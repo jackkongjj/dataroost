@@ -19,6 +19,10 @@ namespace CCS.Fundamentals.DataRoostAPI {
 			FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
 			RouteConfig.RegisterRoutes(RouteTable.Routes);
 			BundleConfig.RegisterBundles(BundleTable.Bundles);
+
+			var jsonFormatter = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
+			var enumConverter = new Newtonsoft.Json.Converters.StringEnumConverter();
+			jsonFormatter.SerializerSettings.Converters.Add(enumConverter);
 		}
 	}
 }
