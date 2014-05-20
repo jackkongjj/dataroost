@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 
-namespace DataRoostAPI.Controllers {
+namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 	public class ValuesController : ApiController {
 		// GET api/values
 		public IEnumerable<string> Get() {
