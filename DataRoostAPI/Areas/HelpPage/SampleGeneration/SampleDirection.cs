@@ -1,4 +1,4 @@
-namespace DataRoostAPI.Areas.HelpPage
+namespace CCS.Fundamentals.DataRoostAPI.Areas.HelpPage
 {
     /// <summary>
     /// Indicates whether the sample is used for request or response

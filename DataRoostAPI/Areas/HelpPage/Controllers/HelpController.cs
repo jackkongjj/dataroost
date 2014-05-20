@@ -1,9 +1,9 @@
 using System;
 using System.Web.Http;
 using System.Web.Mvc;
-using DataRoostAPI.Areas.HelpPage.Models;
+using CCS.Fundamentals.DataRoostAPI.Areas.HelpPage.Models;
 
-namespace DataRoostAPI.Areas.HelpPage.Controllers
+namespace CCS.Fundamentals.DataRoostAPI.Areas.HelpPage.Controllers
 {
     /// <summary>
     /// The controller that will handle requests for the help page.

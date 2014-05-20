@@ -6,7 +6,7 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Description;
 using System.Xml.XPath;
 
-namespace DataRoostAPI.Areas.HelpPage
+namespace CCS.Fundamentals.DataRoostAPI.Areas.HelpPage
 {
     /// <summary>
     /// A custom <see cref="IDocumentationProvider"/> that reads the API documentation from an XML documentation file.
@@ -108,5 +108,18 @@ namespace DataRoostAPI.Areas.HelpPage
 
             return type.FullName;
         }
-    }
+
+				#region IDocumentationProvider Members
+
+
+				public string GetDocumentation(HttpControllerDescriptor controllerDescriptor) {
+					throw new NotImplementedException();
+				}
+
+				public string GetResponseDocumentation(HttpActionDescriptor actionDescriptor) {
+					throw new NotImplementedException();
+				}
+
+				#endregion
+		}
 }

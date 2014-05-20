@@ -3,7 +3,7 @@ using System.Text;
 using System.Web;
 using System.Web.Http.Description;
 
-namespace DataRoostAPI.Areas.HelpPage
+namespace CCS.Fundamentals.DataRoostAPI.Areas.HelpPage
 {
     public static class ApiDescriptionExtensions
     {

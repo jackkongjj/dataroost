@@ -1,7 +1,7 @@
 using System.Web.Http;
 using System.Web.Mvc;
 
-namespace DataRoostAPI.Areas.HelpPage
+namespace CCS.Fundamentals.DataRoostAPI.Areas.HelpPage
 {
     public class HelpPageAreaRegistration : AreaRegistration
     {

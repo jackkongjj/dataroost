@@ -7,9 +7,9 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Web.Http;
 using System.Web.Http.Description;
-using DataRoostAPI.Areas.HelpPage.Models;
+using CCS.Fundamentals.DataRoostAPI.Areas.HelpPage.Models;
 
-namespace DataRoostAPI.Areas.HelpPage
+namespace CCS.Fundamentals.DataRoostAPI.Areas.HelpPage
 {
     public static class HelpPageConfigurationExtensions
     {
