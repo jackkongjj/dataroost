@@ -174,6 +174,9 @@
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TimeseriesDTO.cs" />
+    <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
+    <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
+    <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
