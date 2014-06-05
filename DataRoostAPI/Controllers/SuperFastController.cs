@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using CCS.Fundamentals.DataRoostAPI.Access;
+using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 using CCS.Fundamentals.DataRoostAPI.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
@@ -26,13 +29,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/")]
 		[HttpGet]
 		public TimeseriesDTO[] QuerySDBTemplatesTimeseries(string CompanyId, string TemplateId) {
-			throw new NotImplementedException();
+			string connString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			return tsh.QuerySDBTimeseries(iconum, TemplateId);
 		}
 
 		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/{TimeseriesId}")]
 		[HttpGet]
 		public TimeseriesDTO[] GetSDBTemplatesTimeseries(string CompanyId, string TemplateId, string TimeseriesId) {
-			throw new NotImplementedException();
+			string connString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			return tsh.GetSDBTemplatesTimeseries(iconum, TemplateId, TimeseriesId);
 		}
 
 		[Route("datatypes/std/templates/")]
