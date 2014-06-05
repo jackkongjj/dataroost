@@ -148,6 +148,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Access\PermId.cs" />
     <Compile Include="Access\SuperFast\TimeseriesHelper.cs" />
     <Compile Include="Access\SuperFast\TimeseriesIdentifier.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
