@@ -149,6 +149,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Access\PermId.cs" />
+    <Compile Include="Access\SuperFast\IdentifierBase.cs" />
+    <Compile Include="Access\SuperFast\TemplatesHelper.cs" />
+    <Compile Include="Access\SuperFast\TemplateIdentifier.cs" />
     <Compile Include="Access\SuperFast\TimeseriesHelper.cs" />
     <Compile Include="Access\SuperFast\TimeseriesIdentifier.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
@@ -179,6 +182,7 @@
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
+    <Compile Include="Models\TemplateItemDTO.cs" />
     <Compile Include="Models\TimeseriesDTO.cs" />
     <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
     <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />

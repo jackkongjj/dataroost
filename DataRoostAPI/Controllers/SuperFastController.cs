@@ -17,13 +17,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("datatypes/sdb/templates/")]
 		[HttpGet]
 		public TemplateDTO[] QuerySDBTemplates(string CompanyId) {
-			throw new NotImplementedException();
+			return GetTemplates(CompanyId, null, StandardizationType.SDB);
 		}
 
 		[Route("datatypes/sdb/templates/{TemplateId}")]
 		[HttpGet]
 		public TemplateDTO[] GetSDBTemplates(string CompanyId, string TemplateId) {
-			throw new NotImplementedException();
+			return GetTemplates(CompanyId, TemplateId, StandardizationType.SDB);
 		}
 
 		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/")]
@@ -51,13 +51,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("datatypes/std/templates/")]
 		[HttpGet]
 		public TemplateDTO[] QuerySTDTemplates(string CompanyId) {
-			throw new NotImplementedException();
+			return GetTemplates(CompanyId, null, StandardizationType.STD);
 		}
 
 		[Route("datatypes/std/templates/{TemplateId}")]
 		[HttpGet]
 		public TemplateDTO[] GetSTDTemplates(string CompanyId, string TemplateId) {
-			throw new NotImplementedException();
+			return GetTemplates(CompanyId, TemplateId, StandardizationType.STD);
 		}
 
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/")]
@@ -72,5 +72,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			throw new NotImplementedException();
 		}
 
+		private TemplateDTO[] GetTemplates(string companyId, string templateId, StandardizationType dataTypes) {
+			string connString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			int iconum = 0;
+			if (!int.TryParse(companyId, out iconum))
+				iconum = PermId.PermId2Iconum(companyId);
+
+			TemplatesHelper tsh = new TemplatesHelper(connString, iconum, dataTypes);
+			return tsh.GetTemplates(templateId);
+		}
 	}
 }
