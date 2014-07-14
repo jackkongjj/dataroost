@@ -6,9 +6,9 @@ using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
 using Newtonsoft.Json;
 
 namespace CCS.Fundamentals.DataRoostAPI.Models {
-	
+
 	public class TimeseriesDTO {
-		[JsonProperty(PropertyName="_id")]
+		[JsonProperty(PropertyName = "_id")]
 		public string Id { get; set; }
 
 
@@ -16,7 +16,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Models {
 		public int PeriodLength { get; set; }
 
 		[JsonProperty(PropertyName = "periodType")]
-		public string PeriodType {get; set;}
+		public string PeriodType { get; set; }
 
 		[JsonProperty(PropertyName = "interimType")]
 		public string InterimType { get; set; }

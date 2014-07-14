@@ -135,7 +135,7 @@ where ds.CompanyID = @iconum
 		}
 
 		private TimeseriesDTO _GetSDBTimeseriesDTO(SqlConnection conn, Guid timeseriesId) {
-					string preQuery_timeseriesComponent = @"
+			string preQuery_timeseriesComponent = @"
 select
 	-- Timeseries Components
 	ts.PeriodLength, ts.PeriodTypeID, ts.InterimTypeID, ts.TimeSeriesDate,
@@ -177,7 +177,7 @@ where ts.Id = @tsId
 		}
 
 		private Dictionary<int, TimeseriesValueDTO> _GetTimeseriesSDBValues(SqlConnection conn, Guid timeseriesId) {
-					string preQuery_timeseriesSDBValues = @"
+			string preQuery_timeseriesSDBValues = @"
 select 
 	-- Shared
 	tsd.SDBItemId, tsd.SDBItemTypeId,
