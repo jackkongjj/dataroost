@@ -33,8 +33,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
+			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(TemplateId);
 			TimeseriesHelper tsh = new TimeseriesHelper(connString);
-			return tsh.QuerySDBTimeseries(iconum, TemplateId);
+			return tsh.QuerySDBTimeseries(iconum, templId);
 		}
 
 		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/{TimeseriesId}")]
@@ -44,8 +45,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
+			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(TemplateId);
 			TimeseriesHelper tsh = new TimeseriesHelper(connString);
-			return tsh.GetSDBTemplatesTimeseries(iconum, TemplateId, TimeseriesId);
+			return tsh.GetSDBTemplatesTimeseries(iconum, templId, TimeseriesId);
 		}
 
 		[Route("datatypes/std/templates/")]

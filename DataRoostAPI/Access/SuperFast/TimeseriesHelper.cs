@@ -16,18 +16,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			this.connectionString = connectionString;
 		}
 
-		public TimeseriesDTO[] QuerySDBTimeseries(int iconum, string templateId) {
+		public TimeseriesDTO[] QuerySDBTimeseries(int iconum, TemplateIdentifier templateId) {
 			string preQuery_timeseriesIdentification = @"
 select distinct ts.id
 from Timeseries ts
 join Document d on ts.DocumentID = d.id
 join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
-join SDBItem sdb on sdbd.SDBItemId = sdb.ID
-join StatementType st on sdb.StatementTypeID = st.ID
+join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
 where ds.CompanyID = @iconum
-	and st.ShortDescription = @template
+	and sdbti.SDBTemplateMasterID = @templMasterId
 ";
+
+			TemplatesHelper th = new TemplatesHelper(connectionString, iconum, StandardizationType.SDB);
+			int templMaster = th.GetTemplateMasterId(templateId);
 
 			using (SqlConnection conn = new SqlConnection(connectionString)) {
 				conn.Open();
@@ -36,7 +38,7 @@ where ds.CompanyID = @iconum
 
 				using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesIdentification, conn)) {
 					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = iconum });
-					cmd.Parameters.Add(new SqlParameter("@template", SqlDbType.NVarChar, 64) { Value = templateId });
+					cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.Int) { Value = templMaster });
 
 					using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess)) {
 						while (reader.Read()) {
@@ -47,21 +49,21 @@ where ds.CompanyID = @iconum
 					}
 				}
 
-				return ConvertSDBTimeseries(conn, timeseries, false);
+				return ConvertSDBTimeseries(conn, timeseries, null);
 			}
 		}
 
-		public TimeseriesDTO[] GetSDBTemplatesTimeseries(int iconum, string templateId, string timeseriesId) {
+		public TimeseriesDTO[] GetSDBTemplatesTimeseries(int iconum, TemplateIdentifier templateId, string timeseriesId) {
 			string preQuery_timeseriesFromId = @"
 select distinct ts.id
 from Timeseries ts
 join Document d on ts.DocumentID = d.id
 join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
+join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
 join SDBItem sdb on sdbd.SDBItemId = sdb.ID
-join StatementType st on sdb.StatementTypeID = st.ID
 where ds.CompanyID = @iconum
-	and st.ShortDescription = @template
+	and sdbti.SDBTemplateMasterID = @templMasterId
 	and d.id = @SFDocumentId
 	and ts.CompanyFiscalYear = @FiscalYear
 	and ts.TimeSeriesDate = @PeriodEndDate
@@ -69,6 +71,8 @@ where ds.CompanyID = @iconum
 	and ts.AutoCalcFlag = @AutoCalcFlag
 ";
 			TimeseriesIdentifier tsId = new TimeseriesIdentifier(timeseriesId);
+			TemplatesHelper th = new TemplatesHelper(connectionString, iconum, StandardizationType.SDB);
+			int templMaster = th.GetTemplateMasterId(templateId);
 
 			using (SqlConnection conn = new SqlConnection(connectionString)) {
 				conn.Open();
@@ -77,7 +81,7 @@ where ds.CompanyID = @iconum
 
 				using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesFromId, conn)) {
 					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = iconum });
-					cmd.Parameters.Add(new SqlParameter("@template", SqlDbType.NVarChar, 64) { Value = templateId });
+					cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.Int) { Value = templMaster });
 					cmd.Parameters.Add(new SqlParameter("@SFDocumentId", SqlDbType.UniqueIdentifier) { Value = tsId.SFDocumentId });
 					cmd.Parameters.Add(new SqlParameter("@FiscalYear", SqlDbType.Decimal) { Value = tsId.CompanyFiscalYear });
 					cmd.Parameters.Add(new SqlParameter("@PeriodEndDate", SqlDbType.DateTime) { Value = tsId.PeriodEndDate });
@@ -93,17 +97,17 @@ where ds.CompanyID = @iconum
 					}
 				}
 
-				return ConvertSDBTimeseries(conn, timeseries, true);
+				return ConvertSDBTimeseries(conn, timeseries, templMaster);
 			}
 		}
 
-		private TimeseriesDTO[] ConvertSDBTimeseries(SqlConnection conn, HashSet<Guid> timeseriesIds, bool includeValues) {
+		private TimeseriesDTO[] ConvertSDBTimeseries(SqlConnection conn, HashSet<Guid> timeseriesIds, int? templateMasterId) {
 			List<TimeseriesDTO> timeseries = new List<TimeseriesDTO>();
 			foreach (Guid timeseriesId in timeseriesIds) {
 				TimeseriesDTO ts = _GetSDBTimeseriesDTO(conn, timeseriesId);
 
-				if (includeValues) {
-					ts.Values = _GetTimeseriesSDBValues(conn, timeseriesId);
+				if (templateMasterId.HasValue) {
+					ts.Values = _GetTimeseriesSDBValues(conn, templateMasterId.Value, timeseriesId);
 				}
 
 				timeseries.Add(ts);
@@ -121,7 +125,7 @@ where ds.CompanyID = @iconum
 							if (t == null) {
 								t = e.Current;
 								t.Id = new TimeseriesIdentifier(t).GetToken();
-							} else {
+							} else if (templateMasterId.HasValue) {
 								t.Values = t.Values.Union(e.Current.Values).ToDictionary(k => k.Key, v => v.Value);
 							}
 						}
@@ -176,7 +180,7 @@ where ts.Id = @tsId
 			return null;
 		}
 
-		private Dictionary<int, TimeseriesValueDTO> _GetTimeseriesSDBValues(SqlConnection conn, Guid timeseriesId) {
+		private Dictionary<int, TimeseriesValueDTO> _GetTimeseriesSDBValues(SqlConnection conn, int templateMasterId, Guid timeseriesId) {
 			string preQuery_timeseriesSDBValues = @"
 select 
 	-- Shared
@@ -188,13 +192,16 @@ select
 	tsd.EarningsFlagId,
 	tsd.EarningsCodeId
 from vw_SDBTimeSeriesDetail tsd
+join SDBTemplateItem sdbti on tsd.sdbitemId = sdbti.SDBItemID
 where tsd.TimeSeriesId = @tsId
+	and sdbti.SDBTemplateMasterID = @templMasterId
 ";
 
 			Dictionary<int, TimeseriesValueDTO> toRet = new Dictionary<int, TimeseriesValueDTO>();
 
 			using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesSDBValues, conn)) {
 				cmd.Parameters.Add(new SqlParameter("@tsId", SqlDbType.UniqueIdentifier) { Value = timeseriesId });
+				cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.Int) { Value = templateMasterId });
 
 				using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess)) {
 					while (reader.Read()) {
