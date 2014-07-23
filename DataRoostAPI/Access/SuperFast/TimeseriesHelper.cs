@@ -53,7 +53,7 @@ where ds.CompanyID = @iconum
 			}
 		}
 
-		public TimeseriesDTO[] GetSDBTemplatesTimeseries(int iconum, TemplateIdentifier templateId, string timeseriesId) {
+		public TimeseriesDTO[] GetSDBTemplatesTimeseries(int iconum, TemplateIdentifier templateId, TimeseriesIdentifier timeseriesId) {
 			string preQuery_timeseriesFromId = @"
 select distinct ts.id
 from Timeseries ts
@@ -70,7 +70,7 @@ where ds.CompanyID = @iconum
 	and ts.InterimTypeID = @InterimType
 	and ts.AutoCalcFlag = @AutoCalcFlag
 ";
-			TimeseriesIdentifier tsId = new TimeseriesIdentifier(timeseriesId);
+
 			TemplatesHelper th = new TemplatesHelper(connectionString, iconum, StandardizationType.SDB);
 			int templMaster = th.GetTemplateMasterId(templateId);
 
@@ -82,11 +82,11 @@ where ds.CompanyID = @iconum
 				using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesFromId, conn)) {
 					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = iconum });
 					cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.Int) { Value = templMaster });
-					cmd.Parameters.Add(new SqlParameter("@SFDocumentId", SqlDbType.UniqueIdentifier) { Value = tsId.SFDocumentId });
-					cmd.Parameters.Add(new SqlParameter("@FiscalYear", SqlDbType.Decimal) { Value = tsId.CompanyFiscalYear });
-					cmd.Parameters.Add(new SqlParameter("@PeriodEndDate", SqlDbType.DateTime) { Value = tsId.PeriodEndDate });
-					cmd.Parameters.Add(new SqlParameter("@InterimType", SqlDbType.Char, 2) { Value = tsId.InterimType });
-					cmd.Parameters.Add(new SqlParameter("@AutoCalcFlag", SqlDbType.Int) { Value = (tsId.IsAutoCalc ? 1 : 0) });
+					cmd.Parameters.Add(new SqlParameter("@SFDocumentId", SqlDbType.UniqueIdentifier) { Value = timeseriesId.SFDocumentId });
+					cmd.Parameters.Add(new SqlParameter("@FiscalYear", SqlDbType.Decimal) { Value = timeseriesId.CompanyFiscalYear });
+					cmd.Parameters.Add(new SqlParameter("@PeriodEndDate", SqlDbType.DateTime) { Value = timeseriesId.PeriodEndDate });
+					cmd.Parameters.Add(new SqlParameter("@InterimType", SqlDbType.Char, 2) { Value = timeseriesId.InterimType });
+					cmd.Parameters.Add(new SqlParameter("@AutoCalcFlag", SqlDbType.Int) { Value = (timeseriesId.IsAutoCalc ? 1 : 0) });
 
 					using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess)) {
 						while (reader.Read()) {

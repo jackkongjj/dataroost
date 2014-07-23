@@ -46,8 +46,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(TemplateId);
+			TimeseriesIdentifier tsId = new TimeseriesIdentifier(TimeseriesId);
+
 			TimeseriesHelper tsh = new TimeseriesHelper(connString);
-			return tsh.GetSDBTemplatesTimeseries(iconum, templId, TimeseriesId);
+			return tsh.GetSDBTemplatesTimeseries(iconum, templId, tsId);
 		}
 
 		[Route("datatypes/std/templates/")]
