@@ -24,12 +24,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
 	public class CellExpressionNode : ExpressionNode {
 		public override ExpressionNodeType Type { get { return ExpressionNodeType.Cell; } }
 
-		[JsonProperty(PropertyName = "tableCellId")]
-		public int TableCellId { get; set; }
-
-		[JsonProperty(PropertyName = "sfDocumentId")]
-		public Guid SFDocumentId { get; set; }
-
 		[JsonProperty(PropertyName = "damDocumentId")]
 		public Guid DAMDocumentId { get; set; }
 
@@ -51,13 +45,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
 
 		[JsonProperty(PropertyName = "scalingBase10")]
 		public int ScalingBase10 { get; set; }
-
-
-		[JsonProperty(PropertyName = "companyFinancialTermId")]
-		public int? CompanyFinancialTermId { get; set; }
-
-		[JsonProperty(PropertyName = "companyFinancialTermLabel")]
-		public string CompanyFinancialTermLabel { get; set; }
 	}
 
 	public class SubexpressionExpressionNode : ExpressionNode {

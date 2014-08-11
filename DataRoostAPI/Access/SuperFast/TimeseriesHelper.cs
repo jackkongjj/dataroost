@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using CCS.Fundamentals.DataRoostAPI.Models;
+using CCS.Fundamentals.DataRoostAPI.Models.SuperFast;
 using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
 using FactSet.Data.SqlClient;
 
@@ -478,7 +479,7 @@ JOIN OperationType op on e.OperationTypeID = op.ID
 							ExpressionTimeseriesValueDetailDTO subnode = new ExpressionTimeseriesValueDetailDTO() { Id = lref.Value };
 							node.LeftNode = new SubexpressionExpressionNode() { Expression = subnode };
 						} else if (fref.HasValue) {
-							node.LeftNode = new CellExpressionNode() { TableCellId = fref.Value };
+							node.LeftNode = new SFCellExpressionNode() { TableCellId = fref.Value };
 							tableCells.Add(fref.Value);
 						} else {
 							// Uh oh! Unknown node type!
@@ -495,7 +496,7 @@ JOIN OperationType op on e.OperationTypeID = op.ID
 							ExpressionTimeseriesValueDetailDTO subnode = new ExpressionTimeseriesValueDetailDTO() { Id = lref.Value };
 							node.RightNode = new SubexpressionExpressionNode() { Expression = subnode };
 						} else if (fref.HasValue) {
-							node.RightNode = new CellExpressionNode() { TableCellId = fref.Value };
+							node.RightNode = new SFCellExpressionNode() { TableCellId = fref.Value };
 							tableCells.Add(fref.Value);
 						} else {
 							// Uh oh! Unknown node type!
@@ -516,7 +517,7 @@ JOIN OperationType op on e.OperationTypeID = op.ID
 					int expId = (v.LeftNode as SubexpressionExpressionNode).Expression.Id;
 					v.LeftNode = new SubexpressionExpressionNode() { Expression = nodes[expId] };
 				} else if (v.LeftNode is CellExpressionNode) {
-					int tableCellId = (v.LeftNode as CellExpressionNode).TableCellId;
+					int tableCellId = (v.LeftNode as SFCellExpressionNode).TableCellId;
 					v.LeftNode = cells[tableCellId];
 				}
 
@@ -524,7 +525,7 @@ JOIN OperationType op on e.OperationTypeID = op.ID
 					int expId = (v.RightNode as SubexpressionExpressionNode).Expression.Id;
 					v.RightNode = new SubexpressionExpressionNode() { Expression = nodes[expId] };
 				} else if (v.RightNode is CellExpressionNode) {
-					int tableCellId = (v.RightNode as CellExpressionNode).TableCellId;
+					int tableCellId = (v.RightNode as SFCellExpressionNode).TableCellId;
 					v.RightNode = cells[tableCellId];
 				}
 			}
@@ -565,7 +566,7 @@ WHERE tc.ID = @tcId
 
 						Tuple<int, FLYTOffset> flytOff = _parseSourcelink(off);
 
-						CellExpressionNode node = new CellExpressionNode()
+						SFCellExpressionNode node = new SFCellExpressionNode()
 						{
 							TableCellId = id,
 							SFDocumentId = docId,
