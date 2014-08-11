@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Web;
 using CCS.Fundamentals.DataRoostAPI.Models;
+using CCS.Fundamentals.DataRoostAPI.Models.SuperFast;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	public class TimeseriesIdentifier : IdentifierBase {
@@ -18,7 +19,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 		public TimeseriesIdentifier() { }
 
-		public TimeseriesIdentifier(TimeseriesDTO ts) {
+		public TimeseriesIdentifier(SFTimeseriesDTO ts) {
 			SFDocumentId = ts.SFDocumentId;
 			CompanyFiscalYear = ts.CompanyFiscalYear;
 			PeriodEndDate = ts.PeriodEndDate;

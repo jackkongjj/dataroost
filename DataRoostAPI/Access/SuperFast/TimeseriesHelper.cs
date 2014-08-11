@@ -141,9 +141,9 @@ where ds.CompanyID = @iconum";
 		}
 
 		private TimeseriesDTO[] ConvertSDBTimeseries(SqlConnection conn, HashSet<Guid> timeseriesIds, int? templateMasterId) {
-			List<TimeseriesDTO> timeseries = new List<TimeseriesDTO>();
+			List<SFTimeseriesDTO> timeseries = new List<SFTimeseriesDTO>();
 			foreach (Guid timeseriesId in timeseriesIds) {
-				TimeseriesDTO ts = _GetTimeseriesDTO(conn, timeseriesId);
+				SFTimeseriesDTO ts = _GetTimeseriesDTO(conn, timeseriesId);
 
 				if (templateMasterId.HasValue) {
 					ts.Values = _GetTimeseriesSDBValues(conn, templateMasterId.Value, timeseriesId);
@@ -153,13 +153,13 @@ where ds.CompanyID = @iconum";
 			}
 
 			// Condense our PIT/Duration Timeseries into single instance
-			TimeseriesDTO[] condensed = timeseries
+			SFTimeseriesDTO[] condensed = timeseries
 				.GroupBy(x => new TimeseriesIdentifier(x).GetToken())
 				.Select(x =>
 				{
-					TimeseriesDTO t = null;
+					SFTimeseriesDTO t = null;
 
-					using (IEnumerator<TimeseriesDTO> e = x.GetEnumerator()) {
+					using (IEnumerator<SFTimeseriesDTO> e = x.GetEnumerator()) {
 						while (e.MoveNext()) {
 							if (t == null) {
 								t = e.Current;
@@ -178,9 +178,9 @@ where ds.CompanyID = @iconum";
 		}
 
 		private TimeseriesDTO[] ConvertSTDTimeseries(SqlConnection conn, HashSet<Guid> timeseriesIds, string templateMasterId) {
-			List<TimeseriesDTO> timeseries = new List<TimeseriesDTO>();
+			List<SFTimeseriesDTO> timeseries = new List<SFTimeseriesDTO>();
 			foreach (Guid timeseriesId in timeseriesIds) {
-				TimeseriesDTO ts = _GetTimeseriesDTO(conn, timeseriesId);
+				SFTimeseriesDTO ts = _GetTimeseriesDTO(conn, timeseriesId);
 
 				if (templateMasterId != null) {
 					ts.Values = _GetTimeseriesSTDValues(conn, templateMasterId, timeseriesId);
@@ -190,13 +190,13 @@ where ds.CompanyID = @iconum";
 			}
 
 			// Condense our PIT/Duration Timeseries into single instance
-			TimeseriesDTO[] condensed = timeseries
+			SFTimeseriesDTO[] condensed = timeseries
 				.GroupBy(x => new TimeseriesIdentifier(x).GetToken())
 				.Select(x =>
 				{
-					TimeseriesDTO t = null;
+					SFTimeseriesDTO t = null;
 
-					using (IEnumerator<TimeseriesDTO> e = x.GetEnumerator()) {
+					using (IEnumerator<SFTimeseriesDTO> e = x.GetEnumerator()) {
 						while (e.MoveNext()) {
 							if (t == null) {
 								t = e.Current;
@@ -214,7 +214,7 @@ where ds.CompanyID = @iconum";
 			return condensed;
 		}
 
-		private TimeseriesDTO _GetTimeseriesDTO(SqlConnection conn, Guid timeseriesId) {
+		private SFTimeseriesDTO _GetTimeseriesDTO(SqlConnection conn, Guid timeseriesId) {
 			string preQuery_timeseriesComponent = @"
 select
 	-- Timeseries Components
@@ -234,7 +234,7 @@ where ts.Id = @tsId
 
 				using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess)) {
 					while (reader.Read()) {
-						TimeseriesDTO ts = new TimeseriesDTO();
+						SFTimeseriesDTO ts = new SFTimeseriesDTO();
 
 						int c = 0;
 						ts.PeriodLength = reader.GetInt32(c++);

@@ -185,6 +185,7 @@
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
     <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />
+    <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TemplateItemDTO.cs" />
     <Compile Include="Models\TimeseriesDTO.cs" />

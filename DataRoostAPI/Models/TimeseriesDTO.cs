@@ -41,10 +41,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Models {
 		public string ReportType { get; set; }
 
 
-		[JsonProperty(PropertyName = "sfDocumentId")]
-		public Guid SFDocumentId { get; set; }
-
-
 		[JsonProperty(PropertyName = "values")]
 		public Dictionary<int, TimeseriesValueDTO> Values { get; set; }
 	}

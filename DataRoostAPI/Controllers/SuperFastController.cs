@@ -9,6 +9,7 @@ using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 using CCS.Fundamentals.DataRoostAPI.Models;
+using CCS.Fundamentals.DataRoostAPI.Models.SuperFast;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
