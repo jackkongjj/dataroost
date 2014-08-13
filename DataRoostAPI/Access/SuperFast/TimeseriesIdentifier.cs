@@ -9,7 +9,7 @@ using System.Web;
 using CCS.Fundamentals.DataRoostAPI.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
-	public class TimeseriesIdentifier {
+	public class TimeseriesIdentifier : IdentifierBase {
 		public Guid SFDocumentId { get; set; }
 		public int CompanyFiscalYear { get; set; }
 		public DateTime PeriodEndDate { get; set; }
@@ -27,12 +27,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		}
 
 		public TimeseriesIdentifier(string token) {
-			// See comment in GetToken() below
+			string[] comp = DeconstructToken(token);
 
-			byte[] b = Convert.FromBase64String(token.Replace('_', '/'));
-			string s = new string(Encoding.UTF8.GetChars(b));
-
-			string[] comp = s.Split('|');
 			SFDocumentId = Guid.Parse(comp[0]);
 			CompanyFiscalYear = Int32.Parse(comp[1]);
 			PeriodEndDate = DateTime.Parse(comp[2]);
@@ -40,22 +36,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			IsAutoCalc = Boolean.Parse(comp[4]);
 		}
 
-		public string GetToken() {
-			// You should never, ever implement this conversion elsewhere, in this or any other language
-			// If you find yourself looking here to do just that, you're doing it wrong and should think
-			// and talk through what you're trying to do.
-
-			string s = String.Format("{0}|{1}|{2}|{3}|{4}",
-				SFDocumentId,
-				CompanyFiscalYear,
-				PeriodEndDate,
+		protected override string[] getComponents() {
+			return new string[] {
+				SFDocumentId.ToString(),
+				CompanyFiscalYear.ToString(),
+				PeriodEndDate.ToString(),
 				InterimType,
-				IsAutoCalc
-			);
-
-			byte[] b = Encoding.UTF8.GetBytes(s);
-			return Convert.ToBase64String(b)
-				.Replace('/', '_');
+				IsAutoCalc.ToString()
+			};
 		}
 	}
 }
