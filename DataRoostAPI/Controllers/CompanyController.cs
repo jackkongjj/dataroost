@@ -4,7 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Configuration;
 using CCS.Fundamentals.DataRoostAPI.Models;
+using CCS.Fundamentals.DataRoostAPI.Access;
+using CCS.Fundamentals.DataRoostAPI.Access.Company;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
@@ -20,7 +23,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/{CompanyId}")]
 		[HttpGet]
 		public CompanyDTO[] GetCompanies(string CompanyId) {
-			throw new NotImplementedException();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString);
+			return new CompanyDTO[] { helper.GetCompany(iconum) };
 		}
 
 		[Route("companies/{CompanyId}/efforts/")]
