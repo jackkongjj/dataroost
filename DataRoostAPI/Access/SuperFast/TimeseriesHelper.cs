@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -16,21 +17,73 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			this.connectionString = connectionString;
 		}
 
-		public TimeseriesDTO[] QuerySDBTimeseries(int iconum, TemplateIdentifier templateId) {
-			string preQuery_timeseriesIdentification = @"
-select distinct ts.id
+		public TimeseriesDTO[] QuerySDBTimeseries(int iconum, TemplateIdentifier templateId, TimeseriesIdentifier timeseriesId, StandardizationType dataType, NameValueCollection queryFilter = null) {
+			string preQuery_timeseriesIdentification = dataType == StandardizationType.SDB ? @"
+WITH TemplateMasterID AS
+(
+	select distinct sdm.Id
+	from CompanyIndustry ci 
+	join SDBtemplateDetail std on ci.IndustryDetailID = std.IndustryDetailId
+	join DocumentSeries ds on ci.Iconum = ds.CompanyId
+	join Document d on ds.Id = d.DocumentSeriesId
+	join FDSTriPPIMap f on d.PPI = f.PPI
+	join SDBCountryGroupCountries sc on sc.CountriesIsoCountry = f.IsoCountry
+	join SDBCountryGroup sg on sc.SDBCountryGroupID = sg.Id
+		and std.SDBCountryGroupID = sg.ID
+	join SDBTemplateMaster sdm on std.SDBTemplateMasterId = sdm.Id
+	where ci.Iconum = @iconum
+		and std.ReportTypeID = @reportTypeId
+		and std.UpdateTypeID = @updateTypeId
+		and std.TemplateTypeId = @templateTypeId
+)
+select distinct ts.id, cast(tmi.id as varchar(5))
 from Timeseries ts
 join Document d on ts.DocumentID = d.id
 join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
 join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
-where ds.CompanyID = @iconum
-	and sdbti.SDBTemplateMasterID = @templMasterId
-";
+join TemplateMasterID tmi on tmi.Id = sdbti.SDBTemplateMasterID
+where ds.CompanyID = @iconum	
+" : @"WITH TemplateMasterID AS
+(
+	select distinct sdm.Code
+	from CompanyIndustry ci 
+	join STDTemplateDetail std on ci.IndustryDetailID = std.IndustryDetailId
+	join DocumentSeries ds on ci.Iconum = ds.CompanyId
+	join Document d on ds.Id = d.DocumentSeriesId
+	join FDSTriPPIMap f on d.PPI = f.PPI
+	join STDCountryGroupCountries sc on sc.CountriesIsoCountry = f.IsoCountry
+	join STDCountryGroup sg on sc.STDCountryGroupID = sg.Id
+		and std.STDCountryGroupID = sg.ID
+	join STDTemplateMaster sdm on std.STDTemplateMasterCode = sdm.Code
+	where ci.Iconum = @iconum
+		and std.ReportTypeID = @reportTypeId
+		and std.UpdateTypeID = @updateTypeId
+		and std.TemplateTypeId = @templateTypeId
+)
+select distinct ts.id, tmi.Code
+from Timeseries ts
+join document d on ts.DocumentID = d.ID
+join DocumentSeries ds on d.DocumentSeriesID = ds.ID
+join vw_STDTimeSeriesDetail stdd on ts.ID = stdd.TimeSeriesId
+join STDTemplateItem stdti on stdd.STDItemId = stdti.STDItemID
+join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
+where ds.CompanyID = @iconum";
 
-			TemplatesHelper th = new TemplatesHelper(connectionString, iconum, StandardizationType.SDB);
-			int templMaster = th.GetTemplateMasterId(templateId);
+			bool requestedSpecificTimeSerie = (timeseriesId != null);
+			string templateMasterId = string.Empty;
 
+			if (requestedSpecificTimeSerie) {
+					 preQuery_timeseriesIdentification += @" and d.id = isnull(@SFDocumentId, d.id)
+	and ts.CompanyFiscalYear = isnull(@FiscalYear, ts.CompanyFiscalYear)
+	and ts.TimeSeriesDate = isnull(@PeriodEndDate, ts.TimeSeriesDate)
+	and ts.InterimTypeID = isnull(@InterimType, ts.InterimTypeID)
+	and ts.AutoCalcFlag = isnull(@AutoCalcFlag, ts.AutoCalcFlag)";
+			} else if (!string.IsNullOrEmpty(queryFilter["years"])) {
+				preQuery_timeseriesIdentification += " and ts.companyfiscalyear in (select id from @years)";
+			} else if (!string.IsNullOrEmpty(queryFilter["startyear"]) && !string.IsNullOrEmpty(queryFilter["endyear"])) {
+				preQuery_timeseriesIdentification += " and ts.companyfiscalyear between @startyear AND @endyear";
+			}
 			using (SqlConnection conn = new SqlConnection(connectionString)) {
 				conn.Open();
 
@@ -38,73 +91,58 @@ where ds.CompanyID = @iconum
 
 				using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesIdentification, conn)) {
 					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = iconum });
-					cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.Int) { Value = templMaster });
+					cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = templateId.ReportType });
+					cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = templateId.UpdateType });
+					cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.Int) { Value = templateId.TemplateType });
+					if (requestedSpecificTimeSerie) {
+						cmd.Parameters.Add(new SqlParameter("@SFDocumentId", SqlDbType.UniqueIdentifier) { Value = timeseriesId.SFDocumentId });
+						cmd.Parameters.Add(new SqlParameter("@FiscalYear", SqlDbType.Decimal) { Value = timeseriesId.CompanyFiscalYear });
+						cmd.Parameters.Add(new SqlParameter("@PeriodEndDate", SqlDbType.DateTime) { Value = timeseriesId.PeriodEndDate });
+						cmd.Parameters.Add(new SqlParameter("@InterimType", SqlDbType.Char, 2) { Value = timeseriesId.InterimType });
+						cmd.Parameters.Add(new SqlParameter("@AutoCalcFlag", SqlDbType.Int) { Value = (timeseriesId.IsAutoCalc ? 1 : 0) });
+					} else if (!string.IsNullOrEmpty(queryFilter["years"])) {
+						DataTable dtYears = new DataTable();
+						DataColumn col = new DataColumn("year", typeof(Int32));
+						dtYears.Columns.Add(col);
 
+						var filter = from x in queryFilter["years"].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries).AsEnumerable()
+												 select new { year = int.Parse(x) };
+						foreach (var years in filter) {
+							DataRow row = dtYears.NewRow();
+							row["year"] = years.year;
+							dtYears.Rows.Add(row);
+						}
+						cmd.Parameters.Add(new SqlParameter("@years", SqlDbType.Structured)
+												{
+													TypeName = "tblType_IntList",
+													Value = dtYears
+												});
+
+					} else if (!string.IsNullOrEmpty(queryFilter["startyear"]) && !string.IsNullOrEmpty(queryFilter["endyear"])) {
+						cmd.Parameters.Add(new SqlParameter("@startyear", SqlDbType.Int) { Value = Int32.Parse(queryFilter["startyear"]) });
+						cmd.Parameters.Add(new SqlParameter("@endyear", SqlDbType.Int) { Value = Int32.Parse(queryFilter["endyear"]) });
+					}
 					using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess)) {
 						while (reader.Read()) {
 							int c = 0;
 
 							timeseries.Add(reader.GetGuid(c++));
+							if (string.IsNullOrEmpty(templateMasterId))
+								templateMasterId = reader.GetString(c++);
 						}
 					}
 				}
 
-				return ConvertSDBTimeseries(conn, timeseries, null);
-			}
-		}
-
-		public TimeseriesDTO[] GetSDBTemplatesTimeseries(int iconum, TemplateIdentifier templateId, TimeseriesIdentifier timeseriesId) {
-			string preQuery_timeseriesFromId = @"
-select distinct ts.id
-from Timeseries ts
-join Document d on ts.DocumentID = d.id
-join DocumentSeries ds on d.DocumentSeriesID = ds.ID
-join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
-join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
-join SDBItem sdb on sdbd.SDBItemId = sdb.ID
-where ds.CompanyID = @iconum
-	and sdbti.SDBTemplateMasterID = @templMasterId
-	and d.id = @SFDocumentId
-	and ts.CompanyFiscalYear = @FiscalYear
-	and ts.TimeSeriesDate = @PeriodEndDate
-	and ts.InterimTypeID = @InterimType
-	and ts.AutoCalcFlag = @AutoCalcFlag
-";
-
-			TemplatesHelper th = new TemplatesHelper(connectionString, iconum, StandardizationType.SDB);
-			int templMaster = th.GetTemplateMasterId(templateId);
-
-			using (SqlConnection conn = new SqlConnection(connectionString)) {
-				conn.Open();
-
-				HashSet<Guid> timeseries = new HashSet<Guid>();
-
-				using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesFromId, conn)) {
-					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = iconum });
-					cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.Int) { Value = templMaster });
-					cmd.Parameters.Add(new SqlParameter("@SFDocumentId", SqlDbType.UniqueIdentifier) { Value = timeseriesId.SFDocumentId });
-					cmd.Parameters.Add(new SqlParameter("@FiscalYear", SqlDbType.Decimal) { Value = timeseriesId.CompanyFiscalYear });
-					cmd.Parameters.Add(new SqlParameter("@PeriodEndDate", SqlDbType.DateTime) { Value = timeseriesId.PeriodEndDate });
-					cmd.Parameters.Add(new SqlParameter("@InterimType", SqlDbType.Char, 2) { Value = timeseriesId.InterimType });
-					cmd.Parameters.Add(new SqlParameter("@AutoCalcFlag", SqlDbType.Int) { Value = (timeseriesId.IsAutoCalc ? 1 : 0) });
-
-					using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess)) {
-						while (reader.Read()) {
-							int c = 0;
-
-							timeseries.Add(reader.GetGuid(c++));
-						}
-					}
-				}
-
-				return ConvertSDBTimeseries(conn, timeseries, templMaster);
+				if(dataType == StandardizationType.SDB)
+					return ConvertSDBTimeseries(conn, timeseries, requestedSpecificTimeSerie ? (int?)Int32.Parse(templateMasterId) : null);
+				return ConvertSTDTimeseries(conn, timeseries, requestedSpecificTimeSerie ? templateMasterId : null);
 			}
 		}
 
 		private TimeseriesDTO[] ConvertSDBTimeseries(SqlConnection conn, HashSet<Guid> timeseriesIds, int? templateMasterId) {
 			List<TimeseriesDTO> timeseries = new List<TimeseriesDTO>();
 			foreach (Guid timeseriesId in timeseriesIds) {
-				TimeseriesDTO ts = _GetSDBTimeseriesDTO(conn, timeseriesId);
+				TimeseriesDTO ts = _GetTimeseriesDTO(conn, timeseriesId);
 
 				if (templateMasterId.HasValue) {
 					ts.Values = _GetTimeseriesSDBValues(conn, templateMasterId.Value, timeseriesId);
@@ -138,7 +176,44 @@ where ds.CompanyID = @iconum
 			return condensed;
 		}
 
-		private TimeseriesDTO _GetSDBTimeseriesDTO(SqlConnection conn, Guid timeseriesId) {
+		private TimeseriesDTO[] ConvertSTDTimeseries(SqlConnection conn, HashSet<Guid> timeseriesIds, string templateMasterId) {
+			List<TimeseriesDTO> timeseries = new List<TimeseriesDTO>();
+			foreach (Guid timeseriesId in timeseriesIds) {
+				TimeseriesDTO ts = _GetTimeseriesDTO(conn, timeseriesId);
+
+				if (templateMasterId != null) {
+					ts.Values = _GetTimeseriesSTDValues(conn, templateMasterId, timeseriesId);
+				}
+
+				timeseries.Add(ts);
+			}
+
+			// Condense our PIT/Duration Timeseries into single instance
+			TimeseriesDTO[] condensed = timeseries
+				.GroupBy(x => new TimeseriesIdentifier(x).GetToken())
+				.Select(x =>
+				{
+					TimeseriesDTO t = null;
+
+					using (IEnumerator<TimeseriesDTO> e = x.GetEnumerator()) {
+						while (e.MoveNext()) {
+							if (t == null) {
+								t = e.Current;
+								t.Id = new TimeseriesIdentifier(t).GetToken();
+							} else if (templateMasterId != null) {
+								t.Values = t.Values.Union(e.Current.Values).ToDictionary(k => k.Key, v => v.Value);
+							}
+						}
+					}
+
+					return t;
+				}).ToArray();
+
+			// Return our results
+			return condensed;
+		}
+
+		private TimeseriesDTO _GetTimeseriesDTO(SqlConnection conn, Guid timeseriesId) {
 			string preQuery_timeseriesComponent = @"
 select
 	-- Timeseries Components
@@ -253,20 +328,94 @@ where tsd.TimeSeriesId = @tsId
 
 			foreach (TimeseriesValueDTO val in toRet.Values) {
 				if (val.ValueDetails is ExpressionTimeseriesValueDetailDTO) {
-					_ExpandExpressionValueDetail(conn, val);
+					_ExpandExpressionValueDetail(conn, val, StandardizationType.SDB);
 				}
 			}
 
 			return toRet;
 		}
 
-		private void _ExpandExpressionValueDetail(SqlConnection conn, TimeseriesValueDTO value) {
+		private Dictionary<int, TimeseriesValueDTO> _GetTimeseriesSTDValues(SqlConnection conn, string templateMasterId, Guid timeseriesId) {
+			string preQuery_timeseriesSDBValues = @"
+select 
+	tsd.STDItemId, tsd.STDItemTypeId, tsd.Value, tsd.STDExpressionID,
+	tsd.Date, tsd.BookValueFlagID, tsd.EarningsFlagID, tsd.EarningsCodeID 
+from vw_STDTimeSeriesDetail tsd
+join STDTemplateItem stdti on tsd.STDItemId = stdti.STDItemID
+where tsd.TimeSeriesId =  @tsId
+	and stdti.STDTemplateMasterCode = @templMasterId
+";
+
+			Dictionary<int, TimeseriesValueDTO> toRet = new Dictionary<int, TimeseriesValueDTO>();
+
+			using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesSDBValues, conn)) {
+				cmd.Parameters.Add(new SqlParameter("@tsId", SqlDbType.UniqueIdentifier) { Value = timeseriesId });
+				cmd.Parameters.Add(new SqlParameter("@templMasterId", SqlDbType.VarChar, 4) { Value = templateMasterId });
+
+				using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess)) {
+					while (reader.Read()) {
+						TimeseriesValueDTO val = new TimeseriesValueDTO();
+
+						int c = 0;
+						int sdbItem = reader.GetInt32(c++);
+						string itemType = reader.GetString(c++).ToUpper();
+
+						if (itemType == "E") { // Expression
+							c = 2;
+							decimal value = reader.GetDecimal(c++);
+							int expressionId = reader.GetInt32(c++);
+
+							val.Contents = value.ToString();
+							val.ValueDetails = new ExpressionTimeseriesValueDetailDTO() { Id = expressionId };
+						} else if (itemType == "T") { // Date Time
+							c = 4;
+							DateTime date = reader.GetDateTime(c++);
+
+							val.Contents = date.ToString();
+							val.ValueDetails = new DateTimeseriesValueDetailDTO() { Date = date };
+						} else if (itemType == "B") { // Book Value
+							c = 5;
+							int flag = reader.GetInt32(c++);
+
+							val.Contents = flag.ToString();
+							val.ValueDetails = new LookupTimeseriesValueDetailDTO() { LookupName = "BookValue", Value = flag.ToString() };
+						} else if (itemType == "F") { // Earnings Flag
+							c = 6;
+							int flag = reader.GetInt32(c++);
+
+							val.Contents = flag.ToString();
+							val.ValueDetails = new LookupTimeseriesValueDetailDTO() { LookupName = "EarningsFlag", Value = flag.ToString() };
+						} else if (itemType == "G") { // Earnings Code
+							c = 7;
+							int flag = reader.GetInt32(c++);
+
+							val.Contents = flag.ToString();
+							val.ValueDetails = new LookupTimeseriesValueDetailDTO() { LookupName = "EarningsCode", Value = flag.ToString() };
+						} else {
+							// Uh oh! Unknown item type!
+						}
+
+						toRet.Add(sdbItem, val);
+					}
+				}
+			}
+
+			foreach (TimeseriesValueDTO val in toRet.Values) {
+				if (val.ValueDetails is ExpressionTimeseriesValueDetailDTO) {
+					_ExpandExpressionValueDetail(conn, val, StandardizationType.STD);
+				}
+			}
+
+			return toRet;
+		}
+
+		private void _ExpandExpressionValueDetail(SqlConnection conn, TimeseriesValueDTO value, StandardizationType dataType) {
 			ExpressionTimeseriesValueDetailDTO expValue = value.ValueDetails as ExpressionTimeseriesValueDetailDTO;
 			if (expValue == null) {
 				return;
 			}
 
-			string preQuery_expressionExpansion = @"
+			string preQuery_expressionExpansion = dataType == StandardizationType.SDB ? @"
 ;WITH CTE (rootExpressionId, expressionId) AS (
 	SELECT e.id, e.id
 	FROM Expression e
@@ -282,6 +431,22 @@ where tsd.TimeSeriesId = @tsId
 SELECT c.expressionId, op.[Description], e.Value1, e.LRef1, e.FRef1, e.Value2, e.LRef2, e.FRef2
 FROM CTE c
 JOIN Expression e on c.expressionId = e.ID
+JOIN OperationType op on e.OperationTypeID = op.ID
+" : @"WITH CTE (rootExpressionId, expressionId) AS (
+	SELECT e.id, e.id
+	FROM STDExpression e
+	WHERE e.id = @expressionId
+
+	UNION ALL
+
+	SELECT CTE.rootExpressionId, e.id
+	FROM CTE
+	JOIN STDExpression cExp on CTE.expressionId = cExp.id
+	JOIN STDExpression e on cExp.LRef1 = e.ID OR cExp.LRef2 = e.ID
+)
+SELECT c.expressionId, op.[Description], e.Value1, e.LRef1, e.FRef1, e.Value2, e.LRef2, e.FRef2
+FROM CTE c
+JOIN STDExpression e on c.expressionId = e.ID
 JOIN OperationType op on e.OperationTypeID = op.ID
 ";
 

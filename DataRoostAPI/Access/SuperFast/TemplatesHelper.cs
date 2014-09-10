@@ -109,45 +109,7 @@ and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateT
 				}
 			}
 			return templates.ToArray();
-		}
-
-		public int GetTemplateMasterId(TemplateIdentifier templateId) {
-			const string SQL_SDB_Master = @"
-select distinct sdm.Id
-from CompanyIndustry ci 
-join SDBtemplateDetail std on ci.IndustryDetailID = std.IndustryDetailId
-join DocumentSeries ds on ci.Iconum = ds.CompanyId
-join Document d on ds.Id = d.DocumentSeriesId
-join FDSTriPPIMap f on d.PPI = f.PPI
-join SDBCountryGroupCountries sc on sc.CountriesIsoCountry = f.IsoCountry
-join SDBCountryGroup sg on sc.SDBCountryGroupID = sg.Id
-    and std.SDBCountryGroupID = sg.ID
-join SDBTemplateMaster sdm on std.SDBTemplateMasterId = sdm.Id
-where ci.Iconum = @iconum
-	and std.ReportTypeID = @reportTypeId
-	and std.UpdateTypeID = @updateTypeId
-	and std.TemplateTypeId = @templateTypeId
-";
-
-			using (SqlConnection conn = new SqlConnection(connectionString)) {
-				conn.Open();
-
-				if (dataType == StandardizationType.STD)
-					throw new InvalidOperationException("Unable to get Master for STD Template");
-
-				using (SqlCommand cmd = new SqlCommand(this.dataType == StandardizationType.SDB ? SQL_SDB_Master : null, conn)) {
-					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = this.iconum });
-					cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = templateId.ReportType });
-					cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = templateId.UpdateType });
-					cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.Int) { Value = templateId.TemplateType });
-
-					using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.SingleResult | CommandBehavior.SingleRow)) {
-						reader.Read();
-						return reader.GetInt32(0);
-					}
-				}
-			}
-		}
+		}		
 
 		private List<TemplateItemDTO> PopulateTemplateItem(TemplateIdentifier templateId) {
 			const string SQL_SDB_Items = @"WITH TemplateMasterID AS
