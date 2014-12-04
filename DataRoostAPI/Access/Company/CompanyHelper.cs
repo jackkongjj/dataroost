@@ -10,11 +10,9 @@ using CCS.Fundamentals.DataRoostAPI.Models;
 namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	public class CompanyHelper {
 		private readonly string _sfConnectionString;
-		private readonly string _lionConnectionString;
 
-		public CompanyHelper(string sfConnectionString, string lionConnectionString) {
+		public CompanyHelper(string sfConnectionString) {
 			_sfConnectionString = sfConnectionString;
-			_lionConnectionString = lionConnectionString;
 		}
 
 		public CompanyDTO GetCompany(int iconum) {

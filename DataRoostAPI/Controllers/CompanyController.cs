@@ -24,11 +24,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public CompanyDTO[] GetCompanies(string CompanyId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
-			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString);
 			return new CompanyDTO[] { helper.GetCompany(iconum) };
 		}
 

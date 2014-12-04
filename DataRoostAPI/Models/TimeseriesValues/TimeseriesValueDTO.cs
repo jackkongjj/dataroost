@@ -18,6 +18,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
 		public abstract string Type { get; }
 	}
 
+	public class TextTimeseriesValueDetailDTO : TimeseriesValueDetailDTO {
+		public override string Type { get { return "text"; } }
+
+		[JsonProperty(PropertyName = "text")]
+		public string Text { get; set; }
+	}
+
 	public class DateTimeseriesValueDetailDTO : TimeseriesValueDetailDTO {
 		public override string Type { get { return "date"; } }
 

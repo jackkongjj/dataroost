@@ -5,13 +5,10 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using CCS.Fundamentals.DataRoostAPI.Models;
+using CCS.Fundamentals.DataRoostAPI.Models.SuperFast;
 using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
-	public enum StandardizationType {
-		SDB,
-		STD
-	}
 
 	public class TemplatesHelper {
 		private readonly string connectionString;
@@ -87,7 +84,7 @@ and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateT
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						templates.AddRange(
-										reader.Cast<IDataRecord>().Select(r => new TemplateDTO()
+										reader.Cast<IDataRecord>().Select(r => new SFTemplateDTO()
 										{
 											Id = new TemplateIdentifier() {
 												UpdateType = reader.GetString(2),

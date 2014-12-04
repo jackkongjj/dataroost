@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Web;
 
-namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
+namespace CCS.Fundamentals.DataRoostAPI.Access {
 	public abstract class IdentifierBase {
 
 		public string GetToken() {

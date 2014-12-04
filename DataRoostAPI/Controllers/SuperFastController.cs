@@ -16,6 +16,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/superfast")]
 	public class SuperfastController : ApiController {
 
+		[Route("datatypes/")]
+		[HttpGet]
+		public string[] GetDataTypes(string CompanyId) {
+			return new string[] { StandardizationType.SDB.ToString(), StandardizationType.STD.ToString() };
+		}
+
 		[Route("datatypes/sdb/templates/")]
 		[HttpGet]
 		public TemplateDTO[] QuerySDBTemplates(string CompanyId) {

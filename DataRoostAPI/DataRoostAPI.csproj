@@ -45,6 +45,9 @@
       <HintPath>..\packages\CommonLib.Data.SqlClient.1.0.0.0\lib\net45\FactSet.Data.SqlClient.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Oracle.ManagedDataAccess">
+      <HintPath>..\packages\odp.net.managed.121.1.2\lib\net40\Oracle.ManagedDataAccess.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.Entity" />
@@ -150,11 +153,15 @@
   <ItemGroup>
     <Compile Include="Access\Company\CompanyHelper.cs" />
     <Compile Include="Access\PermId.cs" />
-    <Compile Include="Access\SuperFast\IdentifierBase.cs" />
+    <Compile Include="Access\IdentifierBase.cs" />
     <Compile Include="Access\SuperFast\TemplatesHelper.cs" />
     <Compile Include="Access\SuperFast\TemplateIdentifier.cs" />
     <Compile Include="Access\SuperFast\TimeseriesHelper.cs" />
     <Compile Include="Access\SuperFast\TimeseriesIdentifier.cs" />
+    <Compile Include="Access\Voyager\TemplateIdentifier.cs" />
+    <Compile Include="Access\Voyager\TemplatesHelper.cs" />
+    <Compile Include="Access\Voyager\TimeseriesHelper.cs" />
+    <Compile Include="Access\Voyager\TimeseriesIdentifier.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
@@ -177,6 +184,7 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
+    <Compile Include="Controllers\VoyagerController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -184,7 +192,9 @@
     <Compile Include="Models\CountryDTO.cs" />
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
+    <Compile Include="Models\StandardizationType.cs" />
     <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />
+    <Compile Include="Models\SuperFast\SFTemplateDTO.cs" />
     <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TemplateItemDTO.cs" />
@@ -192,6 +202,8 @@
     <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
     <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
     <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
+    <Compile Include="Models\Voyager\VoyagerTemplateDTO.cs" />
+    <Compile Include="Models\Voyager\VoyagerTimeseriesDTO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -278,7 +290,9 @@
     <Content Include="Scripts\knockout-2.2.0.debug.js" />
     <Content Include="Scripts\knockout-2.2.0.js" />
     <Content Include="Scripts\modernizr-2.6.2.js" />
-    <Content Include="Web.config" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>
@@ -329,7 +343,7 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerPort>63592</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:61581/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

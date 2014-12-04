@@ -27,6 +27,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Models {
 		[JsonProperty(PropertyName = "companyFiscalyear")]
 		public int CompanyFiscalYear { get; set; }
 
+		[JsonProperty(PropertyName = "publicationDate")]
+		public DateTime PublicationDate { get; set; }
+
+		[JsonProperty(PropertyName = "damDocumentId")]
+		public Guid DamDocumentId { get; set; }
 
 		[JsonProperty(PropertyName = "isRecap")]
 		public bool IsRecap { get; set; }
@@ -43,5 +48,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Models {
 
 		[JsonProperty(PropertyName = "values")]
 		public Dictionary<int, TimeseriesValueDTO> Values { get; set; }
+
+		[JsonProperty(PropertyName = "perShareValues")]
+		public Dictionary<int, Dictionary<string, TimeseriesValueDTO>> PerShareValues { get; set; }
 	}
 }

@@ -18,9 +18,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Models {
 		[JsonProperty(PropertyName = "reportType")]
 		public string ReportType { get; set; }
 
-		[JsonProperty(PropertyName = "templateType")]
-		public int TemplateType { get; set; }
-
 		[JsonProperty(PropertyName = "items")]
 		public List<TemplateItemDTO> Items { get; set; }
 	}
