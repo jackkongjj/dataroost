@@ -13,13 +13,22 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		DEV|Any CPU = DEV|Any CPU
+		PROD|Any CPU = PROD|Any CPU
 		Release|Any CPU = Release|Any CPU
+		STAGING|Any CPU = STAGING|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{C0865540-60A4-4522-B877-D9E5B4621A7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C0865540-60A4-4522-B877-D9E5B4621A7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0865540-60A4-4522-B877-D9E5B4621A7C}.DEV|Any CPU.ActiveCfg = DEV|Any CPU
+		{C0865540-60A4-4522-B877-D9E5B4621A7C}.DEV|Any CPU.Build.0 = DEV|Any CPU
+		{C0865540-60A4-4522-B877-D9E5B4621A7C}.PROD|Any CPU.ActiveCfg = PROD|Any CPU
+		{C0865540-60A4-4522-B877-D9E5B4621A7C}.PROD|Any CPU.Build.0 = PROD|Any CPU
 		{C0865540-60A4-4522-B877-D9E5B4621A7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0865540-60A4-4522-B877-D9E5B4621A7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0865540-60A4-4522-B877-D9E5B4621A7C}.STAGING|Any CPU.ActiveCfg = STAGING|Any CPU
+		{C0865540-60A4-4522-B877-D9E5B4621A7C}.STAGING|Any CPU.Build.0 = STAGING|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
