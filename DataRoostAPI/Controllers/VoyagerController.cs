@@ -30,19 +30,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/")]
 		[HttpGet]
 		public VoyagerTimeseriesDTO[] QuerySTDTemplatesTimeseries(string CompanyId, string TemplateId) {
-			throw new NotImplementedException();
+			return GetTimeseries(CompanyId, TemplateId);
 		}
 
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/{TimeseriesId}")]
 		[HttpGet]
 		public VoyagerTimeseriesDTO[] GetSTDTemplatesTimeseries(string CompanyId, string TemplateId, string TimeseriesId) {
-			throw new NotImplementedException();
+			return GetTimeseries(CompanyId, TemplateId, TimeseriesId);
 		}
 
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/")]
 		[HttpGet]
 		public VoyagerTimeseriesDTO[] GetSTDTemplatesTimeseries(string CompanyId, string TemplateId, int startYear, int endYear) {
-			throw new NotImplementedException();
+			return GetTimeseries(CompanyId, TemplateId, startYear, endYear);
 		}
 
 		private TemplateDTO[] GetTemplates(string companyId, string templateId, StandardizationType dataTypes) {
@@ -53,6 +53,43 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			TemplatesHelper tsh = new TemplatesHelper(connString, iconum, dataTypes);
 			return tsh.GetTemplates(templateId);
+		}
+
+		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, string timeseriesId) {
+			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			int iconum = 0;
+			if (!int.TryParse(companyId, out iconum))
+				iconum = PermId.PermId2Iconum(companyId);
+
+			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
+			TimeseriesIdentifier tsId = null;
+			if (timeseriesId != null)
+				tsId = new TimeseriesIdentifier(timeseriesId);
+
+			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			return tsh.QuerySTDTimeseries(iconum, templId, tsId);
+		}
+
+		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, int startYear, int endYear) {
+			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			int iconum = 0;
+			if (!int.TryParse(companyId, out iconum))
+				iconum = PermId.PermId2Iconum(companyId);
+
+			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
+			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			return tsh.QuerySTDTimeseries(iconum, templId, startYear, endYear);
+		}
+
+		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId) {
+			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			int iconum = 0;
+			if (!int.TryParse(companyId, out iconum))
+				iconum = PermId.PermId2Iconum(companyId);
+
+			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
+			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			return tsh.QuerySTDTimeseries(iconum, templId);
 		}
 	}
 }

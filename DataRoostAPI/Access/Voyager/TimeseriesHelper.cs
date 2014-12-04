@@ -19,6 +19,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			_connectionString = connectionString;
 		}
 
+		public VoyagerTimeseriesDTO[] QuerySTDTimeseries(int iconum, TemplateIdentifier templateId, TimeseriesIdentifier timeseriesId) {
+			string ppi = GetPPIByIconum(iconum);
+
+			TemplatesHelper th = new TemplatesHelper(_connectionString, iconum, StandardizationType.STD);
+			//int templMaster = th.GetTemplateMasterId(templateId);
+			VoyagerTimeseriesDTO timeseriesDTO = new VoyagerTimeseriesDTO();
+			timeseriesDTO.Id = timeseriesId.GetToken();
+			string mathML = null;
+			timeseriesDTO.Values = PopulateSTDCells(timeseriesId.MasterId, out mathML);
+			PopulateDocumentTimeSeriesData(timeseriesDTO, mathML);
+			return new VoyagerTimeseriesDTO[] { timeseriesDTO };
+		}
+
 		public VoyagerTimeseriesDTO[] QuerySTDTimeseries(int iconum, TemplateIdentifier templateId) {
 			return QuerySTDTimeseries(iconum, templateId, 1900, 2100);
 		}
@@ -32,9 +45,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			List<VoyagerTimeseriesDTO> timeSeriesList = new List<VoyagerTimeseriesDTO>();
 			foreach (TimeseriesIdentifier timeSeriesId in timeseries) {
 				VoyagerTimeseriesDTO timeseriesDTO = new VoyagerTimeseriesDTO();
+				timeseriesDTO.Id = timeSeriesId.GetToken();
 				string mathML = null;
-				timeseriesDTO.Values = PopulateSTDCells(templateId.TemplateCode, out mathML);
 				PopulateDocumentTimeSeriesData(timeseriesDTO, mathML);
+				timeSeriesList.Add(timeseriesDTO);
 			}
 
 			return timeSeriesList.ToArray();
@@ -46,7 +60,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 		private static IEnumerable<TimeseriesIdentifier> GetAllTimeSeriesIdsByPPI(string ppi, int startYear, int endYear) {
 			string ppiBase = GetPPIBase(ppi);
-			string query = @"SELECT DISTINCT sm.data_year, report_date, time_series_code
+			string query = @"SELECT sm.master_id, sm.data_year, report_date, time_series_code
                                 FROM STD_MASTER sm
                                 WHERE SM.PPI LIKE :ppiBase
                                     AND SM.data_year >= :startYear
@@ -62,7 +76,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Int32, Direction = ParameterDirection.Input, ParameterName = "endYear", Value = endYear });
 					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
 						while (sdr.Read()) {
-							TimeseriesIdentifier id = new TimeseriesIdentifier(sdr.GetInt16(0), sdr.GetDateTime(1), sdr.GetStringSafe(2));
+							TimeseriesIdentifier id = new TimeseriesIdentifier(sdr.GetStringSafe(0), sdr.GetInt16(1), sdr.GetDateTime(2), sdr.GetStringSafe(3));
 							idList.Add(id);
 						}
 					}
@@ -103,7 +117,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
 						while (sdr.Read()) {
 							string dataType = sdr.GetStringSafe(0);
-							int itemCode = sdr.GetInt32(1);
+							int itemCode = int.Parse(sdr.GetStringSafe(1));
 							decimal? numericValue = sdr.GetNullable<decimal>(3);
 							string textValue = sdr.GetStringSafe(2);
 							string mathMlString = sdr.GetStringSafe(4);
@@ -116,12 +130,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 							if (dataType == "text") {
 								TextTimeseriesValueDetailDTO valueDetailsDTO = new TextTimeseriesValueDetailDTO();
 								valueDetailsDTO.Text = textValue;
+								valueDTO.Contents = textValue;
 								valueDTO.ValueDetails = valueDetailsDTO;
 							}
 
 							if (dataType == "date") {
 								DateTimeseriesValueDetailDTO valueDetailsDTO = new DateTimeseriesValueDetailDTO();
-								valueDetailsDTO.Date = DateTime.Parse(textValue);
+								valueDetailsDTO.Date = DateTime.ParseExact(textValue, "ddMMyyyy", null);
+								valueDTO.Contents = valueDetailsDTO.Date.ToShortDateString();
 								valueDTO.ValueDetails = valueDetailsDTO;
 							}
 
@@ -131,6 +147,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 								ValueExpressionNode node = new ValueExpressionNode();
 								node.Value = (decimal)numericValue;
 								valueDetailsDTO.LeftNode = node;
+								valueDTO.Contents = numericValue.ToString();
+								valueDTO.ValueDetails = valueDetailsDTO;
 							}
 
 							cells.Add(itemCode, valueDTO);
@@ -143,6 +161,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		private void PopulateDocumentTimeSeriesData(VoyagerTimeseriesDTO timeSeriesGroup, string firstMathML) {
+			if (string.IsNullOrEmpty(firstMathML)) {
+				return;
+			}
+
 			string arItemString = firstMathML.Substring(firstMathML.IndexOf("<mi>") + 4, firstMathML.IndexOf("</mi>") - 4);
 			string query = @"SELECT f.document_id,
                                     f.file_type,
