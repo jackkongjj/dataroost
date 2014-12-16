@@ -24,17 +24,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public CompanyDTO[] GetCompanies(string CompanyId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString);
 			return new CompanyDTO[] { helper.GetCompany(iconum) };
 		}
 
 		[Route("companies/{CompanyId}/efforts/")]
 		[HttpGet]
 		public EffortDTO[] QueryEfforts(string CompanyId) {
-			throw new NotImplementedException();
+			List<EffortDTO> efforts = new List<EffortDTO>();
+			EffortDTO voyagerEffort = new EffortDTO();
+			voyagerEffort.Name = "voyager";
+			efforts.Add(voyagerEffort);
+			EffortDTO superfastEffort = new EffortDTO();
+			superfastEffort.Name = "superfast";
+			efforts.Add(superfastEffort);
+			return efforts.ToArray();
 		}
 	}
 }

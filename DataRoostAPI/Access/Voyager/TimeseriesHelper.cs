@@ -88,23 +88,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		private static Dictionary<int, TimeseriesValueDTO> PopulateSTDCells(string masterId, out string mathML) {
-			string query = @"  SELECT d.data_type, d.item_code, d.text_value, d.numeric_value, m.mathml_expression
+			string query = @"  SELECT d.data_type, d.item_code, d.text_value, d.numeric_value, m.mathml_expression, d.scaling_factor, ar.bookmark
                                     FROM 
-                                           (SELECT reported_text text_value, null numeric_value, i.item_code item_code, master_id master_id, 'text' data_type
+                                           (SELECT reported_text text_value, null numeric_value, i.item_code item_code, master_id master_id, 'text' data_type, null scaling_factor
                                                 FROM std_text_details d
                                                   JOIN item_std i ON i.item_code = d.item_code
                                                 WHERE  i.data_type_flag = 'A' AND char_type_flag = 'A' AND master_id = :masterId
                                             UNION
-                                            SELECT reported_text text_value, null numeric_value, i.item_code item_code, master_id master_id, 'date' data_type
+                                            SELECT reported_text text_value, null numeric_value, i.item_code item_code, master_id master_id, 'date' data_type, null scaling_factor
                                                 FROM std_text_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
                                                 WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND master_id = :masterId
                                             UNION
-                                            SELECT null text_value, reported_value numeric_value, i.item_code item_code, master_id master_id, 'number' data_type
+                                            SELECT null text_value, reported_value numeric_value, i.item_code item_code, master_id master_id, 'number' data_type, over_sclg_factor scaling_factor
                                                 FROM std_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
                                                 WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND master_id = :masterId) d
-                                        LEFT JOIN ar_std_map m ON d.item_code = m.item_code AND d.master_id = m.master_id";
+                                        LEFT JOIN ar_std_map m ON d.item_code = m.item_code AND d.master_id = m.master_id
+																				LEFT JOIN ar_details ar ON ar.ar_item_id = TO_NUMBER(SUBSTR(m.mathml_expression, INSTR(m.mathml_expression, '<mi>', 1, 1) + 4, INSTR(m.mathml_expression, '</mi>', 1, 1) - INSTR(m.mathml_expression, '<mi>', 1, 1) - 4))";
 
 			mathML = null;
 			Dictionary<int, TimeseriesValueDTO> cells = new Dictionary<int, TimeseriesValueDTO>();
@@ -121,6 +122,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 							decimal? numericValue = sdr.GetNullable<decimal>(3);
 							string textValue = sdr.GetStringSafe(2);
 							string mathMlString = sdr.GetStringSafe(4);
+							int scalingFactor = sdr.GetInt32(5);
+							string offsetString = sdr.GetStringSafe(6);
 
 							if (!string.IsNullOrEmpty(mathMlString)) {
 								mathML = mathMlString;
@@ -144,8 +147,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 							if (dataType == "number") {
 								ExpressionTimeseriesValueDetailDTO valueDetailsDTO = new ExpressionTimeseriesValueDetailDTO();
 								valueDetailsDTO.Operation = "=";
-								ValueExpressionNode node = new ValueExpressionNode();
-								node.Value = (decimal)numericValue;
+								CellExpressionNode node = new CellExpressionNode();
+								node.NumericValue = (decimal)numericValue;
+								node.ScalingBase10 = scalingFactor;
+								if (!string.IsNullOrWhiteSpace(offsetString)) {
+									node.Offset = FLYTOffset.Parse(offsetString);
+								}
 								valueDetailsDTO.LeftNode = node;
 								valueDTO.Contents = numericValue.ToString();
 								valueDTO.ValueDetails = valueDetailsDTO;

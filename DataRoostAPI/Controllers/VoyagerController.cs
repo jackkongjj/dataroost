@@ -15,6 +15,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/voyager")]
 	public class VoyagerController : ApiController {
 
+		[Route("datatypes/")]
+		[HttpGet]
+		public string[] GetDataTypes(string CompanyId) {
+			return new string[] { StandardizationType.STD.ToString() };
+		}
+
+		[Route("datatypes/std/templates/")]
+		[HttpGet]
+		public TemplateDTO[] QuerySDBTemplates(string CompanyId) {
+			throw new NotImplementedException();
+		}
+
 		[Route("datatypes/std/templates/")]
 		[HttpGet]
 		public TemplateDTO[] QuerySTDTemplates(string CompanyId) {

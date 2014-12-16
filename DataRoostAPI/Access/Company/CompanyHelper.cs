@@ -10,9 +10,11 @@ using CCS.Fundamentals.DataRoostAPI.Models;
 namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	public class CompanyHelper {
 		private readonly string _sfConnectionString;
+		private readonly string _lionConnectionString;
 
-		public CompanyHelper(string sfConnectionString) {
+		public CompanyHelper(string sfConnectionString, string lionConnectionString) {
 			_sfConnectionString = sfConnectionString;
+			_lionConnectionString = lionConnectionString;
 		}
 
 		public CompanyDTO GetCompany(int iconum) {
@@ -93,14 +95,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                     s.ISIN,
                                     s.To_Cusip,
                                     s.Issue_Type,
-                                    p.PPI
-                                    --x.PermID
+                                    p.PPI,
+                                    x.permid
                                 FROM SecMas s
 		                            LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
 		                            LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
 		                            LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
-                                    LEFT JOIN FdsTriPpiMap p ON p.CUSIP = s.Cusip
-                                    --LEFT JOIN SecMas_XRef x ON x.Cusip = s.Cusip
+                                LEFT JOIN FdsTriPpiMap p ON p.CUSIP = s.Cusip
+                                LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
 	                            WHERE s.Iconum = @iconum
                                     --AND RIGHT(p.PPI, 1) != '0'
                                     AND s.term_date IS NULL
@@ -131,7 +133,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 								//ToCusip = sdr.GetStringSafe(12),
 								IssueType = sdr.GetStringSafe(13),
 								PPI = sdr.GetStringSafe(14),
-								//PermId = sdr.GetStringSafe(15),
+								Id = sdr.GetStringSafe(15),
+								PermId = sdr.GetStringSafe(15),
 							};
 							shareClasses.Add(shareClass);
 						}
