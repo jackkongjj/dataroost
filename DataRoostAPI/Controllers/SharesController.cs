@@ -11,18 +11,12 @@ using CCS.Fundamentals.DataRoostAPI.Access.Company;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
-	[RoutePrefix("api/v1")]
-	public class CompanyController : ApiController {
+	[RoutePrefix("api/v1/companies/{CompanyId}/shares")]
+	public class SharesController : ApiController {
 
-		[Route("companies/")]
+		[Route("latestFiscalPeriodEnd/")]
 		[HttpGet]
-		public CompanyDTO[] QueryCompanies() {
-			throw new NotImplementedException();
-		}
-
-		[Route("companies/{CompanyId}")]
-		[HttpGet]
-		public CompanyDTO[] GetCompanies(string CompanyId) {
+		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string CompanyId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -30,20 +24,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString);
-			return new CompanyDTO[] { helper.GetCompany(iconum) };
-		}
-
-		[Route("companies/{CompanyId}/efforts/")]
-		[HttpGet]
-		public EffortDTO[] QueryEfforts(string CompanyId) {
-			List<EffortDTO> efforts = new List<EffortDTO>();
-			EffortDTO voyagerEffort = new EffortDTO();
-			voyagerEffort.Name = "voyager";
-			efforts.Add(voyagerEffort);
-			EffortDTO superfastEffort = new EffortDTO();
-			superfastEffort.Name = "superfast";
-			efforts.Add(superfastEffort);
-			return efforts.ToArray();
+			return helper.GetCompanyShareClassData(iconum).ToArray();
 		}
 	}
 }

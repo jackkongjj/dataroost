@@ -13,14 +13,17 @@ using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 	public class TimeseriesHelper {
+
 		private readonly string _connectionString;
+		private VoyagerHelper _voyagerHelper;
 
 		public TimeseriesHelper(string connectionString) {
 			_connectionString = connectionString;
+			_voyagerHelper = new VoyagerHelper(_connectionString);
 		}
 
 		public VoyagerTimeseriesDTO[] QuerySTDTimeseries(int iconum, TemplateIdentifier templateId, TimeseriesIdentifier timeseriesId) {
-			string ppi = GetPPIByIconum(iconum);
+			string ppi = _voyagerHelper.GetPPIByIconum(iconum);
 
 			TemplatesHelper th = new TemplatesHelper(_connectionString, iconum, StandardizationType.STD);
 			//int templMaster = th.GetTemplateMasterId(templateId);
@@ -37,7 +40,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		public VoyagerTimeseriesDTO[] QuerySTDTimeseries(int iconum, TemplateIdentifier templateId, int startYear, int endYear) {
-			string ppi = GetPPIByIconum(iconum);
+			string ppi = _voyagerHelper.GetPPIByIconum(iconum);
 
 			TemplatesHelper th = new TemplatesHelper(_connectionString, iconum, StandardizationType.STD);
 			//int templMaster = th.GetTemplateMasterId(templateId);
@@ -54,12 +57,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			return timeSeriesList.ToArray();
 		}
 
-		private static string GetPPIBase(string ppi) {
-			return ppi.Substring(0, ppi.Length - 1) + "%";
-		}
-
-		private static IEnumerable<TimeseriesIdentifier> GetAllTimeSeriesIdsByPPI(string ppi, int startYear, int endYear) {
-			string ppiBase = GetPPIBase(ppi);
+		private IEnumerable<TimeseriesIdentifier> GetAllTimeSeriesIdsByPPI(string ppi, int startYear, int endYear) {
+			string ppiBase = _voyagerHelper.GetPPIBase(ppi);
 			string query = @"SELECT sm.master_id, sm.data_year, report_date, time_series_code
                                 FROM STD_MASTER sm
                                 WHERE SM.PPI LIKE :ppiBase
@@ -67,8 +66,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
                                     AND SM.data_year <= :endYear
                                 ORDER BY sm.REPORT_DATE DESC";
 			List<TimeseriesIdentifier> idList = new List<TimeseriesIdentifier>();
-			string connectionString = ConfigurationManager.ConnectionStrings["Voyager"].ToString();
-			using (OracleConnection connection = new OracleConnection(connectionString)) {
+			using (OracleConnection connection = new OracleConnection(_connectionString)) {
 				connection.Open();
 				using (OracleCommand command = new OracleCommand(query, connection)) {
 					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "ppiBase", Value = ppiBase });
@@ -214,25 +212,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 					connection.Close();
 				}
 			}
-		}
-
-		private string GetPPIByIconum(int iconum) {
-			string query = @"SELECT PPI_OPER FROM FDS_TRI_PPI_MAP WHERE ICO_OPER = :iconum";
-
-				using (OracleConnection connection = new OracleConnection(_connectionString)) {
-					connection.Open();
-					using (OracleCommand command = new OracleCommand(query, connection)) {
-						command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Int32, Direction = ParameterDirection.Input, ParameterName = "iconum", Value = iconum });
-						using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
-							if (sdr.Read()) {
-								return sdr.GetString(0);
-							}
-						}
-					}
-					connection.Close();
-				}
-
-				return null;
 		}
 	}
 }

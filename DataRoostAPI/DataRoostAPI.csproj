@@ -8,7 +8,7 @@
     </ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{C0865540-60A4-4522-B877-D9E5B4621A7C}</ProjectGuid>
-    <ProjectTypeGuids>{E3E379DF-F4C6-4180-9B81-6769533ABE47};{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CCS.Fundamentals.DataRoostAPI</RootNamespace>
@@ -151,9 +151,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />
     <Compile Include="Access\PermId.cs" />
     <Compile Include="Access\IdentifierBase.cs" />
+    <Compile Include="Access\SuperFast\SuperFastSharesHelper.cs" />
     <Compile Include="Access\SuperFast\TemplatesHelper.cs" />
     <Compile Include="Access\SuperFast\TemplateIdentifier.cs" />
     <Compile Include="Access\SuperFast\TimeseriesHelper.cs" />
@@ -162,6 +164,8 @@
     <Compile Include="Access\Voyager\TemplatesHelper.cs" />
     <Compile Include="Access\Voyager\TimeseriesHelper.cs" />
     <Compile Include="Access\Voyager\TimeseriesIdentifier.cs" />
+    <Compile Include="Access\Voyager\VoyagerHelper.cs" />
+    <Compile Include="Access\Voyager\VoyagerSharesHelper.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
@@ -180,17 +184,24 @@
     <Compile Include="Areas\HelpPage\SampleGeneration\SampleDirection.cs" />
     <Compile Include="Areas\HelpPage\SampleGeneration\TextSample.cs" />
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
+    <Compile Include="Controllers\AsReportedController.cs" />
     <Compile Include="Controllers\CompanyController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\SharesController.cs" />
     <Compile Include="Controllers\SuperFastController.cs" />
-    <Compile Include="Controllers\ValuesController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\AsReported\AsReportedDocument.cs" />
+    <Compile Include="Models\AsReported\AsReportedTable.cs" />
+    <Compile Include="Models\AsReported\Cell.cs" />
+    <Compile Include="Models\AsReported\Column.cs" />
+    <Compile Include="Models\AsReported\Row.cs" />
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\CountryDTO.cs" />
     <Compile Include="Models\EffortDTO.cs" />
+    <Compile Include="Models\ShareClassDataDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
     <Compile Include="Models\StandardizationType.cs" />
     <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />

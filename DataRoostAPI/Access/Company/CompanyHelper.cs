@@ -6,14 +6,19 @@ using System.Data;
 using System.Data.SqlClient;
 using FactSet.Data.SqlClient;
 using CCS.Fundamentals.DataRoostAPI.Models;
+using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
+using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
+using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	public class CompanyHelper {
 		private readonly string _sfConnectionString;
+		private readonly string _voyConnectionString;
 		private readonly string _lionConnectionString;
 
-		public CompanyHelper(string sfConnectionString, string lionConnectionString) {
+		public CompanyHelper(string sfConnectionString, string voyConnectionString, string lionConnectionString) {
 			_sfConnectionString = sfConnectionString;
+			_voyConnectionString = voyConnectionString;
 			_lionConnectionString = lionConnectionString;
 		}
 
@@ -143,6 +148,31 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return shareClasses;
+		}
+
+		public IEnumerable<ShareClassDataDTO> GetCompanyShareClassData(int iconum) {
+			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
+			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
+
+			// TODO: how to determine whether to go to Voyager or SuperFast
+			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
+			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString);
+			Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = new Dictionary<string, List<ShareClassDataItem>>();
+			voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum);
+			foreach (ShareClassDTO shareClass in shareClasses) {
+				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+				if (voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+					securityItemList = voyagerSecurityItems[shareClass.PPI];
+				}
+				List<ShareClassDataItem> superfastItems = superfastShares.GetLatestFPEShareData(shareClass.Cusip);
+				if (superfastItems.Count > securityItemList.Count) {
+					securityItemList = superfastItems;
+				}
+				ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
+				shareClassDataList.Add(shareClassData);
+			}
+
+			return shareClassDataList;
 		}
 	}
 }
