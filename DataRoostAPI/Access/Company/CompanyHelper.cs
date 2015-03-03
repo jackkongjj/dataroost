@@ -67,7 +67,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		private string GetRootPPI(int iconum) {
-			string query = @"SELECT PPI FROM FdsTriPpiMap WHERE iconum = @iconum AND RIGHT(PPI, 1) = '0'";
+			string query = @"SELECT dbo.getppiforiconum(@iconum)";
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
