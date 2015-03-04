@@ -8,6 +8,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access {
 
 		private static string _IconumLookup = "0123456789BCDFGHJKLMNPQRSTVWXYZ";
 		public static int PermId2Iconum(string permId) {
+			int iconum;
+			if (int.TryParse(permId, out iconum)) {
+				return iconum;
+			}
+
 			if (!permId.EndsWith("-E"))
 				throw new InvalidOperationException("Unable to convert PermId to Iconum");
 
