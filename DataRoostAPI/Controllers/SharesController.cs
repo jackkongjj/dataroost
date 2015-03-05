@@ -16,7 +16,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("latestFiscalPeriodEnd/")]
 		[HttpGet]
-		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string CompanyId) {
+		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string CompanyId, DateTime? reportDate = null) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -24,7 +24,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString);
-			return helper.GetCompanyShareClassData(iconum).ToArray();
+			return helper.GetCompanyShareClassData(iconum, reportDate).ToArray();
+		}
+
+		[Route("currentShares/")]
+		[HttpGet]
+		public ShareClassDataDTO[] GetCurrentShareData(string CompanyId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString);
+			return helper.GetCurrentCompanyShareClassData(iconum).ToArray();
 		}
 	}
 }

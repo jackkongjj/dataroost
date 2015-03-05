@@ -18,7 +18,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			_connectionString = connectionString;
 		}
 
-		public List<ShareClassDataItem> GetLatestFPEShareData(string cusip) {
+		public List<ShareClassDataItem> GetLatestFPEShareData(string cusip, DateTime? reportDate) {
 			List<ShareClassDataItem> perShareData = new List<ShareClassDataItem>();
 
 			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode FROM 
@@ -40,14 +40,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	                                        join Document d (nolock)
 		                                        on ts.DocumentID = d.ID
 		                                        and d.ExportFlag = 1 
-                                          where stds.SecurityID = @cusip) temp
+                                          where stds.SecurityID = @cusip
+																						and ts.TimeSeriesDate < @searchDate) temp
                                         where temp.rank = 1";
 
+			DateTime searchDate = DateTime.Now;
+			if (reportDate != null) {
+				searchDate = (DateTime)reportDate;
+			}
 			using (SqlConnection connection = new SqlConnection(_connectionString)) {
 				connection.Open();
 
 				using (var cmd = new SqlCommand(query, connection)) {
 					cmd.Parameters.AddWithValue("@cusip", cusip);
+					cmd.Parameters.AddWithValue("@searchDate", searchDate);
 
 					using (var reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
@@ -59,6 +65,59 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 								ReportDate = reader.GetDateTime(2),
 							};
 							perShareData.Add(item);
+						}
+					}
+				}
+			}
+
+			return perShareData;
+		}
+
+		public Dictionary<string, List<ShareClassDataItem>> GetCurrentShareDataItems(int iconum) {
+			string query = @"SELECT s.ID, s.STDItemID, s.STDExpressionID, s.Value, i.STDCode, i.ItemName, s.Date, s.SecurityID
+                                FROM vw_STDCompanyDetail s
+                                    JOIN STDItem i ON i.ID = s.STDItemID
+                                WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
+
+			Dictionary<string, List<ShareClassDataItem>> perShareData = new Dictionary<string, List<ShareClassDataItem>>();
+			using (SqlConnection connection = new SqlConnection(_connectionString)) {
+				connection.Open();
+
+				using (var cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+
+					using (var reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							string cusip = reader.GetStringSafe(7);
+							if (!perShareData.ContainsKey(cusip)) {
+								perShareData.Add(cusip, new List<ShareClassDataItem>());
+							}
+							List<ShareClassDataItem> items = perShareData[cusip];
+							string itemName = reader.GetStringSafe(5);
+							string itemCode = reader.GetStringSafe(4);
+							decimal? value = reader.GetNullable<decimal>(3);
+							DateTime? reportDate = reader.GetNullable<DateTime>(6);
+
+							ShareClassDataItem item = null;
+							if (reportDate == null) {
+								item = new ShareClassNumericItem
+								{
+									ItemId = itemCode,
+									Name = itemName,
+									Value = (decimal)value,
+								};
+							}
+
+							if (value == null) {
+								item = new ShareClassDateItem
+								{
+									ItemId = itemCode,
+									Name = itemName,
+									Value = (DateTime)reportDate,
+								};
+							}
+							
+							items.Add(item);
 						}
 					}
 				}
