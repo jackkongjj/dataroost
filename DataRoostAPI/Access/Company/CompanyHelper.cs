@@ -69,6 +69,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		private string GetRootPPI(int iconum) {
 			string query = @"SELECT dbo.getppiforiconum(@iconum)";
 
+			string ppi = null;
+
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -76,13 +78,34 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						if (sdr.Read()) {
-							return sdr.GetStringSafe(0);
+							ppi = sdr.GetStringSafe(0);
 						}
 					}
 				}
 			}
 
-			return string.Empty;
+			if (ppi == "<FAILED!>") {
+				// If failed to find PPI for iconum lookup PPI for parent company iconum
+				query = @"SELECT dbo.getppiforiconum(Parent_ID) FROM FilerMst WHERE Iconum = @iconum";
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(query, conn)) {
+						conn.Open();
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							if (sdr.Read()) {
+								ppi = sdr.GetStringSafe(0);
+							}
+						}
+					}
+				}
+
+				if (ppi == "<FAILED!>") {
+					ppi = null;
+				}
+			}
+
+			return ppi;
 		}
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
