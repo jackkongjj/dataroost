@@ -41,7 +41,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		                                        on ts.DocumentID = d.ID
 		                                        and d.ExportFlag = 1 
                                           where stds.SecurityID = @cusip
-																						and ts.TimeSeriesDate < @searchDate) temp
+																						and ts.TimeSeriesDate <= @searchDate) temp
                                         where temp.rank = 1";
 
 			DateTime searchDate = DateTime.Now;
