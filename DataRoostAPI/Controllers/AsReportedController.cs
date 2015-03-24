@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+
+using CCS.Fundamentals.DataRoostAPI.Access;
+using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
+using CCS.Fundamentals.DataRoostAPI.Models.AsReported;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
@@ -12,14 +17,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("documents/{documentId}")]
 		[HttpGet]
-		public string[] GetDocument(string CompanyId, string documentId) {
-			throw new NotImplementedException();
+		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
+			return documentHelper.GetDocument(iconum, documentId);
 		}
 
 		[Route("documents/")]
 		[HttpGet]
-		public string[] GetDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
-			throw new NotImplementedException();
+		public AsReportedDocument[] GetDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
+
+			DateTime startDate = new DateTime(1900, 1, 1);
+			if (startYear != null) {
+				startDate = new DateTime((int)startYear, 1, 1);
+			}
+			DateTime endDate = new DateTime(2100, 12, 31);
+			if (startYear != null) {
+				endDate = new DateTime((int)endYear, 12, 31);
+			}
+
+			return documentHelper.GetDocuments(iconum, startDate, endDate, reportType);
 		}
 	}
 }

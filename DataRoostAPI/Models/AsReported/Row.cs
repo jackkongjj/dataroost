@@ -9,7 +9,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.AsReported {
 	public class Row {
 
 		[JsonProperty("_id")]
-		public string Id { get; set; }
+		public int Id { get; set; }
 
 		[JsonProperty("label")]
 		public string Label { get; set; }

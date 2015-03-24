@@ -9,25 +9,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.AsReported {
 	public class Cell {
 
 		[JsonProperty("_id")]
-		public string Id { get; set; }
+		public int Id { get; set; }
 
 		[JsonProperty("cftId")]
-		public string CftId { get; set; }
+		public int? CftId { get; set; }
 
 		[JsonProperty("columnId")]
-		public string ColumnId { get; set; }
+		public int ColumnId { get; set; }
 
 		[JsonProperty("rowId")]
-		public string RowId { get; set; }
+		public int RowId { get; set; }
 
 		[JsonProperty("value")]
 		public string Value { get; set; }
 
 		[JsonProperty("numericValue")]
-		public decimal NumericValue { get; set; }
+		public decimal? NumericValue { get; set; }
 
 		[JsonProperty("periodLength")]
-		public int PeriodLength { get; set; }
+		public string PeriodLength { get; set; }
 
 		[JsonProperty("periodType")]
 		public string PeriodType { get; set; }
@@ -39,10 +39,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.AsReported {
 		public string Offset { get; set; }
 
 		[JsonProperty("scalingFactor")]
-		public int ScalingFactor { get; set; }
+		public string ScalingFactor { get; set; }
 
 		[JsonProperty("precision")]
-		public int Precision { get; set; }
+		public string Precision { get; set; }
 
 		[JsonProperty("currency")]
 		public string Currency { get; set; }
