@@ -45,9 +45,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Models {
 		[JsonProperty(PropertyName = "reportType")]
 		public string ReportType { get; set; }
 
+		[JsonProperty(PropertyName = "isoCurrency")]
+		public string IsoCurrency { get; set; }
+
+		[JsonProperty(PropertyName = "scalingFactor")]
+		public string ScalingFactor { get; set; }
 
 		[JsonProperty(PropertyName = "values")]
-		public Dictionary<int, TimeseriesValueDTO> Values { get; set; }
+		public Dictionary<string, TimeseriesValueDTO> Values { get; set; }
 
 		[JsonProperty(PropertyName = "perShareValues")]
 		public Dictionary<int, Dictionary<string, TimeseriesValueDTO>> PerShareValues { get; set; }

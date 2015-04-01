@@ -57,4 +57,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
 		[JsonProperty(PropertyName = "rightNode")]
 		public ExpressionNode RightNode { get; set; }
 	}
+
+	public class ExpressionTimeseriesValueDetailVoySDBDTO : ExpressionTimeseriesValueDetailDTO {
+		[JsonProperty(PropertyName = "starItem")]
+		public bool isStar { get; set; }
+	}
 }

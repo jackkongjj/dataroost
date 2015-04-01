@@ -256,7 +256,7 @@ where ts.Id = @tsId
 			return null;
 		}
 
-		private Dictionary<int, TimeseriesValueDTO> _GetTimeseriesSDBValues(SqlConnection conn, int templateMasterId, Guid timeseriesId) {
+		private Dictionary<string, TimeseriesValueDTO> _GetTimeseriesSDBValues(SqlConnection conn, int templateMasterId, Guid timeseriesId) {
 			string preQuery_timeseriesSDBValues = @"
 select 
 	-- Shared
@@ -273,7 +273,7 @@ where tsd.TimeSeriesId = @tsId
 	and sdbti.SDBTemplateMasterID = @templMasterId
 ";
 
-			Dictionary<int, TimeseriesValueDTO> toRet = new Dictionary<int, TimeseriesValueDTO>();
+			Dictionary<string, TimeseriesValueDTO> toRet = new Dictionary<string, TimeseriesValueDTO>();
 
 			using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesSDBValues, conn)) {
 				cmd.Parameters.Add(new SqlParameter("@tsId", SqlDbType.UniqueIdentifier) { Value = timeseriesId });
@@ -284,7 +284,7 @@ where tsd.TimeSeriesId = @tsId
 						TimeseriesValueDTO val = new TimeseriesValueDTO();
 
 						int c = 0;
-						int sdbItem = reader.GetInt32(c++);
+						string sdbItem = reader.GetInt32(c++).ToString();
 						string itemType = reader.GetString(c++).ToUpper();
 
 						if (itemType == "E") { // Expression
@@ -336,7 +336,7 @@ where tsd.TimeSeriesId = @tsId
 			return toRet;
 		}
 
-		private Dictionary<int, TimeseriesValueDTO> _GetTimeseriesSTDValues(SqlConnection conn, string templateMasterId, Guid timeseriesId) {
+		private Dictionary<string, TimeseriesValueDTO> _GetTimeseriesSTDValues(SqlConnection conn, string templateMasterId, Guid timeseriesId) {
 			string preQuery_timeseriesSDBValues = @"
 select 
 	tsd.STDItemId, tsd.STDItemTypeId, tsd.Value, tsd.STDExpressionID,
@@ -347,7 +347,7 @@ where tsd.TimeSeriesId =  @tsId
 	and stdti.STDTemplateMasterCode = @templMasterId
 ";
 
-			Dictionary<int, TimeseriesValueDTO> toRet = new Dictionary<int, TimeseriesValueDTO>();
+			Dictionary<string, TimeseriesValueDTO> toRet = new Dictionary<string, TimeseriesValueDTO>();
 
 			using (SqlCommand cmd = new SqlCommand(preQuery_timeseriesSDBValues, conn)) {
 				cmd.Parameters.Add(new SqlParameter("@tsId", SqlDbType.UniqueIdentifier) { Value = timeseriesId });
@@ -358,7 +358,7 @@ where tsd.TimeSeriesId =  @tsId
 						TimeseriesValueDTO val = new TimeseriesValueDTO();
 
 						int c = 0;
-						int sdbItem = reader.GetInt32(c++);
+						string sdbItem = reader.GetInt32(c++).ToString();
 						string itemType = reader.GetString(c++).ToUpper();
 
 						if (itemType == "E") { // Expression

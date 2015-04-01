@@ -34,17 +34,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
 
 		[JsonProperty(PropertyName = "spanId")]
 		public string SpanId { get; set; }
-
-		public static HTMLOffset Parse(string stringOffset, HTMLOffset htmlOffset) {
-			string regex = @"o(\d+)|";
-			MatchCollection matches = Regex.Matches(stringOffset, regex);
-			int base64Offset = int.Parse(matches[1].ToString());
+		public static HTMLOffset Parse(string stringOffset) {
+			string[] pieces = stringOffset.Split('|');
+			int base64Offset = int.Parse(pieces[0].Remove(0, 1));
 			HTMLOffset offset = new HTMLOffset();
 			offset.Offset = base64Offset;
 			offset.SpanId = GetSpanIdFromHtmlOffset(base64Offset);
-			offset.Length = int.Parse(matches[2].ToString());
+			offset.Length = int.Parse(pieces[1].Remove(0, 1));
 			return offset;
 		}
+		//public static HTMLOffset Parse(string stringOffset) {
+		//	string regex = @"o(\d+)|";
+		//	MatchCollection matches = Regex.Matches(stringOffset, regex);
+		//	int base64Offset = int.Parse(matches[1].ToString());
+		//	HTMLOffset offset = new HTMLOffset();
+		//	offset.Offset = base64Offset;
+		//	offset.SpanId = GetSpanIdFromHtmlOffset(base64Offset);
+		//	offset.Length = int.Parse(matches[2].ToString());
+		//	return offset;
+		//}
 
 		private static string GetSpanIdFromHtmlOffset(int integerOffset) {
 			string base64chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnofqrstuvwxyz+/";

@@ -191,7 +191,7 @@ order by sti.STDItemSequence asc";
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						return reader.Cast<IDataRecord>().Select(r => new TemplateItemDTO()
 						{
-							Id = reader.GetInt32(0),
+							Id = reader.GetInt32(0).ToString(),
 							Code = reader.GetString(1),
 							Description = reader.GetString(2),
 							StatementTypeId = reader.GetString(3),

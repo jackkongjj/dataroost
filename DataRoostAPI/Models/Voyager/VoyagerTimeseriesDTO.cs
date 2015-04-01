@@ -8,7 +8,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.Voyager {
 	public class VoyagerTimeseriesDTO : TimeseriesDTO {
 
 		[JsonProperty(PropertyName = "dcn")]
-		public Guid DCN { get; set; }
+		public string DCN { get; set; }
 
 	}
 }

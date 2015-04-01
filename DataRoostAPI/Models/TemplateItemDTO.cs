@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace CCS.Fundamentals.DataRoostAPI.Models {
 	public class TemplateItemDTO {
 		[JsonProperty(PropertyName = "_id")]
-		public int Id { get; set; }
+		public string Id { get; set; }
 
 		[JsonProperty(PropertyName = "code")]
 		public string Code { get; set; }

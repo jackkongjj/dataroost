@@ -18,13 +18,37 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("datatypes/")]
 		[HttpGet]
 		public string[] GetDataTypes(string CompanyId) {
-			return new string[] { StandardizationType.STD.ToString() };
+			return new string[] { StandardizationType.STD.ToString(), StandardizationType.SDB.ToString() };
 		}
 
-		[Route("datatypes/std/templates/")]
+		[Route("datatypes/sdb/templates/")]
 		[HttpGet]
 		public TemplateDTO[] QuerySDBTemplates(string CompanyId) {
-			throw new NotImplementedException();
+			return GetTemplates(CompanyId, null, StandardizationType.SDB);
+		}
+
+		[Route("datatypes/sdb/templates/{TemplateId}")]
+		[HttpGet]
+		public TemplateDTO[] GetSDBTemplates(string CompanyId, string TemplateId) {
+			return GetTemplates(CompanyId, TemplateId, StandardizationType.SDB);
+		}
+
+		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/")]
+		[HttpGet]
+		public VoyagerTimeseriesDTO[] QuerySDBTemplatesTimeseries(string CompanyId, string TemplateId) {
+			return GetTimeseries(CompanyId, TemplateId, StandardizationType.SDB);
+		}
+
+		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/{TimeseriesId}")]
+		[HttpGet]
+		public VoyagerTimeseriesDTO[] GetSDBTemplatesTimeseries(string CompanyId, string TemplateId, string TimeseriesId) {
+			return GetTimeseries(CompanyId, TemplateId, TimeseriesId, StandardizationType.SDB);
+		}
+
+		[Route("datatypes/sdb/templates/{TemplateId}/timeseries/")]
+		[HttpGet]
+		public VoyagerTimeseriesDTO[] GetSDBTemplatesTimeseries(string CompanyId, string TemplateId, int startYear, int endYear) {
+			return GetTimeseries(CompanyId, TemplateId, startYear, endYear, StandardizationType.SDB);
 		}
 
 		[Route("datatypes/std/templates/")]
@@ -42,19 +66,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/")]
 		[HttpGet]
 		public VoyagerTimeseriesDTO[] QuerySTDTemplatesTimeseries(string CompanyId, string TemplateId) {
-			return GetTimeseries(CompanyId, TemplateId);
+			return GetTimeseries(CompanyId, TemplateId, StandardizationType.STD);
 		}
 
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/{TimeseriesId}")]
 		[HttpGet]
 		public VoyagerTimeseriesDTO[] GetSTDTemplatesTimeseries(string CompanyId, string TemplateId, string TimeseriesId) {
-			return GetTimeseries(CompanyId, TemplateId, TimeseriesId);
+			return GetTimeseries(CompanyId, TemplateId, TimeseriesId, StandardizationType.STD);
 		}
 
 		[Route("datatypes/std/templates/{TemplateId}/timeseries/")]
 		[HttpGet]
 		public VoyagerTimeseriesDTO[] GetSTDTemplatesTimeseries(string CompanyId, string TemplateId, int startYear, int endYear) {
-			return GetTimeseries(CompanyId, TemplateId, startYear, endYear);
+			return GetTimeseries(CompanyId, TemplateId, startYear, endYear, StandardizationType.STD);
 		}
 
 		private TemplateDTO[] GetTemplates(string companyId, string templateId, StandardizationType dataTypes) {
@@ -67,7 +91,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return tsh.GetTemplates(templateId);
 		}
 
-		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, string timeseriesId) {
+		private VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, string timeseriesId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
@@ -79,10 +103,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				tsId = new TimeseriesIdentifier(timeseriesId);
 
 			TimeseriesHelper tsh = new TimeseriesHelper(connString);
-			return tsh.QuerySTDTimeseries(iconum, templId, tsId);
+			return StandardizationType.STD == dataTypes ? tsh.QuerySTDTimeseries(iconum, templId, tsId) : tsh.QuerySDBTimeseries(iconum, templId, tsId);
 		}
 
-		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, int startYear, int endYear) {
+		private VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, int startYear, int endYear, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
@@ -90,10 +114,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
 			TimeseriesHelper tsh = new TimeseriesHelper(connString);
-			return tsh.QuerySTDTimeseries(iconum, templId, startYear, endYear);
+			return StandardizationType.STD == dataTypes ? tsh.QuerySTDTimeseries(iconum, templId, startYear, endYear) : tsh.QuerySDBTimeseries(iconum, templId, startYear, endYear);
 		}
 
-		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId) {
+		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
@@ -101,7 +125,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
 			TimeseriesHelper tsh = new TimeseriesHelper(connString);
-			return tsh.QuerySTDTimeseries(iconum, templId);
+			return StandardizationType.STD == dataTypes ? tsh.QuerySTDTimeseries(iconum, templId) : tsh.QuerySDBTimeseries(iconum, templId);
 		}
 	}
 }
