@@ -154,6 +154,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SolutionAssemblyInfo.cs">
+      <Link>Properties\SolutionAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />
     <Compile Include="Access\PermId.cs" />
