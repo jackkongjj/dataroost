@@ -193,9 +193,11 @@
     <Compile Include="Controllers\AsReportedController.cs" />
     <Compile Include="Controllers\CompanyController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\InfoController.cs" />
     <Compile Include="Controllers\SharesController.cs" />
     <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
+    <Compile Include="Filters\ExceptionHandlerFilter.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
