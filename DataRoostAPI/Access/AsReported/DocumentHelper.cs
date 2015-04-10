@@ -58,7 +58,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																				AND d.ExportFlag = 1
 																				AND d.ReportTypeID = @reportType
 																				AND d.DocumentDate >= @startDate
-																				AND d.DocumentDate <= @endDate";
+																				AND d.DocumentDate <= @endDate
+																			ORDER BY d.DocumentDate DESC";
 			string queryWithoutReportType =
 				@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
 																			FROM DocumentSeries s
@@ -66,7 +67,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																			WHERE s.CompanyID = @iconum
 																				AND d.ExportFlag = 1
 																				AND d.DocumentDate >= @startDate
-																				AND d.DocumentDate <= @endDate";
+																				AND d.DocumentDate <= @endDate
+																			ORDER BY d.DocumentDate DESC";
 			string query = null;
 			if (reportType == null) {
 				query = queryWithoutReportType;
@@ -157,11 +159,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		}
 
 		private List<Cell> GetTableCells(AsReportedTable table) {
-			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode, dt.Description
+			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode, dt.Description, cft.Description
 													FROM TableDimension d 
 														JOIN DimensionType dt ON dt.ID = d.DimensionTypeID
 														JOIN DimensionToCell dtc ON dtc.TableDimensionID = d.ID
 														JOIN TableCell c ON c.ID = dtc.TableCellID
+														JOIN CompanyFinancialTerm cft ON cft.ID = c.CompanyFinancialTermID
 													WHERE d.DocumentTableID = @tableId";
 
 			Dictionary<int, Cell> cells = new Dictionary<int, Cell>();
@@ -185,6 +188,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								string offset = reader.GetStringSafe(8);
 								string scalingFactor = reader.GetStringSafe(9);
 								string currencyCode = reader.GetStringSafe(10);
+								string companyFinancialTermDescription = reader.GetStringSafe(11);
 								cell = new Cell
 								            {
 									            Id = cellId,
@@ -197,6 +201,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 									            PeriodType = periodType,
 									            Offset = offset,
 									            ScalingFactor = scalingFactor,
+															CompanyFinancialTermDescription = companyFinancialTermDescription,
 								            };
 								cells.Add(cellId, cell);
 							}

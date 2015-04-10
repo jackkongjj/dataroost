@@ -44,5 +44,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			return documentHelper.GetDocuments(iconum, startDate, endDate, reportType);
 		}
+
+		[Route("companyFinancialTerms/")]
+		[HttpGet]
+		public CompanyFinancialTerm[] GetCompanyFinancialTerms(string CompanyId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			CompanyFinancialTermsHelper companyFinancialTermsHelper = new CompanyFinancialTermsHelper(sfConnectionString);
+			return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
+		}
 	}
 }

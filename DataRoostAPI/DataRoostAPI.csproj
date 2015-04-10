@@ -157,6 +157,7 @@
     <Compile Include="..\SolutionAssemblyInfo.cs">
       <Link>Properties\SolutionAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Access\AsReported\CompanyFinancialTermsHelper.cs" />
     <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />
     <Compile Include="Access\PermId.cs" />
@@ -205,6 +206,7 @@
     <Compile Include="Models\AsReported\AsReportedTable.cs" />
     <Compile Include="Models\AsReported\Cell.cs" />
     <Compile Include="Models\AsReported\Column.cs" />
+    <Compile Include="Models\AsReported\CompanyFinancialTerm.cs" />
     <Compile Include="Models\AsReported\Row.cs" />
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\CountryDTO.cs" />

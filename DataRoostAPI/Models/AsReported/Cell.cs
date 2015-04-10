@@ -14,6 +14,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Models.AsReported {
 		[JsonProperty("cftId")]
 		public int? CftId { get; set; }
 
+		[JsonProperty("companyFinancialTermDescription")]
+		public string CompanyFinancialTermDescription { get; set; }
+
 		[JsonProperty("columnId")]
 		public int ColumnId { get; set; }
 
