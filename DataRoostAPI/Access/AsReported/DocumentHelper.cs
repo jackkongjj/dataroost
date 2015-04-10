@@ -188,7 +188,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								string offset = reader.GetStringSafe(8);
 								string scalingFactor = reader.GetStringSafe(9);
 								string currencyCode = reader.GetStringSafe(10);
-								string companyFinancialTermDescription = reader.GetStringSafe(11);
+								string companyFinancialTermDescription = reader.GetStringSafe(12);
 								cell = new Cell
 								            {
 									            Id = cellId,
