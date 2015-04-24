@@ -13,7 +13,6 @@ using CCS.Fundamentals.DataRoostAPI.Access.Company;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
-	[EnableCors("*", "*", "*")]
 	[RoutePrefix("api/v1/companies/{CompanyId}/shares")]
 	public class SharesController : ApiController {
 

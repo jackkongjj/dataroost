@@ -30,6 +30,7 @@ namespace DataRoost {
 			JsonMediaTypeFormatter jsonFormatter = new JsonMediaTypeFormatter();
 			var enumConverter = new Newtonsoft.Json.Converters.StringEnumConverter();
 			jsonFormatter.SerializerSettings.Converters.Add(enumConverter);
+			jsonFormatter.Indent = true;
 			config.Formatters.Add(jsonFormatter);
 
 			config.Filters.Add(new ExceptionHandlerFilter());
