@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http.Formatting;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 using CCS.Fundamentals.DataRoostAPI.Filters;
 
@@ -23,6 +24,7 @@ namespace DataRoost {
 			app.UseCors(CorsOptions.AllowAll);
 
 			HttpConfiguration config = new HttpConfiguration();
+			config.EnableCors(new EnableCorsAttribute("*", "*", "*"));
 
 			config.Formatters.Clear();
 			JsonMediaTypeFormatter jsonFormatter = new JsonMediaTypeFormatter();
