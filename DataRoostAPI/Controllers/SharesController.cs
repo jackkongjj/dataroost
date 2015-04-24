@@ -5,12 +5,15 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Configuration;
+using System.Web.Http.Cors;
+
 using CCS.Fundamentals.DataRoostAPI.Models;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
+	[EnableCors("*", "*", "*")]
 	[RoutePrefix("api/v1/companies/{CompanyId}/shares")]
 	public class SharesController : ApiController {
 

@@ -24,7 +24,7 @@ namespace DataRoost {
 			app.UseCors(CorsOptions.AllowAll);
 
 			HttpConfiguration config = new HttpConfiguration();
-			config.EnableCors(new EnableCorsAttribute("*", "*", "*"));
+			//config.EnableCors(new EnableCorsAttribute("*", "*", "*"));
 
 			config.Formatters.Clear();
 			JsonMediaTypeFormatter jsonFormatter = new JsonMediaTypeFormatter();
