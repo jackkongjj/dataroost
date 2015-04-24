@@ -26,11 +26,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			return new CompanyDTO[] { helper.GetCompany(iconum) };
+		}
+
+		[Route("companies/{CompanyId}/collectioneffort/")]
+		[HttpGet]
+		public EffortDTO GetCompanyCollectionEffort(string CompanyId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+			return helper.GetCompanyEffort(iconum);
 		}
 
 		[Route("companies/{CompanyId}/efforts/")]

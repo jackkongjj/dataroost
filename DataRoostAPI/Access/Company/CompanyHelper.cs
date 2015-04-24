@@ -15,11 +15,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		private readonly string _sfConnectionString;
 		private readonly string _voyConnectionString;
 		private readonly string _lionConnectionString;
+		private readonly string _damConnectionString;
 
-		public CompanyHelper(string sfConnectionString, string voyConnectionString, string lionConnectionString) {
+		public CompanyHelper(string sfConnectionString, string voyConnectionString, string lionConnectionString, string damConnectionString) {
 			_sfConnectionString = sfConnectionString;
 			_voyConnectionString = voyConnectionString;
 			_lionConnectionString = lionConnectionString;
+			_damConnectionString = damConnectionString;
 		}
 
 		public CompanyDTO GetCompany(int iconum) {
@@ -134,7 +136,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	                            WHERE s.Iconum = @iconum
                                     --AND RIGHT(p.PPI, 1) != '0'
                                     AND s.term_date IS NULL
-                                    AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
+                                    --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
 
 			List<ShareClassDTO> shareClasses = new List<ShareClassDTO>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -184,7 +186,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum, reportDate);
 			foreach (ShareClassDTO shareClass in shareClasses) {
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-				if (voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+				if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
 					securityItemList = voyagerSecurityItems[shareClass.PPI];
 				}
 				List<ShareClassDataItem> superfastItems = superfastShares.GetLatestFPEShareData(shareClass.Cusip, reportDate);
@@ -219,6 +221,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return shareClassDataList;
+		}
+
+
+		public EffortDTO GetCompanyEffort(int iconum) {
+			string query = @"select 'x'
+												from dbo.CompanyLists cl (nolock)
+													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
+												where cl.ShortName = 'SF_NewMarketWhiteList'
+													AND iconum = @iconum
+											 union
+											 select 'x'
+												from dbo.filermst
+												where iconum = @iconum
+													AND iso_country IN ('US', 'ZW')";
+
+			using (SqlConnection conn = new SqlConnection(_damConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							EffortDTO superfastEffort = new EffortDTO();
+							superfastEffort.Name = "superfast";
+							return superfastEffort;
+						}
+					}
+				}
+			}
+			EffortDTO voyagerEffort = new EffortDTO();
+			voyagerEffort.Name = "voyager";
+			return voyagerEffort;
 		}
 	}
 }
