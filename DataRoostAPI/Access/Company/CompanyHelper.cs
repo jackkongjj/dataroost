@@ -213,7 +213,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 				if (superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
 					securityItemList = superfastSecurityItems[shareClass.Cusip];
-				} else if (voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+				} else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
 					securityItemList = voyagerSecurityItems[shareClass.PPI];
 				}
 				ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
