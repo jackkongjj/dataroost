@@ -5,7 +5,7 @@ using System.Web;
 
 using Newtonsoft.Json;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models.AsReported {
+namespace DataRoostAPI.Common.Models.AsReported {
 	public class CompanyFinancialTerm {
 
 		[JsonProperty("_id")]

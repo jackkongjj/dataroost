@@ -5,10 +5,10 @@ using System.Web;
 using System.Data;
 using System.Data.SqlClient;
 using FactSet.Data.SqlClient;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
+
+using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	public class CompanyHelper {

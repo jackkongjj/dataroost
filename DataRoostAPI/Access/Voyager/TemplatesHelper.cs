@@ -4,9 +4,11 @@ using System.Linq;
 using System.Web;
 using System.Data;
 using System.Data.SqlClient;
+
+using DataRoostAPI.Common.Models;
+using DataRoostAPI.Common.Models.Voyager;
+
 using Oracle.ManagedDataAccess.Client;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.Voyager;
 using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {

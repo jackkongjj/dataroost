@@ -5,9 +5,10 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Configuration;
-using CCS.Fundamentals.DataRoostAPI.Models;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
+
+using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 

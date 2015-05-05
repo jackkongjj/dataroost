@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Web;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.SuperFast;
+
+using DataRoostAPI.Common.Models.SuperFast;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	public class TimeseriesIdentifier : IdentifierBase {

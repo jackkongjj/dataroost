@@ -236,29 +236,6 @@
     <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
     <Compile Include="Filters\ExceptionHandlerFilter.cs" />
-    <Compile Include="Models\AsReported\AsReportedDocument.cs" />
-    <Compile Include="Models\AsReported\AsReportedTable.cs" />
-    <Compile Include="Models\AsReported\Cell.cs" />
-    <Compile Include="Models\AsReported\Column.cs" />
-    <Compile Include="Models\AsReported\CompanyFinancialTerm.cs" />
-    <Compile Include="Models\AsReported\Row.cs" />
-    <Compile Include="Models\CompanyDTO.cs" />
-    <Compile Include="Models\CountryDTO.cs" />
-    <Compile Include="Models\EffortDTO.cs" />
-    <Compile Include="Models\ShareClassDataDTO.cs" />
-    <Compile Include="Models\ShareClassDTO.cs" />
-    <Compile Include="Models\StandardizationType.cs" />
-    <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />
-    <Compile Include="Models\SuperFast\SFTemplateDTO.cs" />
-    <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
-    <Compile Include="Models\TemplateDTO.cs" />
-    <Compile Include="Models\TemplateItemDTO.cs" />
-    <Compile Include="Models\TimeseriesDTO.cs" />
-    <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
-    <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
-    <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
-    <Compile Include="Models\Voyager\VoyagerTemplateDTO.cs" />
-    <Compile Include="Models\Voyager\VoyagerTimeseriesDTO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />
   </ItemGroup>
@@ -388,9 +365,16 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DataRoostAPI.Common\DataRoostAPI.Common.csproj">
+      <Project>{252b98af-b404-46ac-8e5f-523322166d1b}</Project>
+      <Name>DataRoostAPI.Common</Name>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

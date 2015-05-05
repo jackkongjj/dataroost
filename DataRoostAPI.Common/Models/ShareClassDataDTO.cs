@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
-using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models {
+namespace DataRoostAPI.Common.Models {
 
 	public class ShareClassDataDTO : ShareClassDTO {
 

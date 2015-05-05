@@ -4,7 +4,7 @@ using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models.Voyager {
+namespace DataRoostAPI.Common.Models.Voyager {
 	public class VoyagerTimeseriesDTO : TimeseriesDTO {
 
 		[JsonProperty(PropertyName = "dcn")]

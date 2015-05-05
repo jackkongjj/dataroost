@@ -4,7 +4,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 
-using CCS.Fundamentals.DataRoostAPI.Models.AsReported;
+using DataRoostAPI.Common.Models.AsReported;
 
 using FactSet.Data.SqlClient;
 

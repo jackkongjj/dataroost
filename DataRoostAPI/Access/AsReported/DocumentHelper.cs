@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Data.SqlClient;
+
+using DataRoostAPI.Common.Models.AsReported;
+
 using FactSet.Data.SqlClient;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.AsReported;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 

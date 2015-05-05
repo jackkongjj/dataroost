@@ -8,7 +8,8 @@ using System.Web.Http;
 
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
-using CCS.Fundamentals.DataRoostAPI.Models.AsReported;
+
+using DataRoostAPI.Common.Models.AsReported;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 

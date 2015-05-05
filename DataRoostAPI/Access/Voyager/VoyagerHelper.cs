@@ -5,9 +5,6 @@ using System.Web;
 using System.Data;
 using System.Data.SqlClient;
 using Oracle.ManagedDataAccess.Client;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.Voyager;
-using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
 using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {

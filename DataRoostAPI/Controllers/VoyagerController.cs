@@ -7,8 +7,9 @@ using System.Net.Http;
 using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.Voyager;
+
+using DataRoostAPI.Common.Models;
+using DataRoostAPI.Common.Models.Voyager;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 

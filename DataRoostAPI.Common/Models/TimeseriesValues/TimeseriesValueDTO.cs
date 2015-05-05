@@ -4,7 +4,7 @@ using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
+namespace DataRoostAPI.Common.Models.TimeseriesValues {
 	public class TimeseriesValueDTO {
 		[JsonProperty(PropertyName = "contents")]
 		public string Contents { get; set; }

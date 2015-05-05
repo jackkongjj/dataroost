@@ -4,7 +4,7 @@ using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models {
+namespace DataRoostAPI.Common.Models {
 	public class TemplateDTO {
 		[JsonProperty(PropertyName = "_id")]
 		public string Id { get; set; }

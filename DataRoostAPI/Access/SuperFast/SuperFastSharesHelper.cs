@@ -4,9 +4,9 @@ using System.Linq;
 using System.Web;
 using System.Data;
 using System.Data.SqlClient;
-using CCS.Fundamentals.DataRoostAPI.Models;
-using CCS.Fundamentals.DataRoostAPI.Models.SuperFast;
-using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
+
+using DataRoostAPI.Common.Models;
+
 using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues {
+namespace DataRoostAPI.Common.Models.TimeseriesValues {
 	public abstract class FLYTOffset {
 		[JsonProperty(PropertyName = "type")]
 		public abstract string Type { get; }

@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using CCS.Fundamentals.DataRoostAPI.Models.TimeseriesValues;
+
+using DataRoostAPI.Common.Models.TimeseriesValues;
+
 using Newtonsoft.Json;
 
-namespace CCS.Fundamentals.DataRoostAPI.Models.SuperFast {
+namespace DataRoostAPI.Common.Models.SuperFast {
 	public class SFCellExpressionNode : CellExpressionNode {
 		[JsonProperty(PropertyName = "tableCellId")]
 		public int TableCellId { get; set; }
