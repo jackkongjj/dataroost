@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>DataRoostAPI</id>
+    <version></version>
+    <title>Data Roost API</title>
+    <authors>FF Collection Engineering</authors>
+    <owners>FF Collection Engineering</owners>
+    <projectUrl>https://gitlab.factset.com/ccs-fundamentals/dataroost</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Wrapper around Data Roost API</description>
+    <releaseNotes>https://gitlab.factset.com/ccs-fundamentals/dataroost/wikis/home</releaseNotes>
+    <copyright>FactSet</copyright>
+    <tags></tags>
+  </metadata>
+</package>
