@@ -58,8 +58,12 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FFDotNetHelpers">
+      <HintPath>..\packages\FFDotNetHelpers.1.0.5.10\lib\net45\FFDotNetHelpers.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\FFDotNetHelpers.1.0.5.10\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -73,7 +77,13 @@
     <Compile Include="..\SolutionAssemblyInfo.cs">
       <Link>Properties\SolutionAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Access\ApiHelper.cs" />
+    <Compile Include="Access\AsReportedDataAccess.cs" />
+    <Compile Include="Access\CompanyDataAccess.cs" />
+    <Compile Include="Access\DataRoostAccessFactory.cs" />
+    <Compile Include="Access\StandardizedDataAccess.cs" />
+    <Compile Include="Interfaces\IAsReportedDataAccess.cs" />
+    <Compile Include="Interfaces\ICompanyDataAccess.cs" />
+    <Compile Include="Interfaces\IStandardizedDataAccess.cs" />
     <Compile Include="Models\AsReported\AsReportedDocument.cs" />
     <Compile Include="Models\AsReported\AsReportedTable.cs" />
     <Compile Include="Models\AsReported\Cell.cs" />
@@ -99,9 +109,7 @@
     <Compile Include="Models\Voyager\VoyagerTimeseriesDTO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Interfaces\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>

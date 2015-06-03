@@ -39,8 +39,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								                              PublicationDate = reader.GetDateTime(1),
 								                              ReportType = reader.GetStringSafe(2),
 								                              FormType = reader.GetStringSafe(3),
-								                              Id = reader.GetStringSafe(4),
-								                              SuperFastDocumentId = reader.GetStringSafe(5),
+																							Id = reader.GetGuid(4).ToString(),
+								                              SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							                              };
 							return document;
 						}
