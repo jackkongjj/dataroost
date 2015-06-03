@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>DataRoostAPI</id>
-    <version></version>
+    <version>$version$</version>
     <title>Data Roost API</title>
     <authors>FF Collection Engineering</authors>
     <owners>FF Collection Engineering</owners>
@@ -13,4 +13,7 @@
     <copyright>FactSet</copyright>
     <tags></tags>
   </metadata>
+  <files>
+    <file src="bin\$configuration$\**.*" target="lib\net45\" />
+  </files>
 </package>
