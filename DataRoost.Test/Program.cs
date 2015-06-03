@@ -18,6 +18,8 @@ namespace DataRoost.Test {
 			CompanyDTO company = companyDataAccess.GetCompany(iconum);
 			EffortDTO effort = companyDataAccess.GetCompanyCollectionEffort(iconum);
 			EffortDTO[] efforts = companyDataAccess.GetEfforts(iconum);
+			ShareClassDataDTO[] latestFPESharesData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(iconum);
+			ShareClassDataDTO[] currentSharesData = companyDataAccess.GetCurrentShareData(iconum);
 
 			IAsReportedDataAccess asReportedDataAccess = DataRoostAccessFactory.GetAsReportedDataAccess(connectionString);
 			AsReportedDocument[] documents = asReportedDataAccess.GetDocuments(iconum, 2013, 2014);

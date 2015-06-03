@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net;
 using System.Text;
 
@@ -33,6 +34,17 @@ namespace DataRoostAPI.Common.Access {
 			string requestUrl = string.Format("{0}/efforts", GetRootUrl(companyId));
 			return ExecuteGetQuery<EffortDTO[]>(requestUrl);
 		}
+
+		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null) {
+			string requestUrl = string.Format("{0}/shares/latestFiscalPeriodEnd", GetRootUrl(companyId));
+			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
+		}
+
+		public ShareClassDataDTO[] GetCurrentShareData(string companyId) {
+			string requestUrl = string.Format("{0}/shares/currentShares", GetRootUrl(companyId));
+			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
+		}
+
 
 		protected override WebClient GetDefaultWebClient() {
 			WebClient defaultClient = new WebClient();

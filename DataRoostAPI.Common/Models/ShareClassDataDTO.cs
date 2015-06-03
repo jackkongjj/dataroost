@@ -8,6 +8,9 @@ namespace DataRoostAPI.Common.Models {
 
 	public class ShareClassDataDTO : ShareClassDTO {
 
+		public ShareClassDataDTO() {
+		}
+
 		public ShareClassDataDTO(ShareClassDTO shareClass, List<ShareClassDataItem> shareClassData) {
 			base.Id = shareClass.Id;
 			base.PermId = shareClass.PermId;
