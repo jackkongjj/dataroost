@@ -24,5 +24,9 @@ namespace DataRoostAPI.Common.Access {
 		public static ICompanyDataAccess GetCompanyDataAccess(string connectionString) {
 			return new CompanyDataAccess(connectionString);
 		}
+
+		public static IExportedItemsDataAccess GetExportedItemsDataAccess(string connectionString) {
+			return new ExportedItemsDataAccess(connectionString);
+		}
 	}
 }

@@ -44,6 +44,10 @@
     <Reference Include="FactSet.Data.SqlClient">
       <HintPath>..\packages\CommonLib.Data.SqlClient.1.0.0.0\lib\net45\FactSet.Data.SqlClient.dll</HintPath>
     </Reference>
+    <Reference Include="FFDotNetHelpers, Version=1.0.5.10, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\FFDotNetHelpers.1.0.5.10\lib\net45\FFDotNetHelpers.dll</HintPath>
+    </Reference>
     <Reference Include="log4net">
       <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
     </Reference>
@@ -70,7 +74,7 @@
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Oracle.ManagedDataAccess">
       <HintPath>..\packages\odp.net.managed.121.1.2\lib\net40\Oracle.ManagedDataAccess.dll</HintPath>
@@ -199,11 +203,13 @@
     <Compile Include="Access\Company\CompanyHelper.cs" />
     <Compile Include="Access\PermId.cs" />
     <Compile Include="Access\IdentifierBase.cs" />
+    <Compile Include="Access\SuperFast\ExportedItemsHelper.cs" />
     <Compile Include="Access\SuperFast\SuperFastSharesHelper.cs" />
     <Compile Include="Access\SuperFast\TemplatesHelper.cs" />
     <Compile Include="Access\SuperFast\TemplateIdentifier.cs" />
     <Compile Include="Access\SuperFast\TimeseriesHelper.cs" />
     <Compile Include="Access\SuperFast\TimeseriesIdentifier.cs" />
+    <Compile Include="Access\Voyager\ExportedItemsHelper.cs" />
     <Compile Include="Access\Voyager\TemplateIdentifier.cs" />
     <Compile Include="Access\Voyager\TemplatesHelper.cs" />
     <Compile Include="Access\Voyager\TimeseriesHelper.cs" />
@@ -230,6 +236,7 @@
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
     <Compile Include="Controllers\AsReportedController.cs" />
     <Compile Include="Controllers\CompanyController.cs" />
+    <Compile Include="Controllers\ExportedItemsController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\InfoController.cs" />
     <Compile Include="Controllers\SharesController.cs" />

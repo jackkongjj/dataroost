@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -44,7 +45,6 @@ namespace DataRoostAPI.Common.Access {
 			string requestUrl = string.Format("{0}/shares/currentShares", GetRootUrl(companyId));
 			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
 		}
-
 
 		protected override WebClient GetDefaultWebClient() {
 			WebClient defaultClient = new WebClient();
