@@ -36,7 +36,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public string PeriodType { get; set; }
 
 		[JsonProperty("date")]
-		public DateTime Date { get; set; }
+		public DateTime? Date { get; set; }
 
 		[JsonProperty("offset")]
 		public string Offset { get; set; }

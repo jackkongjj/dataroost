@@ -181,10 +181,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							Cell cell;
 							if (!cells.ContainsKey(cellId)) {
 								int? cftId = reader.GetNullable<int>(2);
-								DateTime cellDate = reader.GetDateTime(3);
+								DateTime? cellDate = reader.GetNullable<DateTime>(3);
 								string value = reader.GetStringSafe(4);
 								decimal? numericValue = reader.GetNullable<decimal>(5);
-								string periodLength = reader.GetInt32(6).ToString();
+								int? periodLengthInt = reader.GetNullable<int>(6);
+								string periodLength = null;
+								if (periodLengthInt != null) {
+									periodLength = periodLengthInt.ToString();
+								}
 								string periodType = reader.GetStringSafe(7);
 								string offset = reader.GetStringSafe(8);
 								string scalingFactor = reader.GetStringSafe(9);
