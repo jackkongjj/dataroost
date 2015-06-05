@@ -39,8 +39,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																			join SDBItem s (nolock)
 																					on sdbs.SdbItemId = s.id
 																			join fnc_SplitString(@itemCodes, ',') as fnc
-																					on s.SDBCode = fnc.token        
-																	where EndTimeStamp between @StartTime and @EndTime
+																					on s.SDBCode = CASE WHEN @itemCodes = '' THEN s.SDBCode ELSE fnc.token END
+																	where EndTimeStamp between @startDate and @endDate
+																	order by s.Id, d.id, ts.TimeSeriesDate desc
+																	union
+																	select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+																	from Document d (nolock)
+																			join DocumentSeries ds (nolock)
+																					on d.DocumentSeriesID = ds.ID
+																			join ExportedDocumentLog edl (nolock)
+																					on edl.DocumentID = d.DAMDocumentId
+																					and edl.CompanyID = ds.CompanyID
+																			join TimeSeries ts 
+																					on d.Id = ts.DocumentId
+																					and ts.EncoreFlag = 0
+																					and ts.AutoCalcFlag = 0
+																			join vw_sdbtimeseriesdetail sdbs (nolock)
+																					on ts.ID = sdbs.TimeSeriesID
+																			join SDBItem s (nolock)
+																					on sdbs.SdbItemId = s.id
+																			join fnc_SplitString(@itemCodes, ',') as fnc
+																					on s.SDBCode = CASE WHEN @itemCodes = '' THEN s.SDBCode ELSE fnc.token END
+																	where EndTimeStamp between @startDate and @endDate
 																	order by s.Id, d.id, ts.TimeSeriesDate desc";
 
 			const string stdQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
@@ -57,17 +77,39 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																			join STDTimeSeriesDetailSecurity stds (nolock)
 																					on ts.ID = stds.TimeSeriesID
 																			join STDItem s (nolock)
-																					on stds.STDItemId = s.id     
+																					on stds.STDItemId = s.id
 																			join fnc_SplitString(@itemCodes, ',') as fnc
-																					on s.STDCode = fnc.token        
+																					on s.STDCode = fnc.token
 																	where EndTimeStamp between @startDate and @endDate
-																	order by ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime";
+																union
+																select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+																	from Document d (nolock)
+																			join DocumentSeries ds (nolock)
+																					on d.DocumentSeriesID = ds.ID
+																			join ExportedDocumentLog edl (nolock)
+																					on edl.DocumentID = d.DAMDocumentId
+																					and edl.CompanyID = ds.CompanyID
+																			join TimeSeries ts 
+																					on d.Id = ts.DocumentId
+																					and ts.EncoreFlag = 0
+																					and ts.AutoCalcFlag = 0
+																			join vw_stdtimeseriesdetail stds (nolock)
+																					on ts.ID = stds.TimeSeriesID
+																			join STDItem s (nolock)
+																					on stds.STDItemId = s.id
+																			join fnc_SplitString(@itemCodes, ',') as fnc
+																					on s.STDCode = fnc.token
+																	where EndTimeStamp between @startDate and @endDate
+																order by ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime";
 			string query = stdQuery;
 			if (standardizationType == StandardizationType.SDB) {
 				query = sdbQuery;
 			}
 
-			string itemCodeString = string.Join(",", itemCodes);
+			string itemCodeString = string.Empty;
+			if (itemCodes != null) {
+				itemCodeString = string.Join(",", itemCodes);
+			}
 
 			return
 				ExecuteQuery(query,
@@ -87,6 +129,69 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																DocumentId = reader.GetGuid(4).ToString()
 					                    };
 				             }).ToArray();
+		}
+
+		public ExportedItem[] GetAllExportedShareItems(StandardizationType standardizationType,
+																			 DateTime startDate,
+																			 DateTime endDate) {
+			const string sdbQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+																	from Document d (nolock)
+																			join DocumentSeries ds (nolock)
+																					on d.DocumentSeriesID = ds.ID
+																			join ExportedDocumentLog edl (nolock)
+																					on edl.DocumentID = d.DAMDocumentId
+																					and edl.CompanyID = ds.CompanyID
+																			join TimeSeries ts 
+																					on d.Id = ts.DocumentId
+																					and ts.EncoreFlag = 0
+																					and ts.AutoCalcFlag = 0
+																			join SDBTimeSeriesDetailSecurity sdbs (nolock)
+																					on ts.ID = sdbs.TimeSeriesID
+																			join SDBItem s (nolock)
+																					on sdbs.SdbItemId = s.id
+																	where EndTimeStamp between @startDate and @endDate
+																	order by s.Id, d.id, ts.TimeSeriesDate desc";
+
+			const string stdQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+																	from Document d (nolock)
+																			join DocumentSeries ds (nolock)
+																					on d.DocumentSeriesID = ds.ID
+																			join ExportedDocumentLog edl (nolock)
+																					on edl.DocumentID = d.DAMDocumentId
+																					and edl.CompanyID = ds.CompanyID
+																			join TimeSeries ts 
+																					on d.Id = ts.DocumentId
+																					and ts.EncoreFlag = 0
+																					and ts.AutoCalcFlag = 0
+																			join STDTimeSeriesDetailSecurity stds (nolock)
+																					on ts.ID = stds.TimeSeriesID
+																			join STDItem s (nolock)
+																					on stds.STDItemId = s.id
+																	where EndTimeStamp between @startDate and @endDate
+																	order by ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime";
+			string query = stdQuery;
+			if (standardizationType == StandardizationType.SDB) {
+				query = sdbQuery;
+			}
+
+			return
+				ExecuteQuery(query,
+										 new List<SqlParameter>
+				             {
+					             new SqlParameter("@startDate", startDate),
+					             new SqlParameter("@endDate", endDate),
+				             },
+										 reader =>
+										 {
+											 return new ExportedItem
+											 {
+												 Iconum = reader.GetInt32(0).ToString(),
+												 ReportDate = reader.GetDateTime(1),
+												 FormType = reader.GetStringSafe(2),
+												 PublicationDate = reader.GetDateTime(3),
+												 DocumentId = reader.GetGuid(4).ToString()
+											 };
+										 }).ToArray();
 		}
 
 		protected override SqlConnection GetDatabaseConnection() {

@@ -20,10 +20,13 @@ namespace DataRoostAPI.Common.Access {
 		}
 
 		public ExportedItem[] GetExportedItems(StandardizationType standardizationType,
-																			 List<string> itemCodes,
 																			 DateTime startDate,
+																			 List<string> itemCodes = null,
 																			 DateTime? endDate = null) {
-			string requestUrl = string.Format("{0}/api/v1/exportedItems/{1}?itemCodes={2}&startDate={3}", _dataRoostConnectionString, standardizationType, string.Join(",", itemCodes), startDate);
+			string requestUrl = string.Format("{0}/api/v1/exportedItems/{1}?startDate={2}", _dataRoostConnectionString, standardizationType, startDate);
+			if (itemCodes != null) {
+				requestUrl += "&itemCodes=" + string.Join(",", itemCodes);
+			}
 			if (endDate != null) {
 				requestUrl += "&endDate=" + endDate;
 			}
@@ -39,5 +42,14 @@ namespace DataRoostAPI.Common.Access {
 
 			return defaultClient;
 		}
+
+		public ExportedItem[] GetExportedShareItems(StandardizationType standardizationType, DateTime startDate, DateTime? endDate = null) {
+			string requestUrl = string.Format("{0}/api/v1/exportedItems/{1}/shares?startDate={2}", _dataRoostConnectionString, standardizationType, startDate);
+			if (endDate != null) {
+				requestUrl += "&endDate=" + endDate;
+			}
+			return ExecuteGetQuery<ExportedItem[]>(requestUrl);
+		}
+
 	}
 }

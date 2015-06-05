@@ -23,8 +23,9 @@ namespace DataRoost.Test {
 
 			IExportedItemsDataAccess exportedItemsDataAccess = DataRoostAccessFactory.GetExportedItemsDataAccess(connectionString);
 			ExportedItem[] exportedItems = exportedItemsDataAccess.GetExportedItems(StandardizationType.STD,
-																							 new List<string> { "05301", "05303" },
-			                                         new DateTime(2015, 5, 1));
+			                                         new DateTime(2015, 5, 1),
+																							 new List<string> { "05301", "05303" });
+			ExportedItem[] allShareItems = exportedItemsDataAccess.GetExportedShareItems(StandardizationType.STD, new DateTime(2015, 5, 1));
 
 			IAsReportedDataAccess asReportedDataAccess = DataRoostAccessFactory.GetAsReportedDataAccess(connectionString);
 			AsReportedDocument[] documents = asReportedDataAccess.GetDocuments(iconum, 2013, 2014);

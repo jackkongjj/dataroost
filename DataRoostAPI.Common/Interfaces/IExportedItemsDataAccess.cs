@@ -10,9 +10,13 @@ namespace DataRoostAPI.Common.Interfaces {
 	public interface IExportedItemsDataAccess {
 
 		ExportedItem[] GetExportedItems(StandardizationType standardizationType,
-		                                List<string> itemCodes,
 		                                DateTime startDate,
-		                                DateTime? endDate = null);
+																		List<string> itemCodes = null,
+																		DateTime? endDate = null);
+
+		ExportedItem[] GetExportedShareItems(StandardizationType standardizationType,
+																DateTime startDate,
+																DateTime? endDate = null);
 
 	}
 }
