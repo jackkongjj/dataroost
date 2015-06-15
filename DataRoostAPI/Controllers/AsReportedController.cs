@@ -39,7 +39,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				startDate = new DateTime((int)startYear, 1, 1);
 			}
 			DateTime endDate = new DateTime(2100, 12, 31);
-			if (startYear != null) {
+			if (endYear != null) {
 				endDate = new DateTime((int)endYear, 12, 31);
 			}
 
