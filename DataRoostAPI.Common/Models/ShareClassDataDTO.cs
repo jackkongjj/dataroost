@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+
+using FFDotNetHelpers.Helpers.Serialization;
+
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
@@ -12,25 +13,27 @@ namespace DataRoostAPI.Common.Models {
 		}
 
 		public ShareClassDataDTO(ShareClassDTO shareClass, List<ShareClassDataItem> shareClassData) {
-			base.Id = shareClass.Id;
-			base.PermId = shareClass.PermId;
-			base.PPI = shareClass.PPI;
-			base.Cusip = shareClass.Cusip;
-			base.Sedol = shareClass.Sedol;
-			base.Isin = shareClass.Isin;
-			base.Name = shareClass.Name;
-			base.ListedOn = shareClass.ListedOn;
-			base.TickerSymbol = shareClass.TickerSymbol;
-			base.AssetClass = shareClass.AssetClass;
-			base.InceptionDate = shareClass.InceptionDate;
-			base.TermDate = shareClass.TermDate;
-			base.IssueType = shareClass.IssueType;
+			Id = shareClass.Id;
+			PermId = shareClass.PermId;
+			PPI = shareClass.PPI;
+			Cusip = shareClass.Cusip;
+			Sedol = shareClass.Sedol;
+			Isin = shareClass.Isin;
+			Name = shareClass.Name;
+			ListedOn = shareClass.ListedOn;
+			TickerSymbol = shareClass.TickerSymbol;
+			AssetClass = shareClass.AssetClass;
+			InceptionDate = shareClass.InceptionDate;
+			TermDate = shareClass.TermDate;
+			IssueType = shareClass.IssueType;
 			ShareClassData = shareClassData;
 		}
 
 		public List<ShareClassDataItem> ShareClassData { get; set; }
+
 	}
 
+	[JsonConverter(typeof(JsonDerivedTypeConverter))]
 	public class ShareClassDataItem {
 
 		public DateTime ReportDate { get; set; }
@@ -38,15 +41,25 @@ namespace DataRoostAPI.Common.Models {
 		public string ItemId { get; set; }
 
 		public string Name { get; set; }
+
+		[JsonProperty("_t")]
+		public string Type {
+			get { return GetType().ToString(); }
+			set { }
+		}
+
 	}
 
 	public class ShareClassDateItem : ShareClassDataItem {
 
 		public DateTime Value { get; set; }
+
 	}
 
 	public class ShareClassNumericItem : ShareClassDataItem {
 
 		public decimal Value { get; set; }
+
 	}
+
 }

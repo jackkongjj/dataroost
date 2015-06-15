@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace DataRoostAPI.Common.Models {
 	public class EffortDTO {
 
-		[JsonProperty(PropertyName = "name")]
+		[JsonProperty("name")]
 		public string Name { get; set; }
 	}
 }

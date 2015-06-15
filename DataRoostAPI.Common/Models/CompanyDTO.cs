@@ -7,34 +7,34 @@ using Newtonsoft.Json;
 namespace DataRoostAPI.Common.Models {
 	public class CompanyDTO {
 
-		[JsonProperty(PropertyName = "_id")]
+		[JsonProperty("_id")]
 		public string Id { get; set; }
 
-		[JsonProperty(PropertyName = "rootPPI")]
+		[JsonProperty("rootPPI")]
 		public string RootPPI { get; set; }
 
-		[JsonProperty(PropertyName = "entityPermId")]
+		[JsonProperty("entityPermId")]
 		public string EntitiyPermId { get; set; }
 
-		[JsonProperty(PropertyName = "iconum")]
+		[JsonProperty("iconum")]
 		public int Iconum { get; set; }
 
-		[JsonProperty(PropertyName = "name")]
+		[JsonProperty("name")]
 		public string Name { get; set; }
 
-		[JsonProperty(PropertyName = "companyTyype")]
+		[JsonProperty("companyTyype")]
 		public string CompanyType { get; set; }
 
-		[JsonProperty(PropertyName = "countryId")]
+		[JsonProperty("countryId")]
 		public string CountryId { get; set; }
 
-		[JsonProperty(PropertyName = "country")]
+		[JsonProperty("country")]
 		public CountryDTO Country { get; set; }
 
-		[JsonProperty(PropertyName = "primaryShareClassId")]
+		[JsonProperty("primaryShareClassId")]
 		public string PrimaryShareClassId { get; set; }
 
-		[JsonProperty(PropertyName = "shareClasses")]
+		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }
 	}
 }

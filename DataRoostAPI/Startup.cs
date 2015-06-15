@@ -11,6 +11,8 @@ using CCS.Fundamentals.DataRoostAPI.Filters;
 using Microsoft.Owin;
 using Microsoft.Owin.Cors;
 
+using Newtonsoft.Json.Converters;
+
 using Owin;
 
 [assembly: log4net.Config.XmlConfigurator(Watch = true)]
@@ -28,7 +30,7 @@ namespace DataRoost {
 
 			config.Formatters.Clear();
 			JsonMediaTypeFormatter jsonFormatter = new JsonMediaTypeFormatter();
-			var enumConverter = new Newtonsoft.Json.Converters.StringEnumConverter();
+			StringEnumConverter enumConverter = new StringEnumConverter();
 			jsonFormatter.SerializerSettings.Converters.Add(enumConverter);
 			jsonFormatter.Indent = true;
 			config.Formatters.Add(jsonFormatter);

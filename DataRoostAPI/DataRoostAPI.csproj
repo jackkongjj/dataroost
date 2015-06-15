@@ -44,9 +44,9 @@
     <Reference Include="FactSet.Data.SqlClient">
       <HintPath>..\packages\CommonLib.Data.SqlClient.1.0.0.0\lib\net45\FactSet.Data.SqlClient.dll</HintPath>
     </Reference>
-    <Reference Include="FFDotNetHelpers, Version=1.0.5.10, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="FFDotNetHelpers, Version=1.0.6.15, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\FFDotNetHelpers.1.0.5.10\lib\net45\FFDotNetHelpers.dll</HintPath>
+      <HintPath>..\packages\FFDotNetHelpers.1.0.6.15\lib\net45\FFDotNetHelpers.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
       <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
@@ -72,9 +72,8 @@
     <Reference Include="Microsoft.Owin.Security">
       <HintPath>..\packages\Microsoft.Owin.Security.3.0.1\lib\net45\Microsoft.Owin.Security.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\WebApiHelp.1.0.5.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Oracle.ManagedDataAccess">
       <HintPath>..\packages\odp.net.managed.121.1.2\lib\net40\Oracle.ManagedDataAccess.dll</HintPath>

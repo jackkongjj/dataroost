@@ -10,53 +10,53 @@ using Newtonsoft.Json;
 namespace DataRoostAPI.Common.Models {
 
 	public class TimeseriesDTO {
-		[JsonProperty(PropertyName = "_id")]
+		[JsonProperty("_id")]
 		public string Id { get; set; }
 
 
-		[JsonProperty(PropertyName = "periodLength")]
+		[JsonProperty("periodLength")]
 		public int PeriodLength { get; set; }
 
-		[JsonProperty(PropertyName = "periodType")]
+		[JsonProperty("periodType")]
 		public string PeriodType { get; set; }
 
-		[JsonProperty(PropertyName = "interimType")]
+		[JsonProperty("interimType")]
 		public string InterimType { get; set; }
 
-		[JsonProperty(PropertyName = "periodEndDate")]
+		[JsonProperty("periodEndDate")]
 		public DateTime PeriodEndDate { get; set; }
 
-		[JsonProperty(PropertyName = "companyFiscalyear")]
+		[JsonProperty("companyFiscalyear")]
 		public int CompanyFiscalYear { get; set; }
 
-		[JsonProperty(PropertyName = "publicationDate")]
+		[JsonProperty("publicationDate")]
 		public DateTime PublicationDate { get; set; }
 
-		[JsonProperty(PropertyName = "damDocumentId")]
+		[JsonProperty("damDocumentId")]
 		public Guid DamDocumentId { get; set; }
 
-		[JsonProperty(PropertyName = "isRecap")]
+		[JsonProperty("isRecap")]
 		public bool IsRecap { get; set; }
 
-		[JsonProperty(PropertyName = "isAutoCalc")]
+		[JsonProperty("isAutoCalc")]
 		public bool IsAutoCalc { get; set; }
 
-		[JsonProperty(PropertyName = "voyagerFormType")]
+		[JsonProperty("voyagerFormType")]
 		public string VoyagerFormType { get; set; }
 
-		[JsonProperty(PropertyName = "reportType")]
+		[JsonProperty("reportType")]
 		public string ReportType { get; set; }
 
-		[JsonProperty(PropertyName = "isoCurrency")]
+		[JsonProperty("isoCurrency")]
 		public string IsoCurrency { get; set; }
 
-		[JsonProperty(PropertyName = "scalingFactor")]
+		[JsonProperty("scalingFactor")]
 		public string ScalingFactor { get; set; }
 
-		[JsonProperty(PropertyName = "values")]
+		[JsonProperty("values")]
 		public Dictionary<string, TimeseriesValueDTO> Values { get; set; }
 
-		[JsonProperty(PropertyName = "perShareValues")]
+		[JsonProperty("perShareValues")]
 		public Dictionary<int, Dictionary<string, TimeseriesValueDTO>> PerShareValues { get; set; }
 	}
 }

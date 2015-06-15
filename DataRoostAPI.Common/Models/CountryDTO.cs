@@ -6,16 +6,16 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
 	public class CountryDTO {
-		[JsonProperty(PropertyName = "_id")]
+		[JsonProperty("_id")]
 		public string Id { get; set; }
 
-		[JsonProperty(PropertyName = "iso3")]
+		[JsonProperty("iso3")]
 		public string Iso3 { get; set; }
 
-		[JsonProperty(PropertyName = "shortName")]
+		[JsonProperty("shortName")]
 		public string ShortName { get; set; }
 
-		[JsonProperty(PropertyName = "longName")]
+		[JsonProperty("longName")]
 		public string LongName { get; set; }
 	}
 }

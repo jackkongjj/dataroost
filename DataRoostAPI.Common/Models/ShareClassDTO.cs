@@ -1,48 +1,59 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+
+using FFDotNetHelpers.Helpers.Serialization;
+
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
+
+	[JsonConverter(typeof(JsonDerivedTypeConverter))]
 	public class ShareClassDTO {
-		[JsonProperty(PropertyName = "_id")]
+
+		[JsonProperty("_id")]
 		public string Id { get; set; }
 
-		[JsonProperty(PropertyName = "permId")]
+		[JsonProperty("permId")]
 		public string PermId { get; set; }
 
-		[JsonProperty(PropertyName = "ppi")]
+		[JsonProperty("ppi")]
 		public string PPI { get; set; }
 
-		[JsonProperty(PropertyName = "cusip")]
+		[JsonProperty("cusip")]
 		public string Cusip { get; set; }
 
-		[JsonProperty(PropertyName = "sedol")]
+		[JsonProperty("sedol")]
 		public string Sedol { get; set; }
 
-		[JsonProperty(PropertyName = "isin")]
+		[JsonProperty("isin")]
 		public string Isin { get; set; }
 
-		[JsonProperty(PropertyName = "name")]
+		[JsonProperty("name")]
 		public string Name { get; set; }
 
-		[JsonProperty(PropertyName = "listedOn")]
+		[JsonProperty("listedOn")]
 		public string ListedOn { get; set; }
 
-		[JsonProperty(PropertyName = "tickerSymbol")]
+		[JsonProperty("tickerSymbol")]
 		public string TickerSymbol { get; set; }
 
-		[JsonProperty(PropertyName = "assetClass")]
+		[JsonProperty("assetClass")]
 		public string AssetClass { get; set; }
 
-		[JsonProperty(PropertyName = "inceptionDate")]
+		[JsonProperty("inceptionDate")]
 		public DateTime InceptionDate { get; set; }
 
-		[JsonProperty(PropertyName = "termDate")]
+		[JsonProperty("termDate")]
 		public DateTime? TermDate { get; set; }
 
-		[JsonProperty(PropertyName = "issueType")]
+		[JsonProperty("issueType")]
 		public string IssueType { get; set; }
+
+		[JsonProperty("_t")]
+		public string Type {
+			get { return GetType().ToString(); }
+			set { }
+		}
+
 	}
+
 }

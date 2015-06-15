@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace DataRoostAPI.Common.Models.SuperFast {
 	public class SFTimeseriesDTO : TimeseriesDTO {
 
-		[JsonProperty(PropertyName = "sfDocumentId")]
+		[JsonProperty("sfDocumentId")]
 		public Guid SFDocumentId { get; set; }
 
 	}

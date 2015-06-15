@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.Voyager {
 	public class VoyagerTemplateDTO : TemplateDTO {
-		[JsonProperty(PropertyName = "templateCode")]
+		[JsonProperty("templateCode")]
 		public string TemplateCode { get; set; }
 	}
 }

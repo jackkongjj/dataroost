@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.SuperFast {
 	public class SFTemplateDTO : TemplateDTO {
-		[JsonProperty(PropertyName = "templateType")]
+		[JsonProperty("templateType")]
 		public int TemplateType { get; set; }
 	}
 }

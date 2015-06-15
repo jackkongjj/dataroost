@@ -6,19 +6,19 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
 	public class TemplateDTO {
-		[JsonProperty(PropertyName = "_id")]
+		[JsonProperty("_id")]
 		public string Id { get; set; }
 
-		[JsonProperty(PropertyName = "name")]
+		[JsonProperty("name")]
 		public string Name { get; set; }
 
-		[JsonProperty(PropertyName = "updateType")]
+		[JsonProperty("updateType")]
 		public string UpdateType { get; set; }
 
-		[JsonProperty(PropertyName = "reportType")]
+		[JsonProperty("reportType")]
 		public string ReportType { get; set; }
 
-		[JsonProperty(PropertyName = "items")]
+		[JsonProperty("items")]
 		public List<TemplateItemDTO> Items { get; set; }
 	}
 }

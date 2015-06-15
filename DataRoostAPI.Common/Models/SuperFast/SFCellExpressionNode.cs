@@ -9,16 +9,16 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.SuperFast {
 	public class SFCellExpressionNode : CellExpressionNode {
-		[JsonProperty(PropertyName = "tableCellId")]
+		[JsonProperty("tableCellId")]
 		public int TableCellId { get; set; }
 
-		[JsonProperty(PropertyName = "sfDocumentId")]
+		[JsonProperty("sfDocumentId")]
 		public Guid SFDocumentId { get; set; }
 
-		[JsonProperty(PropertyName = "companyFinancialTermId")]
+		[JsonProperty("companyFinancialTermId")]
 		public int? CompanyFinancialTermId { get; set; }
 
-		[JsonProperty(PropertyName = "companyFinancialTermLabel")]
+		[JsonProperty("companyFinancialTermLabel")]
 		public string CompanyFinancialTermLabel { get; set; }
 	}
 }

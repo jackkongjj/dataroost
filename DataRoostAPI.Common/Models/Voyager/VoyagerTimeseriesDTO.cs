@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace DataRoostAPI.Common.Models.Voyager {
 	public class VoyagerTimeseriesDTO : TimeseriesDTO {
 
-		[JsonProperty(PropertyName = "dcn")]
+		[JsonProperty("dcn")]
 		public string DCN { get; set; }
 
 	}

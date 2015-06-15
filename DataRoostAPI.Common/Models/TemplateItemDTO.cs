@@ -6,34 +6,34 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
 	public class TemplateItemDTO {
-		[JsonProperty(PropertyName = "_id")]
+		[JsonProperty("_id")]
 		public string Id { get; set; }
 
-		[JsonProperty(PropertyName = "code")]
+		[JsonProperty("code")]
 		public string Code { get; set; }
 
-		[JsonProperty(PropertyName = "description")]
+		[JsonProperty("description")]
 		public string Description { get; set; }
 
-		[JsonProperty(PropertyName = "statementTypeId")]
+		[JsonProperty("statementTypeId")]
 		public string StatementTypeId { get; set; }
 
-		[JsonProperty(PropertyName = "usageType")]
+		[JsonProperty("usageType")]
 		public string UsageType { get; set; }
 
-		[JsonProperty(PropertyName = "indentLevel")]
+		[JsonProperty("indentLevel")]
 		public int IndentLevel { get; set; }
 
-		[JsonProperty(PropertyName = "valueType")]
+		[JsonProperty("valueType")]
 		public string ValueType { get; set; }
 
-		[JsonProperty(PropertyName = "isSecurity")]
+		[JsonProperty("isSecurity")]
 		public bool IsSecurity { get; set; }
 
-		[JsonProperty(PropertyName = "isPIT")]
+		[JsonProperty("isPIT")]
 		public bool IsPIT { get; set; }
 
-		[JsonProperty(PropertyName = "precision")]
+		[JsonProperty("precision")]
 		public int Precision { get; set; }
 	}
 }
