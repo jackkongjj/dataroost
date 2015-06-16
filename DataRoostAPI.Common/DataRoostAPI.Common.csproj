@@ -58,9 +58,9 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FFDotNetHelpers, Version=1.0.6.15, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="FFDotNetHelpers, Version=1.0.6.16, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\FFDotNetHelpers.1.0.6.15\lib\net45\FFDotNetHelpers.dll</HintPath>
+      <HintPath>..\packages\FFDotNetHelpers.1.0.6.16\lib\net45\FFDotNetHelpers.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>

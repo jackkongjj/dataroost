@@ -22,7 +22,7 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 
 		[JsonProperty("_t")]
 		public string Type {
-			get { return GetType().ToString(); }
+			get { return GetType().AssemblyQualifiedName; }
 			set { }
 		}
 
