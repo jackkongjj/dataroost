@@ -216,7 +216,7 @@
     <Compile Include="Access\Voyager\TemplatesHelper.cs" />
     <Compile Include="Access\Voyager\TimeseriesHelper.cs" />
     <Compile Include="Access\Voyager\TimeseriesIdentifier.cs" />
-    <Compile Include="Access\Voyager\VoyagerHelper.cs" />
+    <Compile Include="Access\PpiHelper.cs" />
     <Compile Include="Access\Voyager\VoyagerSharesHelper.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />

@@ -19,6 +19,7 @@ namespace DataRoost.Test {
 			EffortDTO effort = companyDataAccess.GetCompanyCollectionEffort(iconum);
 			EffortDTO[] efforts = companyDataAccess.GetEfforts(iconum);
 			ShareClassDataDTO[] latestFPESharesData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(iconum);
+			ShareClassDataDTO[] latestFPESharesData1 = companyDataAccess.GetLatestFiscalPeriodEndSharesData("12414115");
 			ShareClassDataDTO[] currentSharesData = companyDataAccess.GetCurrentShareData(iconum);
 
 			IExportedItemsDataAccess exportedItemsDataAccess = DataRoostAccessFactory.GetExportedItemsDataAccess(connectionString);

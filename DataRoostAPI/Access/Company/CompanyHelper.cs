@@ -181,7 +181,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 			// TODO: how to determine whether to go to Voyager or SuperFast
 			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString);
+			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 			Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = new Dictionary<string, List<ShareClassDataItem>>();
 			voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum, reportDate);
 			foreach (ShareClassDTO shareClass in shareClasses) {
@@ -206,7 +206,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 			// Figure out whether to return voyager or superfast data
 			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString);
+			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 			Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetCurrentShareDataItems(iconum);
 			Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = superfastShares.GetCurrentShareDataItems(iconum);
 			foreach (ShareClassDTO shareClass in shareClasses) {

@@ -94,6 +94,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		private VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, string timeseriesId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);
@@ -103,29 +104,31 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (timeseriesId != null)
 				tsId = new TimeseriesIdentifier(timeseriesId);
 
-			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			TimeseriesHelper tsh = new TimeseriesHelper(connString, sfConnectionString);
 			return StandardizationType.STD == dataTypes ? tsh.QuerySTDTimeseries(iconum, templId, tsId) : tsh.QuerySDBTimeseries(iconum, templId, tsId);
 		}
 
 		private VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, int startYear, int endYear, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);
 
 			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
-			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			TimeseriesHelper tsh = new TimeseriesHelper(connString, sfConnectionString);
 			return StandardizationType.STD == dataTypes ? tsh.QuerySTDTimeseries(iconum, templId, startYear, endYear) : tsh.QuerySDBTimeseries(iconum, templId, startYear, endYear);
 		}
 
 		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);
 
 			TemplateIdentifier templId = TemplateIdentifier.GetTemplateIdentifier(templateId);
-			TimeseriesHelper tsh = new TimeseriesHelper(connString);
+			TimeseriesHelper tsh = new TimeseriesHelper(connString, sfConnectionString);
 			return StandardizationType.STD == dataTypes ? tsh.QuerySTDTimeseries(iconum, templId) : tsh.QuerySDBTimeseries(iconum, templId);
 		}
 	}

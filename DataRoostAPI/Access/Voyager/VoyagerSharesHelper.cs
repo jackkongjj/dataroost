@@ -14,11 +14,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 	public class VoyagerSharesHelper {
 
 		private readonly string _connectionString;
-		private VoyagerHelper _voyagerHelper;
+		private PpiHelper _ppiHelper;
 
-		public VoyagerSharesHelper(string connectionString) {
-			_connectionString = connectionString;
-			_voyagerHelper = new VoyagerHelper(_connectionString);
+		public VoyagerSharesHelper(string voyagerConnectionString, string sfConnectionString) {
+			_connectionString = voyagerConnectionString;
+			_ppiHelper = new PpiHelper(sfConnectionString);
 		}
 
 		public Dictionary<string, List<ShareClassDataItem>> GetLatestFPEShareData(int iconum, DateTime? reportDateToFind) {
@@ -67,8 +67,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				searchDate = (DateTime)reportDateToFind;
 			}
 			Dictionary<string, List<ShareClassDataItem>> dataByShareClass = new Dictionary<string, List<ShareClassDataItem>>();
-			string rootPPI = _voyagerHelper.GetPPIByIconum(iconum);
-			string basePPI = _voyagerHelper.GetPPIBase(rootPPI);
+			string rootPPI = _ppiHelper.GetPPIByIconum(iconum);
+			string basePPI = _ppiHelper.GetPPIBase(rootPPI);
 
 			using (OracleConnection connection = new OracleConnection(_connectionString)) {
 				connection.Open();
@@ -137,8 +137,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
                                     ORDER BY stdti.item_position";
 
 			Dictionary<string, List<ShareClassDataItem>> perShareData = new Dictionary<string, List<ShareClassDataItem>>();
-			string rootPPI = _voyagerHelper.GetPPIByIconum(iconum);
-			string basePPI = _voyagerHelper.GetPPIBase(rootPPI);
+			string rootPPI = _ppiHelper.GetPPIByIconum(iconum);
+			string basePPI = _ppiHelper.GetPPIBase(rootPPI);
 
 			using (OracleConnection connection = new OracleConnection(_connectionString)) {
 				connection.Open();

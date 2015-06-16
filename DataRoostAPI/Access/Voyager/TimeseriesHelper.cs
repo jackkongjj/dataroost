@@ -16,11 +16,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 	public class TimeseriesHelper {
 
 		private readonly string _connectionString;
-		private VoyagerHelper _voyagerHelper;
+		private PpiHelper _ppiHelper;
 
-		public TimeseriesHelper(string connectionString) {
-			_connectionString = connectionString;
-			_voyagerHelper = new VoyagerHelper(_connectionString);
+		public TimeseriesHelper(string voyagerConnectionString, string sfConnectionString) {
+			_connectionString = voyagerConnectionString;
+			_ppiHelper = new PpiHelper(sfConnectionString);
 		}
 
 		public VoyagerTimeseriesDTO[] QuerySTDTimeseries(int iconum, TemplateIdentifier templateId, TimeseriesIdentifier timeseriesId) {
@@ -42,8 +42,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		private VoyagerTimeseriesDTO[] QuerySTDTimeseries(int iconum, TemplateIdentifier templateId, int startYear, int endYear, string master_id) {
-			string ppi = _voyagerHelper.GetPPIByIconum(iconum);
-			string ppiBase = _voyagerHelper.GetPPIBase(ppi);
+			string ppi = _ppiHelper.GetPPIByIconum(iconum);
+			string ppiBase = _ppiHelper.GetPPIBase(ppi);
 			string query = @"select sm.master_id, sm.data_year, sm.report_date, sm.time_series_code, sm.rep_type, sm.interim_type, sm.ISO_CCY_CODE, sm.SCLG_FACTOR,
 										 f.document_id,
 										f.file_type,
@@ -203,8 +203,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		private VoyagerTimeseriesDTO[] QuerySDBTimeseries(int iconum, TemplateIdentifier templateId, int startYear, int endYear, string master_id) {
-			string ppi = _voyagerHelper.GetPPIByIconum(iconum);
-			string ppiBase = _voyagerHelper.GetPPIBase(ppi);
+			string ppi = _ppiHelper.GetPPIByIconum(iconum);
+			string ppiBase = _ppiHelper.GetPPIBase(ppi);
 
 			string query = @"SELECT RM.master_id,
   RM.data_year,
