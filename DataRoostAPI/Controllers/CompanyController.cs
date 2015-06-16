@@ -52,14 +52,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/{CompanyId}/efforts/")]
 		[HttpGet]
 		public EffortDTO[] QueryEfforts(string CompanyId) {
-			List<EffortDTO> efforts = new List<EffortDTO>();
-			EffortDTO voyagerEffort = new EffortDTO();
-			voyagerEffort.Name = "voyager";
-			efforts.Add(voyagerEffort);
-			EffortDTO superfastEffort = new EffortDTO();
-			superfastEffort.Name = "superfast";
-			efforts.Add(superfastEffort);
-			return efforts.ToArray();
+			return new EffortDTO[] { new EffortDTO() { Name = "voyager" }, new EffortDTO() { Name = "superfast" }, new EffortDTO() { Name = "sfvoy_join" } };
 		}
 	}
 }

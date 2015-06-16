@@ -241,6 +241,7 @@
     <Compile Include="Controllers\ExportedItemsController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\InfoController.cs" />
+    <Compile Include="Controllers\SfVoyController.cs" />
     <Compile Include="Controllers\SharesController.cs" />
     <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
