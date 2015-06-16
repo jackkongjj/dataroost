@@ -42,6 +42,11 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<TimeseriesDTO[]>(requestUrl);
 		}
 
+		public TimeseriesDTO[] GetTimeseriesList(string companyId, StandardizationType standardizationType, string templateId, int startYear, int endYear) {
+			string requestUrl = string.Format("{0}/datatypes/{1}/templates/{2}/timeseries?startYear={3}&endYear={4}", GetRootUrl(companyId), standardizationType, templateId, startYear, endYear);
+			return ExecuteGetQuery<TimeseriesDTO[]>(requestUrl);
+		}
+
 		public TimeseriesDTO GetTimeseries(string companyId,
 		                                   StandardizationType standardizationType,
 		                                   string templateId,

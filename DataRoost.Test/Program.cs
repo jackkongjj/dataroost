@@ -35,11 +35,13 @@ namespace DataRoost.Test {
 			StandardizationType[] dataTypes = superFastDataAccess.GetDataTypes(iconum);
 			TemplateDTO[] templateDtos = superFastDataAccess.GetTemplateList(iconum, StandardizationType.SDB);
 			TemplateDTO template = superFastDataAccess.GetTemplate(iconum, StandardizationType.SDB, templateDtos.First().Id);
+			TimeseriesDTO[] timeseriesListAll = superFastDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, template.Id);
+			TimeseriesDTO[] timeseriesListRange = superFastDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, template.Id, 2011, 2015);
 
 			iconum = "36468";
-			String templateid = "RnxBfDE=";
-			string seriresid = "OWRiZTI4NzItMTA4Ny00NDJlLWFmNTAtMzgyMGRmZmUyMjY4fDIwMTV8MTEvMzAvMjAxNCAxMjowMDowMCBBTXxRMXxGYWxzZQ==";
-			TimeseriesDTO detail = superFastDataAccess.GetTimeseries(iconum, StandardizationType.SDB, templateid, seriresid);
+			String templateId = "RnxBfDE=";
+			string seriesId = "OWRiZTI4NzItMTA4Ny00NDJlLWFmNTAtMzgyMGRmZmUyMjY4fDIwMTV8MTEvMzAvMjAxNCAxMjowMDowMCBBTXxRMXxGYWxzZQ==";
+			TimeseriesDTO detail = superFastDataAccess.GetTimeseries(iconum, StandardizationType.SDB, templateId, seriesId);
 
 			IStandardizedDataAccess voyagerDataAccess = DataRoostAccessFactory.GetVoyagerDataAccess(connectionString);
 		}

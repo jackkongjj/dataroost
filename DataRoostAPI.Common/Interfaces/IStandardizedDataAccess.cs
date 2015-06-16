@@ -17,6 +17,8 @@ namespace DataRoostAPI.Common.Interfaces {
 
 		TimeseriesDTO[] GetTimeseriesList(string companyId, StandardizationType standardizationType, string templateId);
 
+		TimeseriesDTO[] GetTimeseriesList(string companyId, StandardizationType standardizationType, string templateId, int startYear, int endYear);
+
 		TimeseriesDTO GetTimeseries(string companyId, StandardizationType standardizationType, string templateId, string timeseriesId);
 
 	}
