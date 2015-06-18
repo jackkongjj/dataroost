@@ -55,7 +55,7 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 		public FLYTOffset Offset { get; set; }
 
 		[JsonProperty("numericValue")]
-		public decimal NumericValue { get; set; }
+		public decimal? NumericValue { get; set; }
 
 		[JsonProperty("asPresentedValue")]
 		public string AsPresentedValue { get; set; }
