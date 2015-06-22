@@ -179,32 +179,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
 			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
 
-			// TODO: how to determine whether to go to Voyager or SuperFast
-			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-			Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = new Dictionary<string, List<ShareClassDataItem>>();
-			voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum, reportDate);
-			foreach (ShareClassDTO shareClass in shareClasses) {
-				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-				if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
-					securityItemList = voyagerSecurityItems[shareClass.PPI];
+			List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+			EffortDTO effort = GetCompanyEffort(iconum);
+			if (effort.Name == "superfast") {
+				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
+				foreach (ShareClassDTO shareClass in shareClasses) {
+					List<ShareClassDataItem> superfastItems = superfastShares.GetLatestFPEShareData(shareClass.Cusip, reportDate);
+					if (superfastItems.Count > securityItemList.Count) {
+						securityItemList = superfastItems;
+					}
+					ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
+					shareClassDataList.Add(shareClassData);
 				}
-				List<ShareClassDataItem> superfastItems = superfastShares.GetLatestFPEShareData(shareClass.Cusip, reportDate);
-				if (superfastItems.Count > securityItemList.Count) {
-					securityItemList = superfastItems;
+			} else if (effort.Name == "voyager") {
+				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
+				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum, reportDate);
+				foreach (ShareClassDTO shareClass in shareClasses) {
+					if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+						securityItemList = voyagerSecurityItems[shareClass.PPI];
+					}
+					ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
+					shareClassDataList.Add(shareClassData);
 				}
-				ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
-				shareClassDataList.Add(shareClassData);
 			}
 
 			return shareClassDataList;
 		}
 
+		// TODO: change this to point to shares instead of voyager and superfast
 		public IEnumerable<ShareClassDataDTO> GetCurrentCompanyShareClassData(int iconum) {
 			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
 			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
 
-			// Figure out whether to return voyager or superfast data
 			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 			Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetCurrentShareDataItems(iconum);
