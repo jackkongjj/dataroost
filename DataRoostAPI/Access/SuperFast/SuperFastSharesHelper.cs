@@ -28,7 +28,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	                                        join STDItem std (nolock)
 		                                        on stds.STDItemId = std.ID
 		                                        and std.SecurityFlag = 1
-																					join STDTemplateItem t
+																					join STDTemplateItem t (nolock)
 																						on t.STDItemID = std.ID
 																						and t.STDTemplateMasterCode = 'PSIT'
 	                                        join TimeSeries ts (nolock)
