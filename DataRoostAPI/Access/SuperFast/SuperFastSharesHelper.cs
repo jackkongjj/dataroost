@@ -18,6 +18,68 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			_connectionString = connectionString;
 		}
 
+		public Dictionary<string, List<ShareClassDataItem>> GetLatestCompanyFPEShareData(int iconum, DateTime? reportDate) {
+			Dictionary<string, List<ShareClassDataItem>> perShareData = new Dictionary<string, List<ShareClassDataItem>>();
+
+			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode FROM 
+                                        (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, 
+	                                        row_number() over (partition by stds.STDItemID order by ts.TimeSeriesDate desc) as rank 
+	                                        from STDTimeSeriesDetailSecurity stds (nolock)
+																						join FdsTriPpiMap fds (nolock)
+																							on fds.cusip = stds.SecurityID
+																						join STDItem std (nolock)
+																							on stds.STDItemId = std.ID
+																							and std.SecurityFlag = 1
+																						join STDTemplateItem t (nolock)
+																							on t.STDItemID = std.ID
+																							and t.STDTemplateMasterCode = 'PSIT'
+																						join TimeSeries ts (nolock)
+																							on stds.TimeSeriesID = ts.Id
+																							and ts.AutoCalcFlag = 0
+																							and ts.EncoreFlag = 0
+																						join InterimType it (nolock)
+																							on ts.InterimTypeID = it.ID
+																						join Document d (nolock)
+																							on ts.DocumentID = d.ID
+																							and d.ExportFlag = 1 
+                                          where fds.iconum = @iconum
+																						and ts.TimeSeriesDate <= @searchDate) temp
+                                        where temp.rank = 1";
+
+			DateTime searchDate = DateTime.Now;
+			if (reportDate != null) {
+				searchDate = (DateTime)reportDate;
+			}
+			using (SqlConnection connection = new SqlConnection(_connectionString)) {
+				connection.Open();
+
+				using (var cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@searchDate", searchDate);
+
+					using (var reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							string cusip = reader.GetStringSafe(0);
+							ShareClassDataItem item = new ShareClassNumericItem
+							{
+								Name = reader.GetStringSafe(3),
+								ItemId = reader.GetStringSafe(4),
+								Value = reader.GetDecimal(1),
+								ReportDate = reader.GetDateTime(2),
+							};
+							if (!perShareData.ContainsKey(cusip)) {
+								perShareData.Add(cusip, new List<ShareClassDataItem>());
+							}
+							List<ShareClassDataItem> dataItems = perShareData[cusip];
+							dataItems.Add(item);
+						}
+					}
+				}
+			}
+
+			return perShareData;
+		}
+
 		public List<ShareClassDataItem> GetLatestFPEShareData(string cusip, DateTime? reportDate) {
 			List<ShareClassDataItem> perShareData = new List<ShareClassDataItem>();
 
