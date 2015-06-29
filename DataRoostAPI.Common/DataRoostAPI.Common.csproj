@@ -96,6 +96,7 @@
     <Compile Include="Models\CountryDTO.cs" />
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\ExportedItem.cs" />
+    <Compile Include="Models\SfVoy\SfVoyTimeSeries.cs" />
     <Compile Include="Models\ShareClassDataDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
     <Compile Include="Models\StandardizationType.cs" />

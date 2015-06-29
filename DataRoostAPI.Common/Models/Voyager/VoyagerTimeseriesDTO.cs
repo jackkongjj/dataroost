@@ -10,5 +10,7 @@ namespace DataRoostAPI.Common.Models.Voyager {
 		[JsonProperty("dcn")]
 		public string DCN { get; set; }
 
+		[JsonProperty("accountType")]
+		public string AccountType { get; set; }
 	}
 }
