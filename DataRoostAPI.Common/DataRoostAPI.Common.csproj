@@ -81,10 +81,12 @@
     <Compile Include="Access\CompanyDataAccess.cs" />
     <Compile Include="Access\DataRoostAccessFactory.cs" />
     <Compile Include="Access\ExportedItemsDataAccess.cs" />
+    <Compile Include="Access\SfVoyDataAccess.cs" />
     <Compile Include="Access\StandardizedDataAccess.cs" />
     <Compile Include="Interfaces\IAsReportedDataAccess.cs" />
     <Compile Include="Interfaces\ICompanyDataAccess.cs" />
     <Compile Include="Interfaces\IExportedItemsDataAccess.cs" />
+    <Compile Include="Interfaces\ISfVoyDataAccess.cs" />
     <Compile Include="Interfaces\IStandardizedDataAccess.cs" />
     <Compile Include="Models\AsReported\AsReportedDocument.cs" />
     <Compile Include="Models\AsReported\AsReportedTable.cs" />

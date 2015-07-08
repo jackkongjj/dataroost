@@ -8,12 +8,13 @@ using DataRoostAPI.Common.Access;
 using DataRoostAPI.Common.Interfaces;
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.AsReported;
+using DataRoostAPI.Common.Models.SfVoy;
 
 namespace DataRoost.Test {
 	class Program {
 		static void Main(string[] args) {
 			string connectionString = "http://localhost:61581";
-			string iconum = "5195905";
+			string iconum = "36468";
 			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
 			CompanyDTO company = companyDataAccess.GetCompany(iconum);
 			EffortDTO effort = companyDataAccess.GetCompanyCollectionEffort(iconum);
@@ -31,6 +32,15 @@ namespace DataRoost.Test {
 			IAsReportedDataAccess asReportedDataAccess = DataRoostAccessFactory.GetAsReportedDataAccess(connectionString);
 			AsReportedDocument[] documents = asReportedDataAccess.GetDocuments(iconum, 2013, 2014);
 			AsReportedDocument document = asReportedDataAccess.GetDocument(iconum, documents.First().Id);
+
+			iconum = "36468";
+			ISfVoyDataAccess sfvoyDataAccess = DataRoostAccessFactory.GetSfVoyDataAccess(connectionString);
+			StandardizationType[] sfvoydataTypes = sfvoyDataAccess.GetDataTypes(iconum);
+			TemplateDTO[] sfVoytemplateDtos = sfvoyDataAccess.GetTemplateList(iconum, StandardizationType.SDB);
+			string sfVoyTempId = "RnxBfDE=";
+			TemplateDTO sfVoytemplate = sfvoyDataAccess.GetTemplate(iconum, StandardizationType.SDB, sfVoyTempId);
+			SfVoyTimeSeries[] sfVoyTSAll = sfvoyDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, sfVoytemplate.Id);
+			SfVoyTimeSeries sfVoyDetail = sfvoyDataAccess.GetTimeseries(iconum, StandardizationType.SDB, sfVoytemplate.Id, sfVoyTSAll[5].Id);
 
 			IStandardizedDataAccess superFastDataAccess = DataRoostAccessFactory.GetSuperFastDataAccess(connectionString);
 			StandardizationType[] dataTypes = superFastDataAccess.GetDataTypes(iconum);
