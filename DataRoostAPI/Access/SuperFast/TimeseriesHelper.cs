@@ -223,9 +223,10 @@ select
 	ts.CompanyFiscalYear, ts.EncoreFlag, ts.AutoCalcFlag, d.VoyFormTypeId,
 	ts.ReportTypeID, ts.DocumentID,
 	-- Document Stuff
-	d.DAMDocumentId, --d.DocumentDate, 
+	d.DAMDocumentId,
 	d.PublicationDateTime,
 	ts.CurrencyCode, ts.ScalingFactorID,
+  d.DocumentDate,
 	d.FormTypeID,	d.ExportFlag
 from Timeseries ts
 join Document d on ts.DocumentId = d.id
@@ -254,7 +255,7 @@ where ts.Id = @tsId
 						ts.PublicationDate = reader.GetDateTime(c++);
 						ts.IsoCurrency = reader.GetStringSafe(c++);
 						ts.ScalingFactor = reader.GetStringSafe(c++);
-
+						ts.DocumentDate = reader.GetDateTime(c++);
 						return ts;
 					}
 				}

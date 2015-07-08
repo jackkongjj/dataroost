@@ -222,7 +222,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
   coalesce(ac.publication_date, aca.publication_date) publicationdate,
   coalesce(coalesce(ac.company_document_type, aca.company_document_type),m.doc_type) FormType,
 	coalesce(f.dcn, m.dcn) dcn,
-  rm.time_series_code
+  rm.time_series_code,
+	RM.account_type,
+  f.DATE_ADDED
 FROM ar_details d
 JOIN ar_master m ON m.master_id = d.master_id
 LEFT JOIN dam_doc_feed f ON f.dcn = m.dcn
@@ -286,7 +288,11 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 								PublicationDate = sdr.GetDateTimeSafe(12) == null ? new DateTime() : (DateTime)sdr.GetDateTimeSafe(12),
 								VoyagerFormType = sdr.GetStringSafe(13),
 								DCN = sdr.GetStringSafe(14),
-								InterimType = sdr.GetStringSafe(3)
+								InterimType = sdr.GetStringSafe(3),
+								CompanyFiscalYear = int.Parse(sdr.GetStringSafe(1)),
+								PeriodEndDate = sdr.GetDateTime(2),
+								AccountType = sdr.GetString(16),
+								DocumentDate = sdr.GetDateTimeSafe(17) == null ? new DateTime() : (DateTime)sdr.GetDateTimeSafe(17)
 							});
 						}
 					}
@@ -297,7 +303,7 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 			return timeSeriesList.ToArray();
 		}
 
-		private static Dictionary<string, TimeseriesValueDTO> PopulateSDBCells(string masterId) {
+		public static Dictionary<string, TimeseriesValueDTO> PopulateSDBCells(string masterId, decimal scalingFactor = 1) {
 			string query = @"select rd.GNRC_CODE||rd.GROUP_CODE||rd.SUB_GROUP_CODE||rd.ITEM_CODE item_code, rd.reported_value, rd.indicator, m.mathml_expression, ar.bookmark
 											from report_details rd 											
 											LEFT JOIN ar_sdb_map m on 
@@ -325,7 +331,7 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 							string offsetString = sdr.GetStringSafe(4);
 
 							TimeseriesValueDTO valueDTO = new TimeseriesValueDTO();
-							
+							numericValue = numericValue * scalingFactor;
 							ExpressionTimeseriesValueDetailVoySDBDTO valueDetailsDTO = new ExpressionTimeseriesValueDetailVoySDBDTO();
 							valueDetailsDTO.Operation = "=";
 							valueDetailsDTO.isStar = (starIndicator == "*");

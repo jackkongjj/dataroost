@@ -32,6 +32,9 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("publicationDate")]
 		public DateTime PublicationDate { get; set; }
 
+		[JsonProperty("documentDate")]
+		public DateTime DocumentDate { get; set; }
+
 		[JsonProperty("damDocumentId")]
 		public Guid DamDocumentId { get; set; }
 
