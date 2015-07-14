@@ -62,6 +62,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 						PeriodEndDate = timeseriesId.PeriodEndDate,
 						ReportType = timeseriesId.ReportType,
 						Values = PopulateMapSDBItem(voyTS, iconum, templateId),
+						DamDocumentId = voyTS.First().DamDocumentId,
+						DCN = voyTS.First().DCN,
+						CompanyFiscalYear = voyTS.First().CompanyFiscalYear,
+						DocumentDate = voyTS.First().DocumentDate,
+						PublicationDate = voyTS.First().PublicationDate,
+						PeriodLength = voyTS.First().PeriodLength,
+						PeriodType = voyTS.First().PeriodType,
+						PerShareValues = voyTS.First().PerShareValues,
+						IsoCurrency = voyTS.First().IsoCurrency,
+						VoyagerFormType = voyTS.First().VoyagerFormType,
+						IsRecap = voyTS.First().IsRecap,
+						IsAutoCalc = voyTS.First().IsAutoCalc,
+						Id = voyTS.First().Id,
 						ScalingFactor = "A"			//convert all to Actual						
 					};
 				}
