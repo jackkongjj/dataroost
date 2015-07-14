@@ -328,6 +328,7 @@ order by tm.sdbItem_id, re.[order]";
 					var value = dt.Compute(expFlat, "");
 					TimeseriesValueDTO tsValue = new TimeseriesValueDTO();
 					tsValue.Contents = value.ToString();
+					tsValue.ValueDetails = new ExpressionTimeseriesValueDetailVoySDBDTO();
 					if (toRet.ContainsKey(item.sdbId.ToString())) {
 						toRet[item.sdbId.ToString()] = tsValue;
 					} else {

@@ -19,6 +19,8 @@ namespace DataRoostAPI.Common.Interfaces {
 
 		SfVoyTimeSeries[] GetTimeseriesList(string companyId, StandardizationType standardizationType, string templateId, int startYear, int endYear);
 
+		SfVoyTimeSeries[] GetTimeseriesListWithValue(string companyId, StandardizationType standardizationType, string templateId, int year);
+
 		SfVoyTimeSeries GetTimeseries(string companyId, StandardizationType standardizationType, string templateId, string timeseriesId);
 
 	}

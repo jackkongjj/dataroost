@@ -44,6 +44,20 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<SfVoyTimeSeries[]>(requestUrl);
 		}
 
+		public SfVoyTimeSeries[] GetTimeseriesListWithValue(string companyId, StandardizationType standardizationType, string templateId, int year) {
+			string requestUrl = string.Format("{0}/datatypes/{1}/templates/{2}/timeseries?startYear={3}&endYear={4}", GetRootUrl(companyId), standardizationType, templateId, year, year);
+			var result = ExecuteGetQuery<SfVoyTimeSeries[]>(requestUrl);
+			foreach (var item in result) {
+				var ts = GetTimeseries(companyId, standardizationType, templateId, item.Id);
+				if (ts.SfTimeSerie != null)
+					item.SfTimeSerie = ts.SfTimeSerie;
+				if (ts.VoyTimeSerie != null)
+					item.VoyTimeSerie = ts.VoyTimeSerie;
+			}
+
+			return result;
+		}
+
 		public SfVoyTimeSeries GetTimeseries(string companyId,
 																			 StandardizationType standardizationType,
 																			 string templateId,

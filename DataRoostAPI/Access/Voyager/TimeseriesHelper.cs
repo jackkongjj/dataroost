@@ -336,10 +336,11 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 							valueDetailsDTO.Operation = "=";
 							valueDetailsDTO.isStar = (starIndicator == "*");
 							CellExpressionNode node = new CellExpressionNode();
-							node.NumericValue = (decimal)numericValue;
+							node.NumericValue = numericValue == null ? 0 : (decimal)numericValue;
 							//node.ScalingBase10 = scalingFactor;
 							if (!string.IsNullOrWhiteSpace(offsetString)) {
-								node.Offset = FLYTOffset.Parse(offsetString);
+								if (offsetString.ToLower().StartsWith("o") || offsetString.ToLower().StartsWith("p"))
+									node.Offset = FLYTOffset.Parse(offsetString);
 							}
 							valueDetailsDTO.LeftNode = node;
 							valueDTO.Contents = numericValue.ToString();
