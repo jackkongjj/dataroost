@@ -166,7 +166,6 @@ LEFT JOIN doc_admin_document ad ON ad.doc_id = x.doc_id
 LEFT JOIN doc_admin_company ac ON ac.doc_id = x.doc_id
 LEFT JOIN doc_admin_company_section acs ON acs.doc_id = x.doc_id
 LEFT JOIN doc_admin_company_archive aca ON aca.doc_id = x.doc_id
-LEFT JOIN doc_admin_comp_section_archive acsa ON acsa.doc_id = x.doc_id
 RIGHT JOIN (
 select distinct rm.report_duration, rm.duration_ind, case when rm.interim_type is null then 'XX' else rm.interim_type end interimtype,
 rm.report_date timeseries,
