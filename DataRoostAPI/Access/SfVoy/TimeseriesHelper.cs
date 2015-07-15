@@ -82,7 +82,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 			} else {
 				TimeseriesDTO[] sf = tsh.QuerySDBTimeseries(iconum, templateId, sfId, dataType, queryFilter);				
 				var superfastTS = sf.ToList<TimeseriesDTO>();
-				var voyTS = GetVoyagerTimeseries(iconum);
+				var voyTS = GetVoyagerTimeseries(iconum, queryFilter);
 				foreach (var ts in superfastTS) {
 					TimeseriesIdentifier id;
 
