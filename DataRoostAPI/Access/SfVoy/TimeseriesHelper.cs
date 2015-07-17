@@ -314,10 +314,20 @@ order by tm.sdbItem_id, re.[order]";
 				int foundNum = 0;
 				string expFlat = item.expressionFlat;
 				foreach (var e in exp) {
+					bool isStarItem = e.Contains("*");
 					string val = e.Replace("(", "").Replace(")", "").Replace("*", "");
 					if (cellValues.ContainsKey(e)) {
-						foundNum++;
-						expFlat = expFlat.Replace(e, cellValues[e].Contents);
+						if (isStarItem) {	//only star item can be replace, else is zero
+							if (((ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[e].ValueDetails).isStar) {
+								foundNum++;
+								expFlat = expFlat.Replace(e, cellValues[e].Contents);
+							} else {
+								expFlat = expFlat.Replace(e, "0");
+							}
+						} else {
+							foundNum++;
+							expFlat = expFlat.Replace(e, cellValues[e].Contents);
+						}
 					} else {
 						expFlat = expFlat.Replace(e, "0");
 					}					
