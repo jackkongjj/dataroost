@@ -45,7 +45,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
 join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
 join TemplateMasterID tmi on tmi.Id = sdbti.SDBTemplateMasterID
-where ds.CompanyID = @iconum	
+where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 
 " : @"WITH TemplateMasterID AS
 (
 	select distinct sdm.Code
@@ -70,7 +70,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_STDTimeSeriesDetail stdd on ts.ID = stdd.TimeSeriesId
 join STDTemplateItem stdti on stdd.STDItemId = stdti.STDItemID
 join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
-where ds.CompanyID = @iconum";
+where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 ";
 
 			bool requestedSpecificTimeSerie = (timeseriesId != null);
 			string templateMasterId = string.Empty;
@@ -437,7 +437,7 @@ where tsd.TimeSeriesId =  @tsId
 	JOIN Expression cExp on CTE.expressionId = cExp.id
 	JOIN Expression e on cExp.LRef1 = e.ID OR cExp.LRef2 = e.ID
 )
-SELECT c.expressionId, op.[Description], e.Value1, e.LRef1, e.FRef1, e.Value2, e.LRef2, e.FRef2
+SELECT distinct c.expressionId, op.[Description], e.Value1, e.LRef1, e.FRef1, e.Value2, e.LRef2, e.FRef2
 FROM CTE c
 JOIN Expression e on c.expressionId = e.ID
 JOIN OperationType op on e.OperationTypeID = op.ID
@@ -453,7 +453,7 @@ JOIN OperationType op on e.OperationTypeID = op.ID
 	JOIN STDExpression cExp on CTE.expressionId = cExp.id
 	JOIN STDExpression e on cExp.LRef1 = e.ID OR cExp.LRef2 = e.ID
 )
-SELECT c.expressionId, op.[Description], e.Value1, e.LRef1, e.FRef1, e.Value2, e.LRef2, e.FRef2
+SELECT distinct c.expressionId, op.[Description], e.Value1, e.LRef1, e.FRef1, e.Value2, e.LRef2, e.FRef2
 FROM CTE c
 JOIN STDExpression e on c.expressionId = e.ID
 JOIN OperationType op on e.OperationTypeID = op.ID
