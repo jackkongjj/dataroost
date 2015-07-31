@@ -40,7 +40,7 @@ namespace DataRoost.Test {
 			string sfVoyTempId = "RnxBfDE=";
 			TemplateDTO sfVoytemplate = sfvoyDataAccess.GetTemplate(iconum, StandardizationType.SDB, sfVoyTempId);
 			SfVoyTimeSeries[] sfVoyTSAll = sfvoyDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, sfVoytemplate.Id);
-			SfVoyTimeSeries[] syVoyTSAllValue = sfvoyDataAccess.GetTimeseriesListWithValue(iconum, StandardizationType.SDB, sfVoytemplate.Id, 2014);
+			SfVoyTimeSeries[] syVoyTSAllValue = sfvoyDataAccess.GetTimeseriesListWithValue(iconum, StandardizationType.STD, sfVoytemplate.Id, 2010);
 			SfVoyTimeSeries sfVoyDetail = sfvoyDataAccess.GetTimeseries(iconum, StandardizationType.SDB, sfVoytemplate.Id, sfVoyTSAll[5].Id);
 			
 

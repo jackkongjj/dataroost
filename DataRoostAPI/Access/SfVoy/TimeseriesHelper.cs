@@ -49,7 +49,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 				}
 				if (timeseriesId.HasVoy) {
 					//get voy data
-					var voyTS = GetVoyagerTimeseries(iconum, timeseriesId, dataType, queryFilter);
+					var voyTS = (from x in GetVoyagerTimeseries(iconum, timeseriesId, dataType, queryFilter)
+									 orderby x.DamDocumentId descending, x.DCN descending
+									 select x).ToList();
+
 					foreach (var ts in voyTS) {
 						var tsId = new voy.TimeseriesIdentifier(ts.Id);
 
@@ -497,7 +500,8 @@ join STDItem stdi on stdi.id = stdti.STDItemID";
 
 				//add to the result
 				foreach (var item in matched) {
-					toRet.Add(item.key.ToString(), item.value);					
+					if(!toRet.ContainsKey(item.key.ToString()))
+						toRet.Add(item.key.ToString(), item.value);
 				}
 			}
 			return toRet;
