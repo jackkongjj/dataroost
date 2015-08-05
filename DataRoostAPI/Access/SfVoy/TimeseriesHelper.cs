@@ -49,19 +49,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 				}
 				if (timeseriesId.HasVoy) {
 					//get voy data
-					var voyTS = GetVoyagerTimeseries(iconum, timeseriesId.PeriodEndDate, timeseriesId.InterimType, timeseriesId.ReportType, timeseriesId.AccountType, queryFilter);
+					var voyTS = (from x in GetVoyagerTimeseries(iconum, timeseriesId, dataType, queryFilter)
+									 orderby x.DamDocumentId descending, x.DCN descending
+									 select x).ToList();
+
 					foreach (var ts in voyTS) {
 						var tsId = new voy.TimeseriesIdentifier(ts.Id);
-						ts.Values = Voyager.TimeseriesHelper.PopulateSDBCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor]);
+
+						ts.Values = dataType == StandardizationType.SDB ? Voyager.TimeseriesHelper.PopulateSDBCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor])
+							: Voyager.TimeseriesHelper.PopulateSTDCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor]);
 					}
-					
+
 					voy = new VoyagerTimeseriesDTO()
 					{
 						InterimType = timeseriesId.InterimType,
 						AccountType = timeseriesId.AccountType,
 						PeriodEndDate = timeseriesId.PeriodEndDate,
 						ReportType = timeseriesId.ReportType,
-						Values = PopulateMapSDBItem(voyTS, iconum, templateId),
+						Values = dataType == StandardizationType.SDB ? PopulateMapSDBItem(voyTS, iconum, templateId) : PopulateMapSTDItem(voyTS, iconum, templateId),
 						DamDocumentId = voyTS.First().DamDocumentId,
 						DCN = voyTS.First().DCN,
 						CompanyFiscalYear = voyTS.First().CompanyFiscalYear,
@@ -82,12 +87,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 			} else {
 				TimeseriesDTO[] sf = tsh.QuerySDBTimeseries(iconum, templateId, sfId, dataType, queryFilter);				
 				var superfastTS = sf.ToList<TimeseriesDTO>();
-				var voyTS = GetVoyagerTimeseries(iconum, queryFilter);
+				var voyTS = GetVoyagerTimeseries(iconum, dataType, queryFilter);
 				foreach (var ts in superfastTS) {
 					TimeseriesIdentifier id;
 
 					var match = from x in voyTS
-											where x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == "S"		//superfast only has "S"
+											where dataType == StandardizationType.SDB ? x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == "S"	: x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear
 											orderby x.DamDocumentId descending, x.DCN descending	//order by one with document
 											select x;
 
@@ -95,43 +100,49 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 					if (temp.Count() > 0) {
 						var voy = temp.First();
 						voy.ScalingFactor = "A";	//convert all to Actual
-						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, "S", true, true);
+						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, "S", true, true);
 						results.Add(new SfVoyTimeSeries { SfTimeSerie = (SFTimeseriesDTO)ts, VoyTimeSerie = voy, Id = id.GetToken() });
-						voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == "S");
+						if (dataType == StandardizationType.SDB)
+							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == "S");
+						else
+							voyTS.RemoveAll(x => x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear);
 					} else {
-						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, "S", true, false);
+						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.StdTimeSeriesCode, "S", true, false);
 						results.Add(new SfVoyTimeSeries { SfTimeSerie = (SFTimeseriesDTO)ts, VoyTimeSerie = null, Id = id.GetToken() });
 					}
 				}
-				//add all the voyager TS that are not mapped to superfast TS, group all Voyager TS by report date, interimType, reporttype and AccountType (since CF,IS,PS,BS their own timerseries)
-				var groupVoyTS = (from x in voyTS
-													group x by new { x.AccountType, x.InterimType, x.PeriodEndDate, x.ReportType }
-														into grp
-														select new
-														{
-															grp.Key.AccountType,
-															grp.Key.InterimType,
-															grp.Key.PeriodEndDate,
-															grp.Key.ReportType
-														}).ToList();
+				//add the rest of voyagerTS, group the SDB timeseries
+				if (dataType == StandardizationType.SDB) {
+					//add all the voyager TS that are not mapped to superfast TS, group all Voyager TS by report date, interimType, reporttype and AccountType (since CF,IS,PS,BS their own timerseries)
+					var groupVoyTS = (from x in voyTS
+														group x by new { x.AccountType, x.InterimType, x.PeriodEndDate, x.ReportType }
+															into grp
+															select new
+															{
+																grp.Key.AccountType,
+																grp.Key.InterimType,
+																grp.Key.PeriodEndDate,
+																grp.Key.ReportType
+															}).ToList();
 
-				foreach (var ts in groupVoyTS) {
-					TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, 0, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.AccountType, false, true);
-					var match = from x in voyTS
-											where x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType
-											orderby x.DamDocumentId descending, x.DCN descending	//order by one with document
-											select x;
-					var temp = match.ToList();
-					if (temp.Count() > 0) {
-						var voy = temp.First();
-						voy.ScalingFactor = "A";	//convert all to Actual						
-						results.Add(new SfVoyTimeSeries { SfTimeSerie = null, VoyTimeSerie = voy, Id = id.GetToken() });
-						voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType);
+					foreach (var ts in groupVoyTS) {
+						var match = from x in voyTS
+												where x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType
+												orderby x.DamDocumentId descending, x.DCN descending	//order by one with document
+												select x;
+						var temp = match.ToList();
+						if (temp.Count() > 0) {
+							var voy = temp.First();
+							voy.ScalingFactor = "A";	//convert all to Actual
+							TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, 0, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, ts.AccountType, false, true);
+							results.Add(new SfVoyTimeSeries { SfTimeSerie = null, VoyTimeSerie = voy, Id = id.GetToken() });
+							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType);
+						}
 					}
 				}
-				//add any remaing???
+				//add any remaing for SDB???, OR add the rest of STD timeseries
 				foreach (var ts in voyTS) {
-					TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, 0, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.AccountType, false, true);
+					TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, 0, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.StdTimeSeriesCode, ts.AccountType, false, true);
 					ts.ScalingFactor = "A"; //convert all to Actual
 					results.Add(new SfVoyTimeSeries { SfTimeSerie = null, VoyTimeSerie = ts, Id = id.GetToken() });
 				}
@@ -139,11 +150,98 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 			return results.ToArray();
 		}
 
-		private List<VoyagerTimeseriesDTO> GetVoyagerTimeseries(int iconum, NameValueCollection queryFilter = null) {
-			return GetVoyagerTimeseries(iconum, null, null, null, null, queryFilter);
+		private List<VoyagerTimeseriesDTO> GetVoyagerTimeseries(int iconum, StandardizationType dataType, NameValueCollection queryFilter = null) {
+			return GetVoyagerTimeseries(iconum, null, dataType, queryFilter);
 		}
 
-		private List<VoyagerTimeseriesDTO> GetVoyagerTimeseries(int iconum, DateTime? periodEndDate, string interimType, string reportType, string accountType, NameValueCollection queryFilter = null) {
+		private List<VoyagerTimeseriesDTO> GetVoyagerTimeseries(int iconum, TimeseriesIdentifier tsId, StandardizationType dataType, NameValueCollection queryFilter = null) {
+			if (dataType == StandardizationType.SDB) {
+				if(tsId != null)
+					return GetVoyagerSDBTimeseries(iconum, tsId.PeriodEndDate, tsId.InterimType, tsId.ReportType, tsId.AccountType, queryFilter);
+				return GetVoyagerSDBTimeseries(iconum, null, null, null, null, queryFilter);
+			}
+
+			if(tsId != null)
+				return GetVoyagerSTDTimeseries(iconum, tsId.PeriodEndDate, tsId.TimeSeriesCode, queryFilter);
+			return GetVoyagerSTDTimeseries(iconum, null, null, queryFilter);
+		}
+
+		private List<VoyagerTimeseriesDTO> GetVoyagerSTDTimeseries(int iconum, DateTime? periodEndDate, string timeSeriesCode, NameValueCollection queryFilter = null) {
+			string startYear = "1900";
+			string endYear = "2100";
+			if (queryFilter != null) {
+				if (!string.IsNullOrEmpty(queryFilter["startyear"]) && !string.IsNullOrEmpty(queryFilter["endyear"])) {
+					startYear = queryFilter["startyear"];
+					endYear = queryFilter["endyear"];
+				}
+			}
+			const string query = @"select sm.master_id, sm.data_year, sm.report_date, sm.time_series_code, sm.ISO_CCY_CODE, sm.SCLG_FACTOR,
+										 f.document_id,
+										coalesce(f.dcn, m.dcn) dcn,
+										coalesce(ac.publication_date, aca.publication_date) publicationdate,
+										coalesce(coalesce(ac.company_document_type, aca.company_document_type),m.doc_type) FormType,
+										f.DATE_ADDED
+										FROM ar_details d
+										RIGHT JOIN (
+											SELECT distinct sm.master_id, sm.data_year, report_date, sm.time_series_code, sm.ISO_CCY_CODE, sm.SCLG_FACTOR,
+											CAST((select SUBSTR(replace(replace(replace(replace(mathml_expression, '<mo>',''),'</mo>',''),'<mi>',''),'</mi>',''),0,12) from ar_std_map e where e.master_id = sm.master_id and rownum=1) as varchar(12)) mathml
+													FROM STD_MASTER sm  													
+													WHERE SM.PPI LIKE :ppiBase
+															AND SM.data_year >= :startYear
+															AND SM.data_year <= :endYear
+                              AND SM.report_date = COALESCE(:reportDate, CAST(SM.report_date as varchar(9)))
+                              AND SM.time_series_code = COALESCE(:timeSeriesCode, SM.time_series_code)
+										)SM on SM.mathml  = ar_item_id
+										LEFT JOIN ar_master m ON m.master_id = d.master_id
+										LEFT JOIN dam_doc_feed f ON f.dcn = m.dcn
+										LEFT JOIN dcn_xref x ON x.dcn = f.dcn
+										LEFT JOIN doc_admin_document ad ON ad.doc_id = x.doc_id
+										LEFT JOIN doc_admin_company ac ON ac.doc_id = x.doc_id
+										LEFT JOIN doc_admin_company_section acs ON acs.doc_id = x.doc_id
+										LEFT JOIN doc_admin_company_archive aca ON aca.doc_id = x.doc_id
+										LEFT JOIN doc_admin_comp_section_archive acsa ON acsa.doc_id = x.doc_id
+										ORDER BY sm.REPORT_DATE DESC";
+
+			string ppi = _ppiHelper.GetPPIByIconum(iconum);
+			string ppiBase = _ppiHelper.GetPPIBase(ppi);
+
+			List<VoyagerTimeseriesDTO> timeSeriesList = new List<VoyagerTimeseriesDTO>();
+
+			using (OracleConnection connection = new OracleConnection(_voyConnectionString)) {
+				connection.Open();
+				using (OracleCommand command = new OracleCommand(query, connection)) {
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "ppiBase", Value = ppiBase });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Int32, Direction = ParameterDirection.Input, ParameterName = "startYear", Value = startYear });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Int32, Direction = ParameterDirection.Input, ParameterName = "endYear", Value = endYear });					
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "reportDate", Value = periodEndDate == null ? null : ((DateTime)periodEndDate).ToString("dd-MMM-yy") });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "timeSeriesCode", Value = timeSeriesCode });
+					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
+						while (sdr.Read()) {
+							voy.TimeseriesIdentifier id = new voy.TimeseriesIdentifier(sdr.GetStringSafe(0), sdr.GetInt16(1), sdr.GetDateTime(2), sdr.GetStringSafe(3));
+							timeSeriesList.Add(new VoyagerTimeseriesDTO()
+							{
+								Id = id.GetToken(),
+								CompanyFiscalYear = sdr.GetInt16(1),
+								PeriodEndDate = sdr.GetDateTime(2),
+								StdTimeSeriesCode = sdr.GetStringSafe(3),
+								IsoCurrency = sdr.GetString(4),
+								ScalingFactor = sdr.GetString(5),
+								DamDocumentId = sdr.GetStringSafe(6) == null ? Guid.Empty : Guid.Parse(sdr.GetStringSafe(6)),
+								PublicationDate = sdr.GetDateTimeSafe(8) == null ? new DateTime() : (DateTime)sdr.GetDateTimeSafe(8),
+								VoyagerFormType = sdr.GetStringSafe(9),
+								DCN = sdr.GetStringSafe(7),								
+								DocumentDate = sdr.GetDateTimeSafe(10) == null ? new DateTime() : (DateTime)sdr.GetDateTimeSafe(10)								
+							});
+						}
+					}
+				}
+				connection.Close();
+			}
+
+			return timeSeriesList;
+		}
+
+		private List<VoyagerTimeseriesDTO> GetVoyagerSDBTimeseries(int iconum, DateTime? periodEndDate, string interimType, string reportType, string accountType, NameValueCollection queryFilter = null) {
 			string startYear = "1900";
 			string endYear = "2100";
 			if (queryFilter != null) {
@@ -241,6 +339,7 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.reptype, RM.account_type, RM
 								AccountType = sdr.GetStringSafe(16),
 								CompanyFiscalYear = int.Parse(sdr.GetString(1)),
 								DocumentDate = sdr.GetDateTimeSafe(17) == null ? new DateTime() : (DateTime)sdr.GetDateTimeSafe(17),
+								StdTimeSeriesCode = sdr.GetStringSafe(15)
 							});
 						}
 					}
@@ -344,6 +443,65 @@ order by tm.sdbItem_id, re.[order]";
 					} else {
 						toRet.Add(item.sdbId.ToString(), tsValue);
 					}
+				}
+			}
+			return toRet;
+		}
+
+		private Dictionary<string, TimeseriesValueDTO> PopulateMapSTDItem(List<VoyagerTimeseriesDTO> voyTS, int iconum, sf.TemplateIdentifier templateId) {
+			const string stdItem_query = @"WITH TemplateMasterID AS
+(
+	select distinct sdm.Code
+	from CompanyIndustry ci 
+	join STDTemplateDetail std on ci.IndustryDetailID = std.IndustryDetailId
+	join DocumentSeries ds on ci.Iconum = ds.CompanyId
+	join Document d on ds.Id = d.DocumentSeriesId
+	join FDSTriPPIMap f on d.PPI = f.PPI
+	join STDCountryGroupCountries sc on sc.CountriesIsoCountry = f.IsoCountry
+	join STDCountryGroup sg on sc.STDCountryGroupID = sg.Id
+		and std.STDCountryGroupID = sg.ID
+	join STDTemplateMaster sdm on std.STDTemplateMasterCode = sdm.Code
+	where ci.Iconum = @iconum
+		and std.ReportTypeID = @reportTypeId
+		and std.UpdateTypeID = @updateTypeId
+		and std.TemplateTypeId = @templateTypeId
+)
+select tmi.code, stdi.id, stdcode
+from STDTemplateItem stdti
+join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
+join STDItem stdi on stdi.id = stdti.STDItemID";
+			var result = new[] { new { tempId = "", stdId = 0, expressionFlat = "" } };
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(stdItem_query, conn)) {
+					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = iconum });
+					cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = templateId.ReportType });
+					cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = templateId.UpdateType });
+					cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.Int) { Value = templateId.TemplateType });
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						result = reader.Cast<IDataRecord>().Select(r => new
+						{
+							tempId = reader.GetString(0),
+							stdId = reader.GetInt32(1),
+							expressionFlat = reader.GetString(2)
+						}).ToArray();
+					}
+				}
+			}
+			Dictionary<string, TimeseriesValueDTO> toRet = new Dictionary<string, TimeseriesValueDTO>();
+			
+			foreach (var ts in voyTS) {
+				var matched = result.Where(k => ts.Values.ContainsKey(k.expressionFlat)).Select(k => new { key = k.stdId, value = ts.Values[k.expressionFlat] });
+				//use for manual check with query
+				//var nomatch = from n in ts.Values
+				//							let item = from x in result select x.expressionFlat
+				//							where !item.Contains(n.Key)
+				//							select n;
+
+				//add to the result
+				foreach (var item in matched) {
+					if(!toRet.ContainsKey(item.key.ToString()))
+						toRet.Add(item.key.ToString(), item.value);
 				}
 			}
 			return toRet;

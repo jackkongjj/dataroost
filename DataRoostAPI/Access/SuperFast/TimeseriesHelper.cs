@@ -226,10 +226,11 @@ select
 	d.DAMDocumentId,
 	d.PublicationDateTime,
 	ts.CurrencyCode, ts.ScalingFactorID,
-  d.DocumentDate,
+  d.DocumentDate, map.stdcode,
 	d.FormTypeID,	d.ExportFlag
 from Timeseries ts
 join Document d on ts.DocumentId = d.id
+left join SDBSTDTimeSeriesMapping map on map.ReportTypeID = d.ReportTypeID and map.InterimTypeID = ts.InterimTypeID and map.AccountTypeID = 'S'
 where ts.Id = @tsId
 ";
 
@@ -256,6 +257,7 @@ where ts.Id = @tsId
 						ts.IsoCurrency = reader.GetStringSafe(c++);
 						ts.ScalingFactor = reader.GetStringSafe(c++);
 						ts.DocumentDate = reader.GetDateTime(c++);
+						ts.StdTimeSeriesCode = reader.GetStringSafe(c++);
 						return ts;
 					}
 				}

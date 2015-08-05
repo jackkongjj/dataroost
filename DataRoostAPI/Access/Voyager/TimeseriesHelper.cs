@@ -110,7 +110,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			return timeSeriesList.ToArray();
 		}
 
-		private static Dictionary<string, TimeseriesValueDTO> PopulateSTDCells(string masterId) {
+		public static Dictionary<string, TimeseriesValueDTO> PopulateSTDCells(string masterId, decimal scalingFactor = 1) {
 			string query = @"SELECT d.data_type, d.item_code, d.text_value, d.numeric_value, m.mathml_expression, d.scaling_factor, ar.bookmark
                                     FROM 
                                            (SELECT reported_text text_value, null numeric_value, i.item_code item_code, master_id master_id, 'text' data_type, null scaling_factor
@@ -166,7 +166,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 								ExpressionTimeseriesValueDetailDTO valueDetailsDTO = new ExpressionTimeseriesValueDetailDTO();
 								valueDetailsDTO.Operation = "=";
 								CellExpressionNode node = new CellExpressionNode();
-								node.NumericValue = (decimal)numericValue;
+								node.NumericValue = (decimal)numericValue * scalingFactor;
 								//node.ScalingBase10 = scalingFactor;
 								if (!string.IsNullOrWhiteSpace(offsetString)) {
 									node.Offset = FLYTOffset.Parse(offsetString);

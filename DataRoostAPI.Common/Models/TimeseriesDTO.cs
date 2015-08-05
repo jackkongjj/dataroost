@@ -56,6 +56,9 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("scalingFactor")]
 		public string ScalingFactor { get; set; }
 
+		[JsonProperty("stdTimeSeriesCode")]
+		public string StdTimeSeriesCode { get; set; }
+
 		[JsonProperty("values")]
 		public Dictionary<string, TimeseriesValueDTO> Values { get; set; }
 
