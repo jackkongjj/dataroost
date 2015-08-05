@@ -9,6 +9,8 @@ using FactSet.Data.SqlClient;
 
 using Fundamentals.Helpers.DataAccess;
 
+using CCS.Fundamentals.DataRoostAPI.Helpers;
+
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 	public class ExportedItemsHelper : SqlHelper {
@@ -22,8 +24,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		public ExportedItem[] GetExportedItems(StandardizationType standardizationType,
 		                                       List<string> itemCodes,
 		                                       DateTime startDate,
-		                                       DateTime endDate) {
-			const string sdbQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+		                                       DateTime endDate,
+																					 List<string> countries = null) {
+			const string sdbQuery =
+				@"SELECT tmp.CompanyID, tmp.DocumentDate, tmp.FormTypeID, tmp.PublicationDateTime, tmp.DAMDocumentId, fds.IsoCountry FROM
+																(select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId 
 																	from Document d (nolock)
 																			join DocumentSeries ds (nolock)
 																					on d.DocumentSeriesID = ds.ID
@@ -38,10 +43,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																					on ts.ID = sdbs.TimeSeriesID
 																			join SDBItem s (nolock)
 																					on sdbs.SdbItemId = s.id
-																			join fnc_SplitString(@itemCodes, ',') as fnc
-																					on s.SDBCode = CASE WHEN @itemCodes = '' THEN s.SDBCode ELSE fnc.token END
 																	where EndTimeStamp between @startDate and @endDate
-																	order by s.Id, d.id, ts.TimeSeriesDate desc
+																		and @itemCodes is null
 																	union
 																	select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
 																	from Document d (nolock)
@@ -60,10 +63,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																					on sdbs.SdbItemId = s.id
 																			join fnc_SplitString(@itemCodes, ',') as fnc
 																					on s.SDBCode = CASE WHEN @itemCodes = '' THEN s.SDBCode ELSE fnc.token END
-																	where EndTimeStamp between @startDate and @endDate
-																	order by s.Id, d.id, ts.TimeSeriesDate desc";
+																	where EndTimeStamp between @startDate and @endDate) as tmp
+																join FdsTriPpiMap fds on tmp.CompanyID = fds.iconum
+																order by tmp.DocumentDate desc";
 
-			const string stdQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+			const string stdQuery =
+				@"SELECT tmp.CompanyID, tmp.DocumentDate, tmp.FormTypeID, tmp.PublicationDateTime, tmp.DAMDocumentId, fds.IsoCountry FROM
+																(select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
 																	from Document d (nolock)
 																			join DocumentSeries ds (nolock)
 																					on d.DocumentSeriesID = ds.ID
@@ -78,9 +84,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																					on ts.ID = stds.TimeSeriesID
 																			join STDItem s (nolock)
 																					on stds.STDItemId = s.id
-																			join fnc_SplitString(@itemCodes, ',') as fnc
-																					on s.STDCode = fnc.token
 																	where EndTimeStamp between @startDate and @endDate
+																		and @itemCodes is null
 																union
 																select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
 																	from Document d (nolock)
@@ -99,8 +104,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																					on stds.STDItemId = s.id
 																			join fnc_SplitString(@itemCodes, ',') as fnc
 																					on s.STDCode = fnc.token
-																	where EndTimeStamp between @startDate and @endDate
-																order by ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime";
+																	where EndTimeStamp between @startDate and @endDate) as tmp
+																join FdsTriPpiMap fds on tmp.CompanyID = fds.iconum
+																order by tmp.CompanyID, tmp.DocumentDate, tmp.FormTypeID, tmp.PublicationDateTime";
+
 			string query = stdQuery;
 			if (standardizationType == StandardizationType.SDB) {
 				query = sdbQuery;
@@ -111,33 +118,41 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 				itemCodeString = string.Join(",", itemCodes);
 			}
 
-			return
-				ExecuteQuery(query,
-				             new List<SqlParameter>
-				             {
-					             new SqlParameter("@startDate", startDate),
-					             new SqlParameter("@endDate", endDate),
-					             new SqlParameter("@itemCodes", itemCodeString)
-				             },
-				             reader => {
-					             return new ExportedItem
-					                    {
-						                    Iconum = reader.GetInt32(0).ToString(),
-						                    ReportDate = reader.GetDateTime(1),
-						                    FormType = reader.GetStringSafe(2),
-						                    PublicationDate = reader.GetDateTime(3),
-																DocumentId = reader.GetGuid(4).ToString()
-					                    };
-				             }).ToArray();
+			IEnumerable<ExportedItem> items = ExecuteQuery(query,
+			                                               new List<SqlParameter>
+			                                               {
+				                                               new SqlParameter("@startDate", startDate),
+				                                               new SqlParameter("@endDate", endDate),
+				                                               new SqlParameter("@itemCodes", itemCodeString),
+			                                               },
+			                                               reader => {
+				                                               return new ExportedItem
+				                                                      {
+					                                                      Iconum = reader.GetInt32(0).ToString(),
+					                                                      ReportDate = reader.GetDateTime(1),
+					                                                      FormType = reader.GetStringSafe(2),
+					                                                      PublicationDate = reader.GetDateTime(3),
+					                                                      DocumentId = reader.GetGuid(4).ToString(),
+																																Country = reader.GetStringSafe(5)
+				                                                      };
+			                                               });
+			if (countries != null && countries.Count() > 0) {
+				items = items.Where(i => i.Country.In(countries));
+			}
+
+			return items.ToArray();
 		}
 
 		public ExportedItem[] GetAllExportedShareItems(StandardizationType standardizationType,
 																			 DateTime startDate,
-																			 DateTime endDate) {
-			const string sdbQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+																			 DateTime endDate,
+																			 List<string> countries = null) {
+			const string sdbQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId, fds.IsoCountry
 																	from Document d (nolock)
 																			join DocumentSeries ds (nolock)
 																					on d.DocumentSeriesID = ds.ID
+																			join FdsTriPpiMap fds (nolock)
+																					on fds.iconum = ds.CompanyID
 																			join ExportedDocumentLog edl (nolock)
 																					on edl.DocumentID = d.DAMDocumentId
 																					and edl.CompanyID = ds.CompanyID
@@ -150,12 +165,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																			join SDBItem s (nolock)
 																					on sdbs.SdbItemId = s.id
 																	where EndTimeStamp between @startDate and @endDate
+																		and 1 = CASE WHEN @country_codes IS NULL THEN 1
+																					ELSE WHEN fds.IsoCountry IN fnc_SplitString(@country_codes, ',') THEN 1
+																					ELSE 0 END
 																	order by s.Id, d.id, ts.TimeSeriesDate desc";
 
-			const string stdQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId
+			const string stdQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId, fds.IsoCountry
 																	from Document d (nolock)
 																			join DocumentSeries ds (nolock)
 																					on d.DocumentSeriesID = ds.ID
+																			join FdsTriPpiMap fds (nolock)
+																					on fds.iconum = ds.CompanyID
 																			join ExportedDocumentLog edl (nolock)
 																					on edl.DocumentID = d.DAMDocumentId
 																					and edl.CompanyID = ds.CompanyID
@@ -168,18 +188,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																			join STDItem s (nolock)
 																					on stds.STDItemId = s.id
 																	where EndTimeStamp between @startDate and @endDate
+																		and 1 = CASE WHEN fds.IsoCountry IN fnc_SplitString(@country_codes, ',') THEN 1
+																					ELSE WHEN @country_codes IS NULL THEN 1
+																					ELSE 0 END
 																	order by ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime";
 			string query = stdQuery;
 			if (standardizationType == StandardizationType.SDB) {
 				query = sdbQuery;
 			}
+			string countriesString = null;
+			if (countries != null && countries.Count() > 0) {
+				countriesString = string.Join(",", countries);
+			}
 
-			return
-				ExecuteQuery(query,
+			IEnumerable<ExportedItem> items = ExecuteQuery(query,
 										 new List<SqlParameter>
 				             {
 					             new SqlParameter("@startDate", startDate),
 					             new SqlParameter("@endDate", endDate),
+											 new SqlParameter("@country_codes", countriesString)
 				             },
 										 reader =>
 										 {
@@ -189,9 +216,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 												 ReportDate = reader.GetDateTime(1),
 												 FormType = reader.GetStringSafe(2),
 												 PublicationDate = reader.GetDateTime(3),
-												 DocumentId = reader.GetGuid(4).ToString()
+												 DocumentId = reader.GetGuid(4).ToString(),
+												 Country = reader.GetStringSafe(5)
 											 };
-										 }).ToArray();
+										 });
+			if (countries != null && countries.Count() > 0) {
+				items = items.Where(i => i.Country.In(countries));
+			}
+
+			return items.ToArray();
 		}
 
 		protected override SqlConnection GetDatabaseConnection() {

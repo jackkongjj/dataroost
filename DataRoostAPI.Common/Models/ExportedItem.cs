@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
+
 	public class ExportedItem {
 
 		[JsonProperty("iconum")]
@@ -23,5 +24,10 @@ namespace DataRoostAPI.Common.Models {
 
 		[JsonProperty("publicationDate")]
 		public DateTime PublicationDate { get; set; }
+
+		[JsonProperty("country")]
+		public string Country { get; set; }
+
 	}
+
 }

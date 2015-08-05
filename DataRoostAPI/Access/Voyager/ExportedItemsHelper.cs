@@ -4,6 +4,8 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 
+using CCS.Fundamentals.DataRoostAPI.Helpers;
+
 using DataRoostAPI.Common.Models;
 
 using FactSet.Data.SqlClient;
@@ -25,9 +27,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		public ExportedItem[] GetExportedItems(StandardizationType standardizationType,
 		                                       List<string> itemCodes,
 		                                       DateTime startDate,
-		                                       DateTime endDate) {
+		                                       DateTime endDate,
+																					 List<string> countries = null) {
 			const string query =
-				@"select DISTINCT fds.iconum, vdcn.ReportDate as DocumentDate, dvm.Value as FormType, d.PublicationStampUtc as PublicationDate, d.id as DAmDocumentId
+				@"select DISTINCT fds.iconum, vdcn.ReportDate as DocumentDate, dvm.Value as FormType, d.PublicationStampUtc as PublicationDate, d.id as DAmDocumentId, fds.IsoCountry
 						from VoyagerUsedDCNs vdcn (nolock)
 							join Documents d (nolock) on vdcn.DCN = d.DCN
 							join FdsTriPpiMap fds (nolock) on fds.PPI = vdcn.PPI
@@ -38,8 +41,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 												AND dvm.KeyId = 1 --form type  
 						where vdcn.CreateDateTime between @startDate and @endDate";
 
-			return
-				ExecuteQuery(query,
+			IEnumerable<ExportedItem> items = ExecuteQuery(query,
 				             new List<SqlParameter>
 				             {
 					             new SqlParameter("@startDate", startDate),
@@ -52,9 +54,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 						                    ReportDate = reader.GetDateTime(1),
 						                    FormType = reader.GetStringSafe(2),
 						                    PublicationDate = reader.GetDateTime(3),
-						                    DocumentId = reader.GetGuid(4).ToString()
+						                    DocumentId = reader.GetGuid(4).ToString(),
+																Country = reader.GetStringSafe(5)
 					                    };
-				             }).ToArray();
+										 });
+			if (countries != null && countries.Count() > 0) {
+				items = items.Where(i => i.Country.In(countries));
+			}
+
+			return items.ToArray();
 		}
 
 		protected override SqlConnection GetDatabaseConnection() {

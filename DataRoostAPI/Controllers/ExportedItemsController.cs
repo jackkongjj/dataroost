@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
 
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
@@ -18,22 +15,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("{standardizationType}")]
 		[HttpGet]
 		public ExportedItem[] GetExportedItems(StandardizationType standardizationType,
-																					 [FromUri] string[] itemCodes,
-																					 DateTime startDate,
-																					 DateTime? endDate = null) {
+		                                       DateTime startDate,
+		                                       DateTime? endDate = null,
+																					 [FromUri] string itemCodes = null,
+																					 [FromUri] string countries = null) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DateTime endDateTime = DateTime.UtcNow;
 			if (endDate != null) {
-				endDateTime = (DateTime)endDate;
+				endDateTime = (DateTime) endDate;
 			}
-			List<string> itemCodeList = new List<string>(itemCodes);
+			List<string> itemCodeList = null;
+			if (itemCodes != null) {
+				itemCodeList = new List<string>(itemCodes.Split(','));
+			}
+			List<string> countryList = null;
+			if (countries != null) {
+				countryList = new List<string>(countries.Split(','));
+			}
 
 			ExportedItemsHelper superfastHelper = new ExportedItemsHelper(sfConnectionString);
-			ExportedItem[] superfastExportedItems = superfastHelper.GetExportedItems(standardizationType, itemCodeList, startDate, endDateTime);
+			ExportedItem[] superfastExportedItems = superfastHelper.GetExportedItems(standardizationType,
+			                                                                         itemCodeList,
+			                                                                         startDate,
+			                                                                         endDateTime,
+																																							 countryList);
 			Access.Voyager.ExportedItemsHelper voyagerHelper = new Access.Voyager.ExportedItemsHelper(damConnectionString);
-			ExportedItem[] voyagerExportedItems = voyagerHelper.GetExportedItems(standardizationType, itemCodeList, startDate, endDateTime);
-			List < ExportedItem > exportedItems = new List<ExportedItem>(superfastExportedItems);
+			ExportedItem[] voyagerExportedItems = voyagerHelper.GetExportedItems(standardizationType,
+			                                                                     itemCodeList,
+			                                                                     startDate,
+			                                                                     endDateTime,
+																																					 countryList);
+			List<ExportedItem> exportedItems = new List<ExportedItem>(superfastExportedItems);
 			exportedItems.AddRange(voyagerExportedItems);
 			return exportedItems.ToArray();
 		}
@@ -41,22 +54,36 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("{standardizationType}/shares")]
 		[HttpGet]
 		public ExportedItem[] GetExportedShareItems(StandardizationType standardizationType,
-																					 DateTime startDate,
-																					 DateTime? endDate = null) {
+		                                            DateTime startDate,
+		                                            DateTime? endDate = null,
+		                                            [FromUri] string countries = null) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DateTime endDateTime = DateTime.UtcNow;
 			if (endDate != null) {
-				endDateTime = (DateTime)endDate;
+				endDateTime = (DateTime) endDate;
 			}
+			List<string> countryList = null;
+			if (countries != null) {
+				countryList = new List<string>(countries.Split(','));
+			}
+
 			ExportedItemsHelper superfastHelper = new ExportedItemsHelper(sfConnectionString);
-			ExportedItem[] superfastExportedItems = superfastHelper.GetAllExportedShareItems(standardizationType, startDate, endDateTime);
+			ExportedItem[] superfastExportedItems = superfastHelper.GetAllExportedShareItems(standardizationType,
+			                                                                                 startDate,
+			                                                                                 endDateTime,
+																																											 countryList);
 			Access.Voyager.ExportedItemsHelper voyagerHelper = new Access.Voyager.ExportedItemsHelper(damConnectionString);
-			ExportedItem[] voyagerExportedItems = voyagerHelper.GetExportedItems(standardizationType, null, startDate, endDateTime);
+			ExportedItem[] voyagerExportedItems = voyagerHelper.GetExportedItems(standardizationType,
+			                                                                     null,
+			                                                                     startDate,
+			                                                                     endDateTime,
+																																					 countryList);
 			List<ExportedItem> exportedItems = new List<ExportedItem>(superfastExportedItems);
 			exportedItems.AddRange(voyagerExportedItems);
 			return exportedItems.ToArray();
 		}
+
 	}
 
 }
