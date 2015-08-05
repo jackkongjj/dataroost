@@ -21,15 +21,20 @@ namespace DataRoostAPI.Common.Access {
 
 		public ExportedItem[] GetExportedItems(StandardizationType standardizationType,
 																			 DateTime startDate,
+																			 DateTime? endDate = null,
 																			 List<string> itemCodes = null,
-																			 DateTime? endDate = null) {
+																			 List<string> countries = null) {
 			string requestUrl = string.Format("{0}/api/v1/exportedItems/{1}?startDate={2}", _dataRoostConnectionString, standardizationType, startDate);
-			if (itemCodes != null) {
-				requestUrl += "&itemCodes=" + string.Join(",", itemCodes);
-			}
 			if (endDate != null) {
 				requestUrl += "&endDate=" + endDate;
 			}
+			if (itemCodes != null) {
+				requestUrl += "&itemCodes=" + string.Join(",", itemCodes);
+			}
+			if (countries != null) {
+				requestUrl += "&countries=" + string.Join(",", countries);
+			}
+
 			return ExecuteGetQuery<ExportedItem[]>(requestUrl);
 		}
 
