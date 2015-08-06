@@ -240,9 +240,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 													AND iconum = @iconum
 											 union
 											 select 'x'
-												from dbo.filermst
+												from dbo.FdsTriPpiMap
 												where iconum = @iconum
-													AND iso_country IN ('US', 'ZW')";
+													AND IsoCountry IN ('US', 'ZW')";
 
 			using (SqlConnection conn = new SqlConnection(_damConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
