@@ -19,7 +19,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		public string GetPPIByIconum(int iconum) {
-			string query = "SELECT PPI FROM FdsTriPpiMap WHERE iconum = @iconum";
+			string query = "SELECT PPI FROM FdsTriPpiMap WHERE iconum = @iconum AND Cusip IS NOT NULL";
 
 			return ExecuteQuery<string>(query, new List<SqlParameter> { new SqlParameter("@iconum", iconum) }, reader => {
 				                                                                                    return reader.GetString(0);
