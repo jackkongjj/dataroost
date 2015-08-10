@@ -241,7 +241,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 											 union
 											 select 'x'
 												from dbo.FdsTriPpiMap
-												where iconum = @iconum
+												where iconum = @iconum AND IsAdr = 0
 													AND IsoCountry IN ('US', 'ZW')";
 
 			using (SqlConnection conn = new SqlConnection(_damConnectionString)) {
