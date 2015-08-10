@@ -14,10 +14,10 @@ using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
-	[RoutePrefix("api/v1/companies/{CompanyId}/shares")]
+	[RoutePrefix("api/v1/companies")]
 	public class SharesController : ApiController {
 
-		[Route("latestFiscalPeriodEnd/")]
+		[Route("{CompanyId}/shares/latestFiscalPeriodEnd/")]
 		[HttpGet]
 		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string CompanyId, DateTime? reportDate = null) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
@@ -31,7 +31,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetCompanyShareClassData(iconum, reportDate).ToArray();
 		}
 
-		[Route("currentShares/")]
+		[Route("shares/latestFiscalPeriodEnd/")]
+		[HttpPost]
+		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			Dictionary<int, ShareClassDataDTO[]> companyData = new Dictionary<int, ShareClassDataDTO[]>();
+			foreach (string companyId in companyIds) {
+				int iconum = PermId.PermId2Iconum(companyId);
+
+				CompanyHelper helper = new CompanyHelper(sfConnectionString,
+				                                         voyConnectionString,
+				                                         lionConnectionString,
+				                                         damConnectionString);
+				ShareClassDataDTO[] data = helper.GetCompanyShareClassData(iconum, null).ToArray();
+				companyData.Add(iconum, data);
+			}
+			return companyData;
+		}
+
+		[Route("{CompanyId}/shares/currentShares/")]
 		[HttpGet]
 		public ShareClassDataDTO[] GetCurrentShareData(string CompanyId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;

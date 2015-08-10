@@ -9,6 +9,8 @@ using DataRoostAPI.Common.Models;
 
 using Fundamentals.Helpers.DataAccess;
 
+using Newtonsoft.Json;
+
 namespace DataRoostAPI.Common.Access {
 
 	internal class CompanyDataAccess : ApiHelper, ICompanyDataAccess {
@@ -39,6 +41,18 @@ namespace DataRoostAPI.Common.Access {
 		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null) {
 			string requestUrl = string.Format("{0}/shares/latestFiscalPeriodEnd", GetRootUrl(companyId));
 			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
+		}
+
+		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
+			string requestUrl = string.Format("{0}/api/v1/companies/shares/latestFiscalPeriodEnd", _dataRoostConnectionString);
+			//string postParams = string.Format("[\"{0}\"]", string.Join("\",\"", companyIds));
+			string postParams = JsonConvert.SerializeObject(companyIds);
+			using (WebClient client = GetDefaultWebClient()) {
+				client.Headers.Add("Content-Type","application/json");
+				string postResponse = client.UploadString(requestUrl, "POST", postParams);
+				return JsonConvert.DeserializeObject<Dictionary<int, ShareClassDataDTO[]>>(postResponse);
+			}
+			//return ExecutePostQuery<Dictionary<int, ShareClassDataDTO[]>>(requestUrl, postParams);
 		}
 
 		public ShareClassDataDTO[] GetCurrentShareData(string companyId) {
