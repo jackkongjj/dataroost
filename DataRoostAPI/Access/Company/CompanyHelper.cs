@@ -135,7 +135,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                 LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
 	                            WHERE s.Iconum = @iconum
                                     --AND RIGHT(p.PPI, 1) != '0'
-                                    AND s.term_date IS NULL
+                                    --AND s.term_date IS NULL
                                     --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
 
 			List<ShareClassDTO> shareClasses = new List<ShareClassDTO>();
