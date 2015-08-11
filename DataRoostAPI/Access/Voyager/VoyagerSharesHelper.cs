@@ -53,6 +53,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
                                                 WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate
+																						UNION
+                                            SELECT reported_text text_value, null numeric_value, i.item_code itemCode, i.item_name itemName, 'text' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code ORDER BY m.report_date DESC) RANK
+                                                FROM std_text_details d
+                                                    JOIN item_std i ON i.item_code = d.item_code
+																										JOIN std_master m ON m.master_id = d.master_id
+																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate
                                             UNION
                                             SELECT null text_value, reported_value numeric_value, i.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code ORDER BY m.report_date DESC) RANK
                                                 FROM std_details d
@@ -112,6 +119,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 									Name = itemName,
 									ReportDate = reportDate,
 									Value = (decimal)numericValue,
+								};
+							} else if (dataType == "text") {
+								item = new ShareClassTextItem
+								{
+									ItemId = itemCode,
+									Name = itemName,
+									ReportDate = reportDate,
+									Value = textValue,
 								};
 							}
 							itemValues.Add(item);

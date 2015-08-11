@@ -62,4 +62,10 @@ namespace DataRoostAPI.Common.Models {
 
 	}
 
+	public class ShareClassTextItem : ShareClassDataItem {
+
+		public string Value { get; set; }
+
+	}
+
 }
