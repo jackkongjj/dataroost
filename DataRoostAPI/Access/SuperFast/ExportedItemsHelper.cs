@@ -165,9 +165,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																			join SDBItem s (nolock)
 																					on sdbs.SdbItemId = s.id
 																	where EndTimeStamp between @startDate and @endDate
-																		and 1 = CASE WHEN @country_codes IS NULL THEN 1
-																					ELSE WHEN fds.IsoCountry IN fnc_SplitString(@country_codes, ',') THEN 1
-																					ELSE 0 END
 																	order by s.Id, d.id, ts.TimeSeriesDate desc";
 
 			const string stdQuery = @"select DISTINCT ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime, d.DAMDocumentId, fds.IsoCountry
@@ -188,17 +185,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																			join STDItem s (nolock)
 																					on stds.STDItemId = s.id
 																	where EndTimeStamp between @startDate and @endDate
-																		and 1 = CASE WHEN fds.IsoCountry IN fnc_SplitString(@country_codes, ',') THEN 1
-																					ELSE WHEN @country_codes IS NULL THEN 1
-																					ELSE 0 END
 																	order by ds.CompanyID, d.DocumentDate, d.FormTypeID, d.PublicationDateTime";
 			string query = stdQuery;
 			if (standardizationType == StandardizationType.SDB) {
 				query = sdbQuery;
-			}
-			string countriesString = null;
-			if (countries != null && countries.Count() > 0) {
-				countriesString = string.Join(",", countries);
 			}
 
 			IEnumerable<ExportedItem> items = ExecuteQuery(query,
@@ -206,7 +196,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 				             {
 					             new SqlParameter("@startDate", startDate),
 					             new SqlParameter("@endDate", endDate),
-											 new SqlParameter("@country_codes", countriesString)
 				             },
 										 reader =>
 										 {
