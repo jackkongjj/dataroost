@@ -13,6 +13,8 @@ namespace DataRoostAPI.Common.Interfaces {
 
 		EffortDTO GetCompanyCollectionEffort(string companyId);
 
+		Dictionary<int, EffortDTO> GetCollectionEffortForCompanies(List<string> companyIds);
+
 		EffortDTO[] GetEfforts(string companyId);
 
 		ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null);

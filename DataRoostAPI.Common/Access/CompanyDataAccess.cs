@@ -33,6 +33,16 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<EffortDTO>(requestUrl);
 		}
 
+		public Dictionary<int, EffortDTO> GetCollectionEffortForCompanies(List<string> companyIds) {
+			string requestUrl = string.Format("{0}/api/v1/companies/collectioneffort", _dataRoostConnectionString);
+			string postParams = JsonConvert.SerializeObject(companyIds);
+			using (WebClient client = GetDefaultWebClient()) {
+				client.Headers.Add("Content-Type", "application/json");
+				string postResponse = client.UploadString(requestUrl, "POST", postParams);
+				return JsonConvert.DeserializeObject<Dictionary<int, EffortDTO>>(postResponse);
+			}	
+		}
+
 		public EffortDTO[] GetEfforts(string companyId) {
 			string requestUrl = string.Format("{0}/efforts", GetRootUrl(companyId));
 			return ExecuteGetQuery<EffortDTO[]>(requestUrl);
@@ -45,14 +55,12 @@ namespace DataRoostAPI.Common.Access {
 
 		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
 			string requestUrl = string.Format("{0}/api/v1/companies/shares/latestFiscalPeriodEnd", _dataRoostConnectionString);
-			//string postParams = string.Format("[\"{0}\"]", string.Join("\",\"", companyIds));
 			string postParams = JsonConvert.SerializeObject(companyIds);
 			using (WebClient client = GetDefaultWebClient()) {
 				client.Headers.Add("Content-Type","application/json");
 				string postResponse = client.UploadString(requestUrl, "POST", postParams);
 				return JsonConvert.DeserializeObject<Dictionary<int, ShareClassDataDTO[]>>(postResponse);
 			}
-			//return ExecutePostQuery<Dictionary<int, ShareClassDataDTO[]>>(requestUrl, postParams);
 		}
 
 		public ShareClassDataDTO[] GetCurrentShareData(string companyId) {

@@ -15,14 +15,16 @@ namespace DataRoost.Test {
 		static void Main(string[] args) {
 			string connectionString = "http://localhost:61581";
 			string iconum = "36468";
+			List<string> companyList = new List<string> { "5195905", "5108772", iconum };
 			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
 			CompanyDTO company = companyDataAccess.GetCompany(iconum);
 			EffortDTO effort = companyDataAccess.GetCompanyCollectionEffort(iconum);
 			EffortDTO[] efforts = companyDataAccess.GetEfforts(iconum);
+			Dictionary<int, EffortDTO> companyEfforts = companyDataAccess.GetCollectionEffortForCompanies(companyList);
 			ShareClassDataDTO[] latestFPESharesData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(iconum);
 			ShareClassDataDTO[] latestFPESharesData1 = companyDataAccess.GetLatestFiscalPeriodEndSharesData("12414115");
 			Dictionary<int, ShareClassDataDTO[]> companyShareData =
-				companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "5195905", "5108772", iconum });
+				companyDataAccess.GetLatestFiscalPeriodEndSharesData(companyList);
 			ShareClassDataDTO[] currentSharesData = companyDataAccess.GetCurrentShareData(iconum);
 
 			IExportedItemsDataAccess exportedItemsDataAccess = DataRoostAccessFactory.GetExportedItemsDataAccess(connectionString);
