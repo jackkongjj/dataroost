@@ -1,23 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Data;
 using System.Data.SqlClient;
-using FactSet.Data.SqlClient;
-using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
+
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
+using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
 
 using DataRoostAPI.Common.Models;
 
+using FactSet.Data.SqlClient;
+
 namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
+
 	public class CompanyHelper {
+
+		private readonly string _damConnectionString;
+		private readonly string _lionConnectionString;
 		private readonly string _sfConnectionString;
 		private readonly string _voyConnectionString;
-		private readonly string _lionConnectionString;
-		private readonly string _damConnectionString;
 
-		public CompanyHelper(string sfConnectionString, string voyConnectionString, string lionConnectionString, string damConnectionString) {
+		public CompanyHelper(string sfConnectionString,
+		                     string voyConnectionString,
+		                     string lionConnectionString,
+		                     string damConnectionString) {
 			_sfConnectionString = sfConnectionString;
 			_voyConnectionString = voyConnectionString;
 			_lionConnectionString = lionConnectionString;
@@ -42,13 +47,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 							company.Name = sdr.GetStringSafe(0);
 							company.CompanyType = sdr.GetStringSafe(1);
 							company.CountryId = sdr.GetStringSafe(4);
-							company.Country = new CountryDTO()
-							{
-								LongName = sdr.GetStringSafe(2),
-								ShortName = sdr.GetStringSafe(3),
-								Id = sdr.GetStringSafe(4),
-								Iso3 = sdr.GetStringSafe(4),
-							};
+							company.Country = new CountryDTO
+							                  {
+								                  LongName = sdr.GetStringSafe(2),
+								                  ShortName = sdr.GetStringSafe(3),
+								                  Id = sdr.GetStringSafe(4),
+								                  Iso3 = sdr.GetStringSafe(4)
+							                  };
 						}
 					}
 				}
@@ -146,26 +151,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						while (sdr.Read()) {
-							ShareClassDTO shareClass = new ShareClassDTO()
-							{
-								Cusip = sdr.GetStringSafe(0),
-								//Iconum = sdr.GetInt32(1),
-								Name = sdr.GetStringSafe(2),
-								AssetClass = sdr.GetStringSafe(3),
-								ListedOn = sdr.GetStringSafe(4),
-								InceptionDate = sdr.GetDateTime(5),
-								TermDate = sdr.GetNullable<DateTime>(6),
-								//CurrentPrice = sdr.GetDecimal(7),
-								//CurrentSharesOutstanding = sdr.GetDecimal(8),
-								TickerSymbol = sdr.GetStringSafe(9),
-								Sedol = sdr.GetStringSafe(10),
-								Isin = sdr.GetStringSafe(11),
-								//ToCusip = sdr.GetStringSafe(12),
-								IssueType = sdr.GetStringSafe(13),
-								PPI = sdr.GetStringSafe(14),
-								Id = sdr.GetStringSafe(15),
-								PermId = sdr.GetStringSafe(15),
-							};
+							ShareClassDTO shareClass = new ShareClassDTO
+							                           {
+								                           Cusip = sdr.GetStringSafe(0),
+
+								                           //Iconum = sdr.GetInt32(1),
+								                           Name = sdr.GetStringSafe(2),
+								                           AssetClass = sdr.GetStringSafe(3),
+								                           ListedOn = sdr.GetStringSafe(4),
+								                           InceptionDate = sdr.GetDateTime(5),
+								                           TermDate = sdr.GetNullable<DateTime>(6),
+
+								                           //CurrentPrice = sdr.GetDecimal(7),
+								                           //CurrentSharesOutstanding = sdr.GetDecimal(8),
+								                           TickerSymbol = sdr.GetStringSafe(9),
+								                           Sedol = sdr.GetStringSafe(10),
+								                           Isin = sdr.GetStringSafe(11),
+
+								                           //ToCusip = sdr.GetStringSafe(12),
+								                           IssueType = sdr.GetStringSafe(13),
+								                           PPI = sdr.GetStringSafe(14),
+								                           Id = sdr.GetStringSafe(15),
+								                           PermId = sdr.GetStringSafe(15)
+							                           };
 							shareClasses.Add(shareClass);
 						}
 					}
@@ -182,7 +190,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			EffortDTO effort = GetCompanyEffort(iconum);
 			if (effort.Name == "superfast") {
 				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-				Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = superfastShares.GetLatestCompanyFPEShareData(iconum, reportDate);
+				Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems =
+					superfastShares.GetLatestCompanyFPEShareData(iconum, reportDate);
 
 				foreach (ShareClassDTO shareClass in shareClasses) {
 					List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
@@ -192,9 +201,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
 					shareClassDataList.Add(shareClassData);
 				}
-			} else if (effort.Name == "voyager") {
+			}
+			else if (effort.Name == "voyager") {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum, reportDate);
+				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum,
+				                                                                                                        reportDate);
 				foreach (ShareClassDTO shareClass in shareClasses) {
 					List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 					if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
@@ -221,7 +232,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 				if (superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
 					securityItemList = superfastSecurityItems[shareClass.Cusip];
-				} else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+				}
+				else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
 					securityItemList = voyagerSecurityItems[shareClass.PPI];
 				}
 				ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
@@ -230,7 +242,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 			return shareClassDataList;
 		}
-
 
 		public EffortDTO GetCompanyEffort(int iconum) {
 			string query = @"select 'x'
@@ -262,5 +273,65 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			voyagerEffort.Name = "voyager";
 			return voyagerEffort;
 		}
+
+		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
+			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
+			DataTable table = new DataTable();
+			table.Columns.Add("iconum", typeof (int));
+			foreach (int iconum in companies) {
+				table.Rows.Add(iconum);
+				effortDictionary.Add(iconum, new EffortDTO { Name = "voyager" });
+			}
+
+			string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
+                                    CREATE TABLE dbo.##CompanyIds (
+	                                    iconum INT NOT NULL
+                                    )";
+			string query = @"select i.iconum
+												from dbo.CompanyLists cl (nolock)
+													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
+													join dbo.##CompanyIds i on i.iconum = clc.iconum
+												where cl.ShortName = 'SF_NewMarketWhiteList'
+											 union
+											 select i.iconum
+												from dbo.FdsTriPpiMap fds
+													join dbo.##CompanyIds i on i.iconum = fds.iconum 
+												where IsAdr = 0 AND IsoCountry IN ('US', 'ZW')";
+
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
+
+				// Upload all sedols to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "dbo.##CompanyIds";
+					try {
+						bulkCopy.WriteToServer(table);
+					}
+					catch (Exception ex) {
+						// Debug.WriteLine(ex.StackTrace, ex.InnerException.Message);
+						//_logger.Error("Error Bulk Uploading Sedols to Lion Temp Table.", ex);
+					}
+				}
+
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							int iconum = reader.GetInt32(0);
+							EffortDTO superfastEffort = new EffortDTO { Name = "superfast" };
+							effortDictionary[iconum] = superfastEffort;
+						}
+					}
+				}
+			}
+
+			return effortDictionary;
+		}
+
 	}
+
 }

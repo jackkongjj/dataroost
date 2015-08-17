@@ -57,19 +57,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
-			Dictionary<int, EffortDTO> companyEfforts = new Dictionary<int, EffortDTO>();
-			foreach (string companyId in companyIds) {
+			List<int> iconumList = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
 
-				int iconum = PermId.PermId2Iconum(companyId);
-
-				CompanyHelper helper = new CompanyHelper(sfConnectionString,
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
 				                                         voyConnectionString,
 				                                         lionConnectionString,
 				                                         damConnectionString);
-				companyEfforts.Add(iconum, helper.GetCompanyEffort(iconum));
-			}
-
-			return companyEfforts;
+			return helper.GetCompaniesEfforts(iconumList);
 		}
 
 		[Route("companies/{CompanyId}/efforts/")]
