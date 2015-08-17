@@ -36,7 +36,10 @@ namespace DataRoostAPI.Common.Access {
 		public Dictionary<int, EffortDTO> GetCollectionEffortForCompanies(List<string> companyIds) {
 			string requestUrl = string.Format("{0}/api/v1/companies/collectioneffort", _dataRoostConnectionString);
 			string postParams = JsonConvert.SerializeObject(companyIds);
-			using (WebClient client = GetDefaultWebClient()) {
+			using (LongRunningWebClient client = new LongRunningWebClient()) {
+				client.Credentials = CredentialCache.DefaultNetworkCredentials;
+				client.Encoding = Encoding.UTF8;
+				client.Timeout = 1000000;
 				client.Headers.Add("Content-Type", "application/json");
 				string postResponse = client.UploadString(requestUrl, "POST", postParams);
 				return JsonConvert.DeserializeObject<Dictionary<int, EffortDTO>>(postResponse);
@@ -56,7 +59,10 @@ namespace DataRoostAPI.Common.Access {
 		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
 			string requestUrl = string.Format("{0}/api/v1/companies/shares/latestFiscalPeriodEnd", _dataRoostConnectionString);
 			string postParams = JsonConvert.SerializeObject(companyIds);
-			using (WebClient client = GetDefaultWebClient()) {
+			using (LongRunningWebClient client = new LongRunningWebClient()) {
+				client.Credentials = CredentialCache.DefaultNetworkCredentials;
+				client.Encoding = Encoding.UTF8;
+				client.Timeout = 1000000;
 				client.Headers.Add("Content-Type","application/json");
 				string postResponse = client.UploadString(requestUrl, "POST", postParams);
 				return JsonConvert.DeserializeObject<Dictionary<int, ShareClassDataDTO[]>>(postResponse);
@@ -75,6 +81,19 @@ namespace DataRoostAPI.Common.Access {
 			defaultClient.Encoding = Encoding.UTF8;
 
 			return defaultClient;
+		}
+
+		private class LongRunningWebClient : WebClient {
+
+			public int Timeout { get; set; }
+
+			protected override WebRequest GetWebRequest(Uri uri) {
+				WebRequest request = base.GetWebRequest(uri);
+				request.Timeout = Timeout;
+				((HttpWebRequest)request).ReadWriteTimeout = Timeout;
+				return request;
+			}
+
 		}
 
 		private string GetRootUrl(string companyId) {
