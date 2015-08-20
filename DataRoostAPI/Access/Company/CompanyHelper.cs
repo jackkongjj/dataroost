@@ -181,6 +181,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				}
 			}
 
+			if (shareClasses.Count > 1) {
+				ShareClassDTO rootPpi = shareClasses.FirstOrDefault(s => s.PPI != null && s.PPI.EndsWith("0"));
+				shareClasses.Remove(rootPpi);
+			}
+
+
 			return shareClasses;
 		}
 
@@ -276,6 +282,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 							companyShareClasses[iconum].Add(shareClass);
 						}
 					}
+				}
+			}
+
+			foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
+				if (shareClasses.Count > 1) {
+					ShareClassDataDTO rootPpi = shareClasses.FirstOrDefault(s => s.PPI != null && s.PPI.EndsWith("0"));
+					shareClasses.Remove(rootPpi);
 				}
 			}
 
