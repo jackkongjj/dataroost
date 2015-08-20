@@ -80,6 +80,95 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			return perShareData;
 		}
 
+		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate) {
+			const string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
+                                    CREATE TABLE dbo.##CompanyIds (
+	                                    iconum INT NOT NULL
+                                    )";
+
+			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum FROM 
+                                        (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, i.iconum iconum,
+	                                        row_number() over (partition by stds.STDItemID order by ts.TimeSeriesDate desc) as rank 
+	                                        from STDTimeSeriesDetailSecurity stds (nolock)
+																						join FdsTriPpiMap fds (nolock)
+																							on fds.cusip = stds.SecurityID
+																						join STDItem std (nolock)
+																							on stds.STDItemId = std.ID
+																							and std.SecurityFlag = 1
+																						join STDTemplateItem t (nolock)
+																							on t.STDItemID = std.ID
+																							and t.STDTemplateMasterCode = 'PSIT'
+																						join TimeSeries ts (nolock)
+																							on stds.TimeSeriesID = ts.Id
+																							and ts.AutoCalcFlag = 0
+																							and ts.EncoreFlag = 0
+																						join InterimType it (nolock)
+																							on ts.InterimTypeID = it.ID
+																						join Document d (nolock)
+																							on ts.DocumentID = d.ID
+																							and d.ExportFlag = 1 
+																						join dbo.##CompanyIds i on i.iconum = fds.iconum
+                                          where ts.TimeSeriesDate <= @searchDate) temp
+                                        where temp.rank = 1";
+
+			DateTime searchDate = DateTime.Now;
+			if (reportDate != null) {
+				searchDate = (DateTime)reportDate;
+			}
+
+			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData = new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+			DataTable table = new DataTable();
+			table.Columns.Add("iconum", typeof(int));
+			foreach (int iconum in iconums) {
+				table.Rows.Add(iconum);
+				companyShareData.Add(iconum, new Dictionary<string, List<ShareClassDataItem>>());
+			}
+
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_connectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
+
+				// Upload all iconums to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "dbo.##CompanyIds";
+					try {
+						bulkCopy.WriteToServer(table);
+					} catch (Exception ex) {
+						// Debug.WriteLine(ex.StackTrace, ex.InnerException.Message);
+						//_logger.Error("Error Bulk Uploading Sedols to Lion Temp Table.", ex);
+					}
+				}
+
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@searchDate", searchDate);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							string cusip = reader.GetStringSafe(0);
+							int iconum = reader.GetInt32(5);
+							Dictionary<string, List<ShareClassDataItem>> perShareData = companyShareData[iconum];
+							ShareClassDataItem item = new ShareClassNumericItem
+							{
+								Name = reader.GetStringSafe(3),
+								ItemId = reader.GetStringSafe(4),
+								Value = reader.GetDecimal(1),
+								ReportDate = reader.GetDateTime(2),
+							};
+							if (!perShareData.ContainsKey(cusip)) {
+								perShareData.Add(cusip, new List<ShareClassDataItem>());
+							}
+							List<ShareClassDataItem> dataItems = perShareData[cusip];
+							dataItems.Add(item);
+						}
+					}
+				}
+			}
+			return companyShareData;
+		}
+
 		public List<ShareClassDataItem> GetLatestFPEShareData(string cusip, DateTime? reportDate) {
 			List<ShareClassDataItem> perShareData = new List<ShareClassDataItem>();
 

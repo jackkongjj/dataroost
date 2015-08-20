@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
@@ -183,6 +184,104 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return shareClasses;
 		}
 
+		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
+			const string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
+                                    CREATE TABLE dbo.##CompanyIds (
+	                                    iconum INT NOT NULL
+                                    )";
+
+			const string query = @"SELECT s.Cusip,
+                                    s.Iconum,
+                                    s.Name,
+                                    a.Description,
+                                    e.Description,
+                                    s.Inception_Date,
+                                    s.Term_Date,
+                                    s.Price,
+                                    s.Shares_Out,
+                                    s.Ticker,
+                                    s.Sedol,
+                                    s.ISIN,
+                                    s.To_Cusip,
+                                    s.Issue_Type,
+                                    p.PPI,
+                                    x.permid
+                                FROM SecMas s
+		                            LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
+		                            LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
+		                            LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
+                                LEFT JOIN FdsTriPpiMap p ON p.CUSIP = s.Cusip
+																LEFT JOIN dbo.##CompanyIds ico ON ico.iconum = p.iconum
+                                LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
+	                            WHERE ico.Iconum IS NOT NULL
+                                    --AND RIGHT(p.PPI, 1) != '0'
+                                    --AND s.term_date IS NULL
+                                    --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
+
+			Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
+			DataTable table = new DataTable();
+			table.Columns.Add("iconum", typeof(int));
+			foreach (int iconum in iconums) {
+				table.Rows.Add(iconum);
+			}
+
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
+
+				// Upload all iconums to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "dbo.##CompanyIds";
+					try {
+						bulkCopy.WriteToServer(table);
+					} catch (Exception ex) {
+						// Debug.WriteLine(ex.StackTrace, ex.InnerException.Message);
+						//_logger.Error("Error Bulk Uploading Sedols to Lion Temp Table.", ex);
+					}
+				}
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							int iconum = sdr.GetInt32(1);
+							ShareClassDataDTO shareClass = new ShareClassDataDTO
+							{
+								Cusip = sdr.GetStringSafe(0),
+
+								Name = sdr.GetStringSafe(2),
+								AssetClass = sdr.GetStringSafe(3),
+								ListedOn = sdr.GetStringSafe(4),
+								InceptionDate = sdr.GetDateTime(5),
+								TermDate = sdr.GetNullable<DateTime>(6),
+
+								//CurrentPrice = sdr.GetDecimal(7),
+								//CurrentSharesOutstanding = sdr.GetDecimal(8),
+								TickerSymbol = sdr.GetStringSafe(9),
+								Sedol = sdr.GetStringSafe(10),
+								Isin = sdr.GetStringSafe(11),
+
+								//ToCusip = sdr.GetStringSafe(12),
+								IssueType = sdr.GetStringSafe(13),
+								PPI = sdr.GetStringSafe(14),
+								Id = sdr.GetStringSafe(15),
+								PermId = sdr.GetStringSafe(15)
+							};
+							if (!companyShareClasses.ContainsKey(iconum)) {
+								companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
+							}
+							companyShareClasses[iconum].Add(shareClass);
+						}
+					}
+				}
+			}
+
+			return companyShareClasses;
+		}
+
 		public IEnumerable<ShareClassDataDTO> GetCompanyShareClassData(int iconum, DateTime? reportDate) {
 			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
 			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
@@ -217,6 +316,51 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return shareClassDataList;
+		}
+
+		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate) {
+			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
+			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
+
+			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == "voyager").Select(kvp => kvp.Key).ToList();
+			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == "superfast").Select(kvp => kvp.Key).ToList();
+
+			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
+			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
+				superfastShares.GetLatestCompanyFPEShareData(superfastIconums, null);
+			foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>>  keyValuePair in superfastShareData) {
+				int iconum = keyValuePair.Key;
+				Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
+				if (companyShareClassData.ContainsKey(iconum)) {
+					List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+					foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+						List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+						if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
+							securityItemList = superfastSecurityItems[shareClass.Cusip];
+						}
+						shareClass.ShareClassData = securityItemList;
+					}
+				}
+			}
+
+			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
+			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
+				voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, null);
+			foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
+				int iconum = keyValuePair.Key;
+				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
+				if (companyShareClassData.ContainsKey(iconum)) {
+					List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+					foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+						List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+						if (shareClass.Cusip != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+							securityItemList = voyagerSecurityItems[shareClass.PPI];
+						}
+						shareClass.ShareClassData = securityItemList;
+					}
+				}
+			}
+			return companyShareClassData;
 		}
 
 		// TODO: change this to point to shares instead of voyager and superfast
@@ -283,11 +427,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				effortDictionary.Add(iconum, new EffortDTO { Name = "voyager" });
 			}
 
-			string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
+			const string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
                                     CREATE TABLE dbo.##CompanyIds (
 	                                    iconum INT NOT NULL
                                     )";
-			string query = @"select i.iconum
+			const string query = @"select i.iconum
 												from dbo.CompanyLists cl (nolock)
 													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
 													join dbo.##CompanyIds i on i.iconum = clc.iconum
@@ -305,7 +449,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					cmd.ExecuteNonQuery();
 				}
 
-				// Upload all sedols to Temp table
+				// Upload all iconums to Temp table
 				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
 					bulkCopy.BatchSize = table.Rows.Count;
 					bulkCopy.DestinationTableName = "dbo.##CompanyIds";

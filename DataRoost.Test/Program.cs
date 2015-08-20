@@ -15,10 +15,17 @@ using Newtonsoft.Json;
 namespace DataRoost.Test {
 	class Program {
 		static void Main(string[] args) {
-			string connectionString = "http://localhost:61581";
+			string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
+			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
+			List<string> hugeIconumList = GetHugeIconumList();
+			Dictionary<int, EffortDTO> hugeCompanyEfforts = companyDataAccess.GetCollectionEffortForCompanies(hugeIconumList);
+			DateTime startTime = DateTime.Now;
+			Dictionary<int, ShareClassDataDTO[]> hugeLatestCompanyFPESharesData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(hugeIconumList);
+			DateTime endTime = DateTime.Now;
+			TimeSpan duration = endTime.Subtract(startTime);
+
 			string iconum = "36468";
 			List<string> companyList = new List<string> { "5195905", "5108772", iconum };
-			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
 			CompanyDTO company = companyDataAccess.GetCompany(iconum);
 			EffortDTO effort = companyDataAccess.GetCompanyCollectionEffort(iconum);
 			EffortDTO[] efforts = companyDataAccess.GetEfforts(iconum);
@@ -29,7 +36,6 @@ namespace DataRoost.Test {
 				companyDataAccess.GetLatestFiscalPeriodEndSharesData(companyList);
 			ShareClassDataDTO[] currentSharesData = companyDataAccess.GetCurrentShareData(iconum);
 
-			Dictionary<int, EffortDTO> hugeCompanyEfforts = companyDataAccess.GetCollectionEffortForCompanies(GetHugeIconumList());
 
 			IExportedItemsDataAccess exportedItemsDataAccess = DataRoostAccessFactory.GetExportedItemsDataAccess(connectionString);
 			ExportedItem[] exportedItems = exportedItemsDataAccess.GetExportedItems(StandardizationType.STD,

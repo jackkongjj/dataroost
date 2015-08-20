@@ -21,6 +21,221 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			_ppiHelper = new PpiHelper(sfConnectionString);
 		}
 
+		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums,
+		                                                                                           DateTime? reportSearchDate) {
+			//const string createSql = "CREATE GLOBAL TEMPORARY TABLE TEMPORARY_PPIS ( PPI VARCHAR2(10) NOT NULL ) ON COMMIT PRESERVE ROWS";
+
+			const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
+
+//			const string query = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
+//                                          (SELECT reported_text text_value, null numeric_value, item_code itemCode, i.item_name itemName, 'date' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code ORDER BY m.report_date DESC) RANK
+//                                                FROM std_text_details d
+//                                                    JOIN item_std i ON i.item_code = d.item_code
+//																										JOIN std_master m ON m.master_id = d.master_id
+//																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+//																										JOIN TMP_PPIS i ON i.PPI = m.PPI
+//                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.report_date <= :reportDate
+//																						UNION
+//                                            SELECT reported_text text_value, null numeric_value, i.item_code itemCode, i.item_name itemName, 'text' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code ORDER BY m.report_date DESC) RANK
+//                                                FROM std_text_details d
+//                                                    JOIN item_std i ON i.item_code = d.item_code
+//																										JOIN std_master m ON m.master_id = d.master_id
+//																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+//																										JOIN TMP_PPIS i ON i.PPI = m.PPI
+//                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.report_date <= :reportDate
+//                                            UNION
+//                                            SELECT null text_value, reported_value numeric_value, i.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code ORDER BY m.report_date DESC) RANK
+//                                                FROM std_details d
+//                                                    JOIN item_std i ON i.item_code = d.item_code
+//																										JOIN std_master m ON m.master_id = d.master_id
+//																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+//																										JOIN TMP_PPIS i ON i.PPI = m.PPI
+//                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.report_date <= :reportDate) tmp
+//                                            WHERE rank = 1 ORDER BY 1, 2";
+
+//			const string query = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
+//                                          (SELECT reported_text text_value, null numeric_value, item_code itemCode, i.item_name itemName, 'date' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//                                                FROM std_text_details d
+//                                                    JOIN item_std i ON i.item_code = d.item_code
+//																										JOIN std_master m ON m.master_id = d.master_id
+//																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+//																										JOIN TEMP_PPIS tmp ON tmp.PPI = m.PPI
+//                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.report_date <= :reportDate
+//																						UNION
+//                                            SELECT reported_text text_value, null numeric_value, i.item_code itemCode, i.item_name itemName, 'text' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//                                                FROM std_text_details d
+//                                                    JOIN item_std i ON i.item_code = d.item_code
+//																										JOIN std_master m ON m.master_id = d.master_id
+//																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+//																										JOIN TEMP_PPIS tmp ON tmp.PPI = m.PPI
+//                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.report_date <= :reportDate
+//                                            UNION
+//                                            SELECT null text_value, reported_value numeric_value, i.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//                                                FROM std_details d
+//                                                    JOIN item_std i ON i.item_code = d.item_code
+//																										JOIN std_master m ON m.master_id = d.master_id
+//																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+//																										JOIN TEMP_PPIS tmp ON tmp.PPI = m.PPI
+//                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.report_date <= :reportDate) tmp
+//                                            WHERE rank = 1 ORDER BY 1, 2";
+
+			const string query =
+			@"
+SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date  FROM (
+SELECT * FROM (
+SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+    FROM std_details d
+        JOIN std_master m ON m.master_id = d.master_id
+        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'A') i ON i.item_code = t.item_code
+) WHERE rank = 1
+UNION
+SELECT * FROM (
+SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+    FROM std_details d
+        JOIN std_master m ON m.master_id = d.master_id
+        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D') i ON i.item_code = t.item_code
+) WHERE rank = 1
+UNION
+SELECT * FROM (
+SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+    FROM std_details d
+        JOIN std_master m ON m.master_id = d.master_id
+        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N') i ON i.item_code = t.item_code
+) WHERE rank = 1
+)";
+
+//			string dropSql = @"BEGIN
+//                                    EXECUTE IMMEDIATE 'TRUNCATE TABLE TMP_PPIS';
+//                                    EXECUTE IMMEDIATE 'DROP TABLE TMP_PPIS';
+//                                EXCEPTION
+//                                    WHEN OTHERS THEN
+//                                        IF SQLCODE != -942 THEN
+//                                            RAISE;
+//                                        END IF;
+//                                END;";
+
+//			string clearTable = @"BEGIN
+//                                    EXECUTE IMMEDIATE 'TRUNCATE TABLE TMP_PPIS';
+//                                EXCEPTION
+//                                    WHEN OTHERS THEN
+//                                        IF SQLCODE != -942 THEN
+//                                            RAISE;
+//                                        END IF;
+//                                END;";
+
+			DateTime searchDate = DateTime.Now;
+			if (reportSearchDate != null) {
+				searchDate = (DateTime)reportSearchDate;
+			}
+			Dictionary<string, List<ShareClassDataItem>> dataByPpi = new Dictionary<string, List<ShareClassDataItem>>();
+			Dictionary<string, int> ppiDictionary = _ppiHelper.GetIconumPpiDictionary(iconums);
+
+			using (OracleConnection connection = new OracleConnection(_connectionString)) {
+				connection.Open();
+				//using (var dropCmd1 = new OracleCommand(dropSql, connection)) {
+				//	dropCmd1.ExecuteNonQuery();
+				//}
+
+				//using (var createCmd = new OracleCommand(createSql, connection)) {
+				//	createCmd.ExecuteNonQuery();
+				//}
+
+				string[] ppiArray = ppiDictionary.Keys.ToArray();
+				using (var insertCmd = new OracleCommand(insertSql, connection)) {
+					insertCmd.BindByName = true;
+					insertCmd.ArrayBindCount = ppiArray.Length;
+					insertCmd.Parameters.Add(":ppis", OracleDbType.Varchar2, ppiArray, ParameterDirection.Input);
+
+					insertCmd.ExecuteNonQuery();
+				}
+
+				DateTime startTime = DateTime.Now;
+				using (OracleCommand command = new OracleCommand(query, connection)) {
+					command.BindByName = true;
+					command.Parameters.Add(new OracleParameter()
+																 {
+																	 OracleDbType = OracleDbType.Date,
+																	 Direction = ParameterDirection.Input,
+																	 ParameterName = "reportDate",
+																	 Value = searchDate
+																 });
+
+					using (
+						OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess)) {
+						while (sdr.Read()) {
+							string ppi = sdr.GetString(0);
+							string dataType = sdr.GetStringSafe(1);
+							string itemCode = sdr.GetStringSafe(2);
+							string textValue = sdr.GetStringSafe(3);
+							decimal? numericValue = sdr.GetNullable<decimal>(4);
+							string itemName = sdr.GetStringSafe(5);
+							DateTime reportDate = sdr.GetDateTime(6);
+							List<ShareClassDataItem> itemValues = null;
+
+							if (dataByPpi.ContainsKey(ppi)) {
+								itemValues = dataByPpi[ppi];
+							} else {
+								itemValues = new List<ShareClassDataItem>();
+								dataByPpi.Add(ppi, itemValues);
+							}
+
+							ShareClassDataItem item = null;
+							if (dataType == "date") {
+								item = new ShareClassDateItem
+											 {
+												 ItemId = itemCode,
+												 Name = itemName,
+												 ReportDate = reportDate,
+												 Value = DateTime.ParseExact(textValue, "ddMMyyyy", null),
+											 };
+							} else if (dataType == "numeric") {
+								item = new ShareClassNumericItem
+											 {
+												 ItemId = itemCode,
+												 Name = itemName,
+												 ReportDate = reportDate,
+												 Value = (decimal)numericValue,
+											 };
+							} else if (dataType == "text") {
+								item = new ShareClassTextItem
+											 {
+												 ItemId = itemCode,
+												 Name = itemName,
+												 ReportDate = reportDate,
+												 Value = textValue,
+											 };
+							}
+							itemValues.Add(item);
+						}
+					}
+				}
+				DateTime endTime = DateTime.Now;
+				TimeSpan duration = endTime.Subtract(startTime);
+
+				//using (var dropCmd1 = new OracleCommand(dropSql, connection)) {
+				//	dropCmd1.ExecuteNonQuery();
+				//}
+
+			}
+
+			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData = new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+			foreach (KeyValuePair<string, List<ShareClassDataItem>> ppiData in dataByPpi) {
+				int iconum = ppiDictionary[ppiData.Key];
+				if (!companyShareData.ContainsKey(iconum)) {
+					companyShareData.Add(iconum, new Dictionary<string, List<ShareClassDataItem>>());
+				}
+				companyShareData[iconum].Add(ppiData.Key, ppiData.Value);
+			}
+
+			return companyShareData;
+		}
+
 		public Dictionary<string, List<ShareClassDataItem>> GetLatestFPEShareData(int iconum, DateTime? reportDateToFind) {
 //			string query = @"SELECT PPI, REPORTED_VALUE, REPORT_DATE FROM
 //                                    (SELECT ts.SEDOL, m.PPI, d.REPORTED_VALUE, m.REPORT_DATE, RANK() OVER (PARTITION BY m.ppi ORDER BY m.report_date DESC) RANK
@@ -46,7 +261,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 //                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND m.PPI LIKE :ppiBase) j
 //																					where j.RANK = 1 ORDER BY 1, 2";
 
-			string query = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
+			const string query = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
                                           (SELECT reported_text text_value, null numeric_value, item_code itemCode, i.item_name itemName, 'date' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code ORDER BY m.report_date DESC) RANK
                                                 FROM std_text_details d
                                                     JOIN item_std i ON i.item_code = d.item_code

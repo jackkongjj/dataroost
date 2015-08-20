@@ -33,24 +33,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("shares/latestFiscalPeriodEnd/")]
 		[HttpPost]
-		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
+		public Dictionary<int, List<ShareClassDataDTO>> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
-			Dictionary<int, ShareClassDataDTO[]> companyData = new Dictionary<int, ShareClassDataDTO[]>();
+			List<int> iconums = new List<int>();
 			foreach (string companyId in companyIds) {
 				int iconum = PermId.PermId2Iconum(companyId);
-
-				CompanyHelper helper = new CompanyHelper(sfConnectionString,
-				                                         voyConnectionString,
-				                                         lionConnectionString,
-				                                         damConnectionString);
-				ShareClassDataDTO[] data = helper.GetCompanyShareClassData(iconum, null).ToArray();
-				companyData.Add(iconum, data);
+				iconums.Add(iconum);
 			}
-			return companyData;
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
+																				 voyConnectionString,
+																				 lionConnectionString,
+																				 damConnectionString);
+			return helper.GetCompanyShareClassData(iconums, null);
 		}
 
 		[Route("{CompanyId}/shares/currentShares/")]
