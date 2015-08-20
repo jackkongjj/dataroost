@@ -184,7 +184,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 										FROM ar_details d
 										RIGHT JOIN (
 											SELECT distinct sm.master_id, sm.data_year, report_date, sm.time_series_code, sm.ISO_CCY_CODE, sm.SCLG_FACTOR,
-											CAST((select SUBSTR(replace(replace(replace(replace(mathml_expression, '<mo>',''),'</mo>',''),'<mi>',''),'</mi>',''),0,12) from ar_std_map e where e.master_id = sm.master_id and rownum=1) as varchar(12)) mathml
+											CAST((select SUBSTR(replace(replace(replace(replace(replace(replace(mathml_expression, '<mo>',''),'</mo>',''),'<mi>',''),'</mi>',''), '(',''), '-',''),0,12) from ar_std_map e where e.master_id = sm.master_id and rownum=1) as varchar(12)) mathml
 													FROM STD_MASTER sm  													
 													WHERE SM.PPI LIKE :ppiBase
 															AND SM.data_year >= :startYear
@@ -285,7 +285,7 @@ rm.data_year,
 --CASE when GNRC_CODE = 66 then 'CF' WHEN GNRC_CODE = 70 then 'BS' WHEN GNRC_CODE = 34 then 'PS' WHEN GNRC_CODE = 46 then 'IS' END tabletype,
 rm.iso_ccy_code, rm.SCLG_FCTR, ct.co_temp_item_id, case when rm.rep_type = 'AR' then 'A' else rm.rep_type end reptype, 
 rm.account_type, rm.interim_type, mts.time_series_code,
-(select SUBSTR(replace(replace(replace(replace(mathml_expression, '<mo>',''),'</mo>',''),'<mi>',''),'</mi>',''),0,12) from ar_sdb_map e where e.master_id = rm.master_id and rownum=1) mathml
+(select SUBSTR(replace(replace(replace(replace(replace(replace(mathml_expression, '<mo>',''),'</mo>',''),'<mi>',''),'</mi>',''), '(',''), '-',''),0,12) from ar_sdb_map e where e.master_id = rm.master_id and rownum=1) mathml
 from report_master rm
 JOIN MAP_SDB_TIME_SERIES mts on mts.rep_type = rm.rep_type AND mts.account_type = rm.account_type AND mts.interim_type = COALESCE(rm.interim_type, ' ')
 join company_template ct on ct.co_temp_item_id = rm.co_temp_item_id and ct.TID_GNRC_CODE in (34,46,66,70,72) 
