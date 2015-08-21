@@ -226,11 +226,13 @@ SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.it
 
 			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData = new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
 			foreach (KeyValuePair<string, List<ShareClassDataItem>> ppiData in dataByPpi) {
-				int iconum = ppiDictionary[ppiData.Key];
-				if (!companyShareData.ContainsKey(iconum)) {
-					companyShareData.Add(iconum, new Dictionary<string, List<ShareClassDataItem>>());
+				if (ppiDictionary.ContainsKey(ppiData.Key)) {
+					int iconum = ppiDictionary[ppiData.Key];
+					if (!companyShareData.ContainsKey(iconum)) {
+						companyShareData.Add(iconum, new Dictionary<string, List<ShareClassDataItem>>());
+					}
+					companyShareData[iconum].Add(ppiData.Key, ppiData.Value);
 				}
-				companyShareData[iconum].Add(ppiData.Key, ppiData.Value);
 			}
 
 			return companyShareData;
