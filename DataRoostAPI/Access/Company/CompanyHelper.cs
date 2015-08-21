@@ -191,6 +191,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
+
 			const string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
                                     CREATE TABLE dbo.##CompanyIds (
 	                                    iconum INT NOT NULL

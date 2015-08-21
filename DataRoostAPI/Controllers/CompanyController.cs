@@ -58,6 +58,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			List<int> iconumList = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
+			iconumList = iconumList.Distinct().ToList();
 
 			CompanyHelper helper = new CompanyHelper(sfConnectionString,
 				                                         voyConnectionString,
