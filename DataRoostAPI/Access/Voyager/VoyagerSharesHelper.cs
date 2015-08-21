@@ -79,36 +79,53 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 //                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.report_date <= :reportDate) tmp
 //                                            WHERE rank = 1 ORDER BY 1, 2";
 
-			const string query =
-			@"
-SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date  FROM (
-SELECT * FROM (
-SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//			const string query =
+//			@"
+//SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date  FROM (
+//SELECT * FROM (
+//SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//    FROM std_details d
+//        JOIN std_master m ON m.master_id = d.master_id
+//        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+//        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+//        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'A') i ON i.item_code = t.item_code
+//) WHERE rank = 1
+//UNION
+//SELECT * FROM (
+//SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//    FROM std_details d
+//        JOIN std_master m ON m.master_id = d.master_id
+//        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+//        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+//        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D') i ON i.item_code = t.item_code
+//) WHERE rank = 1
+//UNION
+//SELECT * FROM (
+//SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+//    FROM std_details d
+//        JOIN std_master m ON m.master_id = d.master_id
+//        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+//        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+//        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N') i ON i.item_code = t.item_code
+//) WHERE rank = 1
+//)";
+
+			const string query = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date  FROM (
+SELECT
+/*+ FULL(d) PARALLEL(d, 35) */
+null text_value, reported_value numeric_value, d.item_code itemCode, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
     FROM std_details d
         JOIN std_master m ON m.master_id = d.master_id
         JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
-        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
-        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'A') i ON i.item_code = t.item_code
-) WHERE rank = 1
-UNION
-SELECT * FROM (
-SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
-    FROM std_details d
-        JOIN std_master m ON m.master_id = d.master_id
-        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
-        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
-        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D') i ON i.item_code = t.item_code
-) WHERE rank = 1
-UNION
-SELECT * FROM (
-SELECT null text_value, reported_value numeric_value, d.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
-    FROM std_details d
-        JOIN std_master m ON m.master_id = d.master_id
-        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
-        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
-        JOIN (SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N') i ON i.item_code = t.item_code
-) WHERE rank = 1
-)";
+        JOIN TEMP_PPIS tmp ON tmp.PPI = m.PPI
+        JOIN (
+        SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'A'
+        UNION
+        SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D'
+        UNION
+        SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N'
+        ) i ON i.item_code = t.item_code
+) WHERE rank = 1";
 
 //			string dropSql = @"BEGIN
 //                                    EXECUTE IMMEDIATE 'TRUNCATE TABLE TMP_PPIS';
