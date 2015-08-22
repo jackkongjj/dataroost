@@ -15,14 +15,28 @@ using Newtonsoft.Json;
 namespace DataRoost.Test {
 	class Program {
 		static void Main(string[] args) {
-			string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
+			//string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
+			string connectionString = "http://localhost:61581";
 			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
-			List<string> hugeIconumList = GetHugeIconumList();
-			Dictionary<int, EffortDTO> hugeCompanyEfforts = companyDataAccess.GetCollectionEffortForCompanies(hugeIconumList);
-			DateTime startTime = DateTime.Now;
-			Dictionary<int, ShareClassDataDTO[]> hugeLatestCompanyFPESharesData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(hugeIconumList);
-			DateTime endTime = DateTime.Now;
-			TimeSpan duration = endTime.Subtract(startTime);
+			//List<string> hugeIconumList = GetHugeIconumList();
+			//Dictionary<int, EffortDTO> hugeCompanyEfforts = companyDataAccess.GetCollectionEffortForCompanies(hugeIconumList);
+			//DateTime startTime = DateTime.Now;
+			//Dictionary<int, ShareClassDataDTO[]> hugeLatestCompanyFPESharesData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(hugeIconumList);
+			//DateTime endTime = DateTime.Now;
+			//TimeSpan duration = endTime.Subtract(startTime);
+
+			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulk = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "17934" });
+			ShareClassDataDTO[] comparisonTestSingle = companyDataAccess.GetLatestFiscalPeriodEndSharesData("17934");
+
+			int mismatchCount = 0;
+			List<ShareClassDataDTO> bulkShareClasses = comparisonTestBulk[17934].ToList();
+			foreach (ShareClassDataDTO shareClassData in bulkShareClasses) {
+				ShareClassDataDTO bulkShareClass = comparisonTestSingle.First(s => s.PPI == shareClassData.PPI);
+				if (bulkShareClass.ShareClassData.Count != shareClassData.ShareClassData.Count) {
+					mismatchCount++;
+				}
+			}
+
 
 			string iconum = "36468";
 			List<string> companyList = new List<string> { "5195905", "5108772", iconum };

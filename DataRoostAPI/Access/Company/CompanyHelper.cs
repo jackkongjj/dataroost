@@ -339,38 +339,42 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == "voyager").Select(kvp => kvp.Key).ToList();
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == "superfast").Select(kvp => kvp.Key).ToList();
 
-			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
-				superfastShares.GetLatestCompanyFPEShareData(superfastIconums, null);
-			foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>>  keyValuePair in superfastShareData) {
-				int iconum = keyValuePair.Key;
-				Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
-				if (companyShareClassData.ContainsKey(iconum)) {
-					List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-					foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-						List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-						if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
-							securityItemList = superfastSecurityItems[shareClass.Cusip];
+			if (superfastIconums.Count > 0) {
+				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
+				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
+					superfastShares.GetLatestCompanyFPEShareData(superfastIconums, null);
+				foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>>  keyValuePair in superfastShareData) {
+					int iconum = keyValuePair.Key;
+					Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
+					if (companyShareClassData.ContainsKey(iconum)) {
+						List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+							List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+							if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
+								securityItemList = superfastSecurityItems[shareClass.Cusip];
+							}
+							shareClass.ShareClassData = securityItemList;
 						}
-						shareClass.ShareClassData = securityItemList;
 					}
 				}
 			}
 
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
-				voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, null);
-			foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
-				int iconum = keyValuePair.Key;
-				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
-				if (companyShareClassData.ContainsKey(iconum)) {
-					List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-					foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-						List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-						if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
-							securityItemList = voyagerSecurityItems[shareClass.PPI];
+			if (voyagerIconums.Count > 0) {
+				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
+				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
+					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, null);
+				foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
+					int iconum = keyValuePair.Key;
+					Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
+					if (companyShareClassData.ContainsKey(iconum)) {
+						List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+							List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+								securityItemList = voyagerSecurityItems[shareClass.PPI];
+							}
+							shareClass.ShareClassData = securityItemList;
 						}
-						shareClass.ShareClassData = securityItemList;
 					}
 				}
 			}
