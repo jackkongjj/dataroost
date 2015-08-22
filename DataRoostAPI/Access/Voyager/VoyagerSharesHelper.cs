@@ -113,17 +113,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			const string query = @"SELECT ppi, data_type, item_code, text_value, numeric_value, item_name, report_date  FROM (
 SELECT
 /*+ FULL(d) PARALLEL(d, 35) */
-null text_value, reported_value numeric_value, d.item_code item_code, i.item_name item_name, i.data_type data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
-    FROM std_details d
+reported_text text_value, null numeric_value, d.item_code item_code, i.item_name item_name, i.data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+    FROM std_text_details d
         JOIN std_master m ON m.master_id = d.master_id
         JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
-        JOIN TEMP_PPIS tmp ON tmp.PPI = m.PPI
+        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
         JOIN (
         SELECT i.item_code, i.item_name, 'text' data_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'A'
         UNION
-        SELECT i.item_code, i.item_name, 'date' data_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D'
-        UNION
-        SELECT i.item_code, i.item_name, 'numeric' data_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N'
+        SELECT i.item_code, i.item_name, 'date' date_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D'
+        ) i ON i.item_code = t.item_code
+UNION
+SELECT
+/*+ FULL(d) PARALLEL(d, 35) */
+null text_value, reported_value numeric_value, d.item_code item_code, i.item_name item_name, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+    FROM std_details d
+        JOIN std_master m ON m.master_id = d.master_id
+        JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
+        JOIN TMP_PPIS tmp ON tmp.PPI = m.PPI
+        JOIN (
+        SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N'
         ) i ON i.item_code = t.item_code
 ) WHERE rank = 1";
 
@@ -211,7 +220,7 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 												 ReportDate = reportDate,
 												 Value = DateTime.ParseExact(textValue, "ddMMyyyy", null),
 											 };
-							} else if (dataType == "numeric") {
+							} else if (dataType == "numeric" && numericValue != null) {
 								item = new ShareClassNumericItem
 											 {
 												 ItemId = itemCode,
@@ -251,6 +260,8 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 					companyShareData[iconum].Add(ppiData.Key, ppiData.Value);
 				}
 			}
+
+			//int count = companyShareData.Values.Where(v => v.Count != null && v.Count > 0).Count();
 
 			return companyShareData;
 		}

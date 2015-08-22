@@ -367,7 +367,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
 					foreach (ShareClassDataDTO shareClass in shareClassDataList) {
 						List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-						if (shareClass.Cusip != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+						if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
 							securityItemList = voyagerSecurityItems[shareClass.PPI];
 						}
 						shareClass.ShareClassData = securityItemList;
