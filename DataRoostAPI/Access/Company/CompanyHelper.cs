@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -287,9 +288,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
-				if (shareClasses.Count > 1) {
-					ShareClassDataDTO rootPpi = shareClasses.FirstOrDefault(s => s.PPI != null && s.PPI.EndsWith("0"));
-					shareClasses.Remove(rootPpi);
+				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
+				IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
+				foreach (IGrouping<string, string> ppiGroup in groups) {
+					if (ppiGroup.Count() > 1) {
+						string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
+						ShareClassDataDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
+						shareClasses.Remove(rootShareClass);
+					}
 				}
 			}
 
@@ -329,6 +335,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				}
 			}
 
+			IEnumerable<string> ppis = shareClassDataList.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
+			IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
+			foreach (IGrouping<string, string> ppiGroup in groups) {
+				if (ppiGroup.Count() > 1) {
+					string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
+					ShareClassDataDTO rootShareClass = shareClassDataList.FirstOrDefault(s => s.PPI == rootPpi);
+					shareClassDataList.Remove(rootShareClass);
+				}
+			}
+
 			return shareClassDataList;
 		}
 
@@ -342,7 +358,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			if (superfastIconums.Count > 0) {
 				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
-					superfastShares.GetLatestCompanyFPEShareData(superfastIconums, null);
+					superfastShares.GetLatestCompanyFPEShareData(superfastIconums, reportDate);
 				foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>>  keyValuePair in superfastShareData) {
 					int iconum = keyValuePair.Key;
 					Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
@@ -362,7 +378,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
-					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, null);
+					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate);
 				foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
 					int iconum = keyValuePair.Key;
 					Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
