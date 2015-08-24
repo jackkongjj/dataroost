@@ -15,8 +15,8 @@ using Newtonsoft.Json;
 namespace DataRoost.Test {
 	class Program {
 		static void Main(string[] args) {
-			//string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
-			string connectionString = "http://localhost:61581";
+			string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
+			//string connectionString = "http://localhost:61581";
 			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
 			//List<string> hugeIconumList = GetHugeIconumList();
 			//Dictionary<int, EffortDTO> hugeCompanyEfforts = companyDataAccess.GetCollectionEffortForCompanies(hugeIconumList);

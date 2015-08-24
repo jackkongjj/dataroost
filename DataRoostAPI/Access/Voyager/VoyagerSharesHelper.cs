@@ -113,7 +113,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			const string query = @"SELECT ppi, data_type, item_code, text_value, numeric_value, item_name, report_date  FROM (
 SELECT
 /*+ FULL(d) PARALLEL(d, 35) */
-reported_text text_value, null numeric_value, d.item_code item_code, i.item_name item_name, i.data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+reported_text text_value, null numeric_value, d.item_code item_code, i.item_name item_name, i.data_type data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
     FROM std_text_details d
         JOIN std_master m ON m.master_id = d.master_id
         JOIN std_template_item t ON t.item_code = d.item_code AND t.template_code = 'PSIT'
@@ -164,13 +164,6 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 
 			using (OracleConnection connection = new OracleConnection(_connectionString)) {
 				connection.Open();
-				//using (var dropCmd1 = new OracleCommand(dropSql, connection)) {
-				//	dropCmd1.ExecuteNonQuery();
-				//}
-
-				//using (var createCmd = new OracleCommand(createSql, connection)) {
-				//	createCmd.ExecuteNonQuery();
-				//}
 
 				string[] ppiArray = ppiDictionary.Keys.ToArray();
 				using (var insertCmd = new OracleCommand(insertSql, connection)) {
@@ -181,7 +174,6 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 					insertCmd.ExecuteNonQuery();
 				}
 
-				DateTime startTime = DateTime.Now;
 				using (OracleCommand command = new OracleCommand(query, connection)) {
 					command.BindByName = true;
 					command.Parameters.Add(new OracleParameter()
@@ -202,14 +194,6 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 							decimal? numericValue = sdr.GetNullable<decimal>(4);
 							string itemName = sdr.GetStringSafe(5);
 							DateTime reportDate = sdr.GetDateTime(6);
-							List<ShareClassDataItem> itemValues = null;
-
-							if (dataByPpi.ContainsKey(ppi)) {
-								itemValues = dataByPpi[ppi];
-							} else {
-								itemValues = new List<ShareClassDataItem>();
-								dataByPpi.Add(ppi, itemValues);
-							}
 
 							ShareClassDataItem item = null;
 							if (dataType == "date") {
@@ -237,17 +221,15 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 												 Value = textValue,
 											 };
 							}
-							itemValues.Add(item);
+
+							if (!dataByPpi.ContainsKey(ppi)) {
+								dataByPpi.Add(ppi, new List<ShareClassDataItem>());
+							}
+
+							dataByPpi[ppi].Add(item);
 						}
 					}
 				}
-				DateTime endTime = DateTime.Now;
-				TimeSpan duration = endTime.Subtract(startTime);
-
-				//using (var dropCmd1 = new OracleCommand(dropSql, connection)) {
-				//	dropCmd1.ExecuteNonQuery();
-				//}
-
 			}
 
 			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData = new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
@@ -260,8 +242,6 @@ null text_value, reported_value numeric_value, d.item_code item_code, i.item_nam
 					companyShareData[iconum].Add(ppiData.Key, ppiData.Value);
 				}
 			}
-
-			//int count = companyShareData.Values.Where(v => v.Count != null && v.Count > 0).Count();
 
 			return companyShareData;
 		}
