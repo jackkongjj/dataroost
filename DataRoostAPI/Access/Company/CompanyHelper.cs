@@ -182,11 +182,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				}
 			}
 
-			if (shareClasses.Count > 1) {
-				ShareClassDTO rootPpi = shareClasses.FirstOrDefault(s => s.PPI != null && s.PPI.EndsWith("0"));
-				shareClasses.Remove(rootPpi);
+			IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
+			IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
+			foreach (IGrouping<string, string> ppiGroup in groups) {
+				if (ppiGroup.Count() > 1) {
+					string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
+					ShareClassDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
+					shareClasses.Remove(rootShareClass);
+				}
 			}
-
 
 			return shareClasses;
 		}
