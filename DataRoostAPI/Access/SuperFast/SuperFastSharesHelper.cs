@@ -23,7 +23,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode FROM 
                                         (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, 
-	                                        row_number() over (partition by stds.STDItemID order by ts.TimeSeriesDate desc) as rank 
+	                                        row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc) as rank 
 	                                        from STDTimeSeriesDetailSecurity stds (nolock)
 																						join FdsTriPpiMap fds (nolock)
 																							on fds.cusip = stds.SecurityID
