@@ -296,7 +296,7 @@ join generic gnrc on GNRC.GNRC_CODE = CT.TID_GNRC_CODE
 where CC.PPI LIKE :ppiBase
   AND rm.data_year >= :startYear
   AND rm.data_year <= :endYear
-	AND CASE WHEN rm.rep_type = 'AR' THEN 'A' ELSE rm.rep_type END = COALESCE(:repType, rm.rep_type)
+	AND CASE WHEN rm.rep_type = 'AR' THEN 'A' ELSE rm.rep_type END = COALESCE(:repType, CASE WHEN rm.rep_type = 'AR' THEN 'A' ELSE rm.rep_type END)
 	AND rm.report_date = COALESCE(:reportDate, CAST(rm.report_date as varchar(9)))
 	AND COALESCE(rm.INTERIM_TYPE,'XX') = COALESCE(:interimType, COALESCE(rm.INTERIM_TYPE, 'XX'))
   AND rm.account_type = COALESCE(:accountType, rm.account_type)
