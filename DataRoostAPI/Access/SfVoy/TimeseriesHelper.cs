@@ -399,8 +399,8 @@ order by tm.sdbItem_id, re.[order]";
 			var cellValues = new Dictionary<string, TimeseriesValueDTO>();
 			foreach(var ts in voyTS){
 				foreach (var v in ts.Values)
-					
-					cellValues.Add(v.Key, v.Value);
+					if(!cellValues.ContainsKey(v.Key))
+						cellValues.Add(v.Key, v.Value);
 			}
 			
 			//calculate the expression
