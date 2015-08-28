@@ -52,7 +52,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				iconum = PermId.PermId2Iconum(companyId);
 
 			TemplatesHelper tsh = new TemplatesHelper(connString, iconum, dataTypes);
-			return tsh.GetTemplates(templateId);
+			return tsh.GetTemplates(templateId, true);
 		}
 
 		private SfVoyTimeSeries[]GetTimeSeries(string companyId, string templateId, StandardizationType dataType, string timeSeriesId = null) {
