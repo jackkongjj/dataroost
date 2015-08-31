@@ -45,7 +45,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
 join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
 join TemplateMasterID tmi on tmi.Id = sdbti.SDBTemplateMasterID
-where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 
+where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 and ts.AccountTypeID = 'S'
 " : @"WITH TemplateMasterID AS
 (
 	select distinct sdm.Code
@@ -70,7 +70,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_STDTimeSeriesDetail stdd on ts.ID = stdd.TimeSeriesId
 join STDTemplateItem stdti on stdd.STDItemId = stdti.STDItemID
 join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
-where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 ";
+where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 and ts.AccountTypeID = 'S' ";
 
 			bool requestedSpecificTimeSerie = (timeseriesId != null);
 			string templateMasterId = string.Empty;
