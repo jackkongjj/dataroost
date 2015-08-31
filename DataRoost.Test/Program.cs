@@ -15,8 +15,8 @@ using Newtonsoft.Json;
 namespace DataRoost.Test {
 	class Program {
 		static void Main(string[] args) {
-			string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
-			//string connectionString = "http://localhost:61581";
+			//string connectionString = "http://DataRoost-ffvwebstga01.prod.factset.com:9990";
+			string connectionString = "http://localhost:61581";
 			ICompanyDataAccess companyDataAccess = DataRoostAccessFactory.GetCompanyDataAccess(connectionString);
 			//List<string> hugeIconumList = GetHugeIconumList();
 			//Dictionary<int, EffortDTO> hugeCompanyEfforts = companyDataAccess.GetCollectionEffortForCompanies(hugeIconumList);
@@ -26,6 +26,11 @@ namespace DataRoost.Test {
 			//TimeSpan duration = endTime.Subtract(startTime);
 
 			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulk = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "17934" });
+			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulkWithDate = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "17934" }, new DateTime(2015, 3, 31));
+			foreach (ShareClassDataDTO item in comparisonTestBulkWithDate[17934]) {
+				DateTime reportDate = item.ShareClassData[0].ReportDate;
+			}
+
 			ShareClassDataDTO[] comparisonTestSingle = companyDataAccess.GetLatestFiscalPeriodEndSharesData("17934");
 
 			int mismatchCount = 0;

@@ -33,7 +33,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("shares/latestFiscalPeriodEnd/")]
 		[HttpPost]
-		public Dictionary<int, List<ShareClassDataDTO>> GetLatestFiscalPeriodEndSharesData(List<string> companyIds) {
+		public Dictionary<int, List<ShareClassDataDTO>> GetLatestFiscalPeriodEndSharesData(List<string> companyIds, DateTime? reportDate = null) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -46,7 +46,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																				 voyConnectionString,
 																				 lionConnectionString,
 																				 damConnectionString);
-			return helper.GetCompanyShareClassData(iconums, null);
+			return helper.GetCompanyShareClassData(iconums, reportDate);
 		}
 
 		[Route("{CompanyId}/shares/currentShares/")]

@@ -19,7 +19,7 @@ namespace DataRoostAPI.Common.Interfaces {
 
 		ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null);
 
-		Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds);
+		Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds, DateTime? reportDate = null);
 
 		ShareClassDataDTO[] GetCurrentShareData(string companyId);
 
