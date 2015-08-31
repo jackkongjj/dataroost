@@ -23,7 +23,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			this.dataType = dataType;
 		}
 
-		public TemplateDTO[] GetTemplates(string templateId) {
+		public TemplateDTO[] GetTemplates(string templateId, bool showMemoField = false) {
 			const string SQL_SDB_Templates = @"select distinct sdm.TemplateName, std.ReportTypeID, std.UpdateTypeID, std.TemplateTypeId
     from CompanyIndustry ci 
     Join SDBtemplateDetail std 
@@ -104,13 +104,13 @@ and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateT
 
 			if (requestedSpecificTemplate) {
 				foreach (var template in templates) {
-					template.Items = PopulateTemplateItem(TemplateIdentifier.GetTemplateIdentifier(template.Id));
+					template.Items = PopulateTemplateItem(TemplateIdentifier.GetTemplateIdentifier(template.Id), showMemoField);
 				}
 			}
 			return templates.ToArray();
-		}		
+		}
 
-		private List<TemplateItemDTO> PopulateTemplateItem(TemplateIdentifier templateId) {
+		private List<TemplateItemDTO> PopulateTemplateItem(TemplateIdentifier templateId, bool showMemoField) {
 			const string SQL_SDB_Items = @"WITH TemplateMasterID AS
 (
 	select distinct sdm.id 
@@ -135,19 +135,35 @@ and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateT
 	AND std.UpdateTypeID = @updateTypeId
 	AND std.TemplateTypeId = @templateTypeId
 )
-select s.Id, [code] = s.SDBCode, [sdbDescription] = s.Description, [statementTypeId] = st.ID, [usageType] = iut.ID, 
-	[indentLevel] = sti.SDBItemLevel, [valueType] = sit.Id, s.SecurityFlag, s.PITFlag, [precision] = s.NoDecimals
-from SDBTemplateItem sti (nolock)
-join SDBitem s (Nolock)
-	on sti.SDBItemID = s.ID
-join StatementType st (nolock)
-	on s.StatementTypeId = st.Id
-join SDBItemTypes sit (nolock)
-	on s.SDBitemTypeId = sit.Id
-join ItemUsageType iut (nolock)
-	on s.ItemUsageTypeId = iut.Id
-join TemplateMasterID tmi on tmi.id = sti.SDBTemplateMasterId
-order by sti.SDBItemSequence asc";
+select Id, code, sdbDescription, statementTypeId, usageType, indentLevel, valueType, SecurityFlag, PITFlag, [precision]
+from (
+	select s.Id, [code] = s.SDBCode, [sdbDescription] = s.Description, [statementTypeId] = st.ID, [usageType] = iut.ID, 
+		[indentLevel] = sti.SDBItemLevel, [valueType] = sit.Id, s.SecurityFlag, s.PITFlag, [precision] = s.NoDecimals, sti.SDBItemSequence
+	from SDBTemplateItem sti (nolock)
+	join SDBitem s (Nolock)
+		on sti.SDBItemID = s.ID
+	join StatementType st (nolock)
+		on s.StatementTypeId = st.Id
+	join SDBItemTypes sit (nolock)
+		on s.SDBitemTypeId = sit.Id
+	join ItemUsageType iut (nolock)
+		on s.ItemUsageTypeId = iut.Id
+	join TemplateMasterID tmi on tmi.id = sti.SDBTemplateMasterId
+	union
+	select s.Id, [code] = s.SDBCode, [sdbDescription] = s.Description, [statementTypeId] = st.ID, [usageType] = iut.ID, 
+		[indentLevel] = 0, [valueType] = sit.Id, s.SecurityFlag, s.PITFlag, [precision] = s.NoDecimals, sti.SDBItemSequence
+	from SDBTemplateItemMemo sti (nolock)
+	join SDBitem s (Nolock)
+		on sti.SDBItemID = s.ID
+	join StatementType st (nolock)
+		on s.StatementTypeId = st.Id
+	join SDBItemTypes sit (nolock)
+		on s.SDBitemTypeId = sit.Id
+	join ItemUsageType iut (nolock)
+		on s.ItemUsageTypeId = iut.Id
+	where sti.isVisible = @showMemoField
+) as A
+order by A.SDBItemSequence asc";
 
 			const string SQL_STD_Items = @"WITH TemplateMasterID AS
 (
@@ -190,6 +206,7 @@ order by sti.STDItemSequence asc";
 					cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = templateId.ReportType });
 					cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = templateId.UpdateType });
 					cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.Int) { Value = templateId.TemplateType });
+					cmd.Parameters.Add(new SqlParameter("@showMemoField", SqlDbType.Bit) { Value = showMemoField });
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						return reader.Cast<IDataRecord>().Select(r => new TemplateItemDTO()
 						{

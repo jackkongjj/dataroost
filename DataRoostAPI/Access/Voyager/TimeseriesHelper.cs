@@ -157,7 +157,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 							if (dataType == "date") {
 								DateTimeseriesValueDetailDTO valueDetailsDTO = new DateTimeseriesValueDetailDTO();
-								valueDetailsDTO.Date = DateTime.ParseExact(textValue, "ddMMyyyy", null);
+								valueDetailsDTO.Date = DateTime.ParseExact(textValue.Replace("\r\n",""), "ddMMyyyy", null);
 								valueDTO.Contents = valueDetailsDTO.Date.ToShortDateString();
 								valueDTO.ValueDetails = valueDetailsDTO;
 							}
@@ -169,7 +169,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 								node.NumericValue = (decimal)numericValue * scalingFactor;
 								//node.ScalingBase10 = scalingFactor;
 								if (!string.IsNullOrWhiteSpace(offsetString)) {
-									node.Offset = FLYTOffset.Parse(offsetString);
+									try {
+										node.Offset = FLYTOffset.Parse(offsetString);
+									} catch { }
 								}
 								valueDetailsDTO.LeftNode = node;
 								valueDTO.Contents = numericValue.ToString();
@@ -340,7 +342,9 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 							//node.ScalingBase10 = scalingFactor;
 							if (!string.IsNullOrWhiteSpace(offsetString)) {
 								if (offsetString.ToLower().StartsWith("o") || offsetString.ToLower().StartsWith("p"))
-									node.Offset = FLYTOffset.Parse(offsetString);
+									try {
+										node.Offset = FLYTOffset.Parse(offsetString);
+									} catch { }
 							}
 							valueDetailsDTO.LeftNode = node;
 							valueDTO.Contents = numericValue.ToString();
