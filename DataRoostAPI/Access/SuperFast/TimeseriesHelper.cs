@@ -45,7 +45,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
 join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
 join TemplateMasterID tmi on tmi.Id = sdbti.SDBTemplateMasterID
-where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 
+where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 and ts.AccountTypeID = 'S'
 " : @"WITH TemplateMasterID AS
 (
 	select distinct sdm.Code
@@ -70,7 +70,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_STDTimeSeriesDetail stdd on ts.ID = stdd.TimeSeriesId
 join STDTemplateItem stdti on stdd.STDItemId = stdti.STDItemID
 join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
-where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 ";
+where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 and ts.AccountTypeID = 'S' ";
 
 			bool requestedSpecificTimeSerie = (timeseriesId != null);
 			string templateMasterId = string.Empty;
@@ -374,10 +374,11 @@ where tsd.TimeSeriesId =  @tsId
 						if (itemType == "E") { // Expression
 							c = 2;
 							decimal value = reader.GetDecimal(c++);
-							int expressionId = reader.GetInt32(c++);
+							int ind = c++;
+							int expressionId = reader.IsDBNull(ind) ? 0 : reader.GetInt32(ind);
 
 							val.Contents = value.ToString();
-							val.ValueDetails = new ExpressionTimeseriesValueDetailDTO() { Id = expressionId };
+							val.ValueDetails = expressionId == 0 ? ((TimeseriesValueDetailDTO)new TextTimeseriesValueDetailDTO()) : new ExpressionTimeseriesValueDetailDTO() { Id = expressionId };
 						} else if (itemType == "T") { // Date Time
 							c = 4;
 							DateTime date = reader.GetDateTime(c++);
@@ -567,8 +568,8 @@ WHERE tc.ID = @tcId
 						Guid docId = reader.GetGuid(c++);
 						Guid damDocId = reader.GetGuid(c++);
 						string off = reader.GetString(c++);
-						decimal? num = reader.GetNullable<decimal>(c++);						
-						string val = reader.GetString(c++);
+						decimal? num = reader.GetNullable<decimal>(c++);
+						string val = reader.GetNullableObj<string>(c++);
 						string curr = reader.GetNullableObj<string>(c++);
 						double scaling = reader.GetDouble(c++);
 						int? cftId = reader.GetNullable<int>(c++);
@@ -599,6 +600,7 @@ WHERE tc.ID = @tcId
 		}
 
 		private Tuple<int, FLYTOffset> _parseSourcelink(string flyt) {
+			if (string.IsNullOrWhiteSpace(flyt)) { return new Tuple<int, FLYTOffset>(0, new PDFOffset()); }
 			string[] comp = flyt.Split('|');
 
 			int rootId = Int32.Parse(comp[2].Substring(1));
