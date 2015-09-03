@@ -45,7 +45,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_SDBTimeSeriesDetail sdbd on ts.id = sdbd.TimeSeriesId
 join SDBTemplateItem sdbti on sdbd.sdbitemId = sdbti.SDBItemID
 join TemplateMasterID tmi on tmi.Id = sdbti.SDBTemplateMasterID
-where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 and ts.AccountTypeID = 'S'
+where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1 
 " : @"WITH TemplateMasterID AS
 (
 	select distinct sdm.Code
@@ -70,7 +70,7 @@ join DocumentSeries ds on d.DocumentSeriesID = ds.ID
 join vw_STDTimeSeriesDetail stdd on ts.ID = stdd.TimeSeriesId
 join STDTemplateItem stdti on stdd.STDItemId = stdti.STDItemID
 join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
-where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 and ts.AccountTypeID = 'S' ";
+where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 ";
 
 			bool requestedSpecificTimeSerie = (timeseriesId != null);
 			string templateMasterId = string.Empty;
@@ -80,7 +80,8 @@ where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 a
 	and ts.CompanyFiscalYear = isnull(@FiscalYear, ts.CompanyFiscalYear)
 	and ts.TimeSeriesDate = isnull(@PeriodEndDate, ts.TimeSeriesDate)
 	and ts.InterimTypeID = isnull(@InterimType, ts.InterimTypeID)
-	and ts.AutoCalcFlag = isnull(@AutoCalcFlag, ts.AutoCalcFlag)";
+	and ts.AutoCalcFlag = isnull(@AutoCalcFlag, ts.AutoCalcFlag)
+	and ts.AccountTypeId = isnull(@AccountType, ts.AccountTypeId)";
 			} else if (!string.IsNullOrEmpty(queryFilter["years"])) {
 				preQuery_timeseriesIdentification += " and ts.companyfiscalyear in (select id from @years)";
 			} else if (!string.IsNullOrEmpty(queryFilter["startyear"]) && !string.IsNullOrEmpty(queryFilter["endyear"])) {
@@ -102,6 +103,7 @@ where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 a
 						cmd.Parameters.Add(new SqlParameter("@PeriodEndDate", SqlDbType.DateTime) { Value = timeseriesId.PeriodEndDate });
 						cmd.Parameters.Add(new SqlParameter("@InterimType", SqlDbType.Char, 2) { Value = timeseriesId.InterimType });
 						cmd.Parameters.Add(new SqlParameter("@AutoCalcFlag", SqlDbType.Int) { Value = (timeseriesId.IsAutoCalc ? 1 : 0) });
+						cmd.Parameters.Add(new SqlParameter("@AccountType", SqlDbType.Char, 1) { Value = timeseriesId.AccountType });
 					} else if (!string.IsNullOrEmpty(queryFilter["years"])) {
 						DataTable dtYears = new DataTable();
 						DataColumn col = new DataColumn("year", typeof(Int32));
@@ -226,11 +228,11 @@ select
 	d.DAMDocumentId,
 	d.PublicationDateTime,
 	ts.CurrencyCode, ts.ScalingFactorID,
-  d.DocumentDate, map.stdcode,
+  d.DocumentDate, map.stdcode, ts.AccountTypeID,
 	d.FormTypeID,	d.ExportFlag
 from Timeseries ts
 join Document d on ts.DocumentId = d.id
-left join SDBSTDTimeSeriesMapping map on map.ReportTypeID = d.ReportTypeID and map.InterimTypeID = ts.InterimTypeID and map.AccountTypeID = 'S'
+left join SDBSTDTimeSeriesMapping map on map.ReportTypeID = d.ReportTypeID and map.InterimTypeID = ts.InterimTypeID and map.AccountTypeID = ts.AccountTypeId
 where ts.Id = @tsId
 ";
 
@@ -258,6 +260,7 @@ where ts.Id = @tsId
 						ts.ScalingFactor = reader.GetStringSafe(c++);
 						ts.DocumentDate = reader.GetDateTime(c++);
 						ts.StdTimeSeriesCode = reader.GetStringSafe(c++);
+						ts.AccountType = reader.GetStringSafe(c++);
 						return ts;
 					}
 				}
