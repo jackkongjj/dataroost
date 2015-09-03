@@ -64,5 +64,8 @@ namespace DataRoostAPI.Common.Models {
 
 		[JsonProperty("perShareValues")]
 		public Dictionary<int, Dictionary<string, TimeseriesValueDTO>> PerShareValues { get; set; }
+
+		[JsonProperty("accountType")]
+		public string AccountType { get; set; }
 	}
 }

@@ -43,7 +43,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 						InterimType = timeseriesId.InterimType,
 						IsAutoCalc = timeseriesId.IsAutoCalc,
 						PeriodEndDate = timeseriesId.PeriodEndDate,
-						CompanyFiscalYear = timeseriesId.CompanyFiscalYear
+						CompanyFiscalYear = timeseriesId.CompanyFiscalYear,
+						AccountType = timeseriesId.AccountType
 					});
 					sf = tsh.QuerySDBTimeseries(iconum, templateId, sfId, dataType, queryFilter)[0];
 				}
@@ -92,7 +93,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 					TimeseriesIdentifier id;
 
 					var match = from x in voyTS
-											where dataType == StandardizationType.SDB ? x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == "S"	: x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear
+											where dataType == StandardizationType.SDB ? x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType	: x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear
 											orderby x.DamDocumentId descending, x.DCN descending	//order by one with document
 											select x;
 
@@ -100,14 +101,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 					if (temp.Count() > 0) {
 						var voy = temp.First();
 						voy.ScalingFactor = "A";	//convert all to Actual
-						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, "S", true, true);
+						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, ts.AccountType, true, true);
 						results.Add(new SfVoyTimeSeries { SfTimeSerie = (SFTimeseriesDTO)ts, VoyTimeSerie = voy, Id = id.GetToken() });
 						if (dataType == StandardizationType.SDB)
-							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == "S");
+							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType);
 						else
 							voyTS.RemoveAll(x => x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear);
 					} else {
-						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.StdTimeSeriesCode, "S", true, false);
+						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.StdTimeSeriesCode, ts.AccountType, true, false);
 						results.Add(new SfVoyTimeSeries { SfTimeSerie = (SFTimeseriesDTO)ts, VoyTimeSerie = null, Id = id.GetToken() });
 					}
 				}
