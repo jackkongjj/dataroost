@@ -118,9 +118,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
-			string query = @"SELECT s.Cusip,
-                                    s.Iconum,
-                                    s.Name,
+			string query = @"SELECT p.Cusip,
+                                    p.Iconum,
+                                    p.Name,
                                     a.Description,
                                     e.Description,
                                     s.Inception_Date,
@@ -134,12 +134,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                     s.Issue_Type,
                                     p.PPI,
                                     x.permid
-                                FROM SecMas s
-		                            LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
-		                            LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
-		                            LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
-                                LEFT JOIN FdsTriPpiMap p ON p.CUSIP = s.Cusip
-                                LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
+                                FROM FdsTriPpiMap p
+	                                LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
+																	LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
+																	LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
+																	LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
+																	LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
 	                            WHERE s.Iconum = @iconum
                                     --AND RIGHT(p.PPI, 1) != '0'
                                     --AND s.term_date IS NULL
@@ -202,9 +202,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	                                    iconum INT NOT NULL
                                     )";
 
-			const string query = @"SELECT s.Cusip,
-                                    s.Iconum,
-                                    s.Name,
+			const string query = @"SELECT p.Cusip,
+                                    p.Iconum,
+                                    p.Name,
                                     a.Description,
                                     e.Description,
                                     s.Inception_Date,
@@ -218,14 +218,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                     s.Issue_Type,
                                     p.PPI,
                                     x.permid
-                                FROM SecMas s
-		                            LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
-		                            LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
-		                            LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
-                                LEFT JOIN FdsTriPpiMap p ON p.CUSIP = s.Cusip
-																LEFT JOIN dbo.##CompanyIds ico ON ico.iconum = p.iconum
-                                LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
-	                            WHERE ico.Iconum IS NOT NULL
+                                FROM FdsTriPpiMap p
+																	LEFT JOIN dbo.##CompanyIds ico ON ico.iconum = p.iconum
+																	LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
+																	LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
+																	LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
+																	LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
+																	LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
+																WHERE ico.Iconum IS NOT NULL
                                     --AND RIGHT(p.PPI, 1) != '0'
                                     --AND s.term_date IS NULL
                                     --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
