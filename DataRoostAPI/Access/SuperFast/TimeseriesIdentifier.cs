@@ -9,6 +9,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		public DateTime PeriodEndDate { get; set; }
 		public string InterimType { get; set; }
 		public bool IsAutoCalc { get; set; }
+		public string AccountType { get; set; }
 
 		public TimeseriesIdentifier() { }
 
@@ -18,6 +19,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			PeriodEndDate = ts.PeriodEndDate;
 			InterimType = ts.InterimType;
 			IsAutoCalc = ts.IsAutoCalc;
+			AccountType = ts.AccountType;
 		}
 
 		public TimeseriesIdentifier(string token) {
@@ -28,6 +30,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			PeriodEndDate = DateTime.Parse(comp[2]);
 			InterimType = comp[3];
 			IsAutoCalc = Boolean.Parse(comp[4]);
+			AccountType = comp[5];
 		}
 
 		protected override string[] getComponents() {
@@ -36,7 +39,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 				CompanyFiscalYear.ToString(),
 				PeriodEndDate.ToString(),
 				InterimType,
-				IsAutoCalc.ToString()
+				IsAutoCalc.ToString(),
+				AccountType
 			};
 		}
 	}
