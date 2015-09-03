@@ -267,7 +267,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 								Name = sdr.GetStringSafe(2),
 								AssetClass = sdr.GetStringSafe(3),
 								ListedOn = sdr.GetStringSafe(4),
-								InceptionDate = sdr.GetDateTime(5),
+								InceptionDate = sdr.GetNullable<DateTime>(5),
 								TermDate = sdr.GetNullable<DateTime>(6),
 
 								//CurrentPrice = sdr.GetDecimal(7),

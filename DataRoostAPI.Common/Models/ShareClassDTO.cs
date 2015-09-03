@@ -40,7 +40,7 @@ namespace DataRoostAPI.Common.Models {
 		public string AssetClass { get; set; }
 
 		[JsonProperty("inceptionDate")]
-		public DateTime InceptionDate { get; set; }
+		public DateTime? InceptionDate { get; set; }
 
 		[JsonProperty("termDate")]
 		public DateTime? TermDate { get; set; }
