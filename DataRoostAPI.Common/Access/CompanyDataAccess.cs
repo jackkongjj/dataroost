@@ -59,11 +59,20 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
 		}
 
-		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds, DateTime? reportDate = null) {
+		public Dictionary<int, ShareClassDataDTO[]> GetLatestFiscalPeriodEndSharesData(List<string> companyIds, DateTime? reportDate = null, DateTime? since = null) {
 			string requestUrl = string.Format("{0}/api/v1/companies/shares/latestFiscalPeriodEnd", _dataRoostConnectionString);
-			if (reportDate != null) {
-				requestUrl += "?reportDate=" + reportDate;
+			if (reportDate != null || since != null) {
+				requestUrl += "?";
+				List<string> queryStrings = new List<string>();
+				if (reportDate != null) {
+					queryStrings.Add("reportDate=" + reportDate);
+				}
+				if (since != null) {
+					queryStrings.Add("since=" + since);
+				}
+				requestUrl += string.Join("&", queryStrings);
 			}
+
 			string postParams = JsonConvert.SerializeObject(companyIds);
 			using (LongRunningWebClient client = new LongRunningWebClient()) {
 				client.Credentials = CredentialCache.DefaultNetworkCredentials;

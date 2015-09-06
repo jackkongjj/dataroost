@@ -25,6 +25,11 @@ namespace DataRoost.Test {
 			//DateTime endTime = DateTime.Now;
 			//TimeSpan duration = endTime.Subtract(startTime);
 
+			Dictionary<int, ShareClassDataDTO[]> missingData = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "334800" });
+			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulkWithReportDate = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "334800" }, new DateTime(2015, 3, 31));
+			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulkWithSinceDate = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "334800" }, null, new DateTime(2015, 5, 31));
+
+
 			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulk = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "17934" });
 			Dictionary<int, ShareClassDataDTO[]> comparisonTestBulkWithDate = companyDataAccess.GetLatestFiscalPeriodEndSharesData(new List<string> { "17934" }, new DateTime(2015, 3, 31));
 			foreach (ShareClassDataDTO item in comparisonTestBulkWithDate[17934]) {
