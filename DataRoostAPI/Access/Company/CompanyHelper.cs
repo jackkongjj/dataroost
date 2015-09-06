@@ -352,13 +352,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return shareClassDataList;
 		}
 
-		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate) {
+		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
+			DateTime startTime = DateTime.Now;
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
+			TimeSpan shareClassAndEffortsDuration = DateTime.Now.Subtract(startTime);
 
 			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == "voyager").Select(kvp => kvp.Key).ToList();
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == "superfast").Select(kvp => kvp.Key).ToList();
 
+			DateTime superfastStartTime = DateTime.Now;
 			if (superfastIconums.Count > 0) {
 				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
@@ -378,11 +381,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					}
 				}
 			}
+			TimeSpan superfastDuration = DateTime.Now.Subtract(superfastStartTime);
 
+			DateTime voyagerStartTime = DateTime.Now;
 			if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
-					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate);
+					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate, since);
 				foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
 					int iconum = keyValuePair.Key;
 					Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
@@ -398,6 +403,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					}
 				}
 			}
+			TimeSpan voyagerDuration = DateTime.Now.Subtract(voyagerStartTime);
+
 			return companyShareClassData;
 		}
 
