@@ -26,12 +26,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				table.Rows.Add(iconum);
 			}
 
-			const string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
-                                    CREATE TABLE dbo.##CompanyIds (
-	                                    iconum INT NOT NULL
-                                    )";
+			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
 
-			const string query = @"SELECT i.iconum, fds.PPI FROM FdsTriPpiMap fds JOIN dbo.##CompanyIds i ON i.iconum = fds.iconum WHERE fds.Cusip IS NOT NULL";
+			const string query = @"SELECT i.iconum, fds.PPI FROM FdsTriPpiMap fds JOIN #CompanyIds i ON i.iconum = fds.iconum WHERE fds.Cusip IS NOT NULL";
 
 			using (SqlConnection connection = new SqlConnection(_connectionString)) {
 				connection.Open();
@@ -42,13 +39,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				// Upload all iconums to Temp table
 				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
 					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "dbo.##CompanyIds";
-					try {
-						bulkCopy.WriteToServer(table);
-					} catch (Exception ex) {
-						// Debug.WriteLine(ex.StackTrace, ex.InnerException.Message);
-						//_logger.Error("Error Bulk Uploading Sedols to Lion Temp Table.", ex);
-					}
+					bulkCopy.DestinationTableName = "#CompanyIds";
+					bulkCopy.WriteToServer(table);
 				}
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {

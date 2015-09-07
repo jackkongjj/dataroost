@@ -81,10 +81,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		}
 
 		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate) {
-			const string createTableQuery = @"IF OBJECT_ID('tempdb..##CompanyIds', 'U') IS NOT NULL DROP TABLE dbo.##CompanyIds;
-                                    CREATE TABLE dbo.##CompanyIds (
-	                                    iconum INT NOT NULL
-                                    )";
+			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
 
 			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum FROM 
                                         (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, i.iconum iconum,
@@ -107,7 +104,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																						join Document d (nolock)
 																							on ts.DocumentID = d.ID
 																							and d.ExportFlag = 1 
-																						join dbo.##CompanyIds i on i.iconum = fds.iconum
+																						join #CompanyIds i on i.iconum = fds.iconum
                                           where ts.TimeSeriesDate <= @searchDate) temp
                                         where temp.rank = 1";
 
@@ -134,13 +131,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 				// Upload all iconums to Temp table
 				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
 					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "dbo.##CompanyIds";
-					try {
-						bulkCopy.WriteToServer(table);
-					} catch (Exception ex) {
-						// Debug.WriteLine(ex.StackTrace, ex.InnerException.Message);
-						//_logger.Error("Error Bulk Uploading Sedols to Lion Temp Table.", ex);
-					}
+					bulkCopy.DestinationTableName = "#CompanyIds";
+					bulkCopy.WriteToServer(table);
 				}
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
