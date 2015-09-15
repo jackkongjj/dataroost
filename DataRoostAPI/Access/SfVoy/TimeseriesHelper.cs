@@ -225,7 +225,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 								CompanyFiscalYear = sdr.GetInt16(1),
 								PeriodEndDate = sdr.GetDateTime(2),
 								StdTimeSeriesCode = sdr.GetStringSafe(3),
-								IsoCurrency = sdr.GetString(4),
+								IsoCurrency = sdr.GetStringSafe(4),
 								ScalingFactor = sdr.GetString(5),
 								DamDocumentId = sdr.GetStringSafe(6) == null ? Guid.Empty : Guid.Parse(sdr.GetStringSafe(6)),
 								PublicationDate = sdr.GetDateTimeSafe(8) == null ? new DateTime() : (DateTime)sdr.GetDateTimeSafe(8),
