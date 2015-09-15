@@ -261,6 +261,10 @@ JOIN
 			Dictionary<string, List<ShareClassDataItem>> dataByPpi = new Dictionary<string, List<ShareClassDataItem>>();
 			Dictionary<string, int> ppiDictionary = _ppiHelper.GetIconumPpiDictionary(iconums);
 
+			if (ppiDictionary == null || ppiDictionary.Count < 1) {
+				return new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+			}
+
 			using (OracleConnection connection = new OracleConnection(_connectionString)) {
 				connection.Open();
 
