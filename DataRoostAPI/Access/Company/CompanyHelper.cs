@@ -298,7 +298,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return companyShareClasses;
 		}
 
-		public IEnumerable<ShareClassDataDTO> GetCompanyShareClassData(int iconum, DateTime? reportDate) {
+		public IEnumerable<ShareClassDataDTO> GetCompanyShareClassData(int iconum, DateTime? reportDate, DateTime? since) {
 			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
 			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
 
@@ -306,7 +306,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			if (effort.Name == "superfast") {
 				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 				Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems =
-					superfastShares.GetLatestCompanyFPEShareData(iconum, reportDate);
+					superfastShares.GetLatestCompanyFPEShareData(iconum, reportDate, since);
 
 				foreach (ShareClassDTO shareClass in shareClasses) {
 					List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
@@ -320,7 +320,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			else if (effort.Name == "voyager") {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum,
-				                                                                                                        reportDate);
+				                                                                                                        reportDate,
+																																																								since);
 				foreach (ShareClassDTO shareClass in shareClasses) {
 					List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 					if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
