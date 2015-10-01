@@ -51,10 +51,18 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<EffortDTO[]>(requestUrl);
 		}
 
-		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null) {
+		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null, DateTime? since = null) {
 			string requestUrl = string.Format("{0}/shares/latestFiscalPeriodEnd", GetRootUrl(companyId));
-			if (reportDate != null) {
-				requestUrl += "?reportDate=" + reportDate;
+			if (reportDate != null || since != null) {
+				requestUrl += "?";
+				List<string> queryStrings = new List<string>();
+				if (reportDate != null) {
+					queryStrings.Add("reportDate=" + reportDate);
+				}
+				if (since != null) {
+					queryStrings.Add("since=" + since);
+				}
+				requestUrl += string.Join("&", queryStrings);
 			}
 			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
 		}

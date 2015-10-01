@@ -358,7 +358,7 @@ JOIN
 			return companyShareData;
 		}
 
-		public Dictionary<string, List<ShareClassDataItem>> GetLatestFPEShareData(int iconum, DateTime? reportDateToFind) {
+		public Dictionary<string, List<ShareClassDataItem>> GetLatestFPEShareData(int iconum, DateTime? reportDateToFind, DateTime? since) {
 //			string query = @"SELECT PPI, REPORTED_VALUE, REPORT_DATE FROM
 //                                    (SELECT ts.SEDOL, m.PPI, d.REPORTED_VALUE, m.REPORT_DATE, RANK() OVER (PARTITION BY m.ppi ORDER BY m.report_date DESC) RANK
 //																			FROM item_std i
@@ -389,21 +389,21 @@ JOIN
                                                     JOIN item_std i ON i.item_code = d.item_code
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
-                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate AND (:since IS NULL OR m.report_date >= :since)
 																						UNION
                                             SELECT reported_text text_value, null numeric_value, i.item_code itemCode, i.item_name itemName, 'text' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
                                                 FROM std_text_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
-                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate AND (:since IS NULL OR m.report_date >= :since)
                                             UNION
                                             SELECT null text_value, reported_value numeric_value, i.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
                                                 FROM std_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
-                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate) tmp
+                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate AND (:since IS NULL OR m.report_date >= :since)) tmp
                                             WHERE rank = 1 ORDER BY 1, 2";
 
 			DateTime searchDate = DateTime.Now;
@@ -421,6 +421,24 @@ JOIN
 					command.BindByName = true;
 					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "ppiBase", Value = basePPI });
 					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Date, Direction = ParameterDirection.Input, ParameterName = "reportDate", Value = searchDate });
+					if (since == null) {
+						command.Parameters.Add(new OracleParameter()
+						                       {
+							                       OracleDbType = OracleDbType.Date,
+							                       Direction = ParameterDirection.Input,
+																		 ParameterName = "since",
+							                       Value = DBNull.Value
+						                       });
+					}
+					else {
+						command.Parameters.Add(new OracleParameter()
+						                       {
+							                       OracleDbType = OracleDbType.Date,
+							                       Direction = ParameterDirection.Input,
+																		 ParameterName = "since",
+							                       Value = since
+						                       });
+					}
 
 					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
 						while (sdr.Read()) {
