@@ -420,13 +420,13 @@ order by tm.sdbItem_id, re.[order]";
 						if (isStarItem) {	//only star item can be replace, else is zero
 							if (((ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[e].ValueDetails).isStar) {
 								foundNum++;
-								expFlat = expFlat.Replace(e, cellValues[e].Contents);
+								expFlat = expFlat.Replace(e, cellValues[e].Contents + "*1.0");	//trick to be double
 							} else {
 								expFlat = expFlat.Replace(e, "0");
 							}
 						} else {
 							foundNum++;
-							expFlat = expFlat.Replace(e, cellValues[e].Contents);
+							expFlat = expFlat.Replace(e, cellValues[e].Contents + "*1.0");
 						}
 					} else {
 						expFlat = expFlat.Replace(e, "0");
@@ -437,7 +437,7 @@ order by tm.sdbItem_id, re.[order]";
 					DataTable dt = new DataTable();
 					var value = dt.Compute(expFlat, "");
 					TimeseriesValueDTO tsValue = new TimeseriesValueDTO();
-					tsValue.Contents = value.ToString();
+					tsValue.Contents = Double.Parse(value.ToString()).ToString("F5");
 					tsValue.ValueDetails = new ExpressionTimeseriesValueDetailVoySDBDTO();
 					if (toRet.ContainsKey(item.sdbId.ToString())) {
 						toRet[item.sdbId.ToString()] = tsValue;
