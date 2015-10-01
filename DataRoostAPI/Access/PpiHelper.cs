@@ -4,6 +4,9 @@ using System.Linq;
 using System.Web;
 using System.Data;
 using System.Data.SqlClient;
+
+using DataRoostAPI.Common.Exceptions;
+
 using Oracle.ManagedDataAccess.Client;
 using FactSet.Data.SqlClient;
 
@@ -60,11 +63,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		public string GetPPIByIconum(int iconum) {
-			string query = "SELECT PPI FROM FdsTriPpiMap WHERE iconum = @iconum AND Cusip IS NOT NULL ORDER BY IsAdr";
+			string query = "SELECT PPI FROM FdsTriPpiMap WHERE iconum = @iconum ORDER BY IsAdr, cusip DESC, PPI";
 
-			return ExecuteQuery<string>(query, new List<SqlParameter> { new SqlParameter("@iconum", iconum) }, reader => {
+			string ppi = ExecuteQuery<string>(query, new List<SqlParameter> { new SqlParameter("@iconum", iconum) }, reader => {
 				                                                                                    return reader.GetString(0);
 			                                                                                    }).FirstOrDefault();
+			if (ppi == null) {
+				throw new SymbologyMappingException(string.Format("Can't find PPI for Iconum {0}", iconum));
+			}
+			return ppi;
 		}
 
 		public string GetPPIBase(string ppi) {
