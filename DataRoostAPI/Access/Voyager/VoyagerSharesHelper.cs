@@ -172,7 +172,7 @@ JOIN
     JOIN (
     SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N'
     ) i ON i.item_code = t.item_code
-		--WHERE m.report_date <= :reportDate AND m.report_date >= :since
+		WHERE m.report_date <= :reportDate AND m.report_date >= :since
   ) WHERE rank = 1) t ON t.master_id = d.master_id AND t.item_code = d.item_code
 UNION
 SELECT t.ppi, t.data_type, t.item_code, t.item_name, d.reported_text text_value, null numeric_value, t.report_date
@@ -190,7 +190,7 @@ JOIN
         UNION
         SELECT i.item_code, i.item_name, 'date' date_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D'
         ) i ON i.item_code = t.item_code
-		--WHERE m.report_date <= :reportDate AND m.report_date >= :since
+		WHERE m.report_date <= :reportDate AND m.report_date >= :since
   ) WHERE rank = 1) t ON t.master_id = d.master_id AND t.item_code = d.item_code
 )";
 
@@ -209,7 +209,7 @@ JOIN
     JOIN (
     SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N'
     ) i ON i.item_code = t.item_code
-		--WHERE m.report_date <= :reportDate
+		WHERE m.report_date <= :reportDate
   ) WHERE rank = 1) t ON t.master_id = d.master_id AND t.item_code = d.item_code
 UNION
 SELECT t.ppi, t.data_type, t.item_code, t.item_name, d.reported_text text_value, null numeric_value, t.report_date
@@ -226,7 +226,7 @@ JOIN
         UNION
         SELECT i.item_code, i.item_name, 'date' date_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D'
         ) i ON i.item_code = t.item_code
-		--WHERE m.report_date <= :reportDate
+		WHERE m.report_date <= :reportDate
   ) WHERE rank = 1) t ON t.master_id = d.master_id AND t.item_code = d.item_code
 )";
 
