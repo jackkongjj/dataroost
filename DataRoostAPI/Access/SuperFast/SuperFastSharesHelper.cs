@@ -86,7 +86,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			return perShareData;
 		}
 
-		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate) {
+		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate, DateTime? since) {
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
 
 			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum FROM 
@@ -111,7 +111,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																							on ts.DocumentID = d.ID
 																							and d.ExportFlag = 1 
 																						join #CompanyIds i on i.iconum = fds.iconum
-                                          where ts.TimeSeriesDate <= @searchDate) temp
+                                          where ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since)) temp
                                         where temp.rank = 1";
 
 			DateTime searchDate = DateTime.Now;
@@ -143,6 +143,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					cmd.Parameters.AddWithValue("@searchDate", searchDate);
+					if (since == null) {
+						cmd.Parameters.AddWithValue("@since", DBNull.Value);
+					} else {
+						cmd.Parameters.AddWithValue("@since", since);
+					}
+
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							string cusip = reader.GetStringSafe(0);

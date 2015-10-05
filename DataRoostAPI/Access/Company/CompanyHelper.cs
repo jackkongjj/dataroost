@@ -358,7 +358,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			if (superfastIconums.Count > 0) {
 				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
-					superfastShares.GetLatestCompanyFPEShareData(superfastIconums, reportDate);
+					superfastShares.GetLatestCompanyFPEShareData(superfastIconums, reportDate, since);
 				foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>>  keyValuePair in superfastShareData) {
 					int iconum = keyValuePair.Key;
 					Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
