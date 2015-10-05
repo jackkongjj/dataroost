@@ -172,7 +172,7 @@ JOIN
     JOIN (
     SELECT i.item_code, i.item_name FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'N' AND i.char_type_flag = 'N'
     ) i ON i.item_code = t.item_code
-		WHERE m.report_date <= :reportDate AND m.report_date >= :since
+		WHERE m.report_date BETWEEN :reportDate AND :since
   ) WHERE rank = 1) t ON t.master_id = d.master_id AND t.item_code = d.item_code
 UNION
 SELECT t.ppi, t.data_type, t.item_code, t.item_name, d.reported_text text_value, null numeric_value, t.report_date
@@ -190,7 +190,7 @@ JOIN
         UNION
         SELECT i.item_code, i.item_name, 'date' date_type FROM item_std i JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT' WHERE i.data_type_flag = 'A' AND i.char_type_flag = 'D'
         ) i ON i.item_code = t.item_code
-		WHERE m.report_date <= :reportDate AND m.report_date >= :since
+		WHERE m.report_date BETWEEN :reportDate AND :since
   ) WHERE rank = 1) t ON t.master_id = d.master_id AND t.item_code = d.item_code
 )";
 
@@ -383,28 +383,56 @@ JOIN
 //                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND m.PPI LIKE :ppiBase) j
 //																					where j.RANK = 1 ORDER BY 1, 2";
 
-			const string query = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
+			const string queryWithSince = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
                                           (SELECT reported_text text_value, null numeric_value, item_code itemCode, i.item_name itemName, 'date' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
                                                 FROM std_text_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
-                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate AND (:since IS NULL OR m.report_date >= :since)
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.PPI LIKE :ppiBase AND m.report_date BETWEEN :reportDate AND :since
 																						UNION
                                             SELECT reported_text text_value, null numeric_value, i.item_code itemCode, i.item_name itemName, 'text' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
                                                 FROM std_text_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
-                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate AND (:since IS NULL OR m.report_date >= :since)
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date BETWEEN :reportDate AND :since
                                             UNION
                                             SELECT null text_value, reported_value numeric_value, i.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
                                                 FROM std_details d
                                                     JOIN item_std i ON i.item_code = d.item_code
 																										JOIN std_master m ON m.master_id = d.master_id
 																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
-                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate AND (:since IS NULL OR m.report_date >= :since)) tmp
+                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date BETWEEN :reportDate AND :since) tmp
                                             WHERE rank = 1 ORDER BY 1, 2";
+
+			const string queryWithoutSince = @"SELECT ppi, data_type, itemCode, text_value, numeric_value, itemName, report_date FROM
+                                          (SELECT reported_text text_value, null numeric_value, item_code itemCode, i.item_name itemName, 'date' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+                                                FROM std_text_details d
+                                                    JOIN item_std i ON i.item_code = d.item_code
+																										JOIN std_master m ON m.master_id = d.master_id
+																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'D' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate
+																						UNION
+                                            SELECT reported_text text_value, null numeric_value, i.item_code itemCode, i.item_name itemName, 'text' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+                                                FROM std_text_details d
+                                                    JOIN item_std i ON i.item_code = d.item_code
+																										JOIN std_master m ON m.master_id = d.master_id
+																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+                                                WHERE i.data_type_flag = 'A' AND char_type_flag = 'A' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate
+                                            UNION
+                                            SELECT null text_value, reported_value numeric_value, i.item_code itemCode, i.item_name itemName, 'numeric' data_type, d.UPDATE_DATE udate, m.report_date report_date, m.PPI ppi, t.template_code, RANK() OVER (PARTITION BY i.item_code, m.PPI ORDER BY m.report_date DESC) RANK
+                                                FROM std_details d
+                                                    JOIN item_std i ON i.item_code = d.item_code
+																										JOIN std_master m ON m.master_id = d.master_id
+																										JOIN std_template_item t ON t.item_code = i.item_code AND t.template_code = 'PSIT'
+                                                WHERE i.data_type_flag = 'N' AND char_type_flag = 'N' AND t.template_code = 'PSIT' AND m.PPI LIKE :ppiBase AND m.report_date <= :reportDate) tmp
+                                            WHERE rank = 1 ORDER BY 1, 2";
+
+			string query = queryWithSince;
+			if (since == null) {
+				query = queryWithoutSince;
+			}
 
 			DateTime searchDate = DateTime.Now;
 			if (reportDateToFind != null) {
@@ -421,16 +449,7 @@ JOIN
 					command.BindByName = true;
 					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "ppiBase", Value = basePPI });
 					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Date, Direction = ParameterDirection.Input, ParameterName = "reportDate", Value = searchDate });
-					if (since == null) {
-						command.Parameters.Add(new OracleParameter()
-						                       {
-							                       OracleDbType = OracleDbType.Date,
-							                       Direction = ParameterDirection.Input,
-																		 ParameterName = "since",
-							                       Value = DBNull.Value
-						                       });
-					}
-					else {
+					if (since != null) {
 						command.Parameters.Add(new OracleParameter()
 						                       {
 							                       OracleDbType = OracleDbType.Date,
