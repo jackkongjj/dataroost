@@ -298,53 +298,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return companyShareClasses;
 		}
 
-		public IEnumerable<ShareClassDataDTO> GetCompanyShareClassData(int iconum, DateTime? reportDate, DateTime? since) {
-			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
-			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
-
-			EffortDTO effort = GetCompanyEffort(iconum);
-			if (effort.Name == "superfast") {
-				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-				Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems =
-					superfastShares.GetLatestCompanyFPEShareData(iconum, reportDate, since);
-
-				foreach (ShareClassDTO shareClass in shareClasses) {
-					List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-					if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
-						securityItemList = superfastSecurityItems[shareClass.Cusip];
-					}
-					ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
-					shareClassDataList.Add(shareClassData);
-				}
-			}
-			else if (effort.Name == "voyager") {
-				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-				Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetLatestFPEShareData(iconum,
-				                                                                                                        reportDate,
-																																																								since);
-				foreach (ShareClassDTO shareClass in shareClasses) {
-					List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-					if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
-						securityItemList = voyagerSecurityItems[shareClass.PPI];
-					}
-					ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
-					shareClassDataList.Add(shareClassData);
-				}
-			}
-
-			IEnumerable<string> ppis = shareClassDataList.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
-			IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
-			foreach (IGrouping<string, string> ppiGroup in groups) {
-				if (ppiGroup.Count() > 1) {
-					string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
-					ShareClassDataDTO rootShareClass = shareClassDataList.FirstOrDefault(s => s.PPI == rootPpi);
-					shareClassDataList.Remove(rootShareClass);
-				}
-			}
-
-			return shareClassDataList;
-		}
-
 		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
 			DateTime startTime = DateTime.Now;
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);

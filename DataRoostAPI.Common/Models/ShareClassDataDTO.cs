@@ -42,6 +42,10 @@ namespace DataRoostAPI.Common.Models {
 
 		public string Name { get; set; }
 
+		public string TimeSeriesCode { get; set; }
+
+		public DateTime UpdatedDate { get; set; }
+
 		[JsonProperty("_t")]
 		public string Type {
 			get { return GetType().AssemblyQualifiedName; }
