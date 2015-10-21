@@ -67,6 +67,41 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetCompaniesEfforts(iconumList);
 		}
 
+		[Route("companies/{CompanyId}/companypriority/")]
+		[HttpGet]
+		public decimal? GetPriorityForCompany(string CompanyId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
+			return helper.GetCompanyPriority(iconum);
+		}
+
+		[Route("companies/companypriority/")]
+		[HttpPost]
+		public Dictionary<int, decimal?> GetPriorityForCompanies(List<string> companyIds) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			List<int> iconumList = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
+			iconumList = iconumList.Distinct().ToList();
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
+			return helper.GetCompanyPriority(iconumList);
+		}
+			
 		[Route("companies/{CompanyId}/efforts/")]
 		[HttpGet]
 		public EffortDTO[] QueryEfforts(string CompanyId) {

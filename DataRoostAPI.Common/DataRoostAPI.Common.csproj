@@ -84,6 +84,7 @@
     <Compile Include="Access\ExportedItemsDataAccess.cs" />
     <Compile Include="Access\SfVoyDataAccess.cs" />
     <Compile Include="Access\StandardizedDataAccess.cs" />
+    <Compile Include="Exceptions\MissingIconumException.cs" />
     <Compile Include="Exceptions\SymbologyMappingException.cs" />
     <Compile Include="Interfaces\IAsReportedDataAccess.cs" />
     <Compile Include="Interfaces\ICompanyDataAccess.cs" />

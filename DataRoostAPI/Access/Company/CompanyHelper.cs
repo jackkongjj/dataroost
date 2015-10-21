@@ -8,6 +8,7 @@ using System.Linq;
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
 
+using DataRoostAPI.Common.Exceptions;
 using DataRoostAPI.Common.Models;
 
 using FactSet.Data.SqlClient;
@@ -66,6 +67,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			company.EntitiyPermId = PermId.Iconum2PermId(iconum);
 			company.Id = company.EntitiyPermId;
 			company.RootPPI = GetRootPPI(iconum);
+			company.CollectionEffort = GetCompanyEffort(iconum);
+			company.Priority = GetCompanyPriority(iconum);
 
 			return company;
 		}
@@ -456,6 +459,56 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return effortDictionary;
+		}
+
+		public decimal? GetCompanyPriority(int iconum) {
+			Dictionary<int, decimal?> companyPriority = GetCompanyPriority(new List<int> { iconum });
+			if (!companyPriority.ContainsKey(iconum)) {
+				throw new MissingIconumException(iconum);
+			}
+			return companyPriority[iconum];
+		}
+
+		public Dictionary<int, decimal?> GetCompanyPriority(List<int> iconums) {
+			Dictionary<int, decimal?> priorityDictionary = new Dictionary<int, decimal?>();
+			DataTable table = new DataTable();
+			table.Columns.Add("iconum", typeof(int));
+			foreach (int iconum in iconums) {
+				table.Rows.Add(iconum);
+				priorityDictionary.Add(iconum, null);
+			}
+
+			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
+			const string query = @"SELECT p.iconum, p.priority
+																FROM CompanyPriority p
+																	JOIN #iconums i ON i.iconum = p.iconum";
+
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
+
+				// Upload all iconums to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "#iconums";
+					bulkCopy.WriteToServer(table);
+				}
+
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							int iconum = reader.GetInt32(0);
+							double priority = reader.GetFloat(1);
+							priorityDictionary[iconum] = decimal.Parse(priority.ToString());
+						}
+					}
+				}
+			}
+
+			return priorityDictionary;
 		}
 
 	}

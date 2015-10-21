@@ -34,6 +34,12 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("primaryShareClassId")]
 		public string PrimaryShareClassId { get; set; }
 
+		[JsonProperty("collectionEffort")]
+		public EffortDTO CollectionEffort { get; set; }
+
+		[JsonProperty("companyPriority")]
+		public decimal? Priority { get; set; }
+
 		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }
 	}
