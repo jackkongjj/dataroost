@@ -57,7 +57,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 					foreach (var ts in voyTS) {
 						var tsId = new voy.TimeseriesIdentifier(ts.Id);
 
-						ts.Values = dataType == StandardizationType.SDB ? Voyager.TimeseriesHelper.PopulateSDBCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor])
+						ts.Values = dataType == StandardizationType.SDB ? Voyager.TimeseriesHelper.PopulateSDBCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor], scalingFactorLookup)
 							: Voyager.TimeseriesHelper.PopulateSTDCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor]);
 					}
 

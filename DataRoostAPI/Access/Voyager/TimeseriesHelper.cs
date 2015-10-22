@@ -305,8 +305,8 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 			return timeSeriesList.ToArray();
 		}
 
-		public static Dictionary<string, TimeseriesValueDTO> PopulateSDBCells(string masterId, decimal scalingFactor = 1) {
-			string query = @"select rd.GNRC_CODE||rd.GROUP_CODE||rd.SUB_GROUP_CODE||rd.ITEM_CODE item_code, rd.reported_value, rd.indicator, m.mathml_expression, ar.bookmark
+		public static Dictionary<string, TimeseriesValueDTO> PopulateSDBCells(string masterId, decimal scalingFactor = 1, Dictionary<string, decimal> scalingFactorLookup = null) {
+			string query = @"select rd.GNRC_CODE||rd.GROUP_CODE||rd.SUB_GROUP_CODE||rd.ITEM_CODE item_code, rd.reported_value, rd.indicator, m.mathml_expression, ar.bookmark, rd.ovr_sclg_fctr
 											from report_details rd 											
 											LEFT JOIN ar_sdb_map m on 
 												m.GNRC_CODE = rd.GNRC_CODE
@@ -331,9 +331,15 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 							string starIndicator = sdr.GetStringSafe(2);
 							string mathMlString = sdr.GetStringSafe(3);							
 							string offsetString = sdr.GetStringSafe(4);
+							string overrideScalingFactor = sdr.GetStringSafe(5);
 
 							TimeseriesValueDTO valueDTO = new TimeseriesValueDTO();
-							numericValue = numericValue * scalingFactor;
+							if (string.IsNullOrWhiteSpace(overrideScalingFactor))
+								numericValue = numericValue * scalingFactor;
+							else {
+								decimal newScalingFactor = scalingFactorLookup == null ? scalingFactor : scalingFactorLookup[overrideScalingFactor];
+								numericValue = numericValue * newScalingFactor;
+							}
 							ExpressionTimeseriesValueDetailVoySDBDTO valueDetailsDTO = new ExpressionTimeseriesValueDetailVoySDBDTO();
 							valueDetailsDTO.Operation = "=";
 							valueDetailsDTO.isStar = (starIndicator == "*");
