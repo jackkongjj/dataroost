@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Data;
-using System.Data.SqlClient;
+using System.Linq;
 
 using DataRoostAPI.Common.Models;
 
-using Oracle.ManagedDataAccess.Client;
 using FactSet.Data.SqlClient;
 
+using Oracle.ManagedDataAccess.Client;
+
 namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
+
 	public class VoyagerSharesHelper {
 
 		private readonly string _connectionString;
-		private PpiHelper _ppiHelper;
+		private readonly PpiHelper _ppiHelper;
 
 		public VoyagerSharesHelper(string voyagerConnectionString, string sfConnectionString) {
 			_connectionString = voyagerConnectionString;
@@ -22,12 +22,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums,
-		                                                                                           DateTime? reportSearchDate,
-			DateTime? since) {
+		                                                                                                  DateTime?
+			                                                                                                  reportSearchDate,
+		                                                                                                  DateTime? since) {
 
 			const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
 
-			const string queryWithStartDate = @"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
+			const string queryWithStartDate =
+				@"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
 																					 FROM
 																								(SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
 																											RANK() OVER (PARTITION BY d.std_item_code, d.PPI ORDER BY d.report_date DESC) RANK
@@ -37,7 +39,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 																						JOIN item_std i ON d.std_item_code = i.item_code
 																					WHERE rank = 1";
 
-			const string queryIfStartDateIsNull = @"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
+			const string queryIfStartDateIsNull =
+				@"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
 																							 FROM
 																										(SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
 																													RANK() OVER (PARTITION BY d.std_item_code, d.PPI ORDER BY d.report_date DESC) RANK
@@ -54,7 +57,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 			DateTime searchDate = DateTime.Now;
 			if (reportSearchDate != null) {
-				searchDate = (DateTime)reportSearchDate;
+				searchDate = (DateTime) reportSearchDate;
 			}
 			Dictionary<string, List<ShareClassDataItem>> dataByPpi = new Dictionary<string, List<ShareClassDataItem>>();
 			Dictionary<string, int> ppiDictionary = _ppiHelper.GetIconumPpiDictionary(iconums);
@@ -67,7 +70,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				connection.Open();
 
 				string[] ppiArray = ppiDictionary.Keys.ToArray();
-				using (var insertCmd = new OracleCommand(insertSql, connection)) {
+				using (OracleCommand insertCmd = new OracleCommand(insertSql, connection)) {
 					insertCmd.BindByName = true;
 					insertCmd.ArrayBindCount = ppiArray.Length;
 					insertCmd.Parameters.Add(":ppis", OracleDbType.Varchar2, ppiArray, ParameterDirection.Input);
@@ -77,25 +80,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 				using (OracleCommand command = new OracleCommand(query, connection)) {
 					command.BindByName = true;
-					command.Parameters.Add(new OracleParameter()
-																 {
-																	 OracleDbType = OracleDbType.Date,
-																	 Direction = ParameterDirection.Input,
-																	 ParameterName = ":report_date",
-																	 Value = searchDate
-																 });
+					command.Parameters.Add(new OracleParameter
+					                       {
+						                       OracleDbType = OracleDbType.Date,
+						                       Direction = ParameterDirection.Input,
+						                       ParameterName = ":report_date",
+						                       Value = searchDate
+					                       });
 					if (since != null) {
-						command.Parameters.Add(new OracleParameter()
+						command.Parameters.Add(new OracleParameter
 						                       {
 							                       OracleDbType = OracleDbType.Date,
 							                       Direction = ParameterDirection.Input,
-																		 ParameterName = ":since_date",
+							                       ParameterName = ":since_date",
 							                       Value = (DateTime) since
 						                       });
 					}
 
-					using (
-						OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess)) {
+					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess)) {
 						while (sdr.Read()) {
 							string ppi = sdr.GetString(0);
 							DateTime reportDate = sdr.GetDateTime(1);
@@ -111,34 +113,36 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 							ShareClassDataItem item = null;
 							if (dateValue != null) {
 								item = new ShareClassDateItem
-											 {
-												 ItemId = itemCode,
-												 Name = itemName,
-												 ReportDate = reportDate,
-												 TimeSeriesCode = timeSeriesCode,
-												 UpdatedDate = updatedDate,
-												 Value = DateTime.ParseExact(textValue, "ddMMyyyy", null),
-											 };
-							} else if (numericValue != null) {
+								       {
+									       ItemId = itemCode,
+									       Name = itemName,
+									       ReportDate = reportDate,
+									       TimeSeriesCode = timeSeriesCode,
+									       UpdatedDate = updatedDate,
+									       Value = DateTime.ParseExact(textValue, "ddMMyyyy", null)
+								       };
+							}
+							else if (numericValue != null) {
 								item = new ShareClassNumericItem
-											 {
-												 ItemId = itemCode,
-												 Name = itemName,
-												 ReportDate = reportDate,
-												 TimeSeriesCode = timeSeriesCode,
-												 UpdatedDate = updatedDate,
-												 Value = (decimal)numericValue,
-											 };
-							} else if (textValue != null) {
+								       {
+									       ItemId = itemCode,
+									       Name = itemName,
+									       ReportDate = reportDate,
+									       TimeSeriesCode = timeSeriesCode,
+									       UpdatedDate = updatedDate,
+									       Value = (decimal) numericValue
+								       };
+							}
+							else if (textValue != null) {
 								item = new ShareClassTextItem
-											 {
-												 ItemId = itemCode,
-												 Name = itemName,
-												 ReportDate = reportDate,
-												 TimeSeriesCode = timeSeriesCode,
-												 UpdatedDate = updatedDate,
-												 Value = textValue,
-											 };
+								       {
+									       ItemId = itemCode,
+									       Name = itemName,
+									       ReportDate = reportDate,
+									       TimeSeriesCode = timeSeriesCode,
+									       UpdatedDate = updatedDate,
+									       Value = textValue
+								       };
 							}
 
 							if (!dataByPpi.ContainsKey(ppi)) {
@@ -151,7 +155,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				}
 			}
 
-			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData = new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData =
+				new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
 			foreach (KeyValuePair<string, List<ShareClassDataItem>> ppiData in dataByPpi) {
 				if (ppiDictionary.ContainsKey(ppiData.Key)) {
 					int iconum = ppiDictionary[ppiData.Key];
@@ -177,7 +182,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				}
 			}
 
-						const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
+			const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
 
 			const string query = @"SELECT d.ppi, d.update_date, d.reported_text
 																FROM current_details d
@@ -188,7 +193,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				connection.Open();
 
 				string[] ppiArray = ppiDictionary.Keys.ToArray();
-				using (var insertCmd = new OracleCommand(insertSql, connection)) {
+				using (OracleCommand insertCmd = new OracleCommand(insertSql, connection)) {
 					insertCmd.BindByName = true;
 					insertCmd.ArrayBindCount = ppiArray.Length;
 					insertCmd.Parameters.Add(":ppis", OracleDbType.Varchar2, ppiArray, ParameterDirection.Input);
@@ -214,7 +219,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 		}
 
 		public Dictionary<string, List<ShareClassDataItem>> GetCurrentShareDataItems(int iconum) {
-			string query = @"SELECT i.item_code, c.reported_value, c.reported_date, c.reported_text, o.item_type, c.ppi, i.item_name
+			string query =
+				@"SELECT i.item_code, c.reported_value, c.reported_date, c.reported_text, o.item_type, c.ppi, i.item_name
                                     FROM current_details c
                                         JOIN map_file2 m ON m.item_gnrc_code = c.gnrc_code AND m.group_code = c.group_code AND m.sub_group_code = c.sub_group_code AND m.item_code = c.item_code
                                         JOIN official_item o ON o.gnrc_code = c.gnrc_code AND o.group_code = c.group_code AND o.sub_group_code = c.sub_group_code AND o.item_code = c.item_code
@@ -235,9 +241,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 				using (OracleCommand command = new OracleCommand(query, connection)) {
 					command.BindByName = true;
-					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "ppiBase", Value = basePPI });
+					command.Parameters.Add(new OracleParameter
+					                       {
+						                       OracleDbType = OracleDbType.Varchar2,
+						                       Direction = ParameterDirection.Input,
+						                       ParameterName = "ppiBase",
+						                       Value = basePPI
+					                       });
 
-					using (OracleDataReader reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
+					using (
+						OracleDataReader reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
 						while (reader.Read()) {
 							string ppi = reader.GetStringSafe(5);
 							if (!perShareData.ContainsKey(ppi)) {
@@ -254,19 +267,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 							ShareClassDataItem item = null;
 							if (itemType == "D") {
-								item = new ShareClassDateItem
-								{
-									ItemId = itemCode,
-									Name = itemName,
-									Value = (DateTime)reportedDate,
-								};
-							} else if (itemType == "F" || itemType == "N") {
-								item = new ShareClassNumericItem
-								{
-									ItemId = itemCode,
-									Name = itemName,
-									Value = (decimal)reportedValue,
-								};
+								item = new ShareClassDateItem { ItemId = itemCode, Name = itemName, Value = (DateTime) reportedDate };
+							}
+							else if (itemType == "F" || itemType == "N") {
+								item = new ShareClassNumericItem { ItemId = itemCode, Name = itemName, Value = (decimal) reportedValue };
 							}
 						}
 					}
@@ -275,5 +279,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 			return perShareData;
 		}
+
 	}
+
 }
