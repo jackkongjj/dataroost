@@ -165,6 +165,54 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			return companyShareData;
 		}
 
+		public void PopulateTypeOfShare(Dictionary<int, List<ShareClassDataDTO>> companyShareClasses) {
+
+			Dictionary<string, List<ShareClassDTO>> ppiDictionary = new Dictionary<string, List<ShareClassDTO>>();
+			foreach (KeyValuePair<int, List<ShareClassDataDTO>> keyValue in companyShareClasses) {
+				foreach (ShareClassDTO shareClass in keyValue.Value) {
+					if (!ppiDictionary.ContainsKey(shareClass.PPI)) {
+						ppiDictionary.Add(shareClass.PPI, new List<ShareClassDTO>());
+					}
+					ppiDictionary[shareClass.PPI].Add(shareClass);
+				}
+			}
+
+						const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
+
+			const string query = @"SELECT d.ppi, d.update_date, d.reported_text
+																FROM current_details d
+																	JOIN TMP_PPIS t ON t.ppi = d.ppi
+																WHERE d.GNRC_CODE = '15' AND d.GROUP_CODE = '40' AND d.SUB_GROUP_CODE = '100' AND d.ITEM_CODE = '080'";
+
+			using (OracleConnection connection = new OracleConnection(_connectionString)) {
+				connection.Open();
+
+				string[] ppiArray = ppiDictionary.Keys.ToArray();
+				using (var insertCmd = new OracleCommand(insertSql, connection)) {
+					insertCmd.BindByName = true;
+					insertCmd.ArrayBindCount = ppiArray.Length;
+					insertCmd.Parameters.Add(":ppis", OracleDbType.Varchar2, ppiArray, ParameterDirection.Input);
+
+					insertCmd.ExecuteNonQuery();
+				}
+
+				using (OracleCommand command = new OracleCommand(query, connection)) {
+					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess)) {
+						while (sdr.Read()) {
+							string ppi = sdr.GetString(0);
+							DateTime reportDate = sdr.GetDateTime(1);
+							string typeOfShare = sdr.GetString(2);
+							if (ppiDictionary.ContainsKey(ppi)) {
+								foreach (ShareClassDTO shareClass in ppiDictionary[ppi]) {
+									shareClass.TypeOfShare = typeOfShare;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		public Dictionary<string, List<ShareClassDataItem>> GetCurrentShareDataItems(int iconum) {
 			string query = @"SELECT i.item_code, c.reported_value, c.reported_date, c.reported_text, o.item_type, c.ppi, i.item_name
                                     FROM current_details c

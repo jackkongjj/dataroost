@@ -48,6 +48,9 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("issueType")]
 		public string IssueType { get; set; }
 
+		[JsonProperty("typeOfShare")]
+		public string TypeOfShare { get; set; }
+
 		[JsonProperty("_t")]
 		public string Type {
 			get { return GetType().AssemblyQualifiedName; }

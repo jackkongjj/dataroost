@@ -121,81 +121,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
-			string query = @"SELECT p.Cusip,
-                                    p.Iconum,
-                                    p.Name,
-                                    a.Description,
-                                    e.Description,
-                                    s.Inception_Date,
-                                    s.Term_Date,
-                                    s.Price,
-                                    s.Shares_Out,
-                                    s.Ticker,
-                                    s.Sedol,
-                                    s.ISIN,
-                                    s.To_Cusip,
-                                    s.Issue_Type,
-                                    p.PPI,
-                                    x.permid
-                                FROM FdsTriPpiMap p
-	                                LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
-																	LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
-																	LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
-																	LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
-																	LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
-	                            WHERE s.Iconum = @iconum
-                                    --AND RIGHT(p.PPI, 1) != '0'
-                                    --AND s.term_date IS NULL
-                                    --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
-
-			List<ShareClassDTO> shareClasses = new List<ShareClassDTO>();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-
-					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						while (sdr.Read()) {
-							ShareClassDTO shareClass = new ShareClassDTO
-							                           {
-								                           Cusip = sdr.GetStringSafe(0),
-
-								                           //Iconum = sdr.GetInt32(1),
-								                           Name = sdr.GetStringSafe(2),
-								                           AssetClass = sdr.GetStringSafe(3),
-								                           ListedOn = sdr.GetStringSafe(4),
-								                           InceptionDate = sdr.GetDateTime(5),
-								                           TermDate = sdr.GetNullable<DateTime>(6),
-
-								                           //CurrentPrice = sdr.GetDecimal(7),
-								                           //CurrentSharesOutstanding = sdr.GetDecimal(8),
-								                           TickerSymbol = sdr.GetStringSafe(9),
-								                           Sedol = sdr.GetStringSafe(10),
-								                           Isin = sdr.GetStringSafe(11),
-
-								                           //ToCusip = sdr.GetStringSafe(12),
-								                           IssueType = sdr.GetStringSafe(13),
-								                           PPI = sdr.GetStringSafe(14),
-								                           Id = sdr.GetStringSafe(15),
-								                           PermId = sdr.GetStringSafe(15)
-							                           };
-							shareClasses.Add(shareClass);
-						}
-					}
-				}
+			Dictionary<int, List<ShareClassDataDTO>> shareClassDictionary = GetCompanyShareClasses(new List<int> { iconum });
+			if (!shareClassDictionary.ContainsKey(iconum)) {
+				throw new MissingIconumException(iconum);
 			}
-
-			IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
-			IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
-			foreach (IGrouping<string, string> ppiGroup in groups) {
-				if (ppiGroup.Count() > 1) {
-					string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
-					ShareClassDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
-					shareClasses.Remove(rootShareClass);
-				}
-			}
-
-			return shareClasses;
+			return shareClassDictionary[iconum];
 		}
 
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
@@ -297,6 +227,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					}
 				}
 			}
+
+			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
+			voyagerShares.PopulateTypeOfShare(companyShareClasses);
 
 			return companyShareClasses;
 		}
