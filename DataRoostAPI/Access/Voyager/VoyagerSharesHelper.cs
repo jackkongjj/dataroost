@@ -13,6 +13,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 	public class VoyagerSharesHelper {
 
+		// SQL to create Voyager tmp table
+		// CREATE GLOBAL TEMPORARY TABLE TMP_PPIS ( PPI VARCHAR2(10) NOT NULL ) ON COMMIT PRESERVE ROWS
+
 		private readonly string _connectionString;
 		private readonly PpiHelper _ppiHelper;
 
