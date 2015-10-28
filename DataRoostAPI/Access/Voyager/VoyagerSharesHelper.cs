@@ -206,7 +206,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 						while (sdr.Read()) {
 							string ppi = sdr.GetString(0);
 							DateTime reportDate = sdr.GetDateTime(1);
-							string typeOfShare = sdr.GetString(2);
+							object obj = sdr.GetValue(2);
+							string typeOfShare = null;
+							if (obj != null) {
+								typeOfShare = obj.ToString();
+							}
 							if (ppiDictionary.ContainsKey(ppi)) {
 								foreach (ShareClassDTO shareClass in ppiDictionary[ppi]) {
 									shareClass.TypeOfShare = typeOfShare;
