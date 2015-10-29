@@ -43,12 +43,30 @@ namespace DataRoostAPI.Common.Access {
 				client.Headers.Add("Content-Type", "application/json");
 				string postResponse = client.UploadString(requestUrl, "POST", postParams);
 				return JsonConvert.DeserializeObject<Dictionary<int, EffortDTO>>(postResponse);
-			}	
+			}
 		}
 
 		public EffortDTO[] GetEfforts(string companyId) {
 			string requestUrl = string.Format("{0}/efforts", GetRootUrl(companyId));
 			return ExecuteGetQuery<EffortDTO[]>(requestUrl);
+		}
+
+		public decimal? GetCompanyPriority(string companyId) {
+			string requestUrl = string.Format("{0}/companypriority", GetRootUrl(companyId));
+			return ExecuteGetQuery<decimal?>(requestUrl);
+		}
+
+		public Dictionary<int, decimal?> GetCompanyPriority(List<string> companyIds) {
+			string requestUrl = string.Format("{0}/api/v1/companies/companypriority", _dataRoostConnectionString);
+			string postParams = JsonConvert.SerializeObject(companyIds);
+			using (LongRunningWebClient client = new LongRunningWebClient()) {
+				client.Credentials = CredentialCache.DefaultNetworkCredentials;
+				client.Encoding = Encoding.UTF8;
+				client.Timeout = 1000000;
+				client.Headers.Add("Content-Type", "application/json");
+				string postResponse = client.UploadString(requestUrl, "POST", postParams);
+				return JsonConvert.DeserializeObject<Dictionary<int, decimal?>>(postResponse);
+			}
 		}
 
 		public ShareClassDataDTO[] GetLatestFiscalPeriodEndSharesData(string companyId, DateTime? reportDate = null, DateTime? since = null) {

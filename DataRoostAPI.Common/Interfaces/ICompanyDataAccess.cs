@@ -11,6 +11,10 @@ namespace DataRoostAPI.Common.Interfaces {
 
 		CompanyDTO GetCompany(string companyId);
 
+		decimal? GetCompanyPriority(string companyId);
+
+		Dictionary<int, decimal?> GetCompanyPriority(List<string> companyIds);
+
 		EffortDTO GetCompanyCollectionEffort(string companyId);
 
 		Dictionary<int, EffortDTO> GetCollectionEffortForCompanies(List<string> companyIds);
