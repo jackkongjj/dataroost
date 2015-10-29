@@ -10,6 +10,7 @@ using System.Web.Http.Cors;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
 
+using DataRoostAPI.Common.Exceptions;
 using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
@@ -19,7 +20,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("{CompanyId}/shares/latestFiscalPeriodEnd/")]
 		[HttpGet]
-		public Dictionary<int, List<ShareClassDataDTO>> GetLatestFiscalPeriodEndSharesData(string CompanyId, DateTime? reportDate = null, DateTime? since = null) {
+		public List<ShareClassDataDTO> GetLatestFiscalPeriodEndSharesData(string CompanyId, DateTime? reportDate = null, DateTime? since = null) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -29,7 +30,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			List<int> iconumList = new List<int> {iconum};
 
 			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
-			return helper.GetCompanyShareClassData(iconumList, reportDate, since);
+			Dictionary<int, List<ShareClassDataDTO>> iconumDictionary = helper.GetCompanyShareClassData(iconumList, reportDate, since);
+			if (!iconumDictionary.ContainsKey(iconum)) {
+				throw new MissingIconumException(iconum);
+			}
+
+			return iconumDictionary[iconum];
 		}
 
 		[Route("shares/latestFiscalPeriodEnd/")]
