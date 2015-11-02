@@ -33,25 +33,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 			const string queryWithStartDate =
 				@"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
-																					 FROM
-																								(SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
-																											RANK() OVER (PARTITION BY d.std_item_code, d.PPI ORDER BY d.report_date DESC) RANK
-																								FROM CSO_PSIT_DETAILS d
-																									JOIN TMP_PPIS tmp ON tmp.PPI = d.PPI
-																								WHERE report_date BETWEEN :since_date AND :report_date) d
-																						JOIN item_std i ON d.std_item_code = i.item_code
-																					WHERE rank = 1";
+							FROM
+									(SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
+												RANK() OVER (PARTITION BY d.std_item_code, d.PPI ORDER BY d.report_date DESC, t.display_order ASC) RANK
+											FROM CSO_PSIT_DETAILS d
+												JOIN TMP_PPIS tmp ON tmp.PPI = d.PPI
+												JOIN time_series t ON t.time_series_code = d.time_series_code AND INSTR(t.time_series_desc, 'CUM') = 0
+											WHERE report_date BETWEEN :since_date AND :report_date) d
+								JOIN item_std i ON d.std_item_code = i.item_code
+							WHERE rank = 1";
 
 			const string queryIfStartDateIsNull =
 				@"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
-																							 FROM
-																										(SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
-																													RANK() OVER (PARTITION BY d.std_item_code, d.PPI ORDER BY d.report_date DESC) RANK
-																										FROM CSO_PSIT_DETAILS d
-																											JOIN TMP_PPIS tmp ON tmp.PPI = d.PPI
-																										WHERE report_date <= :report_date) d
-																								JOIN item_std i ON d.std_item_code = i.item_code
-																							WHERE rank = 1";
+							FROM
+									(SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
+												RANK() OVER (PARTITION BY d.std_item_code, d.PPI ORDER BY d.report_date DESC, t.display_order ASC) RANK
+											FROM CSO_PSIT_DETAILS d
+												JOIN TMP_PPIS tmp ON tmp.PPI = d.PPI
+												JOIN time_series t ON t.time_series_code = d.time_series_code AND INSTR(t.time_series_desc, 'CUM') = 0
+											WHERE report_date <= :report_date) d
+								JOIN item_std i ON d.std_item_code = i.item_code
+							WHERE rank = 1";
 
 			string query = queryIfStartDateIsNull;
 			if (since != null) {
@@ -156,6 +158,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 						}
 					}
 				}
+
+				connection.Close();
 			}
 
 			Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData =
