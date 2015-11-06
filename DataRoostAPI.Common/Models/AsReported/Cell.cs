@@ -49,5 +49,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("currency")]
 		public string Currency { get; set; }
+
+		[JsonProperty("xbrlTag")]
+		public string XbrlTag { get; set; }
 	}
 }

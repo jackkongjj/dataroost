@@ -160,7 +160,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		}
 
 		private List<Cell> GetTableCells(AsReportedTable table) {
-			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode, dt.Description, cft.Description
+			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode, dt.Description, cft.Description, c.XBRLTag
 													FROM TableDimension d 
 														JOIN DimensionType dt ON dt.ID = d.DimensionTypeID
 														JOIN DimensionToCell dtc ON dtc.TableDimensionID = d.ID
@@ -194,6 +194,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								string scalingFactor = reader.GetStringSafe(9);
 								string currencyCode = reader.GetStringSafe(10);
 								string companyFinancialTermDescription = reader.GetStringSafe(12);
+								string xbrlTag = reader.GetStringSafe(13);
 								cell = new Cell
 								            {
 									            Id = cellId,
@@ -207,6 +208,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 									            Offset = offset,
 									            ScalingFactor = scalingFactor,
 															CompanyFinancialTermDescription = companyFinancialTermDescription,
+															XbrlTag = xbrlTag,
 								            };
 								cells.Add(cellId, cell);
 							}
