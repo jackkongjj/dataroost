@@ -91,6 +91,9 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 		[JsonProperty("starItem")]
 		public bool isStar { get; set; }
 
+		[JsonProperty("overrideScalingFactor")]
+		public string OverrideScalingFactor { get; set; }
+
 	}
 
 }
