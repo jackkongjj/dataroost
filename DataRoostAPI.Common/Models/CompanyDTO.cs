@@ -5,6 +5,7 @@ using System.Web;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
+
 	public class CompanyDTO {
 
 		[JsonProperty("_id")]
@@ -37,10 +38,15 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("collectionEffort")]
 		public EffortDTO CollectionEffort { get; set; }
 
+		[JsonProperty("absolutePriority")]
+		public decimal? AbsolutePriority { get; set; }
+
 		[JsonProperty("companyPriority")]
-		public decimal? Priority { get; set; }
+		public int? Priority { get; set; }
 
 		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }
+
 	}
+
 }

@@ -68,7 +68,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			company.Id = company.EntitiyPermId;
 			company.RootPPI = GetRootPPI(iconum);
 			company.CollectionEffort = GetCompanyEffort(iconum);
-			company.Priority = GetCompanyPriority(iconum);
+			company.AbsolutePriority = GetCompanyPriority(iconum);
+			company.Priority = GetPriorityBucket(iconum);
 
 			return company;
 		}
@@ -443,6 +444,58 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 			return priorityDictionary;
 		}
+
+		public int? GetPriorityBucket(int iconum) {
+			Dictionary<int, int?> companyPriority = GetPriorityBucket(new List<int> { iconum });
+			if (!companyPriority.ContainsKey(iconum)) {
+				throw new MissingIconumException(iconum);
+			}
+			return companyPriority[iconum];
+		}
+
+		public Dictionary<int, int?> GetPriorityBucket(List<int> iconums) {
+			Dictionary<int, int?> priorityDictionary = new Dictionary<int, int?>();
+			DataTable table = new DataTable();
+			table.Columns.Add("iconum", typeof(int));
+			foreach (int iconum in iconums) {
+				table.Rows.Add(iconum);
+				priorityDictionary.Add(iconum, null);
+			}
+
+			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
+			const string query = @"SELECT p.iconum, p.priority
+																FROM FdsTriPpiMap p
+																	JOIN #iconums i ON i.iconum = p.iconum
+																ORDER BY priority ASC";
+
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
+
+				// Upload all iconums to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "#iconums";
+					bulkCopy.WriteToServer(table);
+				}
+
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							int iconum = reader.GetInt32(0);
+							int? priority = reader.GetNullable<int>(1);
+							priorityDictionary[iconum] = priority;
+						}
+					}
+				}
+			}
+
+			return priorityDictionary;
+		}
+
 
 	}
 
