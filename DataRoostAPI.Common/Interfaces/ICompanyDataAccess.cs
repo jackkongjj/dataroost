@@ -11,7 +11,7 @@ namespace DataRoostAPI.Common.Interfaces {
 
 		CompanyDTO GetCompany(string companyId);
 
-		decimal? GetCompanyPriority(string companyId);
+		CompanyPriority GetCompanyPriority(string companyId);
 
 		Dictionary<int, CompanyPriority> GetCompanyPriority(List<string> companyIds);
 

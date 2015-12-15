@@ -69,7 +69,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("companies/{CompanyId}/companypriority/")]
 		[HttpGet]
-		public decimal? GetPriorityForCompany(string CompanyId) {
+		public CompanyPriority GetPriorityForCompany(string CompanyId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -81,7 +81,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																								 voyConnectionString,
 																								 lionConnectionString,
 																								 damConnectionString);
-			return helper.GetAbsolutePriority(iconum);
+			Dictionary<int, CompanyPriority> priorities = helper.GetCompanyPriority(new List<int> {iconum});
+			if (priorities.ContainsKey(iconum)) {
+				return priorities[iconum];
+			}
+
+			return null;
 		}
 
 		[Route("companies/companypriority/")]

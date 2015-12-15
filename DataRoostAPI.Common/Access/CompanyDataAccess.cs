@@ -51,9 +51,9 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<EffortDTO[]>(requestUrl);
 		}
 
-		public decimal? GetCompanyPriority(string companyId) {
+		public CompanyPriority GetCompanyPriority(string companyId) {
 			string requestUrl = string.Format("{0}/companypriority", GetRootUrl(companyId));
-			return ExecuteGetQuery<decimal?>(requestUrl);
+			return ExecuteGetQuery<CompanyPriority>(requestUrl);
 		}
 
 		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<string> companyIds) {
