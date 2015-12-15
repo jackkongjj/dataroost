@@ -68,7 +68,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			company.Id = company.EntitiyPermId;
 			company.RootPPI = GetRootPPI(iconum);
 			company.CollectionEffort = GetCompanyEffort(iconum);
-			company.AbsolutePriority = GetCompanyPriority(iconum);
+			company.AbsolutePriority = GetAbsolutePriority(iconum);
 			company.Priority = GetPriorityBucket(iconum);
 
 			return company;
@@ -395,15 +395,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return effortDictionary;
 		}
 
-		public decimal? GetCompanyPriority(int iconum) {
-			Dictionary<int, decimal?> companyPriority = GetCompanyPriority(new List<int> { iconum });
+		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {
+			Dictionary<int, CompanyPriority> priorities = new Dictionary<int, CompanyPriority>();
+			Dictionary<int, decimal?> absolutePriorities = GetAbsolutePriority(iconums);
+			Dictionary<int, int?> priorityBuckets = GetPriorityBucket(iconums);
+			foreach (int iconum in iconums) {
+				decimal? absolutePriority = absolutePriorities[iconum];
+				int? priorityBucket = priorityBuckets[iconum];
+				priorities.Add(iconum, new CompanyPriority { AbsolutePriority = absolutePriority, Priority = priorityBucket });
+			}
+			return priorities;
+		}
+
+		public decimal? GetAbsolutePriority(int iconum) {
+			Dictionary<int, decimal?> companyPriority = GetAbsolutePriority(new List<int> { iconum });
 			if (!companyPriority.ContainsKey(iconum)) {
 				throw new MissingIconumException(iconum);
 			}
 			return companyPriority[iconum];
 		}
 
-		public Dictionary<int, decimal?> GetCompanyPriority(List<int> iconums) {
+		public Dictionary<int, decimal?> GetAbsolutePriority(List<int> iconums) {
 			Dictionary<int, decimal?> priorityDictionary = new Dictionary<int, decimal?>();
 			DataTable table = new DataTable();
 			table.Columns.Add("iconum", typeof(int));

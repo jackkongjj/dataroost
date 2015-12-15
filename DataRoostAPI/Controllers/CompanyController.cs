@@ -81,12 +81,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																								 voyConnectionString,
 																								 lionConnectionString,
 																								 damConnectionString);
-			return helper.GetCompanyPriority(iconum);
+			return helper.GetAbsolutePriority(iconum);
 		}
 
 		[Route("companies/companypriority/")]
 		[HttpPost]
-		public Dictionary<int, decimal?> GetPriorityForCompanies(List<string> companyIds) {
+		public Dictionary<int, CompanyPriority> GetPriorityForCompanies(List<string> companyIds) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;

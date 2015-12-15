@@ -56,7 +56,7 @@ namespace DataRoostAPI.Common.Access {
 			return ExecuteGetQuery<decimal?>(requestUrl);
 		}
 
-		public Dictionary<int, decimal?> GetCompanyPriority(List<string> companyIds) {
+		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<string> companyIds) {
 			string requestUrl = string.Format("{0}/api/v1/companies/companypriority", _dataRoostConnectionString);
 			string postParams = JsonConvert.SerializeObject(companyIds);
 			using (LongRunningWebClient client = new LongRunningWebClient()) {
@@ -65,7 +65,7 @@ namespace DataRoostAPI.Common.Access {
 				client.Timeout = 1000000;
 				client.Headers.Add("Content-Type", "application/json");
 				string postResponse = client.UploadString(requestUrl, "POST", postParams);
-				return JsonConvert.DeserializeObject<Dictionary<int, decimal?>>(postResponse);
+				return JsonConvert.DeserializeObject<Dictionary<int, CompanyPriority>>(postResponse);
 			}
 		}
 
