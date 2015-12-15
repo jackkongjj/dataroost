@@ -486,7 +486,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							int iconum = reader.GetInt32(0);
-							int? priority = reader.GetNullable<int>(1);
+							int? priority = reader.GetNullable<byte>(1);
 							priorityDictionary[iconum] = priority;
 						}
 					}
