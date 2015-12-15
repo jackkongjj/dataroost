@@ -57,7 +57,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 					foreach (var ts in voyTS) {
 						var tsId = new voy.TimeseriesIdentifier(ts.Id);
 
-						ts.Values = dataType == StandardizationType.SDB ? Voyager.TimeseriesHelper.PopulateSDBCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor], scalingFactorLookup)
+						ts.Values = dataType == StandardizationType.SDB ? Voyager.TimeseriesHelper.PopulateSDBCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor])
 							: Voyager.TimeseriesHelper.PopulateSTDCells(tsId.MasterId, scalingFactorLookup[ts.ScalingFactor]);
 					}
 
@@ -399,9 +399,11 @@ order by tm.sdbItem_id, re.[order]";
 			Dictionary<string, TimeseriesValueDTO> toRet = new Dictionary<string, TimeseriesValueDTO>();
 			var cellValues = new Dictionary<string, TimeseriesValueDTO>();
 			foreach(var ts in voyTS){
-				foreach (var v in ts.Values)
-					if(!cellValues.ContainsKey(v.Key))
-						cellValues.Add(v.Key, v.Value);
+				foreach (var v in ts.Values) {
+					var cellKey = ((ExpressionTimeseriesValueDetailVoySDBDTO)v.Value.ValueDetails).isStar ? v.Key + "*" : v.Key;
+					if (!cellValues.ContainsKey(cellKey))
+						cellValues.Add(cellKey, v.Value);					
+				}
 			}
 			
 			//calculate the expression
@@ -412,25 +414,19 @@ order by tm.sdbItem_id, re.[order]";
 				}
 				string[] exp = item.expressionFlat.Split(new string[] { "+", "-" }, StringSplitOptions.RemoveEmptyEntries);
 				int foundNum = 0;
+				string overrideScalingFactor = null;
 				string expFlat = item.expressionFlat;
-				foreach (var e in exp) {
-					bool isStarItem = e.Contains("*");
-					string val = e.Replace("(", "").Replace(")", "").Replace("*", "");
-					if (cellValues.ContainsKey(e)) {
-						if (isStarItem) {	//only star item can be replace, else is zero
-							if (((ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[e].ValueDetails).isStar) {
-								foundNum++;
-								expFlat = expFlat.Replace(e, cellValues[e].Contents + "*1.0");	//trick to be double
-							} else {
-								expFlat = expFlat.Replace(e, "0");
-							}
-						} else {
-							foundNum++;
-							expFlat = expFlat.Replace(e, cellValues[e].Contents + "*1.0");
-						}
+				foreach (var e in exp) {					
+					string val = e.Replace("(", "").Replace(")", "");
+					if (cellValues.ContainsKey(val)) {
+						foundNum++;
+						expFlat = ReplaceFirst(expFlat, e, cellValues[val].Contents + "*1.0");
+						var temp = (ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[val].ValueDetails;
+						if (!String.IsNullOrEmpty(temp.OverrideScalingFactor))
+							overrideScalingFactor = temp.OverrideScalingFactor;
 					} else {
-						expFlat = expFlat.Replace(e, "0");
-					}					
+						expFlat = ReplaceFirst(expFlat, e, "0");
+					}				
 				}
 				if (foundNum > 0) {
 					//eval it
@@ -439,6 +435,7 @@ order by tm.sdbItem_id, re.[order]";
 					TimeseriesValueDTO tsValue = new TimeseriesValueDTO();
 					tsValue.Contents = Double.Parse(value.ToString()).ToString("F5");
 					tsValue.ValueDetails = new ExpressionTimeseriesValueDetailVoySDBDTO();
+					((ExpressionTimeseriesValueDetailVoySDBDTO)tsValue.ValueDetails).OverrideScalingFactor = overrideScalingFactor;
 					if (toRet.ContainsKey(item.sdbId.ToString())) {
 						toRet[item.sdbId.ToString()] = tsValue;
 					} else {
@@ -447,6 +444,14 @@ order by tm.sdbItem_id, re.[order]";
 				}
 			}
 			return toRet;
+		}
+
+		private string ReplaceFirst(string text, string search, string replace) {
+			int pos = text.IndexOf(search);
+			if (pos < 0) {
+				return text;
+			}
+			return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
 		}
 
 		private Dictionary<string, TimeseriesValueDTO> PopulateMapSTDItem(List<VoyagerTimeseriesDTO> voyTS, int iconum, sf.TemplateIdentifier templateId) {
