@@ -478,7 +478,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			const string query = @"SELECT p.iconum, p.priority
 																FROM FdsTriPpiMap p
 																	JOIN #iconums i ON i.iconum = p.iconum
-																ORDER BY priority ASC";
+																ORDER BY IsAdr ASC, IsActive DESC, priority ASC";
 
 			// Create Global Temp Table
 			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
