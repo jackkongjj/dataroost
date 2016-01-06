@@ -24,6 +24,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/{CompanyId}")]
 		[HttpGet]
 		public CompanyDTO[] GetCompanies(string CompanyId) {
+			if (string.IsNullOrEmpty(CompanyId)) {
+				return null;
+			}
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -38,6 +42,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/{CompanyId}/collectioneffort/")]
 		[HttpGet]
 		public EffortDTO GetCompanyCollectionEffort(string CompanyId) {
+			if (string.IsNullOrEmpty(CompanyId)) {
+				return null;
+			}
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -52,6 +60,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/collectioneffort/")]
 		[HttpPost]
 		public Dictionary<int, EffortDTO> GetCollectionEffortForCompanies(List<string> companyIds) {
+			if (companyIds == null || companyIds.Count < 1) {
+				return new Dictionary<int, EffortDTO>();
+			}
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -70,6 +82,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/{CompanyId}/companypriority/")]
 		[HttpGet]
 		public CompanyPriority GetPriorityForCompany(string CompanyId) {
+			if (string.IsNullOrEmpty(CompanyId)) {
+				return null;
+			}
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -92,6 +108,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/companypriority/")]
 		[HttpPost]
 		public Dictionary<int, CompanyPriority> GetPriorityForCompanies(List<string> companyIds) {
+			if (companyIds == null || companyIds.Count < 1) {
+				return new Dictionary<int, CompanyPriority>();
+			}
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
@@ -110,6 +130,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("companies/{CompanyId}/efforts/")]
 		[HttpGet]
 		public EffortDTO[] QueryEfforts(string CompanyId) {
+			if (string.IsNullOrEmpty(CompanyId)) {
+				return null;
+			}
+
 			return new EffortDTO[] { new EffortDTO() { Name = "voyager" }, new EffortDTO() { Name = "superfast" }, new EffortDTO() { Name = "sfvoy_join" } };
 		}
 	}
