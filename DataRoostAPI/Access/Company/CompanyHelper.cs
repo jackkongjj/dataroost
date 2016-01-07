@@ -475,7 +475,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
-			const string query = @"SELECT p.iconum, p.priority
+			const string query = @"SELECT TOP 1 p.iconum, p.priority
 																FROM FdsTriPpiMap p
 																	JOIN #iconums i ON i.iconum = p.iconum
 																ORDER BY IsAdr ASC, IsActive DESC, priority ASC";
@@ -496,7 +496,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
+						if (reader.Read()) {
 							int iconum = reader.GetInt32(0);
 							Byte? priority = reader.GetNullable<Byte>(1);
 							priorityDictionary[iconum] = priority;
