@@ -475,10 +475,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
-			const string query = @"SELECT TOP 1 p.iconum, p.priority
-																FROM FdsTriPpiMap p
-																	JOIN #iconums i ON i.iconum = p.iconum
-																ORDER BY IsAdr ASC, IsActive DESC, priority ASC";
+			const string query = @"SELECT iconum, priority FROM
+																(SELECT p.iconum, p.priority,
+																		row_number() OVER (PARTITION BY p.iconum ORDER BY IsAdr ASC, IsActive DESC, priority ASC) as rank
+																	FROM FdsTriPpiMap p
+																	JOIN #iconums i ON i.iconum = p.iconum) tmp
+																WHERE rank = 1";
+																	
 
 			// Create Global Temp Table
 			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
@@ -496,7 +499,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						if (reader.Read()) {
+						while (reader.Read()) {
 							int iconum = reader.GetInt32(0);
 							Byte? priority = reader.GetNullable<Byte>(1);
 							priorityDictionary[iconum] = priority;
