@@ -479,7 +479,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 																(SELECT p.iconum, p.priority,
 																		row_number() OVER (PARTITION BY p.iconum ORDER BY IsAdr ASC, IsActive DESC, priority ASC) as rank
 																	FROM FdsTriPpiMap p
-																	JOIN #iconums i ON i.iconum = p.iconum) tmp
+																		JOIN #iconums i ON i.iconum = p.iconum
+																	WHERE RIGHT(p.ppi, 1) = '0') tmp
 																WHERE rank = 1";
 																	
 
