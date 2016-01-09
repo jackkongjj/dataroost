@@ -477,7 +477,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
 			const string query = @"SELECT iconum, priority FROM
 																(SELECT p.iconum, p.priority,
-																		row_number() OVER (PARTITION BY p.iconum ORDER BY IsAdr ASC, IsActive DESC, priority ASC) as rank
+																		row_number() OVER (PARTITION BY p.iconum ORDER BY IsActive DESC, IsReleased DESC, IsAdr ASC, priority ASC) as rank
 																	FROM FdsTriPpiMap p
 																		JOIN #iconums i ON i.iconum = p.iconum
 																	WHERE RIGHT(p.ppi, 1) = '0') tmp
