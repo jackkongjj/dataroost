@@ -42,6 +42,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																							Id = reader.GetGuid(4).ToString(),
 								                              SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							                              };
+							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							return document;
 						}
 					}
