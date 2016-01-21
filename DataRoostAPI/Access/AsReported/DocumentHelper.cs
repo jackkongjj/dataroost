@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Web;
 using System.Data.SqlClient;
@@ -51,8 +52,63 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return null;
 		}
 
+		public AsReportedDocument[] GetDocuments(int iconum, List<string> documentIds) {
+			const string createTableQuery = @"CREATE TABLE #documentIds ( documentId VARCHAR(50) NOT NULL )";
+
+			const string query = @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
+																			FROM DocumentSeries s
+																					JOIN Document d ON d.DocumentSeriesID = s.Id
+																					JOIN #documentIds i ON i.documentId = d.DAMDocumentId
+																			WHERE s.CompanyID = @iconum";
+
+			DataTable table = new DataTable();
+			table.Columns.Add("documentId", typeof(string));
+			foreach (string documentId in documentIds) {
+				table.Rows.Add(documentId);
+			}
+
+			List<AsReportedDocument> documents = new List<AsReportedDocument>();
+
+			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+				connection.Open();
+
+					using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+						cmd.ExecuteNonQuery();
+					}
+
+					// Upload all iconums to Temp table
+					using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+						bulkCopy.BatchSize = table.Rows.Count;
+						bulkCopy.DestinationTableName = "#documentIds";
+						bulkCopy.WriteToServer(table);
+					}
+
+					using (SqlCommand cmd = new SqlCommand(query, connection)) {
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							AsReportedDocument document = new AsReportedDocument
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+							};
+							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
+							documents.Add(document);
+						}
+					}
+				}
+			}
+
+			return documents.ToArray();
+		}
+
 		public AsReportedDocument[] GetDocuments(int iconum, DateTime startDate, DateTime endDate, string reportType) {
-			string queryWithReportType =
+			const string queryWithReportType =
 				@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
@@ -62,7 +118,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
-			string queryWithoutReportType =
+			const string queryWithoutReportType =
 				@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
@@ -76,7 +132,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 				query = queryWithoutReportType;
 			}
 			else {
-				query = queryWithoutReportType;
+				query = queryWithReportType;
 			}
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {

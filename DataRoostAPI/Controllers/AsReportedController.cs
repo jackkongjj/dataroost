@@ -27,6 +27,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("documents/")]
+		[HttpPost]
+		public AsReportedDocument[] GetDocuments(string CompanyId, List<string> documentIds) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
+			return documentHelper.GetDocuments(iconum, documentIds);
+		}
+
+		[Route("documents/")]
 		[HttpGet]
 		public AsReportedDocument[] GetDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
