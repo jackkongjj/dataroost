@@ -213,6 +213,7 @@
     <Compile Include="Access\IdentifierBase.cs" />
     <Compile Include="Access\SfVoy\TimeseriesHelper.cs" />
     <Compile Include="Access\SfVoy\TimeseriesIdentifier.cs" />
+    <Compile Include="Access\SuperFast\DocumentHelper.cs" />
     <Compile Include="Access\SuperFast\ExportedItemsHelper.cs" />
     <Compile Include="Access\SuperFast\SuperFastSharesHelper.cs" />
     <Compile Include="Access\SuperFast\TemplatesHelper.cs" />

@@ -13,7 +13,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 	public class DocumentHelper {
 
-		private string _sfConnectionString;
+		private readonly string _sfConnectionString;
 
 		public DocumentHelper(string sfConnectionString) {
 			_sfConnectionString = sfConnectionString;
@@ -59,7 +59,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																					JOIN #documentIds i ON i.documentId = d.DAMDocumentId
-																			WHERE s.CompanyID = @iconum";
+																			WHERE s.CompanyID = @iconum AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1)";
 
 			DataTable table = new DataTable();
 			table.Columns.Add("documentId", typeof(string));
@@ -113,7 +113,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND d.ExportFlag = 1
+																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1)
 																				AND d.ReportTypeID = @reportType
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
@@ -123,7 +123,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND d.ExportFlag = 1
+																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1)
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";

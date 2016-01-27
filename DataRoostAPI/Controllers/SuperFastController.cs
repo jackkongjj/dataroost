@@ -70,6 +70,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return GetTimeSeries(CompanyId, TemplateId, TimeseriesId, StandardizationType.STD);
 		}
 
+		[Route("documents/")]
+		[HttpGet]
+		public Document[] GetDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
+
+			DateTime startDate = new DateTime(1900, 1, 1);
+			if (startYear != null) {
+				startDate = new DateTime((int)startYear, 1, 1);
+			}
+			DateTime endDate = new DateTime(2100, 12, 31);
+			if (endYear != null) {
+				endDate = new DateTime((int)endYear, 12, 31);
+			}
+
+			return documentHelper.GetDocuments(iconum, startDate, endDate, reportType);
+		}
+
 		private TemplateDTO[] GetTemplates(string companyId, string templateId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			int iconum = 0;

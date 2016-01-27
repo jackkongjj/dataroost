@@ -100,6 +100,7 @@
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\CompanyPriority.cs" />
     <Compile Include="Models\CountryDTO.cs" />
+    <Compile Include="Models\Document.cs" />
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\ExportedItem.cs" />
     <Compile Include="Models\SfVoy\SfVoyTimeSeries.cs" />
