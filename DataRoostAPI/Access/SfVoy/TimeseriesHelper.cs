@@ -289,7 +289,7 @@ rm.account_type, rm.interim_type, mts.time_series_code,
 (select SUBSTR(replace(replace(replace(replace(replace(replace(mathml_expression, '<mo>',''),'</mo>',''),'<mi>',''),'</mi>',''), '(',''), '-',''),0,12) from ar_sdb_map e where e.master_id = rm.master_id and rownum=1) mathml
 from report_master rm
 JOIN MAP_SDB_TIME_SERIES mts on mts.rep_type = rm.rep_type AND mts.account_type = rm.account_type AND mts.interim_type = COALESCE(rm.interim_type, ' ')
-join company_template ct on ct.co_temp_item_id = rm.co_temp_item_id and ct.TID_GNRC_CODE in (34,46,66,70,72) 
+join company_template ct on ct.co_temp_item_id = rm.co_temp_item_id and ct.TID_GNRC_CODE in (34,46,66,70,72,75) 
 join company_category cc on cc.co_cat_id  = ct.co_cat_id
 join Company_Template_Items rd on RD.co_temp_item_id = ct.co_temp_item_id
 JOIN TEMPLATE_ITEM TI on RD.GNRC_CODE = TI.ITEM_GNRC_CODE and RD.GROUP_CODE = TI.GROUP_CODE and RD.SUB_GROUP_CODE = TI.SUB_GROUP_CODE and RD.ITEM_CODE = TI.ITEM_CODE

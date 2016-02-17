@@ -43,7 +43,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
         on std.SDBTemplateMasterId = sdm.Id
 where ci.Iconum = @iconum and 
 (std.ReportTypeID = isnull(@reportTypeId, std.ReportTypeID) 
-and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))";
+and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))
+union  --temporary always show pension template
+select sdm.TemplateName, 'A', ut.id, 1 from sdbtemplatemaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'";
 
 			const string SQL_STD_Templates = @"select distinct sdm.TemplateName, std.ReportTypeID, std.UpdateTypeID, std.TemplateTypeId
     from CompanyIndustry ci 
@@ -64,7 +66,9 @@ and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateT
         on std.STDTemplateMasterCode = sdm.Code
 where ci.Iconum = @iconum and 
 (std.ReportTypeID = isnull(@reportTypeId, std.ReportTypeID) 
-and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))";
+and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))
+union  --temporary always show pension template
+select sdm.TemplateName, 'A', ut.id, 1 from STDTemplateMaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'";
 
 			List<TemplateDTO> templates = new List<TemplateDTO>();
 			bool requestedSpecificTemplate = (templateId != null);
@@ -134,6 +138,10 @@ and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateT
 	AND  std.ReportTypeID = @reportTypeId
 	AND std.UpdateTypeID = @updateTypeId
 	AND std.TemplateTypeId = @templateTypeId
+	UNION
+	select id from SDBTemplateMaster where TemplateName = 'SF Full - Pension' AND  'A' = @reportTypeId
+	AND 'N' = @updateTypeId
+	AND 1 = @templateTypeId
 )
 select Id, code, sdbDescription, statementTypeId, usageType, indentLevel, valueType, SecurityFlag, PITFlag, [precision]
 from (
@@ -188,6 +196,10 @@ order by A.SDBItemSequence asc";
 	AND  std.ReportTypeID = @reportTypeId
 	AND std.UpdateTypeID = @updateTypeId
 	AND std.TemplateTypeId = @templateTypeId
+	UNION
+	select code from STDTemplateMaster where TemplateName = 'SF Full - Pension' AND  'A' = @reportTypeId
+	AND 'N' = @updateTypeId
+	AND 1 = @templateTypeId
 )
 select s.Id, [code] = s.STDCode, [sdbDescription] = s.ItemShortName, [statementTypeId] = st.ID, [usageType] = iut.ID, 
 	[indentLevel] = 0, [valueType] = sit.Id, s.SecurityFlag, s.PITFlag, [precision] = s.NoDecimals

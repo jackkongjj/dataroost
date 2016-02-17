@@ -37,6 +37,10 @@ WITH TemplateMasterID AS
 		and std.ReportTypeID = @reportTypeId
 		and std.UpdateTypeID = @updateTypeId
 		and std.TemplateTypeId = @templateTypeId
+  UNION
+	select id from SDBTemplateMaster where TemplateName = 'SF Full - Pension' AND  'A' = @reportTypeId
+	AND 'N' = @updateTypeId
+	AND 1 = @templateTypeId
 )
 select distinct ts.id, cast(tmi.id as varchar(5))
 from Timeseries ts
@@ -62,6 +66,10 @@ where ds.CompanyID = @iconum	and ts.InterimTypeID != '--' and d.exportflag = 1
 		and std.ReportTypeID = @reportTypeId
 		and std.UpdateTypeID = @updateTypeId
 		and std.TemplateTypeId = @templateTypeId
+	UNION
+	select Code from STDTemplateMaster where TemplateName = 'SF Full - Pension' AND  'A' = @reportTypeId
+	AND 'N' = @updateTypeId
+	AND 1 = @templateTypeId
 )
 select distinct ts.id, tmi.Code
 from Timeseries ts
