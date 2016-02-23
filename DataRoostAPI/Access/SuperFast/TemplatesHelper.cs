@@ -45,7 +45,8 @@ where ci.Iconum = @iconum and
 (std.ReportTypeID = isnull(@reportTypeId, std.ReportTypeID) 
 and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))
 union  --temporary always show pension template
-select sdm.TemplateName, 'A', ut.id, 1 from sdbtemplatemaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'";
+select sdm.TemplateName, 'A', ut.id, 1 from sdbtemplatemaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'
+and 'A' = isnull(@reportTypeId, 'A') AND ut.ID = isnull(@updateTypeId, 'N') AND 1 = isnull(@templateTypeId, 1)";
 
 			const string SQL_STD_Templates = @"select distinct sdm.TemplateName, std.ReportTypeID, std.UpdateTypeID, std.TemplateTypeId
     from CompanyIndustry ci 
@@ -68,7 +69,8 @@ where ci.Iconum = @iconum and
 (std.ReportTypeID = isnull(@reportTypeId, std.ReportTypeID) 
 and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))
 union  --temporary always show pension template
-select sdm.TemplateName, 'A', ut.id, 1 from STDTemplateMaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'";
+select sdm.TemplateName, 'A', ut.id, 1 from STDTemplateMaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'
+and 'A' = isnull(@reportTypeId, 'A') AND ut.ID = isnull(@updateTypeId, 'N') AND 1 = isnull(@templateTypeId, 1)";
 
 			List<TemplateDTO> templates = new List<TemplateDTO>();
 			bool requestedSpecificTemplate = (templateId != null);
