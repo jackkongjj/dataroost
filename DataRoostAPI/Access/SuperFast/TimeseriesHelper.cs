@@ -89,7 +89,8 @@ where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 "
 	and ts.TimeSeriesDate = isnull(@PeriodEndDate, ts.TimeSeriesDate)
 	and ts.InterimTypeID = isnull(@InterimType, ts.InterimTypeID)
 	and ts.AutoCalcFlag = isnull(@AutoCalcFlag, ts.AutoCalcFlag)
-	and ts.AccountTypeId = isnull(@AccountType, ts.AccountTypeId)";
+	and ts.AccountTypeId = isnull(@AccountType, ts.AccountTypeId)
+	and ts.updatetypeid = isnull(@updateTypeId, ts.updatetypeid)";
 			} else if (!string.IsNullOrEmpty(queryFilter["years"])) {
 				preQuery_timeseriesIdentification += " and ts.companyfiscalyear in (select id from @years)";
 			} else if (!string.IsNullOrEmpty(queryFilter["startyear"]) && !string.IsNullOrEmpty(queryFilter["endyear"])) {
