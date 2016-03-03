@@ -80,6 +80,7 @@ join STDTemplateItem stdti on stdd.STDItemId = stdti.STDItemID
 join TemplateMasterID tmi on tmi.Code = stdti.STDTemplateMasterCode
 where ds.CompanyID = @iconum and ts.InterimTypeID != '--' and d.exportflag = 1 ";
 
+			preQuery_timeseriesIdentification += templateId.UpdateType == "N" ? "and ts.updatetypeid = 'N'" : "and ts.updatetypeid in ('F','P')";
 			bool requestedSpecificTimeSerie = (timeseriesId != null);
 			string templateMasterId = string.Empty;
 
