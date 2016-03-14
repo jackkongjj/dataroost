@@ -420,7 +420,8 @@ order by tm.sdbItem_id, re.[order]";
 					string val = e.Replace("(", "").Replace(")", "");
 					if (cellValues.ContainsKey(val)) {
 						foundNum++;
-						expFlat = ReplaceFirst(expFlat, e, cellValues[val].Contents + "*1.0");
+						string tempval = string.IsNullOrEmpty(cellValues[val].Contents) ? "0" : cellValues[val].Contents + "*1.0";
+						expFlat = ReplaceFirst(expFlat, e, tempval);
 						var temp = (ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[val].ValueDetails;
 						if (!String.IsNullOrEmpty(temp.OverrideScalingFactor))
 							overrideScalingFactor = temp.OverrideScalingFactor;
