@@ -124,7 +124,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 									       ReportDate = reportDate,
 									       TimeSeriesCode = timeSeriesCode,
 									       UpdatedDate = updatedDate,
-									       Value = DateTime.ParseExact(textValue, "ddMMyyyy", null)
+												 Value = DateTime.ParseExact(dateValue, "ddMMyyyy", null)
 								       };
 							}
 							else if (numericValue != null) {
