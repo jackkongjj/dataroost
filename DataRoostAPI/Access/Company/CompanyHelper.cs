@@ -316,37 +316,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		public EffortDTO GetCompanyEffort(int iconum) {
-			string query = @"select 'x'
-												from dbo.CompanyLists cl (nolock)
-													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
-												where cl.ShortName = 'SF_NewMarketWhiteList'
-													AND iconum = @iconum
-											 union
-											 select 'x'
-												from dbo.FdsTriPpiMap
-												where iconum = @iconum AND IsAdr = 0
-													AND IsoCountry IN ('US', 'ZW')";
-
-			using (SqlConnection conn = new SqlConnection(_damConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-
-					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						if (sdr.Read()) {
-							EffortDTO superfastEffort = new EffortDTO();
-							superfastEffort.Name = "superfast";
-							return superfastEffort;
-						}
-					}
-				}
+			Dictionary<int, EffortDTO> effortDictionary = GetCompaniesEfforts(new List<int>() { iconum });
+			if (!effortDictionary.ContainsKey(iconum)) {
+				return null;
 			}
-			EffortDTO voyagerEffort = new EffortDTO();
-			voyagerEffort.Name = "voyager";
-			return voyagerEffort;
+			return effortDictionary[iconum];
 		}
 
 		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
+
+			List<string> countries = GetWhiteListedCountries();
+			string countryString = string.Join("', '", countries);
+
 			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
 			DataTable table = new DataTable();
 			table.Columns.Add("iconum", typeof (int));
@@ -356,7 +337,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
-			const string query = @"select i.iconum
+			string query = string.Format(@"select i.iconum
 												from dbo.CompanyLists cl (nolock)
 													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
 													join #CompanyIds i on i.iconum = clc.iconum
@@ -365,7 +346,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 											 select i.iconum
 												from dbo.FdsTriPpiMap fds
 													join #CompanyIds i on i.iconum = fds.iconum 
-												where IsAdr = 0 AND IsoCountry IN ('US', 'ZW')";
+												where IsAdr = 0 AND IsoCountry IN ('{0}')", countryString);
 
 			// Create Global Temp Table
 			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
@@ -393,6 +374,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return effortDictionary;
+		}
+
+		private List<string> GetWhiteListedCountries() {
+
+			const string query =
+				@"SELECT DISTINCT iso_country FROM ppi_check GROUP BY iso_country HAVING SUM(CAST(isWhiteList AS INT)) = 0";
+
+			List<string> countries = new List<string>();
+			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							string country = reader.GetString(0);
+							countries.Add(country);
+						}
+					}
+				}
+			}
+
+			return countries;
 		}
 
 		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {
