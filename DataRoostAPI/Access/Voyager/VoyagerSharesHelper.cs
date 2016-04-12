@@ -189,6 +189,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 				}
 			}
 
+			if (!ppiDictionary.Any()) {
+				return;
+			}
+
 			const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
 
 			const string query = @"SELECT d.ppi, d.update_date, d.reported_text
