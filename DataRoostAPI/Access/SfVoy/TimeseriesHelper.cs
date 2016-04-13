@@ -94,7 +94,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 					TimeseriesIdentifier id;
 
 					var match = from x in voyTS
-											where dataType == StandardizationType.SDB ? x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType	: x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear
+											where dataType == StandardizationType.SDB ? x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType && x.CompanyFiscalYear == ts.CompanyFiscalYear	: x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear
 											orderby x.DamDocumentId descending, x.DCN descending	//order by one with document
 											select x;
 
