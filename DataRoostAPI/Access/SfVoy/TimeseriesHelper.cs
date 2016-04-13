@@ -105,7 +105,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 						id = new TimeseriesIdentifier(((SFTimeseriesDTO)ts).SFDocumentId, ts.CompanyFiscalYear, ts.IsAutoCalc, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, ts.AccountType, true, true);
 						results.Add(new SfVoyTimeSeries { SfTimeSerie = (SFTimeseriesDTO)ts, VoyTimeSerie = voy, Id = id.GetToken() });
 						if (dataType == StandardizationType.SDB)
-							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType);
+							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType && x.CompanyFiscalYear == ts.CompanyFiscalYear);
 						else
 							voyTS.RemoveAll(x => x.StdTimeSeriesCode == ts.StdTimeSeriesCode && x.PeriodEndDate == ts.PeriodEndDate && x.CompanyFiscalYear == ts.CompanyFiscalYear);
 					} else {
@@ -117,34 +117,35 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 				if (dataType == StandardizationType.SDB) {
 					//add all the voyager TS that are not mapped to superfast TS, group all Voyager TS by report date, interimType, reporttype and AccountType (since CF,IS,PS,BS their own timerseries)
 					var groupVoyTS = (from x in voyTS
-														group x by new { x.AccountType, x.InterimType, x.PeriodEndDate, x.ReportType }
+														group x by new { x.AccountType, x.InterimType, x.PeriodEndDate, x.ReportType, x.CompanyFiscalYear }
 															into grp
 															select new
 															{
 																grp.Key.AccountType,
 																grp.Key.InterimType,
 																grp.Key.PeriodEndDate,
-																grp.Key.ReportType
+																grp.Key.ReportType,
+																grp.Key.CompanyFiscalYear
 															}).ToList();
 
 					foreach (var ts in groupVoyTS) {
 						var match = from x in voyTS
-												where x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType
+												where x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType && x.CompanyFiscalYear == ts.CompanyFiscalYear
 												orderby x.DamDocumentId descending, x.DCN descending	//order by one with document
 												select x;
 						var temp = match.ToList();
 						if (temp.Count() > 0) {
 							var voy = temp.First();
 							voy.ScalingFactor = "A";	//convert all to Actual
-							TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, 0, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, ts.AccountType, false, true);
+							TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, voy.CompanyFiscalYear, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, voy.StdTimeSeriesCode, ts.AccountType, false, true);
 							results.Add(new SfVoyTimeSeries { SfTimeSerie = null, VoyTimeSerie = voy, Id = id.GetToken() });
-							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType);
+							voyTS.RemoveAll(x => x.InterimType == ts.InterimType && ts.PeriodEndDate == x.PeriodEndDate && ts.ReportType == x.ReportType && x.AccountType == ts.AccountType && x.CompanyFiscalYear == ts.CompanyFiscalYear);
 						}
 					}
 				}
 				//add any remaing for SDB???, OR add the rest of STD timeseries
 				foreach (var ts in voyTS) {
-					TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, 0, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.StdTimeSeriesCode, ts.AccountType, false, true);
+					TimeseriesIdentifier id = new TimeseriesIdentifier(Guid.Empty, ts.CompanyFiscalYear, false, ts.PeriodEndDate, ts.InterimType, ts.ReportType, ts.StdTimeSeriesCode, ts.AccountType, false, true);
 					ts.ScalingFactor = "A"; //convert all to Actual
 					results.Add(new SfVoyTimeSeries { SfTimeSerie = null, VoyTimeSerie = ts, Id = id.GetToken() });
 				}

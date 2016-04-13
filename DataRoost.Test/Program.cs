@@ -73,14 +73,14 @@ namespace DataRoost.Test {
 			AsReportedDocument[] documents = asReportedDataAccess.GetDocuments(iconum, 2013, 2014);
 			AsReportedDocument document = asReportedDataAccess.GetDocument(iconum, documents.First().Id);
 
-			iconum = "216191";
+			iconum = "21149";
 			ISfVoyDataAccess sfvoyDataAccess = DataRoostAccessFactory.GetSfVoyDataAccess(connectionString);
 			StandardizationType[] sfvoydataTypes = sfvoyDataAccess.GetDataTypes(iconum);
 			TemplateDTO[] sfVoytemplateDtos = sfvoyDataAccess.GetTemplateList(iconum, StandardizationType.SDB);
 			string sfVoyTempId = "RnxBfDE=";
 			TemplateDTO sfVoytemplate = sfvoyDataAccess.GetTemplate(iconum, StandardizationType.SDB, sfVoyTempId);
-			SfVoyTimeSeries[] sfVoyTSAll = sfvoyDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, sfVoytemplate.Id);
-			SfVoyTimeSeries[] syVoyTSAllValue = sfvoyDataAccess.GetTimeseriesListWithValue(iconum, StandardizationType.STD, sfVoytemplate.Id, 2010);
+			SfVoyTimeSeries[] sfVoyTSAll = sfvoyDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, sfVoytemplate.Id, 2011, 2011);
+			SfVoyTimeSeries[] syVoyTSAllValue = sfvoyDataAccess.GetTimeseriesListWithValue(iconum, StandardizationType.SDB, sfVoytemplate.Id, 2011);
 			SfVoyTimeSeries sfVoyDetail = sfvoyDataAccess.GetTimeseries(iconum, StandardizationType.SDB, sfVoytemplate.Id, sfVoyTSAll[5].Id);
 			
 
