@@ -51,6 +51,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SfVoy {
 				if (timeseriesId.HasVoy) {
 					//get voy data
 					var voyTS = (from x in GetVoyagerTimeseries(iconum, timeseriesId, dataType, queryFilter)
+											 where x.CompanyFiscalYear == timeseriesId.CompanyFiscalYear
 									 orderby x.DamDocumentId descending, x.DCN descending
 									 select x).ToList();
 
