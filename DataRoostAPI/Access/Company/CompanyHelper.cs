@@ -379,7 +379,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		private List<string> GetWhiteListedCountries() {
 
 			const string query =
-				@"SELECT DISTINCT iso_country FROM ppi_check GROUP BY iso_country HAVING SUM(CAST(isWhiteList AS INT)) = 0";
+				@"SELECT DISTINCT iso_country FROM ppi_check where IsEnable = 1 GROUP BY iso_country HAVING SUM(CAST(isWhiteList AS INT)) = 0";
 
 			List<string> countries = new List<string>();
 			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
