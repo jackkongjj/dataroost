@@ -418,18 +418,20 @@ order by tm.sdbItem_id, re.[order]";
 				int foundNum = 0;
 				string overrideScalingFactor = null;
 				string expFlat = item.expressionFlat;
-				foreach (var e in exp) {					
+				foreach (var e in exp) {
 					string val = e.Replace("(", "").Replace(")", "");
-					if (cellValues.ContainsKey(val)) {
+
+					if (cellValues.ContainsKey(val) || (!val.Contains("*") && cellValues.ContainsKey(val + "*"))) {
 						foundNum++;
-						string tempval = string.IsNullOrEmpty(cellValues[val].Contents) ? "0" : cellValues[val].Contents + "*1.0";
+						var k = cellValues.ContainsKey(val) ? val : val + "*";
+						string tempval = string.IsNullOrEmpty(cellValues[k].Contents) ? "0" : cellValues[k].Contents + "*1.0";
 						expFlat = ReplaceFirst(expFlat, e, tempval);
-						var temp = (ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[val].ValueDetails;
+						var temp = (ExpressionTimeseriesValueDetailVoySDBDTO)cellValues[k].ValueDetails;
 						if (!String.IsNullOrEmpty(temp.OverrideScalingFactor))
 							overrideScalingFactor = temp.OverrideScalingFactor;
 					} else {
 						expFlat = ReplaceFirst(expFlat, e, "0");
-					}				
+					}
 				}
 				if (foundNum > 0) {
 					//eval it
