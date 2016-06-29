@@ -59,7 +59,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																					JOIN #documentIds i ON i.documentId = d.DAMDocumentId
-																			WHERE s.CompanyID = @iconum AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1)";
+																			WHERE s.CompanyID = @iconum AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)";
 
 			DataTable table = new DataTable();
 			table.Columns.Add("documentId", typeof(string));
@@ -109,21 +109,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		public AsReportedDocument[] GetDocuments(int iconum, DateTime startDate, DateTime endDate, string reportType) {
 			const string queryWithReportType =
-				@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
+                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1)
+																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 																				AND d.ReportTypeID = @reportType
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
 			const string queryWithoutReportType =
-				@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
+                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1)
+																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
