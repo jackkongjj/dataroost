@@ -241,8 +241,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
 			TimeSpan shareClassAndEffortsDuration = DateTime.Now.Subtract(startTime);
 
-			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == "voyager").Select(kvp => kvp.Key).ToList();
-			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == "superfast").Select(kvp => kvp.Key).ToList();
+			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value == EffortDTO.Voyager()).Select(kvp => kvp.Key).ToList();
+			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value == EffortDTO.SuperCore()).Select(kvp => kvp.Key).ToList();
 
 			DateTime superfastStartTime = DateTime.Now;
 			if (superfastIconums.Count > 0) {
@@ -333,7 +333,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			table.Columns.Add("iconum", typeof (int));
 			foreach (int iconum in companies) {
 				table.Rows.Add(iconum);
-				effortDictionary.Add(iconum, new EffortDTO { Name = "voyager" });
+				effortDictionary.Add(iconum, EffortDTO.Voyager());
 			}
 
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
@@ -366,7 +366,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							int iconum = reader.GetInt32(0);
-							EffortDTO superfastEffort = new EffortDTO { Name = "superfast" };
+                            EffortDTO superfastEffort = EffortDTO.SuperCore();
 							effortDictionary[iconum] = superfastEffort;
 						}
 					}
