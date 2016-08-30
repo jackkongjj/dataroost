@@ -27,5 +27,7 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("sfDocumentId")]
 		public string SuperFastDocumentId { get; set; }
 
-	}
+        [JsonProperty("hasXbrl")]
+        public bool HasXbrl { get; set; }
+    }
 }

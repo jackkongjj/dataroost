@@ -109,7 +109,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		public AsReportedDocument[] GetDocuments(int iconum, DateTime startDate, DateTime endDate, string reportType) {
 			const string queryWithReportType =
-                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
+                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
@@ -119,7 +119,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
 			const string queryWithoutReportType =
-                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
+                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
@@ -154,6 +154,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								                              FormType = reader.GetStringSafe(3),
 								                              Id = reader.GetGuid(4).ToString(),
 								                              SuperFastDocumentId = reader.GetGuid(5).ToString(),
+                                                              HasXbrl = reader.GetBoolean(6),
 							                              };
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							documents.Add(document);
