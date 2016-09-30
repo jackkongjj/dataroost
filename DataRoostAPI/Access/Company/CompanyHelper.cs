@@ -123,17 +123,48 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
 			Dictionary<int, List<ShareClassDataDTO>> shareClassDictionary = GetCompanyShareClasses(new List<int> { iconum });
-			if (!shareClassDictionary.ContainsKey(iconum)) {
-				throw new MissingIconumException(iconum);
-			}
-			return shareClassDictionary[iconum];
+			return shareClassDictionary.Values.First();
 		}
 
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
 
-			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+		    Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = ShareClasses(iconums);
+            List<int> missingIconums = new List<int>();
+		    foreach (int iconum in iconums) {
+		        if (!companyShareClasses.ContainsKey(iconum)) {
+		            missingIconums.Add(iconum);
+		        }
+		    }
+		    Dictionary<int, int> iconumMap = LookForStitchedIconums(missingIconums);
+		    Dictionary<int, List<ShareClassDataDTO>> missingShareClasses = ShareClasses(iconumMap.Values.Distinct().ToList());
+		    foreach (KeyValuePair<int, List<ShareClassDataDTO>> pair in missingShareClasses) {
+		        if (!companyShareClasses.ContainsKey(pair.Key)) {
+		            companyShareClasses.Add(pair.Key, pair.Value);
+		        }
+		    }
 
-			const string query = @"SELECT p.Cusip,
+            foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
+				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
+				IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
+				foreach (IGrouping<string, string> ppiGroup in groups) {
+					if (ppiGroup.Count() > 1) {
+						string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
+						ShareClassDataDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
+						shareClasses.Remove(rootShareClass);
+					}
+				}
+			}
+
+			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
+			voyagerShares.PopulateTypeOfShare(companyShareClasses);
+
+			return companyShareClasses;
+		}
+
+	    private Dictionary<int, List<ShareClassDataDTO>> ShareClasses(List<int> iconums) {
+            const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+
+            const string query = @"SELECT p.Cusip,
                                         p.Iconum,
                                         p.Name,
                                         a.Description,
@@ -161,81 +192,119 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                         --AND s.term_date IS NULL
                                         --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
 
-			Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
-			DataTable table = new DataTable();
-			table.Columns.Add("iconum", typeof(int));
-			foreach (int iconum in iconums) {
-				table.Rows.Add(iconum);
-			}
+            Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
+            DataTable table = new DataTable();
+            table.Columns.Add("iconum", typeof(int));
+            foreach (int iconum in iconums)
+            {
+                table.Rows.Add(iconum);
+            }
 
-			// Create Global Temp Table
-			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
-				connection.Open();
-				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-					cmd.ExecuteNonQuery();
-				}
+            // Create Global Temp Table
+            using (SqlConnection connection = new SqlConnection(_sfConnectionString))
+            {
+                connection.Open();
+                using (SqlCommand cmd = new SqlCommand(createTableQuery, connection))
+                {
+                    cmd.ExecuteNonQuery();
+                }
 
-				// Upload all iconums to Temp table
-				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#CompanyIds";
-					bulkCopy.WriteToServer(table);
-				}
-				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+                // Upload all iconums to Temp table
+                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null))
+                {
+                    bulkCopy.BatchSize = table.Rows.Count;
+                    bulkCopy.DestinationTableName = "#CompanyIds";
+                    bulkCopy.WriteToServer(table);
+                }
+                using (SqlCommand cmd = new SqlCommand(query, connection))
+                {
 
-					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						while (sdr.Read()) {
-							int iconum = sdr.GetInt32(1);
-							ShareClassDataDTO shareClass = new ShareClassDataDTO
-							{
-								Cusip = sdr.GetStringSafe(0),
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            int iconum = sdr.GetInt32(1);
+                            ShareClassDataDTO shareClass = new ShareClassDataDTO
+                            {
+                                Cusip = sdr.GetStringSafe(0),
 
-								Name = sdr.GetStringSafe(2),
-								AssetClass = sdr.GetStringSafe(3),
-								ListedOn = sdr.GetStringSafe(4),
-								InceptionDate = sdr.GetNullable<DateTime>(5),
-								TermDate = sdr.GetNullable<DateTime>(6),
+                                Name = sdr.GetStringSafe(2),
+                                AssetClass = sdr.GetStringSafe(3),
+                                ListedOn = sdr.GetStringSafe(4),
+                                InceptionDate = sdr.GetNullable<DateTime>(5),
+                                TermDate = sdr.GetNullable<DateTime>(6),
 
-								//CurrentPrice = sdr.GetDecimal(7),
-								//CurrentSharesOutstanding = sdr.GetDecimal(8),
-								TickerSymbol = sdr.GetStringSafe(9),
-								Sedol = sdr.GetStringSafe(10),
-								Isin = sdr.GetStringSafe(11),
+                                //CurrentPrice = sdr.GetDecimal(7),
+                                //CurrentSharesOutstanding = sdr.GetDecimal(8),
+                                TickerSymbol = sdr.GetStringSafe(9),
+                                Sedol = sdr.GetStringSafe(10),
+                                Isin = sdr.GetStringSafe(11),
 
-								//ToCusip = sdr.GetStringSafe(12),
-								IssueType = sdr.GetStringSafe(13),
-								PPI = sdr.GetStringSafe(14),
-								Id = sdr.GetStringSafe(15),
-								PermId = sdr.GetStringSafe(15)
-							};
-							if (!companyShareClasses.ContainsKey(iconum)) {
-								companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
-							}
-							companyShareClasses[iconum].Add(shareClass);
-						}
-					}
-				}
-			}
+                                //ToCusip = sdr.GetStringSafe(12),
+                                IssueType = sdr.GetStringSafe(13),
+                                PPI = sdr.GetStringSafe(14),
+                                Id = sdr.GetStringSafe(15),
+                                PermId = sdr.GetStringSafe(15)
+                            };
+                            if (!companyShareClasses.ContainsKey(iconum))
+                            {
+                                companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
+                            }
+                            companyShareClasses[iconum].Add(shareClass);
+                        }
+                    }
+                }
+            }
 
-			foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
-				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
-				IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
-				foreach (IGrouping<string, string> ppiGroup in groups) {
-					if (ppiGroup.Count() > 1) {
-						string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
-						ShareClassDataDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
-						shareClasses.Remove(rootShareClass);
-					}
-				}
-			}
+	        return companyShareClasses;
+	    }
 
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-			voyagerShares.PopulateTypeOfShare(companyShareClasses);
+	    private Dictionary<int, int> LookForStitchedIconums(List<int> iconums) {
 
-			return companyShareClasses;
-		}
+			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
 
-		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
+            const string query = @"SELECT TOP 1 o.iconum, n.iconum, n.ppi, n.UpdateStampUtc
+                                    FROM IconumPpiMap o
+			                            JOIN IconumPpiMap n ON o.ppi = n.ppi
+                                        JOIN #CompanyIds i ON i.iconum = o.iconum
+		                            ORDER BY n.UpdateStampUtc DESC";
+
+            DataTable table = new DataTable();
+            table.Columns.Add("iconum", typeof(int));
+            foreach (int iconum in iconums)
+            {
+                table.Rows.Add(iconum);
+            }
+
+            Dictionary<int, int> iconumMap = new Dictionary<int, int>();
+            using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+	            connection.Open();
+	            using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+	                cmd.ExecuteNonQuery();
+	            }
+
+	            // Upload all iconums to Temp table
+	            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+	                bulkCopy.BatchSize = table.Rows.Count;
+	                bulkCopy.DestinationTableName = "#CompanyIds";
+	                bulkCopy.WriteToServer(table);
+	            }
+	            using (SqlCommand cmd = new SqlCommand(query, connection)) {
+
+	                using (SqlDataReader sdr = cmd.ExecuteReader()) {
+	                    while (sdr.Read()) {
+	                        int oldIconum = sdr.GetInt32(0);
+	                        int newIconum = sdr.GetInt32(1);
+                            iconumMap.Add(oldIconum, newIconum);
+	                    }
+	                }
+	            }
+	        }
+
+            return iconumMap;
+	    }
+
+	    public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
 			DateTime startTime = DateTime.Now;
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
