@@ -134,7 +134,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			return new EffortDTO[] { EffortDTO.Voyager(), EffortDTO.SuperCore(), new EffortDTO() { Name = "sfvoy_join" } };
+			return new EffortDTO[] { EffortDTO.Voyager(), EffortDTO.SuperCore(), EffortDTO.Kpi(), EffortDTO.Segment(), new EffortDTO() { Name = "sfvoy_join" } };
 		}
 	}
 }

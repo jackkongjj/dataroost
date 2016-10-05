@@ -103,6 +103,8 @@
     <Compile Include="Models\Document.cs" />
     <Compile Include="Models\EffortDTO.cs" />
     <Compile Include="Models\ExportedItem.cs" />
+    <Compile Include="Models\KPI\KpiTimeSeriesDTO.cs" />
+    <Compile Include="Models\Segment\SegmentTimeSeriesDTO.cs" />
     <Compile Include="Models\SfVoy\SfVoyTimeSeries.cs" />
     <Compile Include="Models\ShareClassDataDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
@@ -115,7 +117,9 @@
     <Compile Include="Models\TimeseriesDTO.cs" />
     <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
     <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
+    <Compile Include="Models\TimeseriesValues\SegmentNode.cs" />
     <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
+    <Compile Include="Models\ExportedVersionInfo.cs" />
     <Compile Include="Models\Voyager\VoyagerTemplateDTO.cs" />
     <Compile Include="Models\Voyager\VoyagerTimeseriesDTO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

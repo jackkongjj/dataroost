@@ -13,7 +13,7 @@ using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/superfast")]
+	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/supercore")]
 	public class SuperfastController : ApiController {
 
 		[Route("datatypes/")]

@@ -209,8 +209,12 @@
     <Compile Include="Access\AsReported\CompanyFinancialTermsHelper.cs" />
     <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />
+    <Compile Include="Access\Kpi\ExportVersionHelper.cs" />
+    <Compile Include="Access\Kpi\TimeseriesHelper.cs" />
     <Compile Include="Access\PermId.cs" />
     <Compile Include="Access\IdentifierBase.cs" />
+    <Compile Include="Access\Segment\ExportVersionHelper.cs" />
+    <Compile Include="Access\Segment\TimeseriesHelper.cs" />
     <Compile Include="Access\SfVoy\TimeseriesHelper.cs" />
     <Compile Include="Access\SfVoy\TimeseriesIdentifier.cs" />
     <Compile Include="Access\SuperFast\DocumentHelper.cs" />
@@ -264,9 +268,11 @@
     <Compile Include="Controllers\ExportedItemsController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\InfoController.cs" />
+    <Compile Include="Controllers\SegmentController.cs" />
     <Compile Include="Controllers\SfVoyController.cs" />
     <Compile Include="Controllers\SharesController.cs" />
     <Compile Include="Controllers\SuperFastController.cs" />
+    <Compile Include="Controllers\KpiController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
     <Compile Include="Filters\ExceptionHandlerFilter.cs" />
     <Compile Include="Helpers\StringExtensions.cs" />
@@ -388,6 +394,7 @@
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Models\" />
+    <Folder Include="Views\Segment\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config">

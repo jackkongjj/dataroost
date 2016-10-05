@@ -17,6 +17,9 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("entityPermId")]
 		public string EntitiyPermId { get; set; }
 
+		[JsonProperty("secPermId")]
+		public string SecPermId { get; set; }
+
 		[JsonProperty("iconum")]
 		public int Iconum { get; set; }
 

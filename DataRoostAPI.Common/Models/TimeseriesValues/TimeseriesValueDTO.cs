@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Collections.Generic;
 using FFDotNetHelpers.Helpers.Serialization;
 
 using Newtonsoft.Json;
@@ -66,6 +66,14 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 
 	}
 
+	public class LookupTimeseriesValueDetailKpiDTO : LookupTimeseriesValueDetailDTO {
+		[JsonProperty("itemCode")]
+		public string ItemCode { get; set; }
+
+		[JsonProperty("numericValue")]
+		public decimal NumericValue { get; set; }
+	}
+
 	public class ExpressionTimeseriesValueDetailDTO : TimeseriesValueDetailDTO {
 
 		public override string Type {
@@ -96,4 +104,27 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 
 	}
 
+	public class SegmentTimeseriesValueGDetailDTO : TimeseriesValueDetailDTO {
+		public override string Type {
+			get { return "segmentG"; }
+		}
+
+		public Dictionary<string, SegmentNode> Detail { get; set; }
+	}
+
+	public class SegmentTimeseriesValueTDetailDTO : TimeseriesValueDetailDTO {
+		public override string Type {
+			get { return "segmentT"; }
+		}
+
+		public Dictionary<string, Dictionary<string,SegmentNode>> Detail { get; set; }
+	}
+
+	public class SegmentTimeseriesValueODetailDTO : TimeseriesValueDetailDTO {
+		public override string Type {
+			get { return "segmentO"; }
+		}
+
+		public Dictionary<string, Dictionary<string, Dictionary<string, SegmentNode>>> Detail { get; set; }
+	}	
 }

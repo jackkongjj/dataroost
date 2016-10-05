@@ -14,7 +14,7 @@ namespace DataRoostAPI.Common.Access {
 		}
 
 		public static IStandardizedDataAccess GetSuperFastDataAccess(string connectionString) {
-			return new StandardizedDataAccess(connectionString, "superfast");
+			return new StandardizedDataAccess(connectionString, "supercore");
 		}
 
 		public static ISfVoyDataAccess GetSfVoyDataAccess(string connectionString) {

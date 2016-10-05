@@ -10,7 +10,6 @@ using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
 
 using DataRoostAPI.Common.Exceptions;
 using DataRoostAPI.Common.Models;
-
 using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
@@ -516,7 +515,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return priorityDictionary;
 		}
 
+		public string GetSecPermId(int iconum) {
+			string query = @"select p.iconum, p.EntityPermId, p.PermId, p.Name, p.IsoCountry, t.Descrip from PpiIconumMap p
+												left join filermst f on p.iconum = f.Iconum
+												left join FilerTypes t on t.Code = f.Filer_Type
+												where p.iconum = @iconum";
 
+			string result = "";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							result = sdr.GetStringSafe(2);
+						}
+					}
+				}
+			}
+			return result;
+		}
 	}
 
 }
