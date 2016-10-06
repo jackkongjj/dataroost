@@ -10,6 +10,7 @@ using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
 using CCS.Fundamentals.DataRoostAPI.Access.Kpi;
 using DataRoostAPI.Common.Models;
+using DataRoostAPI.Common.Models.KPI;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
@@ -40,28 +41,35 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("exportedVersions/{versionId}/timeseries/")]
 		[HttpGet]
-		public Dictionary<int, Dictionary<Guid, TimeseriesDTO>> QuerySTDTemplatesTimeseries(string CompanyId, string VersionId) {
-			return GetTimeSeries(CompanyId, VersionId, null, StandardizationType.STD);
-		}
-
-		[Route("exportedVersions/{versionId}/timeseries/{timeseriesId}")]
-		[HttpGet]
-		public Dictionary<int, Dictionary<Guid, TimeseriesDTO>> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
-			return GetTimeSeries(CompanyId, VersionId, TimeseriesId, StandardizationType.STD);
-		}
-
-		private Dictionary<int, Dictionary<Guid, TimeseriesDTO>> GetTimeSeries(string companyId, string versionId, string timeSeriesId, StandardizationType dataType) {
+		public Dictionary<int, Dictionary<Guid, KpiTimeSeriesDTO>> QuerySTDTemplatesTimeseries(string CompanyId, string VersionId) {
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["KPI-Diff"].ConnectionString;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
-			int iconum = PermId.PermId2Iconum(companyId);
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			CompanyHelper cc = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+			TimeseriesHelper tsh = new TimeseriesHelper(kpiConnectionString);
+			return tsh.GetExportedTimeSeries(VersionId, cc.GetSecPermId(iconum));
+		}
+
+		[Route("exportedVersions/{versionId}/timeseries/{timeseriesId}")]
+		[HttpGet]
+		public Dictionary<string, string> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["KPI-Diff"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
 			CompanyHelper cc = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			TimeseriesHelper tsh = new TimeseriesHelper(kpiConnectionString);
 
-			return tsh.GetExportedTimeSeries(versionId, cc.GetSecPermId(iconum), timeSeriesId);
+
+			return tsh.GetTimeseriesSTDValues(TimeseriesId,VersionId);
 		}
+
 	}
 }

@@ -25,8 +25,8 @@ namespace DataRoostAPI.Common.Models {
 					return new EffortDTO() { Name = "Kpi" };
 				}
 
-				public static EffortDTO Segment() {
-					return new EffortDTO() { Name = "Segment" };
+				public static EffortDTO Segments() {
+					return new EffortDTO() { Name = "Segments" };
 				}
 
 		[JsonProperty("name")]

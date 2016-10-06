@@ -6,20 +6,20 @@ using Newtonsoft.Json;
 
 
 namespace DataRoostAPI.Common.Models.Segment {
-	public class SegmentTimeSeriesDTO : TimeseriesDTO {
-		[JsonProperty("versionId")]
-		public string VersionId { get; set; }
-
-		[JsonProperty("duration")]
-		public int? Duration { get; set; }
-
-		[JsonProperty("isRestated")]
-		public bool? IsRestated { get; set; }
-
-		[JsonProperty("contentSource")]
+	public class SegmentsTimeSeriesDTO {
+		public string AAADisplay { get; set; }
+		public int Id { get; set; }
+		[JsonIgnore]
+		public DateTime PeriodEndDate { get; set; }
+		public int Duration { get; set; }
+		public string PeriodType { get; set; }
+		[JsonIgnore]
+		public int CompanyFiscalYear { get; set; }
+		[JsonIgnore]
+		public bool IsRestated { get; set; }
+		public string Currency { get; set; }
+		[JsonIgnore]
 		public string ContentSource { get; set; }
-
-		[JsonProperty("isFish")]
 		public bool IsFish { get; set; }
 	}
 }

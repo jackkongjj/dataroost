@@ -66,14 +66,6 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 
 	}
 
-	public class LookupTimeseriesValueDetailKpiDTO : LookupTimeseriesValueDetailDTO {
-		[JsonProperty("itemCode")]
-		public string ItemCode { get; set; }
-
-		[JsonProperty("numericValue")]
-		public decimal NumericValue { get; set; }
-	}
-
 	public class ExpressionTimeseriesValueDetailDTO : TimeseriesValueDetailDTO {
 
 		public override string Type {
