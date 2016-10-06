@@ -121,7 +121,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 								STDCode = sdr.GetNullable<int>(5),
 								SICCode = sdr.GetStringSafe(6),
 								NAICCode = sdr.GetStringSafe(7),
-								Value = sdr.GetNullable<decimal>(8),
+								AAAValue = sdr.GetNullable<decimal>(8),
 								MathMl = sdr.GetStringSafe(9),
 								IsCorpElim = sdr.GetNullable<bool>(10),
 								IsExceptionalCharges = sdr.GetNullable<bool>(11),
@@ -147,7 +147,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 									string segmentCode = conceptType.Key == "Total" ? seg.SegmentTitle + " - " +seg.STDCode : seg.SegmentTitle;
 
 									if (conceptType.Key == "Total") {
-										SegmentTypes.Add(segmentCode, new { seg.STDCode, seg.Value });
+										SegmentTypes.Add(segmentCode, seg.AAAValue );
 									} else if (conceptType.Key == "Geo1OperationsSegments" || conceptType.Key == "Geo2CustomerLocationSegments") {
 										IDictionary<string, object> segObject = seg.ToDynamic();
 										int i = 0;
@@ -155,7 +155,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 										segObject.Remove("SICCode");
 										foreach (var footnote in footNotes.Where(o => o.SegmentId == seg.SegmentId)) {
 											i++;
-											segObject[i + ". " + footnote.GeoRevType] = footnote.Area;
+											segObject[footnote.GeoRevType+i] = footnote.Area;
 										}
 										SegmentTypes.Add(segmentCode, segObject);
 									} else {
@@ -173,7 +173,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 				} else if (vTypes.Key == "GeoRev") {
 					Dictionary<string, object> sg = new System.Collections.Generic.Dictionary<string, object>();
 					foreach (var geo in vTypes) {
-						sg.Add(geo.AccountName + " - " + geo.AsReportedLabel, new { geo.AsReportedLabel, geo.Value, geo.MathMl });
+						sg.Add(geo.AccountName + " - " + geo.AsReportedLabel, new { geo.AsReportedLabel, Value = geo.AAAValue, geo.MathMl });
 					}
 					toRet.Add(vTypes.Key, sg);
 				}

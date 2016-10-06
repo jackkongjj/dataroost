@@ -16,7 +16,7 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 		public int? STDCode { get; set; }
 		public string SICCode { get; set; }
 		public string NAICCode { get; set; }
-		public decimal? Value { get; set; }
+		public decimal? AAAValue { get; set; }
 		public string MathMl { get; set; }
 		public bool? IsCorpElim { get; set; }
 		public bool? IsExceptionalCharges { get; set; }
