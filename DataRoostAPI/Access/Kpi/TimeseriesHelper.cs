@@ -69,7 +69,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 				foreach (var ts in year) {
 					string Restated = ts.IsRestated ? " - Restated" : "";
 					string Recap = ts.IsRecap ? " - Recap" : "";
-					ts.AAADisplay = ts.PeriodEndDate.ToString("yyyy-MM-dd") + " - " + ts.PeriodType + Recap + Restated;
+					ts.AAADisplay = ts.PeriodEndDate.ToString("MMM-dd-yyyy") + " - " + ts.PeriodType + Recap + Restated;
 					vts.Add(ts.Id, ts);
 				}
 				result.Add(year.Key, vts);
@@ -92,7 +92,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 				sqlConn.Open();
 				using (SqlDataReader reader = cmd.ExecuteReader()) {
 					while (reader.Read()) {
-						toRet.Add(reader.GetStringSafe(3) + " - " + reader.GetStringSafe(2), reader.GetDecimal(4) + "  " + reader.GetStringSafe(5));
+						toRet.Add(reader.GetStringSafe(2) + " - " + reader.GetStringSafe(3), string.Format("{0:###,###,###,###,###,##0.#####}", reader.GetDecimal(4)) + "  " + reader.GetStringSafe(5));
 					}
 				}
 			}

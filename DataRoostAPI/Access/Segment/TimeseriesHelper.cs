@@ -55,7 +55,7 @@ ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.Ve
 				Dictionary<int, SegmentsTimeSeriesDTO> vts = new Dictionary<int, SegmentsTimeSeriesDTO>();
 				foreach (var ts in year) {
 					string Restated = ts.IsRestated ? " - Restated" : "";
-					ts.AAADisplay = ts.PeriodEndDate.ToString("yyyy-MM-dd") + " - " + ts.ContentSource + Restated;
+					ts.AAADisplay = ts.PeriodEndDate.ToString("MMM-dd-yyyy") + " - " + ts.ContentSource + Restated;
 					vts.Add(ts.Id, ts);
 				}
 				result.Add(year.Key, vts);
@@ -121,7 +121,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 								STDCode = sdr.GetNullable<int>(5),
 								SICCode = sdr.GetStringSafe(6),
 								NAICCode = sdr.GetStringSafe(7),
-								AAAValue = sdr.GetNullable<decimal>(8),
+								AAAValue = sdr.GetNullable<decimal>(8) == null ? "" : string.Format("{0:###,###,###,###,###,##0.#####}", sdr.GetNullable<decimal>(8)),
 								MathMl = sdr.GetStringSafe(9),
 								IsCorpElim = sdr.GetNullable<bool>(10),
 								IsExceptionalCharges = sdr.GetNullable<bool>(11),
