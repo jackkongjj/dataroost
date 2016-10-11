@@ -32,7 +32,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		public CompanyDTO GetCompany(int iconum) {
-			string query = @"SELECT f.Firm_Name, t.Descrip, c.name_long, c.name_short, c.iso_country
+
+		    iconum = LookForStitchedIconum(iconum);
+
+            string query = @"SELECT f.Firm_Name, t.Descrip, c.name_long, c.name_short, c.iso_country
                                 FROM FilerMst f
 	                                LEFT JOIN FilerTypes t ON t.Code = f.Filer_Type
 	                                LEFT JOIN Countries c ON c.iso_country = f.ISO_Country
@@ -134,13 +137,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		            missingIconums.Add(iconum);
 		        }
 		    }
-		    Dictionary<int, int> iconumMap = LookForStitchedIconums(missingIconums);
-		    Dictionary<int, List<ShareClassDataDTO>> missingShareClasses = ShareClasses(iconumMap.Values.Distinct().ToList());
-		    foreach (KeyValuePair<int, List<ShareClassDataDTO>> pair in missingShareClasses) {
-		        if (!companyShareClasses.ContainsKey(pair.Key)) {
-		            companyShareClasses.Add(pair.Key, pair.Value);
-		        }
-		    }
+		    //Dictionary<int, int> iconumMap = LookForStitchedIconums(missingIconums);
+		    //Dictionary<int, List<ShareClassDataDTO>> missingShareClasses = ShareClasses(iconumMap.Values.Distinct().ToList());
+		    //foreach (KeyValuePair<int, List<ShareClassDataDTO>> pair in missingShareClasses) {
+		    //    if (!companyShareClasses.ContainsKey(pair.Key)) {
+		    //        companyShareClasses.Add(pair.Key, pair.Value);
+		    //    }
+		    //}
 
             foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
 				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
@@ -258,49 +261,31 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	        return companyShareClasses;
 	    }
 
-	    private Dictionary<int, int> LookForStitchedIconums(List<int> iconums) {
-
-			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+	    private int LookForStitchedIconum(int iconum) {
 
             const string query = @"SELECT TOP 1 o.iconum, n.iconum, n.ppi, n.UpdateStampUtc
                                     FROM IconumPpiMap o
 			                            JOIN IconumPpiMap n ON o.ppi = n.ppi
-                                        JOIN #CompanyIds i ON i.iconum = o.iconum
+                                    WHERE o.iconum = @iconum
 		                            ORDER BY n.UpdateStampUtc DESC";
 
-            DataTable table = new DataTable();
-            table.Columns.Add("iconum", typeof(int));
-            foreach (int iconum in iconums)
-            {
-                table.Rows.Add(iconum);
-            }
-
-            Dictionary<int, int> iconumMap = new Dictionary<int, int>();
+	        int newIconum = iconum;
             using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
 	            connection.Open();
-	            using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-	                cmd.ExecuteNonQuery();
-	            }
 
-	            // Upload all iconums to Temp table
-	            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-	                bulkCopy.BatchSize = table.Rows.Count;
-	                bulkCopy.DestinationTableName = "#CompanyIds";
-	                bulkCopy.WriteToServer(table);
-	            }
 	            using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
 
 	                using (SqlDataReader sdr = cmd.ExecuteReader()) {
 	                    while (sdr.Read()) {
 	                        int oldIconum = sdr.GetInt32(0);
-	                        int newIconum = sdr.GetInt32(1);
-                            iconumMap.Add(oldIconum, newIconum);
+	                        newIconum = sdr.GetInt32(1);
 	                    }
 	                }
 	            }
 	        }
 
-            return iconumMap;
+            return newIconum;
 	    }
 
 	    public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
