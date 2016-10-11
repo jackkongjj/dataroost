@@ -137,13 +137,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		            missingIconums.Add(iconum);
 		        }
 		    }
-		    //Dictionary<int, int> iconumMap = LookForStitchedIconums(missingIconums);
-		    //Dictionary<int, List<ShareClassDataDTO>> missingShareClasses = ShareClasses(iconumMap.Values.Distinct().ToList());
-		    //foreach (KeyValuePair<int, List<ShareClassDataDTO>> pair in missingShareClasses) {
-		    //    if (!companyShareClasses.ContainsKey(pair.Key)) {
-		    //        companyShareClasses.Add(pair.Key, pair.Value);
-		    //    }
-		    //}
 
             foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
 				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
@@ -378,9 +371,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
 
-			List<string> countries = GetWhiteListedCountries();
-			string countryString = string.Join("', '", countries);
-
 			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
 			DataTable table = new DataTable();
 			table.Columns.Add("iconum", typeof (int));
@@ -390,19 +380,37 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
-			string query = string.Format(@"select i.iconum
-												from dbo.CompanyLists cl (nolock)
-													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
-													join #CompanyIds i on i.iconum = clc.iconum
-												where cl.ShortName = 'SF_NewMarketWhiteList'
-											 union
-											 select i.iconum
-												from dbo.FdsTriPpiMap fds
-													join #CompanyIds i on i.iconum = fds.iconum 
-												where IsAdr = 0 AND IsoCountry IN ('{0}')", countryString);
+		    string query = @"
+select i.iconum
+from fce.rules r
+join fdstrippimap fds on r.country = fds.IsoCountry
+join #CompanyIds i on i.iconum = fds.iconum
+join fce.RulesToPath rtp on r.id = rtp.RuleId
+join fce.Paths p on p.Id = rtp.PathId
+join fce.PathTransitions pt on p.Id = pt.PathId
+join WorkQueueTasks wqt on wqt.id = pt.taskid
+left join fce.CompanyListRulesToPath clr on clr.RulesToPathId = rtp.Id
+where wqt.name = 'Finantula' and clr.RulesToPathId is null
+	and IsAdr = 0 and IsActive=1
+group by i.iconum
+union
+select i.iconum
+from fce.rules r
+join fdstrippimap fds on r.country = fds.IsoCountry
+join #CompanyIds i on i.iconum = fds.iconum
+join fce.RulesToPath rtp on r.id = rtp.RuleId
+join fce.Paths p on p.Id = rtp.PathId
+join fce.PathTransitions pt on p.Id = pt.PathId
+join WorkQueueTasks wqt on wqt.id = pt.taskid
+join fce.CompanyListRulesToPath clr on clr.RulesToPathId = rtp.Id
+join companylistcompanies clc on clc.companylistid = clr.companylistid and clc.iconum = fds.iconum
+where wqt.name = 'Finantula'
+	and IsAdr = 0 and IsActive=1
+group by i.iconum
+";
 
-			// Create Global Temp Table
-			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+            // Create Global Temp Table
+            using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
 				connection.Open();
 				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
 					cmd.ExecuteNonQuery();
@@ -418,8 +426,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
-
-
 							int iconum = reader.GetInt32(0);
                             EffortDTO superfastEffort = EffortDTO.SuperCore();
 							effortDictionary[iconum] = superfastEffort;
@@ -429,27 +435,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return effortDictionary;
-		}
-
-		private List<string> GetWhiteListedCountries() {
-
-			const string query =
-				@"SELECT DISTINCT iso_country FROM ppi_check where IsEnable = 1 GROUP BY iso_country HAVING SUM(CAST(isWhiteList AS INT)) = 0";
-
-			List<string> countries = new List<string>();
-			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
-				connection.Open();
-				using (SqlCommand cmd = new SqlCommand(query, connection)) {
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							string country = reader.GetString(0);
-							countries.Add(country);
-						}
-					}
-				}
-			}
-
-			return countries;
 		}
 
 		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {
