@@ -72,5 +72,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return tsh.GetTimeseriesSTDValues(TimeseriesId, VersionId, cc.GetSecPermId(iconum));
 		}
 
+		[Route("exportedVersions/{timeSeriesId}/document/")]
+		[HttpGet]
+		public List<Guid> GetDocumentId(string CompanyId, string timeSeriesId) {
+			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			CompanyHelper cc = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+			TimeseriesHelper tsh = new TimeseriesHelper(segConnectionString);
+
+			return tsh.GetDocumentId(iconum, timeSeriesId);
+		}
+
+
 	}
 }

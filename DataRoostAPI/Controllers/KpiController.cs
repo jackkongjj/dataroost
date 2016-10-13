@@ -11,6 +11,7 @@ using CCS.Fundamentals.DataRoostAPI.Access.Company;
 using CCS.Fundamentals.DataRoostAPI.Access.Kpi;
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.KPI;
+using DataRoostAPI.Common.Models.TimeseriesValues;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
@@ -56,7 +57,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("exportedVersions/{versionId}/timeseries/{timeseriesId}")]
 		[HttpGet]
-		public Dictionary<string, string> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
+		public Dictionary<string, KPINode> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["KPI-Diff"].ConnectionString;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
@@ -69,6 +70,34 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 
 			return tsh.GetTimeseriesSTDValues(TimeseriesId,VersionId);
+		}
+
+		[Route("ARDItems/{itemId}")]
+		[HttpGet]
+		public List<ARDItem> GetARDItems(string CompanyId,int itemId) {
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["KPI-Diff"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			TimeseriesHelper tsh = new TimeseriesHelper(kpiConnectionString);
+			return tsh.GetARDItems(itemId);
+		}
+
+
+		[Route("exportedVersions/{timeSeriesId}/document/")]
+		[HttpGet]
+		public List<Guid> GetDocumentId(string CompanyId, string timeSeriesId) {
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["KPI-Diff"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			TimeseriesHelper tsh = new TimeseriesHelper(kpiConnectionString);
+
+			return tsh.GetDocumentId(timeSeriesId);
 		}
 
 	}

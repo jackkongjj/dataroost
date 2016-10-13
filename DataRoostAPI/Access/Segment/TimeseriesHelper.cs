@@ -20,6 +20,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Segment {
 			this.connectionString = connectionString;
 		}
 
+		public List<Guid> GetDocumentId(int companyId, string timeSliceId) {
+			List<Guid> Documents = new List<Guid>();
+			const string query = @"select DISTINCT d.DocumentId from SegEx.TimeSeries  ts
+															join SegEx.Documents d on d.VersionId = ts.VersionId
+															where ts.id = @TimeSeriesId and ts.Iconum = @Iconum";
+
+			using (SqlConnection sqlConn = new SqlConnection(connectionString))
+			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
+				cmd.CommandType = CommandType.Text;
+				cmd.Parameters.AddWithValue("@TimeSeriesId", timeSliceId);
+				cmd.Parameters.AddWithValue("@Iconum", companyId);
+
+				sqlConn.Open();
+				using (SqlDataReader sdr = cmd.ExecuteReader()) {
+					if (sdr.Read()) {
+						Documents.Add(sdr.GetGuid(0));
+					}
+				}
+			}
+			return Documents;
+		}
+
+
 		public Dictionary<int, Dictionary<int, SegmentsTimeSeriesDTO>> GetExportedTimeSeries(string versionId) {
 			const string query = @"select  ts.Id , ts.PeriodEndDate , ts.Duration , ts.PeriodType , ts.FiscalYear , ts.IsRestated , 
 ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.VersionId = @VersionId ";
@@ -173,7 +196,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 				} else if (vTypes.Key == "GeoRev") {
 					Dictionary<string, object> sg = new System.Collections.Generic.Dictionary<string, object>();
 					foreach (var geo in vTypes) {
-						sg.Add(geo.AccountName + " - " + geo.AsReportedLabel, new { geo.AsReportedLabel, Value = geo.AAAValue, geo.MathMl });
+						sg.Add(geo.AccountName + " - " + geo.AsReportedLabel, new { geo.AAAValue, geo.MathMl });
 					}
 					toRet.Add(vTypes.Key, sg);
 				}

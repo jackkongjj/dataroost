@@ -115,8 +115,10 @@
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TemplateItemDTO.cs" />
     <Compile Include="Models\TimeseriesDTO.cs" />
+    <Compile Include="Models\TimeseriesValues\ARDItem.cs" />
     <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
     <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
+    <Compile Include="Models\TimeseriesValues\KPINode.cs" />
     <Compile Include="Models\TimeseriesValues\SegmentNode.cs" />
     <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
     <Compile Include="Models\ExportedVersionInfo.cs" />

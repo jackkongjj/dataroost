@@ -19,6 +19,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 			this.connectionString = connectionString;
 		}
 
+		public List<Guid> GetDocumentId(string timeSliceId) {
+			List<Guid> Documents = new List<Guid>();
+			const string query = @"select DISTINCT ar.DocumentID from STDValue st
+															join ARValue ar on ar.STDValueID = st.ID
+															where st.TimeSliceID = @TimeSeriesId";
+	
+			using (SqlConnection sqlConn = new SqlConnection(connectionString))
+			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
+				cmd.CommandType = CommandType.Text;
+				cmd.Parameters.AddWithValue("@TimeSeriesId", timeSliceId);
+
+				sqlConn.Open();
+				using (SqlDataReader sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						Documents.Add(sdr.GetGuid(0));
+					}
+				}
+			}
+			return Documents;
+		}
+
 		public Dictionary<int, Dictionary<Guid, KpiTimeSeriesDTO>> GetExportedTimeSeries(string versionId, string secPermId) {
 			const string query = @"select PeriodEndDate,
 																Duration,
@@ -78,9 +99,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 			return result;
 		}
 
-		public Dictionary<string, string> GetTimeseriesSTDValues(string timeSliceId, string versionId) {
-			Dictionary<string, string> toRet = new System.Collections.Generic.Dictionary<string, string>();
-			const string query = @" SELECT  ts.ID , std.VersionID , std.STDCode  , si.ItemName , std.NumericValue, ua.UnitDescription  from TimeSlice ts 
+		public Dictionary<string, KPINode> GetTimeseriesSTDValues(string timeSliceId, string versionId) {
+			Dictionary<string, KPINode> toRet = new System.Collections.Generic.Dictionary<string, KPINode>();
+			const string query = @" SELECT  std.STDCode  , si.ItemName , std.NumericValue,
+																isnull(ua.UnitDescription,ua.name),std.id,std.mathml  from TimeSlice ts 
 																join STDValue std on std.TimeSliceID = ts.ID and std.VersionID = ts.VersionId
 																join STDItem si on si.STDCode = std.STDCode
 																left join UnitAlias ua on ua.ID = std.UnitAliasID
@@ -92,11 +114,47 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 				sqlConn.Open();
 				using (SqlDataReader reader = cmd.ExecuteReader()) {
 					while (reader.Read()) {
-						toRet.Add(reader.GetStringSafe(2) + " - " + reader.GetStringSafe(3), string.Format("{0:###,###,###,###,###,##0.#####}", reader.GetDecimal(4)) + "  " + reader.GetStringSafe(5));
+						toRet.Add(
+							reader.GetStringSafe(0) + " - " + reader.GetStringSafe(1), 
+							new KPINode{
+								ItemDescription = reader.GetStringSafe(0) + " - " + reader.GetStringSafe(1), 
+								AAAValue =  string.Format("{0:###,###,###,###,###,##0.#####}", reader.GetDecimal(2)) + "  " + reader.GetStringSafe(3),
+								ItemId = reader.GetInt32(4),
+								MathMl = reader.GetStringSafe(5)
+							});
 					}
 				}
 			}
 			return toRet;
 		}
+
+		public List<ARDItem> GetARDItems(int itemId) {
+			List<ARDItem> toRet = new List<ARDItem>();
+			const string query = @" SELECT id, DocumentID, SourceLink, NumericValue, AsPresentedValue,
+																AsPresentedText, ScalingFactorID,DAMRootID from ARValue where STDValueID = @itemId";
+			using (SqlConnection sqlConn = new SqlConnection(connectionString))
+			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
+				cmd.Parameters.AddWithValue("@itemId", itemId);
+				sqlConn.Open();
+				using (SqlDataReader sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						toRet.Add(new ARDItem
+						{
+							Id = sdr.GetInt32(0),
+							DocumentID = sdr.GetGuid(1),
+							Offset= sdr.GetStringSafe(2),
+							ValueNumeric = sdr.GetNullable<double>(3),
+							Value = sdr.GetStringSafe(4),
+							Label = sdr.GetStringSafe(5),
+							ScalingFactor = sdr.GetStringSafe(6),
+							RootId = sdr.GetInt32(7)
+						});
+					}
+				}
+			}
+			return toRet;
+		}
+
+
 	}
 }
