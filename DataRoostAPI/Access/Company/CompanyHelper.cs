@@ -125,7 +125,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
 			Dictionary<int, List<ShareClassDataDTO>> shareClassDictionary = GetCompanyShareClasses(new List<int> { iconum });
-			return shareClassDictionary.Values.First();
+		    if (shareClassDictionary.Count() > 0) {
+		        return shareClassDictionary.Values.First();
+		    }
+
+		    return null;
 		}
 
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
@@ -211,6 +215,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                     bulkCopy.DestinationTableName = "#CompanyIds";
                     bulkCopy.WriteToServer(table);
                 }
+
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
 
