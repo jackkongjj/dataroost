@@ -93,10 +93,15 @@
     <Compile Include="Interfaces\IStandardizedDataAccess.cs" />
     <Compile Include="Models\AsReported\AsReportedDocument.cs" />
     <Compile Include="Models\AsReported\AsReportedTable.cs" />
+    <Compile Include="Models\AsReported\AsReportedTemplate.cs" />
+    <Compile Include="Models\AsReported\AsReportedTemplateSkeleton.cs" />
     <Compile Include="Models\AsReported\Cell.cs" />
     <Compile Include="Models\AsReported\Column.cs" />
     <Compile Include="Models\AsReported\CompanyFinancialTerm.cs" />
     <Compile Include="Models\AsReported\Row.cs" />
+    <Compile Include="Models\AsReported\StaticHierarchy.cs" />
+    <Compile Include="Models\AsReported\TableCell.cs" />
+    <Compile Include="Models\AsReported\TimeSlice.cs" />
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\CompanyPriority.cs" />
     <Compile Include="Models\CountryDTO.cs" />

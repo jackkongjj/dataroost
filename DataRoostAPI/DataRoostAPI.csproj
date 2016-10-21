@@ -206,6 +206,7 @@
     <Compile Include="..\SolutionAssemblyInfo.cs">
       <Link>Properties\SolutionAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Access\AsReported\AsReportedTemplateHelper.cs" />
     <Compile Include="Access\AsReported\CompanyFinancialTermsHelper.cs" />
     <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />

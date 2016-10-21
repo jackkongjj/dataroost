@@ -65,5 +65,53 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			CompanyFinancialTermsHelper companyFinancialTermsHelper = new CompanyFinancialTermsHelper(sfConnectionString);
 			return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
 		}
+
+		[Route("templates/{TemplateName}/")]
+		[HttpGet]
+		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplate(iconum, TemplateName);
+		}
+
+		[Route("templates/{TemplateName}/skeleton/")]
+		[HttpGet]
+		public AsReportedTemplateSkeleton GetTemplateSkeleton(string CompanyId, string TemplateName) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplateSkeleton(iconum, TemplateName);
+		}
+
+		[Route("staticHierarchy/{id}")]
+		[HttpGet]
+		public StaticHierarchy GetStaticHierarchy(string CompanyId, int id) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (id == 0 || id == -1)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetStaticHierarchy(id);
+		}
+
+		[Route("timeSlice/{id}")]
+		[HttpGet]
+		public TimeSlice GetTimeSlice(string CompanyId, int id) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (id == 0 || id == -1)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTimeSlice(id);
+		}
 	}
 }
