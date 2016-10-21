@@ -52,5 +52,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("xbrlTag")]
 		public string XbrlTag { get; set; }
+
+		public string Label { get; set; }
 	}
 }

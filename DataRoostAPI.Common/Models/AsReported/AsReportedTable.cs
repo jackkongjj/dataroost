@@ -22,5 +22,12 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("columns")]
 		public List<Column> Columns { get; set; }
+
+		[JsonIgnore]
+		public int TableIntId { get; set; }
+
+		[JsonIgnore]
+		public int RootId { get; set; }
+
 	}
 }

@@ -11,5 +11,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("tables")]
 		public AsReportedTable[] Tables { get; set; }
 
+		[JsonProperty("cells")]
+		public Cell[] Cells { get; set; }
+
     }
 }
