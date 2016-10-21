@@ -66,6 +66,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
 		}
 
+		//TODO: Add IsSummary for timeslices and Derivation Meta for cells, add MTMW and like period validation indicators.
 		[Route("templates/{TemplateName}/")]
 		[HttpGet]
 		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName) {
@@ -90,6 +91,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTemplateSkeleton(iconum, TemplateName);
 		}
 
+		//TODO: Add Derivation Meta for cells, add MTMW and like period validation indicators.
 		[Route("staticHierarchy/{id}")]
 		[HttpGet]
 		public StaticHierarchy GetStaticHierarchy(string CompanyId, int id) {
@@ -102,6 +104,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetStaticHierarchy(id);
 		}
 
+		//TODO: Add IsSummary
 		[Route("timeSlice/{id}")]
 		[HttpGet]
 		public TimeSlice GetTimeSlice(string CompanyId, int id) {
