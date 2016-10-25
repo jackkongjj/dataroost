@@ -260,15 +260,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	    }
 
 	    private int LookForStitchedIconum(int iconum) {
+            
+	        const string query = @"
+SELECT o.old_iconum, m.Iconum
+FROM vw_PpiIconumMap_Entity o
+	JOIN PPiIconumMap m (nolock) ON o.PPI = m.PPI
+WHERE o.old_iconum = @iconum
+ORDER BY ChangeDate DESC";
 
-            const string query = @"SELECT TOP 1 o.iconum, n.iconum, n.ppi, n.UpdateStampUtc
-                                    FROM IconumPpiMap o
-			                            JOIN IconumPpiMap n ON o.ppi = n.ppi
-                                    WHERE o.iconum = @iconum
-		                            ORDER BY n.UpdateStampUtc DESC";
-
-	        int newIconum = iconum;
-            using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+            int newIconum = iconum;
+            using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 	            connection.Open();
 
 	            using (SqlCommand cmd = new SqlCommand(query, connection)) {
