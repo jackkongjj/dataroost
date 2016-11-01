@@ -1,0 +1,47 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+namespace DataRoostAPI.Common.Models.AsReported {
+	public class StaticHierarchy {
+
+		[JsonProperty("_id")]
+		public int Id { get; set; }
+
+		[JsonProperty("companyFinancialTermId")]
+		public int CompanyFinancialTermId { get; set; }
+
+		[JsonProperty("adjustedOrder")]
+		public int AdjustedOrder { get; set; }
+
+		[JsonProperty("tableTypeId")]
+		public int TableTypeId { get; set; }
+
+		[JsonProperty("description")]
+		public string Description { get; set; }
+
+		[JsonProperty("hierarchyTypeId")]
+		public char HierarchyTypeId { get; set; }
+
+		[JsonProperty("separatorFlag")]
+		public bool SeparatorFlag { get; set; }
+
+		[JsonProperty("staticHierarchyMetaId")]
+		public int StaticHierarchyMetaId { get; set; }
+
+		[JsonProperty("unitTypeId")]
+		public int UnitTypeId { get; set; }
+
+		[JsonProperty("isIncomePositive")]
+		public bool IsIncomePositive { get; set; }
+
+		[JsonProperty("childrenExpandDown")]
+		public bool ChildrenExpandDown { get; set; }
+
+		[JsonProperty("cells")]
+		public List<TableCell> Cells { get; set; }
+	}
+}
