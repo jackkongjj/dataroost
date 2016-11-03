@@ -25,13 +25,16 @@ using DataRoostAPI.Common.Models.SuperFast;
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 	public class DocumentHelper {
-
+		private readonly Regex rxHtmlBookmark = new Regex(@"o(-?\d+)\|l(\d+)", RegexOptions.Compiled);
 		private readonly string _sfConnectionString;
 		private readonly string _damConnectionString;
+
+		private DirectCollectionHelper dcHelper;
 
 		public DocumentHelper(string sfConnectionString, string damConnectionString) {
 			_sfConnectionString = sfConnectionString;
 			_damConnectionString = damConnectionString;
+			dcHelper = new DirectCollectionHelper(_sfConnectionString);
 		}
 
 		public AsReportedDocument GetDocument(int iconum, string documentId) {
@@ -50,14 +53,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
-							                              {
-								                              ReportDate = reader.GetDateTime(0),
-								                              PublicationDate = reader.GetDateTime(1),
-								                              ReportType = reader.GetStringSafe(2),
-								                              FormType = reader.GetStringSafe(3),
+																						{
+																							ReportDate = reader.GetDateTime(0),
+																							PublicationDate = reader.GetDateTime(1),
+																							ReportType = reader.GetStringSafe(2),
+																							FormType = reader.GetStringSafe(3),
 																							Id = reader.GetGuid(4).ToString(),
-								                              SuperFastDocumentId = reader.GetGuid(5).ToString(),
-							                              };
+																							SuperFastDocumentId = reader.GetGuid(5).ToString(),
+																						};
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							return document;
 						}
@@ -87,19 +90,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 				connection.Open();
 
-					using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-						cmd.ExecuteNonQuery();
-					}
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
 
-					// Upload all iconums to Temp table
-					using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-						bulkCopy.BatchSize = table.Rows.Count;
-						bulkCopy.DestinationTableName = "#documentIds";
-						bulkCopy.WriteToServer(table);
-					}
+				// Upload all iconums to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "#documentIds";
+					bulkCopy.WriteToServer(table);
+				}
 
-					using (SqlCommand cmd = new SqlCommand(query, connection)) {
-						cmd.Parameters.AddWithValue("@iconum", iconum);
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
@@ -124,7 +127,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		public AsReportedDocument[] GetDocuments(int iconum, DateTime startDate, DateTime endDate, string reportType) {
 			const string queryWithReportType =
-                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+								@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
@@ -134,7 +137,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
 			const string queryWithoutReportType =
-                @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+								@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
@@ -145,8 +148,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			string query = null;
 			if (reportType == null) {
 				query = queryWithoutReportType;
-			}
-			else {
+			} else {
 				query = queryWithReportType;
 			}
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
@@ -162,15 +164,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
-							                              {
-								                              ReportDate = reader.GetDateTime(0),
-								                              PublicationDate = reader.GetDateTime(1),
-								                              ReportType = reader.GetStringSafe(2),
-								                              FormType = reader.GetStringSafe(3),
-								                              Id = reader.GetGuid(4).ToString(),
-								                              SuperFastDocumentId = reader.GetGuid(5).ToString(),
-                                                              HasXbrl = reader.GetBoolean(6),
-							                              };
+																						{
+																							ReportDate = reader.GetDateTime(0),
+																							PublicationDate = reader.GetDateTime(1),
+																							ReportType = reader.GetStringSafe(2),
+																							FormType = reader.GetStringSafe(3),
+																							Id = reader.GetGuid(4).ToString(),
+																							SuperFastDocumentId = reader.GetGuid(5).ToString(),
+																							HasXbrl = reader.GetBoolean(6),
+																						};
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							documents.Add(document);
 						}
@@ -199,13 +201,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							AsReportedTable table;
 							if (!tables.ContainsKey(tableId)) {
 								table = new AsReportedTable
-								        {
-									        Id = tableId,
+												{
+													Id = tableId,
 													TableType = reader.GetStringSafe(1),
 													Cells = new List<Cell>(),
 													Rows = new List<Row>(),
 													Columns = new List<Column>()
-								        };
+												};
 								tables.Add(tableId, table);
 							}
 							table = tables[tableId];
@@ -269,20 +271,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								string companyFinancialTermDescription = reader.GetStringSafe(12);
 								string xbrlTag = reader.GetStringSafe(13);
 								cell = new Cell
-								            {
-									            Id = cellId,
-									            CftId = cftId,
-									            Currency = currencyCode,
-									            Date = cellDate,
-									            Value = value,
-									            NumericValue = numericValue,
-									            PeriodLength = periodLength,
-									            PeriodType = periodType,
-									            Offset = offset,
-									            ScalingFactor = scalingFactor,
+														{
+															Id = cellId,
+															CftId = cftId,
+															Currency = currencyCode,
+															Date = cellDate,
+															Value = value,
+															NumericValue = numericValue,
+															PeriodLength = periodLength,
+															PeriodType = periodType,
+															Offset = offset,
+															ScalingFactor = scalingFactor,
 															CompanyFinancialTermDescription = companyFinancialTermDescription,
 															XbrlTag = xbrlTag,
-								            };
+														};
 								cells.Add(cellId, cell);
 							}
 
@@ -299,7 +301,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return cells.Values.ToList();
 		}
 
-		#region Direct Collection 
+		#region Direct Collection
 
 		public AsReportedDocument GetDCDocument(int iconum, string documentId) {
 			string query = @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
@@ -325,8 +327,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							InsertTINTOffsets(documentId,iconum);
+							List<Cell> insertedCells =  InsertTINTOffsets(documentId, iconum);
 							document.Cells = GetTableCells(document.SuperFastDocumentId);
+
+							foreach(var cell in document.Cells){
+								Cell tc = insertedCells.FirstOrDefault(o => o.Id == cell.Id);
+								if (tc != null) {
+									cell.RowOrder = tc.RowOrder;
+									cell.TableName = tc.TableName;
+								}
+							}
+
 							return document;
 						}
 					}
@@ -380,7 +391,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+							if (dcHelper.IsIconumDC(iconum)) {
+								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+							} else {
+								document.Cells = GetTableCells(document.SuperFastDocumentId);
+							}
 							documents.Add(document);
 						}
 					}
@@ -438,7 +453,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 								HasXbrl = reader.GetBoolean(6),
 							};
-							document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+							if (dcHelper.IsIconumDC(iconum)) {
+								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+							} else {
+								document.Cells = GetTableCells(document.SuperFastDocumentId);
+							}
 							documents.Add(document);
 						}
 					}
@@ -447,18 +466,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return documents.ToArray();
 		}
 
-		private void InsertTINTOffsets(string documentId, int CompanyId) {
+		private List<Cell> InsertTINTOffsets(string documentId, int CompanyId) {
 			TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
 			Dictionary<byte, Tint> tintFiles = helper.GetTintFiles(documentId);
 			Guid SFDocumentId = GetSuperFastDocumentID(documentId, CompanyId).Value;
 			int documentSeries = GetDocumentSeriesID(SFDocumentId.ToString());
-
+			List<Cell> tableCells = GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString()).ToList();
+			List<Cell> insertedCells = new List<Cell>();
 			foreach (var root in tintFiles.Keys) {
 				foreach (var tint in tintFiles[root]) {
 					int currentTerm = 0;
 					string Label = string.Empty;
 					TableCell tc = new TableCell(_sfConnectionString);
 					foreach (TintCell cell in tint) {
+						string offset = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.OriginalOffset;
+
+						int length = cell.Value.Length;
+						if (rxHtmlBookmark.IsMatch(offset)) {
+							Match m = rxHtmlBookmark.Match(offset);
+							offset = m.Groups[1].Value;
+							try {
+								if (!string.IsNullOrEmpty(cell.OffSet)) {
+									string[] offsets = cell.OffSet.Split('|');
+									length = int.Parse(offsets[1].Replace('l', ' '));
+								}
+							} catch { }
+						}
+
+
+						string CellOffsetValue = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.HasBoundingBox ?
+							new Bookmark(cell.OriginalOffset, root).ToString() : new Bookmark(int.Parse(offset), length, root).ToString();
+
+						if(tableCells.Count(o => o.Offset == CellOffsetValue) == 0){
 						try {
 							if (cell.ColumnType == "Description") {
 								Label = cell.Value;
@@ -472,9 +511,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								currentTerm = tc.CreateNewTerm(documentSeries, Label);
 
 							} else {
-							
-								tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
+								Cell cc = new Cell();
+								cc.Id =  tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
 																										 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Title, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
+
+								cc.RowOrder = cell.Line;
+								cc.TableName = tint.Title;
+								insertedCells.Add(cc);
 							}
 
 						} catch (Exception e) {
@@ -483,14 +526,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 						}
 					}
 				}
+				}
 			}
+			return insertedCells;
 		}
 
 		private Cell[] GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												 c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label from dbo.TableCell c 
-												 join dbo.CompanyFinancialTerm cft on cft.ID = c.CompanyFinancialTermID
-												 WHERE c.DocumentId = @documentId";
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), td.AdjustedOrder
+												from dbo.TableCell c with (NOLOCK)
+												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
+												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
+												left JOIN dbo.TableDimension td  with (NOLOCK) on td.ID = dtc.TableDimensionID
+												left join dbo.DocumentTable dt  with (NOLOCK) on dt.ID = td.DocumentTableID
+												left join dbo.TableType tt  with (NOLOCK) on tt.ID = dt.TableTypeID
+												WHERE c.DocumentId = @documentId and (td.DimensionTypeID is null or TD.DimensionTypeID in (1,3))";
 
 			List<Cell> cells = new List<Cell>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -520,7 +570,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								ScalingFactor = reader.GetStringSafe(8),
 								CompanyFinancialTermDescription = reader.GetStringSafe(10),
 								XbrlTag = reader.GetStringSafe(11),
-								Label = reader.GetStringSafe(12)
+								Label = reader.GetStringSafe(12),
+								TableName = reader.GetStringSafe(13),
+								RowOrder = reader.GetInt32(14)
 							});
 
 						}
@@ -530,7 +582,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return cells.ToArray();
 		}
 
-		private Cell[] GetTableCells(string documentId,int Iconum) {
+		private Cell[] GetTableCells(string documentId, int Iconum) {
 			string ExpressionStore = ConfigurationManager.AppSettings["ExpressionStore"];
 			string ExpressionStoreId = ConfigurationManager.AppSettings["ExpressionStoreId"];
 			string ExpressionStorePassword = ConfigurationManager.AppSettings["ExpressionStorePassword"];
@@ -539,7 +591,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			var settingAuthentication = settings.BasicAuthentication(ExpressionStoreId, ExpressionStorePassword);
 			var elastic = new ElasticClient(settings);
 
-			List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId,Iconum);
+			List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId, Iconum);
 
 			List<Cell> cells = new List<Cell>();
 			ISearchResponse<ElasticObjectTree> request = elastic.Search<ElasticObjectTree>(s => s
@@ -547,14 +599,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			.AllTypes()
 			.From(0)
 			.Size(5000)
-	    .Query(q => q.Term(p => p.DocumentId, documentId) && q.Term(p => p.Iconum, Iconum))
+			.Query(q => q.Term(p => p.DocumentId, documentId) && q.Term(p => p.Iconum, Iconum))
 			);
 
 			List<ElasticObjectTree> ebObjects = new List<ElasticObjectTree>(request.Documents);
-			foreach (var eboTS in ebObjects.GroupBy(o => new { o.InterimTypeID , o.ReportTypeID , o.AccountTypeID , o.AutoClacFlag, o.EncoreFlag })) {
+			foreach (var eboTS in ebObjects.GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID, o.AutoClacFlag, o.EncoreFlag })) {
 				SFTimeseriesDTO ts = timeSlices.FirstOrDefault(o => o.InterimType == eboTS.Key.InterimTypeID && o.ReportType == eboTS.Key.ReportTypeID && o.AccountType == eboTS.Key.AccountTypeID
 					&& o.IsAutoCalc == (eboTS.Key.AutoClacFlag == 0 ? false : true) && o.IsRecap == eboTS.Key.EncoreFlag);
-				foreach(var ebo in eboTS.GroupBy(o => o.Offset)){
+				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
 					cells.Add(new Cell
 					{
@@ -572,7 +624,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 						Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate
 					});
 				}
-				
+
 			}
 			return cells.ToArray();
 		}
@@ -642,22 +694,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
 			using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
 				cmd.Parameters.AddWithValue("@docId", documentId);
-				cmd.Parameters.AddWithValue("@iconum",Iconum);
+				cmd.Parameters.AddWithValue("@iconum", Iconum);
 				sqlConn.Open();
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
 					while (sdr.Read()) {
-						timeSlices.Add(new SFTimeseriesDTO { 
-						PeriodEndDate = sdr.GetDateTime(0),
-						AccountType = sdr.GetStringSafe(1),
-						ReportType = sdr.GetStringSafe(2),
-						InterimType = sdr.GetStringSafe(3),
-						IsRecap = sdr.GetBoolean(4),
-						IsAutoCalc = sdr.GetInt32(5) == 0 ? false : true,
-						PeriodLength = sdr.GetInt32(6),
-						PeriodType = sdr.GetStringSafe(7)
+						timeSlices.Add(new SFTimeseriesDTO
+						{
+							PeriodEndDate = sdr.GetDateTime(0),
+							AccountType = sdr.GetStringSafe(1),
+							ReportType = sdr.GetStringSafe(2),
+							InterimType = sdr.GetStringSafe(3),
+							IsRecap = sdr.GetBoolean(4),
+							IsAutoCalc = sdr.GetInt32(5) == 0 ? false : true,
+							PeriodLength = sdr.GetInt32(6),
+							PeriodType = sdr.GetStringSafe(7)
 						});
 					}
-						
+
 				}
 			}
 			return timeSlices;

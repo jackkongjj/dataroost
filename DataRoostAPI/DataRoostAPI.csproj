@@ -279,6 +279,7 @@
     <Compile Include="Access\AsReported\CompanyFinancialTermsHelper.cs" />
     <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />
+    <Compile Include="Access\DirectCollectionHelper.cs" />
     <Compile Include="Access\Kpi\ExportVersionHelper.cs" />
     <Compile Include="Access\Kpi\TimeseriesHelper.cs" />
     <Compile Include="Access\PermId.cs" />
@@ -345,6 +346,7 @@
     <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\KpiController.cs" />
     <Compile Include="Controllers\TintController.cs" />
+    <Compile Include="Controllers\v2\AsReportedController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
     <Compile Include="Filters\ExceptionHandlerFilter.cs" />
     <Compile Include="Global.asax.cs">

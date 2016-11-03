@@ -14,8 +14,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 		private readonly string _connectionString;
 
+		private DirectCollectionHelper dcHelper;
+
 		public SuperFastSharesHelper(string connectionString) {
 			_connectionString = connectionString;
+			dcHelper = new DirectCollectionHelper(_connectionString);
 		}
 
 		public Dictionary<string, List<ShareClassDataItem>> GetLatestCompanyFPEShareData(int iconum, DateTime? reportDate, DateTime? since) {
@@ -72,7 +75,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																						and ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since)
 																						) temp
                                         where temp.rank = 1";
-			bool isIconumDC = IsIconumDC(iconum);
+			bool isIconumDC = dcHelper.IsIconumDC(iconum);
 
 			string query = isIconumDC ? queryDC : queryNonDC;
 			DateTime searchDate = DateTime.Now;
@@ -307,7 +310,7 @@ SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.icon
                                     JOIN STDItem i ON i.ID = s.STDItemID
                                 WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
 
-			bool isIconumDC = IsIconumDC(iconum);
+			bool isIconumDC = dcHelper.IsIconumDC(iconum);
 
 			string query = isIconumDC ? queryDC : queryNonDC;
 
@@ -358,28 +361,5 @@ SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.icon
 			return perShareData;
 		}
 
-		private bool IsIconumDC(int iconum) {
-			bool result = false;
-			const string query = @"if exists (SELECT * from dbo.MigrateToTimeSlice where MigrationStatusID = 1 and Iconum = @iconum)
-														begin 
-														 select convert(bit,1)
-														end else 
-														begin 
-														 select convert(bit,0)
-														end";
-			using (SqlConnection connection = new SqlConnection(_connectionString)) {
-				connection.Open();
-				using (var cmd = new SqlCommand(query, connection)) {
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-
-					using (var reader = cmd.ExecuteReader()) {
-						if (reader.Read()) {
-							result = reader.GetBoolean(0);
-						}
-					}
-				}
-			}
-			return result;
-		}
 	}
 }
