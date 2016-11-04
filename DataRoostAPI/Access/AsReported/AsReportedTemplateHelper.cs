@@ -17,7 +17,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			this._sfConnectionString = sfConnectionString;
 		}
 
-		public AsReportedTemplate GetTemplate(int iconum, string TemplateName) {
+		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
 
 			string query =
 				@"
@@ -31,23 +31,52 @@ AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc";
 
 			string CellsQuery =
-				@"SELECT DISTINCT tc.*,
-		(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
-		(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
-sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate
+				@"
+SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+				tc.XBRLTag, tc.UpdateStampUTC, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
+				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate
 FROM DocumentSeries ds
+JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt on sh.TableTypeID = tt.ID
+JOIN(
+	SELECT distinct dts.ID
+	FROM DocumentSeries ds
+	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc on dtstc.TableCellID = tc.ID
+	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt on tt.ID = sh.TableTypeID
+	WHERE ds.CompanyID = @iconum
+	AND tt.Description = @templateName
+	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+) as ts on 1=1
+JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+LEFT JOIN(
+	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
+	FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	WHERE ds.CompanyID = @iconum
+	AND tt.Description = @templateName
+) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
+ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc
+
+";//I hate this query, it is so bad
 
 			string TimeSliceQuery =
-				@"SELECT DISTINCT dts.*, sh.AdjustedOrder
+				@"SELECT DISTINCT dts.*
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -55,9 +84,15 @@ FROM DocumentSeries ds
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
 	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN Document d on dts.DocumentId = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
+AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
+
+
+			Dictionary<Tuple<StaticHierarchy, TimeSlice>, TableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, TableCell>();
+			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
 
 			AsReportedTemplate temp = new AsReportedTemplate();
@@ -94,13 +129,17 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
 						int shix = 0;
 
+						int adjustedOrder = 0;
 						while (reader.Read()) {
-							TableCell cell = new TableCell
+							TableCell cell;
+							if (reader.GetNullable<int>(0).HasValue) { 
+							cell = new TableCell
 							{
 								ID = reader.GetInt32(0),
 								Offset = reader.GetStringSafe(1),
@@ -127,14 +166,22 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 								UpdateStampUTC = reader.GetNullable<DateTime>(22),
 								DocumentID = reader.GetGuid(23),
 								Label = reader.GetStringSafe(24),
-								ARDErrorTypeId = reader.GetNullable<int>(25),
-								MTMWErrorTypeId = reader.GetNullable<int>(26)
+								ScalingFactorValue = reader.GetDouble(25),
+								ARDErrorTypeId = reader.GetNullable<int>(26),
+								MTMWErrorTypeId = reader.GetNullable<int>(27)
 							};
 
-							while (cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId)
-								shix++;
+							adjustedOrder = reader.GetInt32(28);
+						}else{
+								cell = new TableCell();
+								adjustedOrder = reader.GetInt32(28);
+						}
 
-							if (cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
+							while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+								shix++;
+							}
+
+							if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
 								StaticHierarchies[shix].Cells.Add(cell);
 							}else{
 								throw new Exception();
@@ -150,6 +197,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
@@ -179,12 +227,39 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 
 							TimeSlices.Add(slice);
 
+							Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
+							if (!TimeSliceMap.ContainsKey(tup)) {
+								TimeSliceMap.Add(tup, new List<int>());
+							}
+
+							TimeSliceMap[tup].Add(TimeSlices.Count -1);
+
+							foreach (StaticHierarchy sh in temp.StaticHierarchies) {
+								CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+							}
+
 						}
 					}
 				}
 
 			}
+
+			foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
+				for(int i = 0; i< sh.Cells.Count; i++){
+					TimeSlice ts = temp.TimeSlices[i];
+					List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
+					sh.Cells[i].LikePeriodValidationFlag = matches.Any(t => (CalculateCellValue(sh.Cells[t]) != CalculateCellValue(sh.Cells[i]))) && 
+						!matches.Any(t=>sh.Cells[t].ARDErrorTypeId.HasValue);
+				}
+			}
+
 			return temp;
+		}
+
+		private decimal CalculateCellValue(TableCell cell) {
+			if (cell.ValueNumeric.HasValue) {
+				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
+			} else return 0;
 		}
 
 		public AsReportedTemplateSkeleton GetTemplateSkeleton(int iconum, string TemplateName) {
