@@ -71,7 +71,7 @@ LEFT JOIN(
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc
+ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc, dts.Duration desc
 
 ";//I hate this query, it is so bad
 
@@ -99,6 +99,7 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 
 			temp.StaticHierarchies = new List<StaticHierarchy>();
 			Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<TableCell, Tuple<StaticHierarchy, int>>();
+			Dictionary<TableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<TableCell, Tuple<StaticHierarchy, int>>();
 			Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
@@ -195,6 +196,7 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 							if (cell.ID == 0) {
 								BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
 							}
+							CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
 
 							if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
 								StaticHierarchies[shix].Cells.Add(cell);
@@ -270,9 +272,14 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 			foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
 				for(int i = 0; i< sh.Cells.Count; i++){
 					TimeSlice ts = temp.TimeSlices[i];
+
+					TableCell tc = sh.Cells[i];
 					List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
-					sh.Cells[i].LikePeriodValidationFlag = matches.Any(t => (CalculateCellValue(sh.Cells[t], BlankCells, SHChildLookup) != CalculateCellValue(sh.Cells[i], BlankCells, SHChildLookup))) && //TODO: Is there a more efficient way to do this?
+					tc.LikePeriodValidationFlag = matches.Any(t => (CalculateCellValue(sh.Cells[t], BlankCells, SHChildLookup) != CalculateCellValue(tc, BlankCells, SHChildLookup))) && //TODO: Is there a more efficient way to do this?
 						!matches.Any(t=>sh.Cells[t].ARDErrorTypeId.HasValue);
+
+
+					tc.MTMWValidationFlag = (CalculateCellValue(tc, BlankCells, SHChildLookup) != CalculateChildSum(tc, CellLookup, SHChildLookup)) && !tc.MTMWErrorTypeId.HasValue;
 				}
 			}
 
@@ -298,6 +305,24 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 
 						return sum;
 					}
+				}
+			}
+			return 0;
+		}
+
+		private decimal CalculateChildSum(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
+			if (CellLookup.ContainsKey(cell)) {
+				decimal sum = 0;
+				StaticHierarchy sh = CellLookup[cell].Item1;
+				int timesliceIndex = CellLookup[cell].Item2;
+
+				foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
+					sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup);
+				}
+				if (SHChildLookup[sh.Id].Count > 0) {
+					cell.VirtualValueNumeric = sum;
+
+					return sum;
 				}
 			}
 			return 0;

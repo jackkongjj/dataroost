@@ -102,10 +102,6 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("MTMWValidationFlag")]
 		public bool MTMWValidationFlag { get; set; }
 
-		//green cleared MTMW validation
-		[JsonProperty("MTMWValidationClearedFlag")]
-		public bool MTMWValidationClearedFlag { get; set; }
-
 		[JsonProperty("scalingFactorValue")]
 		public double ScalingFactorValue { get; set; }
 	}
