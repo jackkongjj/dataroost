@@ -66,7 +66,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
 		}
 
-		//TODO: Add IsSummary for timeslices and Derivation Meta for cells, add MTMW and like period validation indicators.
+		//TODO: Add IsSummary for timeslices and Derivation Meta for cells, add MTMW.
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpGet]
 		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {

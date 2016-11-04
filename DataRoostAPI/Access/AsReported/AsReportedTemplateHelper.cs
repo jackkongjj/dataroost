@@ -98,7 +98,12 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 			AsReportedTemplate temp = new AsReportedTemplate();
 
 			temp.StaticHierarchies = new List<StaticHierarchy>();
+			Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<TableCell, Tuple<StaticHierarchy, int>>();
+			Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
+			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
+
+
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -119,9 +124,15 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
+								ParentID = reader.GetNullable<int>(11),
 								Cells = new List<TableCell>()
 							};
 							StaticHierarchies.Add(document);
+							SHLookup.Add(document.Id, document);
+							SHChildLookup.Add(document.Id, new List<StaticHierarchy>());
+							if (document.ParentID != null) {
+								SHChildLookup[document.ParentID.Value].Add(document);
+							}
 						}
 					}
 				}
@@ -179,6 +190,10 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 
 							while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
 								shix++;
+							}
+
+							if (cell.ID == 0) {
+								BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
 							}
 
 							if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
@@ -244,11 +259,19 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 
 			}
 
+			//foreach (Tuple<StaticHierarchy, int, TableCell> tup in BlankCells) {
+			//	StaticHierarchy sh = tup.Item1;
+			//	int cellIndex = tup.Item2;
+			//	TableCell tc = tup.Item3;
+
+
+			//}
+
 			foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
 				for(int i = 0; i< sh.Cells.Count; i++){
 					TimeSlice ts = temp.TimeSlices[i];
 					List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
-					sh.Cells[i].LikePeriodValidationFlag = matches.Any(t => (CalculateCellValue(sh.Cells[t]) != CalculateCellValue(sh.Cells[i]))) && 
+					sh.Cells[i].LikePeriodValidationFlag = matches.Any(t => (CalculateCellValue(sh.Cells[t], BlankCells, SHChildLookup) != CalculateCellValue(sh.Cells[i], BlankCells, SHChildLookup))) && //TODO: Is there a more efficient way to do this?
 						!matches.Any(t=>sh.Cells[t].ARDErrorTypeId.HasValue);
 				}
 			}
@@ -256,10 +279,28 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 			return temp;
 		}
 
-		private decimal CalculateCellValue(TableCell cell) {
+		private decimal CalculateCellValue(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
 			if (cell.ValueNumeric.HasValue) {
 				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
-			} else return 0;
+			} else if (cell.VirtualValueNumeric.HasValue) {
+				return cell.VirtualValueNumeric.Value;
+			} else {
+				if (BlankCells.ContainsKey(cell)) {
+					decimal sum = 0;
+					StaticHierarchy sh = BlankCells[cell].Item1;
+					int timesliceIndex = BlankCells[cell].Item2;
+
+					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
+						sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup);
+					}
+					if (SHChildLookup[sh.Id].Count > 0) {
+						cell.VirtualValueNumeric = sum;
+
+						return sum;
+					}
+				}
+			}
+			return 0;
 		}
 
 		public AsReportedTemplateSkeleton GetTemplateSkeleton(int iconum, string TemplateName) {

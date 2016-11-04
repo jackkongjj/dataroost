@@ -47,6 +47,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("valueNumeric")]
 		public decimal? ValueNumeric { get; set; }
 
+		[JsonProperty("virtualValueNumeric")]
+		public decimal? VirtualValueNumeric { get; set; }
+
 		[JsonProperty("normalizedNegativeIndicator")]
 		public bool NormalizedNegativeIndicator { get; set; }
 

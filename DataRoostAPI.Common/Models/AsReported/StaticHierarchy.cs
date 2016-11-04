@@ -43,5 +43,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("cells")]
 		public List<TableCell> Cells { get; set; }
+
+		[JsonProperty("parentId")]
+		public int? ParentID { get; set; }
 	}
 }
