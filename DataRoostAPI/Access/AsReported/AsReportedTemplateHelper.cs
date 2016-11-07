@@ -38,7 +38,7 @@ SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPer
 				tc.XBRLTag, tc.UpdateStampUTC, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
-				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate
+				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
 FROM DocumentSeries ds
 JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -50,6 +50,7 @@ JOIN(
 	JOIN Document d on dts.DocumentId = d.ID
 	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
 	JOIN TableCell tc on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
 	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
 	JOIN TableType tt on tt.ID = sh.TableTypeID
 	WHERE ds.CompanyID = @iconum
@@ -69,26 +70,28 @@ LEFT JOIN(
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
+JOIN Document d on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc, dts.Duration desc
+ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
 
 ";//I hate this query, it is so bad
 
 			string TimeSliceQuery =
-				@"SELECT DISTINCT dts.*
+				@"SELECT DISTINCT dts.*, d.PublicationDateTime
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
+	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
 	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
 	JOIN Document d on dts.DocumentId = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
+ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc";
 
 
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, TableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, TableCell>();
@@ -239,7 +242,8 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 								IsAmended = reader.GetBoolean(15),
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
-								ManualOrgSet = reader.GetBoolean(18)
+								ManualOrgSet = reader.GetBoolean(18),
+								PublicationDate = reader.GetDateTime(19)
 							};
 
 							TimeSlices.Add(slice);
@@ -270,16 +274,37 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 			//}
 
 			foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
+
+				if (!sh.ParentID.HasValue) {
+					sh.Level = 0;
+				}
+				foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
+					ch.Level = sh.Level + 1;
+				}
+
 				for(int i = 0; i< sh.Cells.Count; i++){
 					TimeSlice ts = temp.TimeSlices[i];
 
 					TableCell tc = sh.Cells[i];
 					List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
-					tc.LikePeriodValidationFlag = matches.Any(t => (CalculateCellValue(sh.Cells[t], BlankCells, SHChildLookup) != CalculateCellValue(tc, BlankCells, SHChildLookup))) && //TODO: Is there a more efficient way to do this?
-						!matches.Any(t=>sh.Cells[t].ARDErrorTypeId.HasValue);
+					foreach (int j in matches) {
+						if (sh.Cells[j] == tc)
+							continue;
 
+						decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup);
+						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup);
+						bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
 
-					tc.MTMWValidationFlag = (CalculateCellValue(tc, BlankCells, SHChildLookup) != CalculateChildSum(tc, CellLookup, SHChildLookup)) && !tc.MTMWErrorTypeId.HasValue;
+						if (matchValue != cellValue &&//TODO: remove double checks
+							!((ts.PublicationDate > temp.TimeSlices[j].PublicationDate && cellValue == 0) || (temp.TimeSlices[j].PublicationDate > ts.PublicationDate && matchValue == 0)) &&
+							!anyValidationPasses &&
+							tc.ValueNumeric.HasValue
+							) {
+								tc.LikePeriodValidationFlag = true;
+						}
+					}
+
+					tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && (CalculateCellValue(tc, BlankCells, SHChildLookup) != CalculateChildSum(tc, CellLookup, SHChildLookup)) && !tc.MTMWErrorTypeId.HasValue;
 				}
 			}
 
@@ -301,7 +326,8 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 						sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup);
 					}
 					if (SHChildLookup[sh.Id].Count > 0) {
-						cell.VirtualValueNumeric = sum;
+						if(!cell.ValueNumeric.HasValue)
+							cell.VirtualValueNumeric = sum;
 
 						return sum;
 					}
@@ -320,7 +346,8 @@ ORDER BY dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodE
 					sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup);
 				}
 				if (SHChildLookup[sh.Id].Count > 0) {
-					cell.VirtualValueNumeric = sum;
+					if(!cell.ValueNumeric.HasValue)
+						cell.VirtualValueNumeric = sum;
 
 					return sum;
 				}

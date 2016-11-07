@@ -104,6 +104,20 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("scalingFactorValue")]
 		public double ScalingFactorValue { get; set; }
+
+		[JsonProperty("displayValue")]
+		public decimal?
+			DisplayValue {
+			get {
+				if (ValueNumeric.HasValue) {
+					return ValueNumeric.Value * (IsIncomePositive ? 1 : -1) * (decimal)ScalingFactorValue;
+				} else if (VirtualValueNumeric.HasValue) {
+					return VirtualValueNumeric.Value;
+				} else {
+					return null;
+				}
+			}
+		}
 	}
 
 

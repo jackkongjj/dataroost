@@ -2,11 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.AsReported {
 	public class StaticHierarchy {
+
+		public static string labelRx = @"(\[[^\]]*\])*(?<desc>[^\[\]]*)";
+
+		private Regex rx = new Regex(StaticHierarchy.labelRx);
 
 		[JsonProperty("_id")]
 		public int Id { get; set; }
@@ -46,5 +51,15 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("parentId")]
 		public int? ParentID { get; set; }
+
+		[JsonProperty("normalizedDescription")]
+		public string NormalizedDescription {
+			get {
+				return rx.Match(Description).Result(@"${desc}");
+			}
+		}
+
+		[JsonProperty("level")]
+		public int Level { get; set; }
 	}
 }

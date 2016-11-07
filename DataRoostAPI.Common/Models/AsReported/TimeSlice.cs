@@ -22,6 +22,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("ReportingPeriodEndDate")]
 		public DateTime ReportingPeriodEndDate { get; set; }
 
+		[JsonProperty("PublicationDate")]
+		public DateTime PublicationDate { get; set; }
+
 		[JsonProperty("FiscalDistance")]
 		public int FiscalDistance { get; set; }
 
