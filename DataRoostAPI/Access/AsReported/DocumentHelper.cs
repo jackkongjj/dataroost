@@ -2,25 +2,17 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Web;
 using System.Data.SqlClient;
-
 using DataRoostAPI.Common.Models.AsReported;
-
 using FactSet.Data.SqlClient;
 using DataRoostAPI.Common.Models.TINT;
-using FactSet.DocumentAcquisition.BatchProcessing.Net;
-using System.Xml.Linq;
-using System.IO;
-using System.IO.Compression;
 using System.Text;
-using FactSet.Util;
 using System.Text.RegularExpressions;
 using FactSet.Fundamentals.Sourcelinks;
-using System.Collections.ObjectModel;
 using Nest;
 using System.Configuration;
 using DataRoostAPI.Common.Models.SuperFast;
+using System.Web.Mvc;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
@@ -331,13 +323,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							document.Cells = GetTableCells(document.SuperFastDocumentId);
 
 							foreach(var cell in document.Cells){
+								
 								Cell tc = insertedCells.FirstOrDefault(o => o.Id == cell.Id);
 								if (tc != null) {
 									cell.RowOrder =  cell.RowOrder.HasValue ? cell.RowOrder : tc.RowOrder;
 									cell.TableName = string.IsNullOrEmpty(cell.TableName) ? tc.TableName : cell.TableName;
 								}
 							}
-
+							//export Data as CSV
+							//StringBuilder sb = new StringBuilder();
+							//foreach(var tc in document.Cells.GroupBy(o => o.CftId)){
+							//	sb.Append(tc.First().Label + ",");
+							//	foreach (var exportCell in tc) {
+							//		sb.Append(exportCell.Value + ",");
+							//	}
+							//	sb.AppendLine();
+							//}
+							//string contents = sb.ToString();
+							//DownloadCSV(document.SuperFastDocumentId+".csv",sb.ToString());
 							return document;
 						}
 					}
@@ -393,6 +396,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							};
 							if (dcHelper.IsIconumDC(iconum)) {
 								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+								var tableCells = GetTableCells(document.SuperFastDocumentId);
+								foreach (var cell in tableCells) {
+									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+									if (existingCell != null) {
+										existingCell.RowOrder = cell.RowOrder;
+										existingCell.TableName = cell.TableName;
+									} else {
+										document.Cells.Add(cell);
+									}
+								}
 							} else {
 								document.Cells = GetTableCells(document.SuperFastDocumentId);
 							}
@@ -455,6 +468,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							};
 							if (dcHelper.IsIconumDC(iconum)) {
 								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+								var tableCells = GetTableCells(document.SuperFastDocumentId);
+								foreach (var cell in tableCells) {
+									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+									if (existingCell != null) {
+										existingCell.RowOrder = cell.RowOrder;
+										existingCell.TableName = cell.TableName;
+									} else {
+										document.Cells.Add(cell);
+									}
+								}
 							} else {
 								document.Cells = GetTableCells(document.SuperFastDocumentId);
 							}
@@ -513,10 +536,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							} else {
 								Cell cc = new Cell();
 								cc.Id =  tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
-																										 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Title, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
+																										 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
 
 								cc.RowOrder = cell.Line;
-								cc.TableName = tint.Title;
+								cc.TableName = tint.Type;
 								insertedCells.Add(cc);
 							}
 
@@ -528,7 +551,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							Cell existingCell = tableCells.FirstOrDefault(o => o.Offset == CellOffsetValue);
 							if (existingCell != null) {
 								existingCell.RowOrder = cell.Line;
-								existingCell.TableName = tint.Title;
+								existingCell.TableName = tint.Type;
 								insertedCells.Add(existingCell);
 							}
 						}
@@ -538,7 +561,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return insertedCells;
 		}
 
-		private Cell[] GetTableCells(string documentId) {
+		private List<Cell> GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
 												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), td.AdjustedOrder
 												from dbo.TableCell c with (NOLOCK)
@@ -586,10 +609,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					}
 				}
 			}
-			return cells.ToArray();
+			return cells;
 		}
 
-		private Cell[] GetTableCells(string documentId, int Iconum) {
+		private List<Cell> GetTableCells(string documentId, int Iconum) {
 			string ExpressionStore = ConfigurationManager.AppSettings["ExpressionStore"];
 			string ExpressionStoreId = ConfigurationManager.AppSettings["ExpressionStoreId"];
 			string ExpressionStorePassword = ConfigurationManager.AppSettings["ExpressionStorePassword"];
@@ -633,7 +656,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 				}
 
 			}
-			return cells.ToArray();
+			return cells;
 		}
 
 		private Guid? GetSuperFastDocumentID(string DamDocId, int iconum) {
@@ -722,6 +745,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			}
 			return timeSlices;
 		}
+
+	
 
 		#endregion
 

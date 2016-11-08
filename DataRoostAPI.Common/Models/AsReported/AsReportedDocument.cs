@@ -12,7 +12,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public AsReportedTable[] Tables { get; set; }
 
 		[JsonProperty("cells")]
-		public Cell[] Cells { get; set; }
+		public List<Cell> Cells { get; set; }
 
     }
 }
