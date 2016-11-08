@@ -333,8 +333,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							foreach(var cell in document.Cells){
 								Cell tc = insertedCells.FirstOrDefault(o => o.Id == cell.Id);
 								if (tc != null) {
-									cell.RowOrder = tc.RowOrder;
-									cell.TableName = tc.TableName;
+									cell.RowOrder =  cell.RowOrder.HasValue ? cell.RowOrder : tc.RowOrder;
+									cell.TableName = string.IsNullOrEmpty(cell.TableName) ? tc.TableName : cell.TableName;
 								}
 							}
 
@@ -524,7 +524,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							System.Diagnostics.Debug.WriteLine(e.ToString());
 							continue;
 						}
-					}
+						} else {
+							Cell existingCell = tableCells.FirstOrDefault(o => o.Offset == CellOffsetValue);
+							if (existingCell != null) {
+								existingCell.RowOrder = cell.Line;
+								existingCell.TableName = tint.Title;
+								insertedCells.Add(existingCell);
+							}
+						}
 				}
 				}
 			}
@@ -533,7 +540,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		private Cell[] GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), td.AdjustedOrder
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), isnull(td.AdjustedOrder,-1)
 												from dbo.TableCell c with (NOLOCK)
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
@@ -572,7 +579,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								XbrlTag = reader.GetStringSafe(11),
 								Label = reader.GetStringSafe(12),
 								TableName = reader.GetStringSafe(13),
-								RowOrder = reader.GetInt32(14)
+								RowOrder = reader.GetNullable<int>(14)
 							});
 
 						}

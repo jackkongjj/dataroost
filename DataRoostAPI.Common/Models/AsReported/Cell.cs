@@ -60,6 +60,6 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public string TableName { get; set; }
 
 		[JsonProperty("rowOrder")]
-		public int RowOrder { get; set; }
+		public int? RowOrder { get; set; }
 	}
 }
