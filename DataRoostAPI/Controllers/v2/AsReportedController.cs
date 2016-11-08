@@ -12,7 +12,8 @@ using DataRoostAPI.Common.Models.AsReported;
 namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 
 	[RoutePrefix("api/v2/companies/{CompanyId}/efforts/asreported")]
-	public class AsReportedController : ApiController {
+	public class AsReportedV2Controller : ApiController {
+
 		[Route("documents/{documentId}")]
 		[HttpGet]
 		public AsReportedDocument GetDCDocument(string CompanyId, string documentId) {
