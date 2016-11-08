@@ -116,5 +116,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTimeSlice(id);
 		}
+
+        [Route("cells/{id}/flipsign/")]
+        [HttpGet]
+        public TableCell FlipSign(string id)
+        {
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.GetCell(id);
+        }
+
+
 	}
 }
