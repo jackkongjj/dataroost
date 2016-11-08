@@ -540,7 +540,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		private Cell[] GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), isnull(td.AdjustedOrder,-1)
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), td.AdjustedOrder
 												from dbo.TableCell c with (NOLOCK)
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
