@@ -330,17 +330,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 									cell.TableName = string.IsNullOrEmpty(cell.TableName) ? tc.TableName : cell.TableName;
 								}
 							}
-							//export Data as CSV
-							//StringBuilder sb = new StringBuilder();
-							//foreach(var tc in document.Cells.GroupBy(o => o.CftId)){
-							//	sb.Append(tc.First().Label + ",");
-							//	foreach (var exportCell in tc) {
-							//		sb.Append(exportCell.Value + ",");
-							//	}
-							//	sb.AppendLine();
-							//}
-							//string contents = sb.ToString();
-							//DownloadCSV(document.SuperFastDocumentId+".csv",sb.ToString());
 							return document;
 						}
 					}
@@ -489,6 +478,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return documents.ToArray();
 		}
 
+		public string DownloadFile(int iconum, string documentId) {
+			AsReportedDocument document = GetDCDocument(iconum,documentId);
+			//export Data as CSV
+			StringBuilder sb = new StringBuilder();
+			foreach (var tc in document.Cells.OrderBy(o => o.CftId).GroupBy(o => o.CftId)) {
+				sb.Append(tc.First().Label.Replace(",", "") + ",");
+				foreach (var exportCell in tc) {
+					sb.Append(exportCell.Value.Replace(",", "") + ",");
+				}
+				sb.AppendLine();
+			}
+			string contents = sb.ToString();
+			return contents;
+			
+		}
+
 		private List<Cell> InsertTINTOffsets(string documentId, int CompanyId) {
 			TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
 			Dictionary<byte, Tint> tintFiles = helper.GetTintFiles(documentId);
@@ -531,7 +536,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 									String value = cell.Value.Substring(start + 1, cell.Value.Length - start - 2);
 									cell.Value = pre + value;
 								}
-								currentTerm = tc.CreateNewTerm(documentSeries, Label);
+								currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
 
 							} else {
 								Cell cc = new Cell();

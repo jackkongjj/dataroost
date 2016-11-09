@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
@@ -24,6 +27,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetDCDocument(iconum, documentId);
 		}
+
+
+		[Route("documents/{documentId}/Testing")]
+		[HttpGet]
+		public HttpResponseMessage GetDCDocumentDownload(string CompanyId, string documentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			string contents = documentHelper.DownloadFile(iconum, documentId);
+			HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
+			response.Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(contents ?? "")));
+			response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
+			response.Content.Headers.ContentDisposition.FileName = documentId+".csv";
+			
+
+			return response;
+		}
+
 
 		[Route("documents/")]
 		[HttpPost]
