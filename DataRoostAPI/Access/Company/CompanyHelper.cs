@@ -161,7 +161,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 	    private Dictionary<int, List<ShareClassDataDTO>> ShareClasses(List<int> iconums) {
-            const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+            const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
 
             const string query = @"SELECT p.Cusip,
                                         p.Iconum,
@@ -180,16 +180,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                         p.PPI,
                                         x.permid
                                     FROM PpiIconumMap p
-									    LEFT JOIN #CompanyIds ico ON ico.iconum = p.iconum
+									    LEFT JOIN #iconums ico ON ico.iconum = p.iconum
 									    LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
 									    LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
 									    LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
 									    LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
 									    LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
-								    WHERE ico.Iconum IS NOT NULL
-                                        --AND RIGHT(p.PPI, 1) != '0'
-                                        --AND s.term_date IS NULL
-                                        --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
+								    WHERE ico.Iconum IS NOT NULL";
 
             Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
             DataTable table = new DataTable();
@@ -212,7 +209,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                 using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null))
                 {
                     bulkCopy.BatchSize = table.Rows.Count;
-                    bulkCopy.DestinationTableName = "#CompanyIds";
+                    bulkCopy.DestinationTableName = "#iconums";
                     bulkCopy.WriteToServer(table);
                 }
 
