@@ -485,7 +485,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			foreach (var tc in document.Cells.OrderBy(o => o.CftId).GroupBy(o => o.CftId)) {
 				sb.Append(tc.First().Label.Replace(",", "") + ",");
 				foreach (var exportCell in tc) {
-					sb.Append(exportCell.Value.Replace(",", "") + ",");
+					sb.Append(exportCell.Date + ","+exportCell.Value.Replace(",", "")+" "+ exportCell.ScalingFactor + ",");
 				}
 				sb.AppendLine();
 			}
