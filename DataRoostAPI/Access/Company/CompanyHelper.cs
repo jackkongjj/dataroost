@@ -259,10 +259,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	    private int LookForStitchedIconum(int iconum) {
             
 	        const string query = @"
-SELECT o.old_iconum, m.Iconum
-FROM vw_PpiIconumMap_Entity o
-	JOIN PPiIconumMap m (nolock) ON o.PPI = m.PPI
-WHERE o.old_iconum = @iconum AND m.iconum > 0
+SELECT h.iconum, m.iconum
+FROM PpiIconumMapHistory h (nolock)
+	JOIN PPiIconumMap m (nolock) ON h.PPI = m.PPI
+WHERE h.iconum = @iconum AND m.iconum > 0
 ORDER BY ChangeDate DESC";
 
             int newIconum = iconum;
