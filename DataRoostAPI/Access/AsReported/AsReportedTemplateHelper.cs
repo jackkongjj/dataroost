@@ -597,7 +597,41 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+        private bool setIsIncomePositive(string CellId, bool isIncomePositive)
+        {
+            const string SQL_SetIncomePositive = @"UPDATE TableCell 
+																set IsIncomePositive = @newValue
+																WHERE ID = @id";
 
+            using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
+            using (SqlCommand cmd = new SqlCommand(SQL_SetIncomePositive, sqlConn))
+            {
+                cmd.Parameters.AddWithValue("@id", CellId);
+                cmd.Parameters.AddWithValue("@newValue", isIncomePositive);
+                sqlConn.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            return true;
+        }
+        private TableCell[] getSibilingsCells(string CellId)
+        {
+            return null;
+        }
+        public TableCell FlipSign(string CellId)
+        {
+            TableCell currCell= GetCell(CellId);
+            if (setIsIncomePositive(CellId, !currCell.IsIncomePositive))
+            {
+                currCell.IsIncomePositive = !currCell.IsIncomePositive;
+                TableCell[] sibilings = getSibilingsCells(CellId);
+                return currCell;
+            }
+            else
+            {
+                return new TableCell();
+            }
+        }
         public TableCell GetCell(string CellId)
         {
             using (SqlConnection conn = new SqlConnection(_sfConnectionString))
@@ -657,27 +691,6 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
                                 adjustedOrder = reader.GetInt32(28);
                             }
                             return cell;
-
-                            //while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder)
-                            //{
-                            //    shix++;
-                            //}
-
-                            //if (cell.ID == 0)
-                            //{
-                            //    BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
-                            //}
-                            //CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
-
-                            //if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId)
-                            //{
-                            //    StaticHierarchies[shix].Cells.Add(cell);
-                            //}
-                            //else
-                            //{
-                            //    throw new Exception();
-                            //}
-
                         }
                     }
                 }
