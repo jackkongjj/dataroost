@@ -161,7 +161,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 	    private Dictionary<int, List<ShareClassDataDTO>> ShareClasses(List<int> iconums) {
-            const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+            const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
 
             const string query = @"SELECT p.Cusip,
                                         p.Iconum,
@@ -180,16 +180,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                         p.PPI,
                                         x.permid
                                     FROM PpiIconumMap p
-									    LEFT JOIN #CompanyIds ico ON ico.iconum = p.iconum
+									    LEFT JOIN #iconums ico ON ico.iconum = p.iconum
 									    LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
 									    LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
 									    LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
 									    LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
 									    LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
-								    WHERE ico.Iconum IS NOT NULL
-                                        --AND RIGHT(p.PPI, 1) != '0'
-                                        --AND s.term_date IS NULL
-                                        --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
+								    WHERE ico.Iconum IS NOT NULL";
 
             Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
             DataTable table = new DataTable();
@@ -212,7 +209,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                 using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null))
                 {
                     bulkCopy.BatchSize = table.Rows.Count;
-                    bulkCopy.DestinationTableName = "#CompanyIds";
+                    bulkCopy.DestinationTableName = "#iconums";
                     bulkCopy.WriteToServer(table);
                 }
 
@@ -375,36 +372,7 @@ ORDER BY ChangeDate DESC";
 			return effortDictionary[iconum];
 		}
 
-        private List<string> GetWhiteListedCountries()
-        {
-
-            const string query =
-                @"SELECT DISTINCT iso_country FROM ppi_check where IsEnable = 1 GROUP BY iso_country HAVING SUM(CAST(isWhiteList AS INT)) = 0";
-
-            List<string> countries = new List<string>();
-            using (SqlConnection connection = new SqlConnection(_sfConnectionString))
-            {
-                connection.Open();
-                using (SqlCommand cmd = new SqlCommand(query, connection))
-                {
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            string country = reader.GetString(0);
-                            countries.Add(country);
-                        }
-                    }
-                }
-            }
-
-            return countries;
-        }
-
         public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
-
-            List<string> countries = GetWhiteListedCountries();
-            string countryString = string.Join("', '", countries);
 
             Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
 			DataTable table = new DataTable();
@@ -414,17 +382,44 @@ ORDER BY ChangeDate DESC";
 				effortDictionary.Add(iconum, EffortDTO.Voyager());
 			}
 
-			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
-		    string query = string.Format(@"select i.iconum
-												from dbo.CompanyLists cl (nolock)
-													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
-													join #CompanyIds i on i.iconum = clc.iconum
-												where cl.ShortName = 'SF_NewMarketWhiteList'
-											 union
-											 select i.iconum
-												from dbo.FdsTriPpiMap fds
-													join #CompanyIds i on i.iconum = fds.iconum 
-												where IsAdr = 0 AND IsoCountry IN ('{0}')", countryString);
+			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
+            const string query = @"
+with ico as
+(
+       select c.iconum, IsoCountry 
+       from #iconums c
+       join fdstrippimap fds on fds.iconum = c.iconum
+       where IsAdr = 0 and IsActive=1 --order by ClientAddDate, [Priority]
+)      
+select  fds.iconum
+from fce.rules r
+join ico fds on r.country = fds.IsoCountry
+join fce.RulesToPath rtp on r.id = rtp.RuleId
+join fce.Paths p on p.Id = rtp.PathId
+join fce.PathTransitions pt on p.Id = pt.PathId
+join WorkQueueTasks wqt on wqt.id = pt.taskid
+left join fce.CompanyListRulesToPath clr on clr.RulesToPathId = rtp.Id
+where wqt.name = 'Finantula' and clr.RulesToPathId is null
+union
+select matchList.iconum from
+(
+       select fds.iconum, rulestopathid, matchcount = count(distinct 1)
+       from fce.rules r
+       join ico fds on r.country = fds.IsoCountry
+       join fce.RulesToPath rtp on r.id = rtp.RuleId
+       join fce.Paths p on p.Id = rtp.PathId
+       join fce.PathTransitions pt on p.Id = pt.PathId
+       join WorkQueueTasks wqt on wqt.id = pt.taskid
+       join fce.CompanyListRulesToPath clr on clr.RulesToPathId = rtp.Id
+       join companylistcompanies clc on clc.companylistid = clr.companylistid and clc.iconum = fds.iconum
+       where wqt.name = 'Finantula'
+       group by clr.RulesToPathId, fds.iconum
+) as matchList
+join (
+       select rulestopathid, matchcount = count(1)
+       from fce.CompanyListRulesToPath
+       group by rulestopathid
+) as reqList on matchList.RulesToPathId = reqList.RulesToPathId and matchList.matchcount = reqList.matchcount";
 
             // Create Global Temp Table
             using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
@@ -436,7 +431,7 @@ ORDER BY ChangeDate DESC";
 				// Upload all iconums to Temp table
 				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
 					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#CompanyIds";
+					bulkCopy.DestinationTableName = "#iconums";
 					bulkCopy.WriteToServer(table);
 				}
 
