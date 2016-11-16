@@ -137,6 +137,7 @@
     <Compile Include="Models\TimeseriesValues\SegmentNode.cs" />
     <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
     <Compile Include="Models\ExportedVersionInfo.cs" />
+    <Compile Include="Models\TimeSlice.cs" />
     <Compile Include="Models\TINT\Cell.cs" />
     <Compile Include="Models\TINT\Table.cs" />
     <Compile Include="Models\TINT\Tint.cs" />

@@ -295,6 +295,7 @@
     <Compile Include="Access\SuperFast\TemplateIdentifier.cs" />
     <Compile Include="Access\SuperFast\TimeseriesHelper.cs" />
     <Compile Include="Access\SuperFast\TimeseriesIdentifier.cs" />
+    <Compile Include="Access\Timeslice\DocumentHelper.cs" />
     <Compile Include="Access\Tint\DocumentHelper.cs" />
     <Compile Include="Access\Voyager\ExportedItemsHelper.cs" />
     <Compile Include="Access\Voyager\TemplateIdentifier.cs" />
@@ -345,6 +346,7 @@
     <Compile Include="Controllers\SharesController.cs" />
     <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\KpiController.cs" />
+    <Compile Include="Controllers\TimeSliceController.cs" />
     <Compile Include="Controllers\TintController.cs" />
     <Compile Include="Controllers\v2\AsReportedController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
