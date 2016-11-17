@@ -116,5 +116,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTimeSlice(id);
 		}
+
+		public class test {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
+
+		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
+		[HttpPost]
+		public StitchResult PostStitch(string CompanyId, string TemplateName, Guid DocumentId, test test/**/) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			if (test.TargetStaticHierarchyID == 0 || test.StitchingStaticHierarchyIDs.Count == 0 || test.StitchingStaticHierarchyIDs.Any(s => s == 0))
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.StitchStaticHierarchies(test.TargetStaticHierarchyID, DocumentId, test.StitchingStaticHierarchyIDs, iconum);
+		}
 	}
 }

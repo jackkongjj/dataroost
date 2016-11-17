@@ -13,7 +13,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		private Regex rx = new Regex(StaticHierarchy.labelRx);
 
-		[JsonProperty("_id")]
+		[JsonProperty("id")]
 		public int Id { get; set; }
 
 		[JsonProperty("companyFinancialTermId")]
