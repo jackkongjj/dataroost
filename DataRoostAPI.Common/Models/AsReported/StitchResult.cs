@@ -13,8 +13,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public List<StaticHierarchyAdjustedOrder> StaticHierarchyAdjustedOrders { get; set; }
 
 		//TODO: Add Parent Cell Changes
-
-		//public List<CellMTMWComponent> CellMTMWComponents { get; set; }
+		[JsonIgnore]
+		public List<CellMTMWComponent> ParentCellChangeComponents { get; set; }
 
 		[JsonProperty("staticHierarchy")]
 		public StaticHierarchy StaticHierarchy { get; set; }
@@ -33,6 +33,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public decimal ValueNumeric { get; set; }
 		public bool IsIncomePositive { get; set; }
 		public double ScalingFactorValue { get; set; }
+		public int RootStaticHierarchyID { get; set; }
+		public int RootDocumentTimeSliceID { get; set; }
 	}
 
 	public class StaticHierarchyAdjustedOrder {

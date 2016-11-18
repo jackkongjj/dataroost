@@ -714,6 +714,20 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 						res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
 						sdr.NextResult();
 
+						res.ParentCellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+						{
+							StaticHierarchyID = r.GetInt32(0),
+							DocumentTimeSliceID = r.GetInt32(1),
+							TableCellID = r.GetInt32(2),
+							ValueNumeric = r.GetDecimal(3),
+							IsIncomePositive = r.GetBoolean(4),
+							ScalingFactorValue = r.GetDouble(5),
+							RootStaticHierarchyID = r.GetInt32(6),
+							RootDocumentTimeSliceID = r.GetInt32(7)
+						}
+						).ToList();
+
+						sdr.NextResult();
 						List<CellMTMWComponent> comps = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
 						{
 							StaticHierarchyID = r.GetInt32(0),
@@ -721,7 +735,9 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							TableCellID = r.GetInt32(2),
 							ValueNumeric = r.GetDecimal(3),
 							IsIncomePositive = r.GetBoolean(4),
-							ScalingFactorValue = r.GetDouble(5)
+							ScalingFactorValue = r.GetDouble(5),
+							RootStaticHierarchyID = r.GetInt32(6),
+							RootDocumentTimeSliceID = r.GetInt32(7)
 						}
 							).ToList();
 						foreach (CellMTMWComponent comp in comps) {
@@ -807,6 +823,10 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 						sum += c.ValueNumeric * ((decimal)(c.IsIncomePositive ? 1 : -1)) * ((decimal)c.ScalingFactorValue);
 				}
 				cell.MTMWValidationFlag = value != sum;
+			}
+
+			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents) {
+
 			}
 
 			return res;
