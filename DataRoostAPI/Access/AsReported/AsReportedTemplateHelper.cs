@@ -340,8 +340,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						if (sh.Cells[j] == tc)
 							continue;
 
-						decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup);
-						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup);
+						bool whatever = false;
+
+						decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup, ref whatever);
+						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
 						bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
 
 						if (matchValue != cellValue &&//TODO: remove double checks
@@ -353,17 +355,22 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 
-					tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && (CalculateCellValue(tc, BlankCells, SHChildLookup) != CalculateChildSum(tc, CellLookup, SHChildLookup)) && !tc.MTMWErrorTypeId.HasValue;
+					bool hasChildren = false;
+					bool whatever2 = false;
+
+					tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && (CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) && !tc.MTMWErrorTypeId.HasValue && hasChildren;
 				}
 			}
 
 			return temp;
 		}
 
-		private decimal CalculateCellValue(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
+		private decimal CalculateCellValue(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren) {
 			if (cell.ValueNumeric.HasValue) {
+				hasChildren = true;
 				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
 			} else if (cell.VirtualValueNumeric.HasValue) {
+				hasChildren = true;
 				return cell.VirtualValueNumeric.Value;
 			} else {
 				if (BlankCells.ContainsKey(cell)) {
@@ -372,7 +379,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					int timesliceIndex = BlankCells[cell].Item2;
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
-						sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup);
+						sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, ref hasChildren);
 					}
 					if (SHChildLookup[sh.Id].Count > 0) {
 						if (!cell.ValueNumeric.HasValue)
@@ -385,14 +392,14 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			return 0;
 		}
 
-		private decimal CalculateChildSum(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
+		private decimal CalculateChildSum(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren) {
 			if (CellLookup.ContainsKey(cell)) {
 				decimal sum = 0;
 				StaticHierarchy sh = CellLookup[cell].Item1;
 				int timesliceIndex = CellLookup[cell].Item2;
 
 				foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
-					sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup);
+					sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
 				}
 				if (SHChildLookup[sh.Id].Count > 0) {
 					if (!cell.ValueNumeric.HasValue)
@@ -825,9 +832,25 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 				cell.MTMWValidationFlag = value != sum;
 			}
 
-			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents) {
+			//TODO: Optimize
+			Dictionary<int, Dictionary<int, bool>> ParentMTMW = new Dictionary<int, Dictionary<int, bool>>();
+			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c=>c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID)) {
+				if (!ParentMTMW.ContainsKey(comp.StaticHierarchyID)) {
+					ParentMTMW.Add(comp.StaticHierarchyID, new Dictionary<int, bool>());
+				}
 
+				decimal val = comp.ValueNumeric * (comp.IsIncomePositive ? 1 : -1) * (decimal)comp.ScalingFactorValue;
+				bool any = false;
+				decimal sum = 0;
+				foreach (CellMTMWComponent subComp in res.ParentCellChangeComponents.Where(sc => sc.RootStaticHierarchyID == comp.RootStaticHierarchyID && sc.RootDocumentTimeSliceID == comp.RootDocumentTimeSliceID && !sc.Equals(comp))) {
+					if(!any) any = true;
+
+					sum += subComp.ValueNumeric * (subComp.IsIncomePositive ? 1 : -1) * (decimal)subComp.ScalingFactorValue;
+				}
+
+				ParentMTMW[comp.StaticHierarchyID].Add(comp.DocumentTimeSliceID, any && val != sum);
 			}
+			res.ParentMTMWChanges = ParentMTMW;
 
 			return res;
 		}
