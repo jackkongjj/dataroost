@@ -622,7 +622,89 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			return true;
 		}
 		private TableCell[] getSibilingsCells(string CellId) {
-			return null;
+            		string SQL_GetSibilingCellsQuery =
+                                @"
+SELECT *
+FROM vw_SCARDocumentTimeSliceTableCell tc
+JOIN DocumentTimeSlice dts ON tc.DocumentTimeSliceID = dts.ID
+LEFT JOIN DocumentTimeSlice dtsSib ON dts.TimeSlicePeriodEndDate = dtsSib.TimeSlicePeriodEndDate 
+                                                                     AND dts.PeriodType = dtsSib.PeriodType 
+                                                                     AND dts.DocumentSeriesId = dtsSib.DocumentSeriesId
+                                                                     AND dts.ID <> dtsSib.ID
+LEFT JOIN Document d on dtsSib.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tcSib ON tcSib.DocumentTimeSliceID = dtsSib.ID AND tc.CompanyFinancialTermID = tcSib.CompanyFinancialTermID
+WHERE tc.TableCellID = @TCID
+AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+AND not tcSib.TableCellID is null
+
+"; 
+
+            System.Collections.ArrayList tableCells = new System.Collections.ArrayList();
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(SQL_GetSibilingCellsQuery, conn))
+                {
+                   
+                    cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
+                    cmd.Parameters.AddWithValue("@TCID", CellId);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+
+                        int shix = 0;
+
+                        int adjustedOrder = 0;
+                        while (reader.Read())
+                        {
+                            TableCell cell;
+                            if (reader.GetNullable<int>(0).HasValue)
+                            {
+                                cell = new TableCell
+                                {
+                                    ID = reader.GetInt32(1),
+                                    Offset = reader.GetStringSafe(2),
+                                    CellPeriodType = reader.GetStringSafe(3),
+                                    PeriodTypeID = reader.GetStringSafe(4),
+                                    CellPeriodCount = reader.GetStringSafe(5),
+                                    PeriodLength = reader.GetNullable<int>(6),
+                                    CellDay = reader.GetStringSafe(7),
+                                    CellMonth = reader.GetStringSafe(8),
+                                    CellYear = reader.GetStringSafe(9),
+                                    CellDate = reader.GetNullable<DateTime>(10),
+                                    Value = reader.GetStringSafe(11),
+                                    CompanyFinancialTermID = reader.GetNullable<int>(12),
+                                    ValueNumeric = reader.GetNullable<decimal>(13),
+                                    NormalizedNegativeIndicator = reader.GetBoolean(14),
+                                    ScalingFactorID = reader.GetStringSafe(15),
+                                    AsReportedScalingFactor = reader.GetStringSafe(16),
+                                    Currency = reader.GetStringSafe(17),
+                                    CurrencyCode = reader.GetStringSafe(18),
+                                    Cusip = reader.GetStringSafe(19),
+                                    ScarUpdated = reader.GetBoolean(20),
+                                    IsIncomePositive = reader.GetBoolean(21),
+                                    XBRLTag = reader.GetStringSafe(22),
+                                    UpdateStampUTC = reader.GetNullable<DateTime>(23),
+                                    DocumentID = reader.GetGuid(24),
+                                    Label = reader.GetStringSafe(25),
+                                    ScalingFactorValue = reader.GetDouble(26),
+                                    ARDErrorTypeId = reader.GetNullable<int>(1),
+                                    MTMWErrorTypeId = reader.GetNullable<int>(1)
+                                };
+
+                                adjustedOrder = reader.GetInt32(1);
+                            }
+                            else
+                            {
+                                cell = new TableCell();
+                                adjustedOrder = reader.GetInt32(28);
+                            }
+                            tableCells.Add(cell);
+                        }
+                    }
+                }
+            }
+            return (TableCell[])tableCells.ToArray(typeof(TableCell));
 		}
 		public TableCell FlipSign(string CellId) {
 			TableCell currCell = GetCell(CellId);
