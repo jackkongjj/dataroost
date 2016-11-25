@@ -621,7 +621,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 
 			return true;
 		}
-		private TableCell[] getSibilingsCells(string CellId) {
+		private TableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
             		string SQL_GetSibilingCellsQuery =
                                 @"
 SELECT *
@@ -646,7 +646,8 @@ AND not tcSib.TableCellID is null
                 using (SqlCommand cmd = new SqlCommand(SQL_GetSibilingCellsQuery, conn))
                 {
                    
-                    cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
+                    //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
+                    cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
                     cmd.Parameters.AddWithValue("@TCID", CellId);
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
@@ -706,11 +707,11 @@ AND not tcSib.TableCellID is null
             }
             return (TableCell[])tableCells.ToArray(typeof(TableCell));
 		}
-		public TableCell FlipSign(string CellId) {
+		public TableCell FlipSign(string CellId, Guid DocumentId) {
 			TableCell currCell = GetCell(CellId);
 			if (setIsIncomePositive(CellId, !currCell.IsIncomePositive)) {
 				currCell.IsIncomePositive = !currCell.IsIncomePositive;
-				TableCell[] sibilings = getSibilingsCells(CellId);
+                TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
 				return currCell;
 			} else {
 				return new TableCell();
