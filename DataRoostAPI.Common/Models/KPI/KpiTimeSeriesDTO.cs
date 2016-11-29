@@ -5,23 +5,24 @@ using System.Web;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.KPI {
-	public class KpiTimeSeriesDTO : TimeseriesDTO {
-		[JsonProperty("versionId")]
-		public string VersionId { get; set; }
-
-		[JsonProperty("duration")]
-		public int? Duration { get; set; }
-
-		[JsonProperty("acquisitionStatus")]
+	public class KpiTimeSeriesDTO {
+		public string AAADisplay { get; set; }
+		[JsonIgnore]
+		public Guid Id { get; set; }
+		[JsonIgnore]
+		public DateTime PeriodEndDate { get; set; }
+		public int Duration { get; set; }
+		[JsonIgnore]
+		public string PeriodType { get; set; }
+		[JsonIgnore]
+		public int CompanyFiscalYear { get; set; }
 		public string AcquisitionStatus { get; set; }
-
-		[JsonProperty("consolidatedType")]
+		public string AccountingStandard { get; set; }
 		public string ConsolidatedType { get; set; }
-
-		[JsonProperty("isProforma")]
-		public bool? IsProforma { get; set; }
-
-		[JsonProperty("isRestated")]
-		public bool? IsRestated { get; set; }
+		[JsonIgnore]
+		public bool IsRecap { get; set; }
+		public bool IsProforma { get; set; }
+		[JsonIgnore]
+		public bool IsRestated { get; set; }
 	}
 }
