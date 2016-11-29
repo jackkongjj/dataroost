@@ -319,17 +319,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							List<Cell> insertedCells =  InsertTINTOffsets(documentId, iconum);
-							document.Cells = GetTableCells(document.SuperFastDocumentId);
-
-							foreach(var cell in document.Cells){
-								
-								Cell tc = insertedCells.FirstOrDefault(o => o.Id == cell.Id);
-								if (tc != null) {
-									cell.RowOrder =  cell.RowOrder.HasValue ? cell.RowOrder : tc.RowOrder;
-									cell.TableName = string.IsNullOrEmpty(cell.TableName) ? tc.TableName : cell.TableName;
-								}
-							}
+							document.Cells = InsertTINTOffsets(documentId, iconum);
 							return document;
 						}
 					}
