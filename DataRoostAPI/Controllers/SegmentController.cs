@@ -11,10 +11,11 @@ using CCS.Fundamentals.DataRoostAPI.Access.Company;
 using CCS.Fundamentals.DataRoostAPI.Access.Segment;
 
 using DataRoostAPI.Common.Models;
+using DataRoostAPI.Common.Models.Segment;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/segment")]
+	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/segments")]
 	public class SegmentController : ApiController {
 		[Route("datatypes/")]
 		[HttpGet]
@@ -41,29 +42,52 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("exportedVersions/{versionId}/timeseries/")]
 		[HttpGet]
-		public Dictionary<int, Dictionary<int, TimeseriesDTO>> QuerySTDTemplatesTimeseries(string CompanyId, string VersionId) {
-			return GetTimeSeries(CompanyId, VersionId, null, StandardizationType.STD);
-		}
-
-		[Route("exportedVersions/{versionId}/timeseries/{timeseriesId}")]
-		[HttpGet]
-		public Dictionary<int, Dictionary<int, TimeseriesDTO>> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
-			return GetTimeSeries(CompanyId, VersionId, TimeseriesId, StandardizationType.STD);
-		}
-
-		private Dictionary<int, Dictionary<int, TimeseriesDTO>> GetTimeSeries(string companyId, string versionId, string timeSeriesId, StandardizationType dataType) {
+		public Dictionary<int, Dictionary<int, SegmentsTimeSeriesDTO>> QuerySTDTemplatesTimeseries(string CompanyId, string VersionId) {
 			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
-			int iconum = PermId.PermId2Iconum(companyId);
+			int iconum = PermId.PermId2Iconum(CompanyId);
 			CompanyHelper cc = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			TimeseriesHelper tsh = new TimeseriesHelper(segConnectionString);
 
-			return tsh.GetExportedTimeSeries(versionId, cc.GetSecPermId(iconum), timeSeriesId);
+			return tsh.GetExportedTimeSeries(VersionId);
 		}
+
+		[Route("exportedVersions/{versionId}/timeseries/{timeseriesId}")]
+		[HttpGet]
+		public Dictionary<string, object> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
+			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			CompanyHelper cc = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+			TimeseriesHelper tsh = new TimeseriesHelper(segConnectionString);
+
+			return tsh.GetTimeseriesSTDValues(TimeseriesId, VersionId, cc.GetSecPermId(iconum));
+		}
+
+		[Route("exportedVersions/{timeSeriesId}/document/")]
+		[HttpGet]
+		public List<Guid> GetDocumentId(string CompanyId, string timeSeriesId) {
+			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			CompanyHelper cc = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+			TimeseriesHelper tsh = new TimeseriesHelper(segConnectionString);
+
+			return tsh.GetDocumentId(iconum, timeSeriesId);
+		}
+
 
 	}
 }

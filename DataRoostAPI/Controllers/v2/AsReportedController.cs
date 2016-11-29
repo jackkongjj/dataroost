@@ -1,45 +1,67 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
-
 using DataRoostAPI.Common.Models.AsReported;
 
-namespace CCS.Fundamentals.DataRoostAPI.Controllers {
+namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
-	public class AsReportedController : ApiController {
+	[RoutePrefix("api/v2/companies/{CompanyId}/efforts/asreported")]
+	public class AsReportedV2Controller : ApiController {
 
 		[Route("documents/{documentId}")]
 		[HttpGet]
-		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
+		public AsReportedDocument GetDCDocument(string CompanyId, string documentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-			return documentHelper.GetDocument(iconum, documentId);
+			return documentHelper.GetDCDocument(iconum, documentId);
 		}
+
+
+		[Route("documents/{documentId}/Testing")]
+		[HttpGet]
+		public HttpResponseMessage GetDCDocumentDownload(string CompanyId, string documentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			string contents = documentHelper.DownloadFile(iconum, documentId);
+			HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
+			response.Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(contents ?? "")));
+			response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
+			response.Content.Headers.ContentDisposition.FileName = documentId+".csv";
+			
+
+			return response;
+		}
+
 
 		[Route("documents/")]
 		[HttpPost]
-		public AsReportedDocument[] GetDocuments(string CompanyId, List<string> documentIds) {
+		public AsReportedDocument[] GetDCDocuments(string CompanyId, List<string> documentIds) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-			return documentHelper.GetDocuments(iconum, documentIds);
+			return documentHelper.GetDCDocuments(iconum, documentIds);
 		}
 
 		[Route("documents/")]
 		[HttpGet]
-		public AsReportedDocument[] GetDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
+		public AsReportedDocument[] GetDCDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -55,17 +77,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				endDate = new DateTime((int)endYear, 12, 31);
 			}
 
-			return documentHelper.GetDocuments(iconum, startDate, endDate, reportType);
-		}
-
-		[Route("companyFinancialTerms/")]
-		[HttpGet]
-		public CompanyFinancialTerm[] GetCompanyFinancialTerms(string CompanyId) {
-			int iconum = PermId.PermId2Iconum(CompanyId);
-
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-			CompanyFinancialTermsHelper companyFinancialTermsHelper = new CompanyFinancialTermsHelper(sfConnectionString);
-			return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
+			return documentHelper.GetDCDocuments(iconum, startDate, endDate, reportType);
 		}
 	}
 }
