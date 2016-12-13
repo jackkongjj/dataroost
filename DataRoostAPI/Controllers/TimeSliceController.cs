@@ -16,14 +16,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("migrate")]
 		[HttpGet]
-		public bool MigrateTimeSlice(string CompanyId) {
+		public bool MigrateIconumTimeSlices(string CompanyId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString,segmentsConnectionString,sfarConnectionString);
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString,segmentsConnectionString,sfarConnectionString,damConnectionString);
 		  return documentHelper.MigrateIconumTimeSlices(iconum);
 		}
 
@@ -37,8 +38,112 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString);
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString,damConnectionString);
 			return documentHelper.CreateTimeSlice(iconum,TimeSlice);
+		}
+
+		[Route("Iconum")]
+		[HttpGet]
+		public List<TimeSlice> GetTimeSlices(string CompanyId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString,damConnectionString);
+			return documentHelper.GetTimeSlices(iconum);
+		}
+
+
+		[Route("DocumentMeta/{DocumentId}")]
+		[HttpGet]
+		public object GetDocumentMeta(string DocumentId) {
+		
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString,damConnectionString);
+			return documentHelper.GetDocumentMeta(DocumentId);
+		}
+
+		[Route("Year/{Year}")]
+		[HttpGet]
+		public List<TimeSlice> GetTimeSlices(string CompanyId, string Year) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.GetTimeSlices(iconum, Year);
+		}
+
+
+
+		[Route("Document/{DocumentId}")]
+		[HttpGet]
+		public List<TimeSlice> GetTimeSlices(string CompanyId, Guid DocumentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.GetTimeSlices(iconum, "", DocumentId);
+		}
+
+
+		[Route("Product/{ProductId}/Year/{Year}")]
+		[HttpGet]
+		public object GetProductTimeSlices(string CompanyId, string ProductId, string Year) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.GetProductTimeSlices(iconum, ProductId,Year);
+		}
+
+
+		[Route("RPEDDocuments")]
+		[HttpGet]
+		public List<object> GetRPEDDocumentsForIconum(string CompanyId, [FromUri]DateTime reportPeriodEndDate) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.GetRPEDDocumentsForIconum(iconum, reportPeriodEndDate);
+		}
+
+
+		[Route("Document/{DocumentId}/TimeSlice/{TimeSliceId}")]
+		[HttpGet]
+		public bool RemoveDocumentLink(string CompanyId, Guid DocumentId , Guid TimeSliceId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
+			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
+			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.RemoveDocumentLink(DocumentId,TimeSliceId);
 		}
 
 

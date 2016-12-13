@@ -484,7 +484,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			
 		}
 
-		private List<Cell> InsertTINTOffsets(string documentId, int CompanyId) {
+		public List<Cell> InsertTINTOffsets(string documentId, int CompanyId) {
 			TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
 			Dictionary<byte, Tint> tintFiles = helper.GetTintFiles(documentId);
 			Guid SFDocumentId = GetSuperFastDocumentID(documentId, CompanyId).Value;
