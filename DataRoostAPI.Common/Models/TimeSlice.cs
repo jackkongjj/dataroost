@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
-	public class TimeSlice {
+	public class TimeSlice  {
 		public Guid Id { get; set; }
 		public DateTime PeriodEndDate { get; set; }
 		public int PeriodLength { get; set; }
@@ -18,10 +19,25 @@ namespace DataRoostAPI.Common.Models {
 		public int FiscalDistance { get; set; }
 		public DateTime ReportingPeriodEndDate { get; set; }
 		public List<TimeSliceDocument> Documents { get; set; }
+		public bool isNew { get; set; }
+		public bool isEdited { get; set; }
 
 		public TimeSlice() {
 			Documents = new List<TimeSliceDocument>();
 		}
+
+		public override bool Equals(Object timeSliceObj) {
+			TimeSlice obj = timeSliceObj as TimeSlice;
+			if (obj == null) return false;
+			return PeriodLength == obj.PeriodLength && PeriodType == obj.PeriodType && FiscalYear == obj.FiscalYear
+				&& InterimType == obj.InterimType && IsConsolidated == obj.IsConsolidated && IsProforma == obj.IsProforma
+				&& AcquisitionStatus == obj.AcquisitionStatus && FiscalDistance == obj.FiscalDistance && obj.ReportingPeriodEndDate == ReportingPeriodEndDate;
+		}
+
+		public override int GetHashCode() {
+			return this.Id.GetHashCode();
+		}
+
 	}
 
 	public class TimeSliceDocument {
@@ -32,5 +48,7 @@ namespace DataRoostAPI.Common.Models {
 		public string ReportType { get; set; }
 		public bool IsAmended { get; set; }
 		public bool IsRestated { get; set; }
+		public bool isNew { get; set; }
+		public bool isEdited { get; set; }
 	}
 }
