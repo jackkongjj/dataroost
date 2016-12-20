@@ -116,32 +116,49 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTimeSlice(id);
 		}
-        [Route("cells/{id}/flipsign/")]
-        [HttpGet]
-        public TableCell FlipSign(string id)
-        {
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.GetCell(id);
-        }
+		[Route("cells/{id}/flipsign/")]
+		[HttpGet]
+		public TableCell FlipSign(string id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetCell(id);
+		}
 
-		public class test {
+		public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
+		public class UnStitchInput {
+			public int TargetStaticHierarchyID { get; set; }
 		}
 
 
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]
-		public StitchResult PostStitch(string CompanyId, string TemplateName, Guid DocumentId, test test) {
+		public StitchResult PostStitch(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			if (test.TargetStaticHierarchyID == 0 || test.StitchingStaticHierarchyIDs.Count == 0 || test.StitchingStaticHierarchyIDs.Any(s => s == 0))
+			if (stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
 				return null;
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.StitchStaticHierarchies(test.TargetStaticHierarchyID, DocumentId, test.StitchingStaticHierarchyIDs, iconum);
+			return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
+		}
+
+
+		[Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
+		[HttpPost]
+		public UnStitchResult PostUnStitch(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
 		}
 	}
 }

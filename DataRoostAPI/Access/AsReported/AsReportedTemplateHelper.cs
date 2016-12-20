@@ -825,16 +825,19 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			foreach (TableCell cell in res.StaticHierarchy.Cells) {
 				decimal value = cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
 				decimal sum = 0;
+				bool any = false;
 				foreach (CellMTMWComponent c in res.DTSToMTMWComponent[res.CellToDTS[cell]]) {
-					if (c.StaticHierarchyID != res.StaticHierarchy.Id)
+					if (c.StaticHierarchyID != res.StaticHierarchy.Id) {
+						any = true;
 						sum += c.ValueNumeric * ((decimal)(c.IsIncomePositive ? 1 : -1)) * ((decimal)c.ScalingFactorValue);
+					}
 				}
-				cell.MTMWValidationFlag = value != sum;
+				cell.MTMWValidationFlag = value != sum && any;
 			}
 
 			//TODO: Optimize
 			Dictionary<int, Dictionary<int, bool>> ParentMTMW = new Dictionary<int, Dictionary<int, bool>>();
-			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c=>c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID)) {
+			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c => c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID)) {
 				if (!ParentMTMW.ContainsKey(comp.StaticHierarchyID)) {
 					ParentMTMW.Add(comp.StaticHierarchyID, new Dictionary<int, bool>());
 				}
@@ -843,7 +846,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 				bool any = false;
 				decimal sum = 0;
 				foreach (CellMTMWComponent subComp in res.ParentCellChangeComponents.Where(sc => sc.RootStaticHierarchyID == comp.RootStaticHierarchyID && sc.RootDocumentTimeSliceID == comp.RootDocumentTimeSliceID && !sc.Equals(comp))) {
-					if(!any) any = true;
+					if (!any) any = true;
 
 					sum += subComp.ValueNumeric * (subComp.IsIncomePositive ? 1 : -1) * (decimal)subComp.ScalingFactorValue;
 				}
@@ -851,6 +854,158 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 				ParentMTMW[comp.StaticHierarchyID].Add(comp.DocumentTimeSliceID, any && val != sum);
 			}
 			res.ParentMTMWChanges = ParentMTMW;
+
+			return res;
+		}
+
+		public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum) {
+
+			UnStitchResult res = new UnStitchResult()
+			{
+				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
+				StaticHierarchies = new List<StaticHierarchy>()
+			};
+
+			Dictionary<Tuple<int, int>, TableCell> CellMap = new Dictionary<Tuple<int, int>, TableCell>();
+			List<CellMTMWComponent> CellChangeComponents;
+			Dictionary<int, int> SHLevels;
+
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand("SCARUnStitchRows", conn)) {
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@TargetSH", StaticHierarchyID);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
+					cmd.Parameters.AddWithValue("@Iconum", Iconum);
+
+
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
+						sdr.NextResult();
+
+						SHLevels = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToDictionary(k => k.Item1, v => v.Item2);
+						
+						sdr.NextResult();
+
+						while (sdr.Read()) {
+							StaticHierarchy document = new StaticHierarchy
+							{
+								Id = sdr.GetInt32(0),
+								CompanyFinancialTermId = sdr.GetInt32(1),
+								AdjustedOrder = sdr.GetInt32(2),
+								TableTypeId = sdr.GetInt32(3),
+								Description = sdr.GetStringSafe(4),
+								HierarchyTypeId = sdr.GetStringSafe(5)[0],
+								SeparatorFlag = sdr.GetBoolean(6),
+								StaticHierarchyMetaId = sdr.GetInt32(7),
+								UnitTypeId = sdr.GetInt32(8),
+								IsIncomePositive = sdr.GetBoolean(9),
+								ChildrenExpandDown = sdr.GetBoolean(10),
+								ParentID = sdr.GetNullable<int>(11),
+								Cells = new List<TableCell>()
+							};
+							res.StaticHierarchies.Add(document);
+						}
+
+						sdr.NextResult();
+
+						int shix = 0;
+						int adjustedOrder = 0;
+
+						while (sdr.Read()) {
+							TableCell cell;
+							if (sdr.GetNullable<int>(0).HasValue) {
+								cell = new TableCell
+								{
+									ID = sdr.GetInt32(0),
+									Offset = sdr.GetStringSafe(1),
+									CellPeriodType = sdr.GetStringSafe(2),
+									PeriodTypeID = sdr.GetStringSafe(3),
+									CellPeriodCount = sdr.GetStringSafe(4),
+									PeriodLength = sdr.GetNullable<int>(5),
+									CellDay = sdr.GetStringSafe(6),
+									CellMonth = sdr.GetStringSafe(7),
+									CellYear = sdr.GetStringSafe(8),
+									CellDate = sdr.GetNullable<DateTime>(9),
+									Value = sdr.GetStringSafe(10),
+									CompanyFinancialTermID = sdr.GetNullable<int>(11),
+									ValueNumeric = sdr.GetNullable<decimal>(12),
+									NormalizedNegativeIndicator = sdr.GetBoolean(13),
+									ScalingFactorID = sdr.GetStringSafe(14),
+									AsReportedScalingFactor = sdr.GetStringSafe(15),
+									Currency = sdr.GetStringSafe(16),
+									CurrencyCode = sdr.GetStringSafe(17),
+									Cusip = sdr.GetStringSafe(18),
+									ScarUpdated = sdr.GetBoolean(19),
+									IsIncomePositive = sdr.GetBoolean(20),
+									XBRLTag = sdr.GetStringSafe(21),
+									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
+									DocumentID = sdr.GetGuid(23),
+									Label = sdr.GetStringSafe(24),
+									ScalingFactorValue = sdr.GetDouble(25),
+									ARDErrorTypeId = sdr.GetNullable<int>(26),
+									MTMWErrorTypeId = sdr.GetNullable<int>(27),
+									LikePeriodValidationFlag = sdr.GetBoolean(28)
+								};
+
+								adjustedOrder = sdr.GetInt32(29);
+							} else {
+								cell = new TableCell();
+								adjustedOrder = sdr.GetInt32(29);
+							}
+
+							while (adjustedOrder != res.StaticHierarchies[shix].AdjustedOrder) {
+								shix++;
+							}
+
+							CellMap.Add(new Tuple<int, int>(res.StaticHierarchies[shix].Id, sdr.GetInt32(30)), cell);
+
+							if (cell.ID == 0 || cell.CompanyFinancialTermID == res.StaticHierarchies[shix].CompanyFinancialTermId) {
+								res.StaticHierarchies[shix].Cells.Add(cell);
+							} else {
+								throw new Exception();
+							}
+						}
+
+						sdr.NextResult();
+
+						CellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+						{
+							StaticHierarchyID = r.GetInt32(0),
+							DocumentTimeSliceID = r.GetInt32(3),
+							TableCellID = r.GetInt32(4),
+							ValueNumeric = r.GetDecimal(8),
+							IsIncomePositive = r.GetBoolean(9),
+							ScalingFactorValue = r.GetDouble(10),
+							RootStaticHierarchyID = r.GetInt32(6),
+							RootDocumentTimeSliceID = r.GetInt32(7)
+						}
+						).ToList();
+					}
+				}
+			}
+
+			
+			Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
+
+			foreach (CellMTMWComponent comp in CellChangeComponents) {
+				Tuple<int,int> tup = new Tuple<int,int>(comp.RootStaticHierarchyID, comp.RootDocumentTimeSliceID);
+				if(!CellValueMap.ContainsKey(tup))
+					CellValueMap.Add(tup, 0);
+
+				CellValueMap[tup] += comp.ValueNumeric * ((decimal)comp.ScalingFactorValue) * (comp.IsIncomePositive ? 1 : -1);
+			}
+
+			foreach(Tuple<int, int> key in CellMap.Keys){
+				TableCell cell = CellMap[key];
+				if(CellValueMap.ContainsKey(key))
+				cell.MTMWValidationFlag = (cell.ValueNumeric * (decimal)cell.ScalingFactorValue * (cell.IsIncomePositive ? 1 : -1)) != CellValueMap[key];
+			}
+
+			foreach (StaticHierarchy sh in res.StaticHierarchies) {
+				sh.Level = SHLevels[sh.Id];
+			}
 
 			return res;
 		}

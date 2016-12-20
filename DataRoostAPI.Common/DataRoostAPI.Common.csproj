@@ -103,6 +103,7 @@
     <Compile Include="Models\AsReported\StitchResult.cs" />
     <Compile Include="Models\AsReported\TableCell.cs" />
     <Compile Include="Models\AsReported\TimeSlice.cs" />
+    <Compile Include="Models\AsReported\UnStitchResult.cs" />
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\CompanyPriority.cs" />
     <Compile Include="Models\CountryDTO.cs" />
