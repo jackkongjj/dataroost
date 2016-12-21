@@ -103,7 +103,7 @@ ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.Ve
        on gai.areaid = gsn.areaid
 	   where  gvv.VersionID =@VersionId and gsn.TimeSliceID = @TimeSeriesId
 union
-select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, 'Segments' as Type, b.SegmentId
+select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, isnull(b.Type,'Segments'), b.SegmentId
  from (
 select ac.ID as AccountId , ac.Title as AccountTitle , ct.ID as ConceptId , ct.ConceptName as ConceptName  from 
 SegEx.SegmentConceptTypes ct 
@@ -117,13 +117,37 @@ from  SegEx.Segments s
 left join SegEx.[Values] v on  v.PeriodId = s.TSID and s.VersionId = v.VersionId  and v.SegmentId = s.Id
 left JOIN SegEx.Versions c on c.ID = v.VersionId
 left join SegEx.TimeSeries t on t.VersionId = s.VersionId and t.Id = v.PeriodId
-where s.VersionId =@VersionId  and t.Id = @TimeSeriesId )b on b.AccountId = a.AccountId and a.ConceptId = b.SegmentConceptType
+where s.VersionId =@VersionId  and t.Id = @TimeSeriesId )b on b.AccountId = a.AccountId and a.ConceptId = b.SegmentConceptType 
+where  (b.STDCode is null or b.STDCode < 65999)
 union 
 Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as AsReportedLabel,null as AsRepStdCode,t.STDCode,t.SICCode,t.NAICCode ,t.Total as Value , null as Mathml , null as IsCorpElim ,null as IsExceptionalCharges, null as IsDiscontinued, 'Segments' as Type, null from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
                               left join SegEx.TimeSeries ts on t.VersionId = ts.VersionId and t.tsid = ts.id  
                                                   left join SegEx.Account a on a.id = t.AccountId
                              join SegEx.SegmentConceptTypes sc on sc.id = t.SegConceptTypeId 
- WHERE V.PermSecId = @PermId AND  v.id = @VersionId and ts.Id = @TimeSeriesId";
+ WHERE V.PermSecId = @PermId AND  v.id = @VersionId and ts.Id = @TimeSeriesId
+
+union 
+
+
+select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, b.Type, b.SegmentId
+ from (
+select ac.ID as AccountId , ac.Title as AccountTitle , ct.ID as ConceptId , ct.ConceptName as ConceptName  from 
+SegEx.SegmentConceptTypes ct 
+cross join SegEx.Account ac
+) a
+left join 
+(
+select s.SegmentConceptType , v.AccountId ,  s.Title as SegmentTitle ,null as AsReportedLabel, s.AsRepStdCode , s.StandardizedStdCode as STDCode,
+s.SIC as SICCode , s.NAIC as NAICCode ,  v.AsReportedValue as Value , v.Mathml , s.IsCorpElim , s.IsExceptionalCharges , s.IsDiscontinued, 'Segments BreakOut' as Type, s.Id as SegmentId
+from  SegEx.Segments s 
+left join SegEx.[Values] v on  v.PeriodId = s.TSID and s.VersionId = v.VersionId  and v.SegmentId = s.Id
+left JOIN SegEx.Versions c on c.ID = v.VersionId
+left join SegEx.TimeSeries t on t.VersionId = s.VersionId and t.Id = v.PeriodId
+where s.VersionId =@VersionId  and t.Id = @TimeSeriesId )b on b.AccountId = a.AccountId and a.ConceptId = b.SegmentConceptType 
+where b.STDCode > 65999
+
+
+";
 
 			List<SegmentNode> list = new List<SegmentNode>();
 			using (SqlConnection sqlConn = new SqlConnection(connectionString))
@@ -159,7 +183,7 @@ Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as 
 			List<FootNotes> footNotes = GetFootNotes(new Guid(versionId));
 
 			foreach (var vTypes in list.GroupBy(o => o.Type)) {
-				if (vTypes.Key == "Segments") {
+				if (vTypes.Key == "Segments" || vTypes.Key == "Segments BreakOut") {
 					Dictionary<string, object> conceptTypes = new System.Collections.Generic.Dictionary<string, object>();
 					foreach (var conceptType in vTypes.GroupBy(o => o.ConceptName)) {
 						Dictionary<string, object> AccountTypes = new System.Collections.Generic.Dictionary<string, object>();
