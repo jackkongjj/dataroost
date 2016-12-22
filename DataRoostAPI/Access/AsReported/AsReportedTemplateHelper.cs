@@ -15,12 +15,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		public AsReportedTemplateHelper(string sfConnectionString) {
 			this._sfConnectionString = sfConnectionString;
 		}
-		private string SQL_CellsQuery =
-								@"
+		private string SQL_GetCellQuery =
+                                @"
 SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
-				tc.XBRLTag, tc.UpdateStampUTC, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
+				tc.XBRLTag, null, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
 				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
@@ -38,12 +38,11 @@ JOIN(
 	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
 	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
 	JOIN TableType tt on tt.ID = sh.TableTypeID
-	WHERE ds.CompanyID = @iconum
-	AND tt.Description = @templateName
-	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+	WHERE tc.ID = @cellId
+	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
 JOIN DocumentTimeSlice dts on dts.ID = ts.ID
-LEFT JOIN(
+JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
@@ -52,12 +51,10 @@ LEFT JOIN(
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
 	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
-	WHERE ds.CompanyID = @iconum
-	AND tt.Description = @templateName
+	WHERE tc.ID = @cellId
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
 JOIN Document d on dts.documentid = d.ID
-WHERE ds.CompanyID = @iconum
-AND tt.Description = @templateName
+WHERE 1=1
 ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
 
 ";//I hate this query, it is so bad
@@ -645,7 +642,7 @@ AND not tcSib.TableCellID is null
             {
                 using (SqlCommand cmd = new SqlCommand(SQL_GetSibilingCellsQuery, conn))
                 {
-                   
+                    conn.Open();
                     //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
                     cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
                     cmd.Parameters.AddWithValue("@TCID", CellId);
@@ -681,19 +678,27 @@ AND not tcSib.TableCellID is null
                                     AsReportedScalingFactor = reader.GetStringSafe(16),
                                     Currency = reader.GetStringSafe(17),
                                     CurrencyCode = reader.GetStringSafe(18),
-                                    Cusip = reader.GetStringSafe(19),
-                                    ScarUpdated = reader.GetBoolean(20),
-                                    IsIncomePositive = reader.GetBoolean(21),
-                                    XBRLTag = reader.GetStringSafe(22),
-                                    UpdateStampUTC = reader.GetNullable<DateTime>(23),
-                                    DocumentID = reader.GetGuid(24),
-                                    Label = reader.GetStringSafe(25),
-                                    ScalingFactorValue = reader.GetDouble(26),
-                                    ARDErrorTypeId = reader.GetNullable<int>(1),
-                                    MTMWErrorTypeId = reader.GetNullable<int>(1)
+                                    Cusip = reader.GetStringSafe(19)
+                                    //ScarUpdated = reader.GetBoolean(20),
+                                    //IsIncomePositive = reader.GetBoolean(21),
+                                    //XBRLTag = reader.GetStringSafe(22),
+                                    //UpdateStampUTC = reader.GetNullable<DateTime>(23),
+                                    //DocumentID = reader.IsDBNull(24) ? Guid.Empty : reader.GetGuid(24),
+                                    //Label = reader.GetStringSafe(25),
+                                    //ScalingFactorValue = reader.GetDouble(26),
+                                    //ARDErrorTypeId = reader.GetNullable<int>(1),
+                                    //MTMWErrorTypeId = reader.GetNullable<int>(1)
                                 };
-
-                                adjustedOrder = reader.GetInt32(1);
+                                cell.ScarUpdated = reader.GetBoolean(20);
+                                cell.IsIncomePositive = reader.GetBoolean(21);
+                                cell.XBRLTag = reader.GetStringSafe(22);
+                                //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+                                cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+                                cell.Label = reader.GetStringSafe(24);
+                                //cell.ScalingFactorValue = reader.GetDouble(25);
+                                //cell.ARDErrorTypeId = reader.GetNullable<int>(1);
+                                //cell.MTMWErrorTypeId = reader.GetNullable<int>(1);
+                                adjustedOrder++;// = reader.GetInt32(1);
                             }
                             else
                             {
@@ -719,7 +724,8 @@ AND not tcSib.TableCellID is null
 		}
 		public TableCell GetCell(string CellId) {
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(SQL_CellsQuery, conn)) {
+				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
+                    conn.Open();
 					cmd.Parameters.AddWithValue("@cellId", CellId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
