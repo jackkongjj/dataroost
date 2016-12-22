@@ -25,6 +25,8 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 		public string Type { get; set; }
 		[JsonIgnore]
 		public int? SegmentId { get; set; }
+		[JsonIgnore]
+		public bool IsBreakOut { get; set; }
 	}
 
 	public class FootNotes {
