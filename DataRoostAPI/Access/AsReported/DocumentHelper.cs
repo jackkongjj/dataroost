@@ -388,6 +388,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							} else {
 								document.Cells = GetTableCells(document.SuperFastDocumentId);
 							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							documents.Add(document);
 						}
 					}
@@ -460,6 +461,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							} else {
 								document.Cells = GetTableCells(document.SuperFastDocumentId);
 							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							documents.Add(document);
 						}
 					}
@@ -565,7 +567,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 												left JOIN dbo.TableDimension td  with (NOLOCK) on td.ID = dtc.TableDimensionID
 												left join dbo.DocumentTable dt  with (NOLOCK) on dt.ID = td.DocumentTableID
 												left join dbo.TableType tt  with (NOLOCK) on tt.ID = dt.TableTypeID
-												WHERE c.DocumentId = @documentId and (td.DimensionTypeID is null or TD.DimensionTypeID in (1,3))";
+												WHERE c.DocumentId = @documentId and (td.DimensionTypeID is null or TD.DimensionTypeID in (1,3))  and (tt.id is null or tt.description = 'ReferencedCells') ";
 
 			List<Cell> cells = new List<Cell>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
