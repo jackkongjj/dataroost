@@ -89,7 +89,8 @@ ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.Ve
 
 		public Dictionary<string, object> GetTimeseriesSTDValues(string timeSliceId, string versionId, string secPermId) {
 			Dictionary<string, object> toRet = new System.Collections.Generic.Dictionary<string, object>();
-			const string query_g = @"select null as ConceptName, gai.Name as AccountTitle , null as SegmentTitle, gvv.AsReportedLabel ,null as AsRepStdCode,null as STDCode, null as SICCode, null as NAICCode, gvv.Value , gvv.MathML,  null as IsCorpElim ,null as IsExceptionalCharges, null as IsDiscontinued , 'GeoRev' as Type, null
+			const string query_g = @"
+select null as ConceptName, gai.Name as AccountTitle , null as SegmentTitle, gvv.AsReportedLabel ,null as AsRepStdCode,null as STDCode, null as SICCode, null as NAICCode, gvv.Value , gvv.MathML,  null as IsCorpElim ,null as IsExceptionalCharges, null as IsDiscontinued , 'GeoRev' as Type, null , convert(bit,0 ) as IsBreakOut
 
  from [SegEx].[GeoRevValues] gvv
        join SegEx.TimeSeries t on gvv.tsid = t.id and gvv.VersionId= t.VersionId
@@ -103,7 +104,7 @@ ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.Ve
        on gai.areaid = gsn.areaid
 	   where  gvv.VersionID =@VersionId and gsn.TimeSliceID = @TimeSeriesId
 union
-select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, isnull(b.Type,'Segments'), b.SegmentId
+select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, isnull(b.Type,'Segments'), b.SegmentId , case when (b.STDCode is not null and b.STDCode > 65999) then convert(bit,1 ) else  convert(bit,0 ) end as IsBreakOut
  from (
 select ac.ID as AccountId , ac.Title as AccountTitle , ct.ID as ConceptId , ct.ConceptName as ConceptName  from 
 SegEx.SegmentConceptTypes ct 
@@ -118,35 +119,14 @@ left join SegEx.[Values] v on  v.PeriodId = s.TSID and s.VersionId = v.VersionId
 left JOIN SegEx.Versions c on c.ID = v.VersionId
 left join SegEx.TimeSeries t on t.VersionId = s.VersionId and t.Id = v.PeriodId
 where s.VersionId =@VersionId  and t.Id = @TimeSeriesId )b on b.AccountId = a.AccountId and a.ConceptId = b.SegmentConceptType 
-where  (b.STDCode is null or b.STDCode < 65999)
+
 union 
-Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as AsReportedLabel,null as AsRepStdCode,t.STDCode,t.SICCode,t.NAICCode ,t.Total as Value , null as Mathml , null as IsCorpElim ,null as IsExceptionalCharges, null as IsDiscontinued, 'Segments' as Type, null from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
+Select 'Total',  sc.ConceptName as AccountTitle,a.Title as SegmentTitle,null as AsReportedLabel,null as AsRepStdCode,t.STDCode,t.SICCode,t.NAICCode ,t.Total as Value , null as Mathml , null as IsCorpElim ,null as IsExceptionalCharges, null as IsDiscontinued, 'Segments' as Type, null , convert(bit,0 ) as IsBreakOut
+from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
                               left join SegEx.TimeSeries ts on t.VersionId = ts.VersionId and t.tsid = ts.id  
                                                   left join SegEx.Account a on a.id = t.AccountId
                              join SegEx.SegmentConceptTypes sc on sc.id = t.SegConceptTypeId 
  WHERE V.PermSecId = @PermId AND  v.id = @VersionId and ts.Id = @TimeSeriesId
-
-union 
-
-
-select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, b.Type, b.SegmentId
- from (
-select ac.ID as AccountId , ac.Title as AccountTitle , ct.ID as ConceptId , ct.ConceptName as ConceptName  from 
-SegEx.SegmentConceptTypes ct 
-cross join SegEx.Account ac
-) a
-left join 
-(
-select s.SegmentConceptType , v.AccountId ,  s.Title as SegmentTitle ,null as AsReportedLabel, s.AsRepStdCode , s.StandardizedStdCode as STDCode,
-s.SIC as SICCode , s.NAIC as NAICCode ,  v.AsReportedValue as Value , v.Mathml , s.IsCorpElim , s.IsExceptionalCharges , s.IsDiscontinued, 'Segments BreakOut' as Type, s.Id as SegmentId
-from  SegEx.Segments s 
-left join SegEx.[Values] v on  v.PeriodId = s.TSID and s.VersionId = v.VersionId  and v.SegmentId = s.Id
-left JOIN SegEx.Versions c on c.ID = v.VersionId
-left join SegEx.TimeSeries t on t.VersionId = s.VersionId and t.Id = v.PeriodId
-where s.VersionId =@VersionId  and t.Id = @TimeSeriesId )b on b.AccountId = a.AccountId and a.ConceptId = b.SegmentConceptType 
-where b.STDCode > 65999
-
-
 ";
 
 			List<SegmentNode> list = new List<SegmentNode>();
@@ -174,7 +154,8 @@ where b.STDCode > 65999
 							IsExceptionalCharges = sdr.GetNullable<bool>(11),
 							IsDiscontinued = sdr.GetNullable<bool>(12),
 							Type = sdr.GetStringSafe(13),
-							SegmentId = sdr.GetNullable<int>(14)
+							SegmentId = sdr.GetNullable<int>(14),
+							IsBreakOut = sdr.GetBoolean(15)
 						});
 					}
 				}
@@ -183,35 +164,43 @@ where b.STDCode > 65999
 			List<FootNotes> footNotes = GetFootNotes(new Guid(versionId));
 
 			foreach (var vTypes in list.GroupBy(o => o.Type)) {
-				if (vTypes.Key == "Segments" || vTypes.Key == "Segments BreakOut") {
+				if (vTypes.Key == "Segments") {
 					Dictionary<string, object> conceptTypes = new System.Collections.Generic.Dictionary<string, object>();
 					foreach (var conceptType in vTypes.GroupBy(o => o.ConceptName)) {
 						Dictionary<string, object> AccountTypes = new System.Collections.Generic.Dictionary<string, object>();
 						foreach (var accountType in conceptType.GroupBy(o => o.AccountName)) {
 							Dictionary<string, object> SegmentTypes = new System.Collections.Generic.Dictionary<string, object>();
-							foreach (var seg in accountType) {
-								if (!string.IsNullOrWhiteSpace(seg.SegmentTitle)) {
-									string segmentCode = conceptType.Key == "Total" ? seg.SegmentTitle + " - " + seg.STDCode : seg.SegmentTitle;
+							foreach (var segment in accountType.GroupBy(o => o.IsBreakOut)) {
+								Dictionary<string, object> breakOutSeg = new Dictionary<string, object>();
+								foreach (var seg in segment) {
 
-									if (conceptType.Key == "Total") {
-										SegmentTypes.Add(segmentCode, seg.AAAValue);
-									} else if (conceptType.Key == "Geo1OperationsSegments" || conceptType.Key == "Geo2CustomerLocationSegments") {
-										IDictionary<string, object> segObject = seg.ToDynamic();
-										int i = 0;
-										segObject.Remove("NAICCode");
-										segObject.Remove("SICCode");
-										foreach (var footnote in footNotes.Where(o => o.SegmentId == seg.SegmentId)) {
-											i++;
-											segObject[footnote.GeoRevType + i] = footnote.Area;
+									if (!string.IsNullOrWhiteSpace(seg.SegmentTitle)) {
+										string segmentCode = conceptType.Key == "Total" ? seg.SegmentTitle + " - " + seg.STDCode : seg.SegmentTitle;
+
+										if (conceptType.Key == "Total") {
+											SegmentTypes.Add(segmentCode, seg.AAAValue);
+										} else if (conceptType.Key == "Geo1OperationsSegments" || conceptType.Key == "Geo2CustomerLocationSegments") {
+											IDictionary<string, object> segObject = seg.ToDynamic();
+											int i = 0;
+											segObject.Remove("NAICCode");
+											segObject.Remove("SICCode");
+											foreach (var footnote in footNotes.Where(o => o.SegmentId == seg.SegmentId)) {
+												i++;
+												segObject[footnote.GeoRevType + i] = footnote.Area;
+											}
+											breakOutSeg.Add(segmentCode, segObject);
+
+										} else {
+											SegmentTypes.Add(segmentCode, seg);
 										}
-										SegmentTypes.Add(segmentCode, segObject);
-									} else {
-										SegmentTypes.Add(segmentCode, seg);
+
 									}
-
-
 								}
+								if (breakOutSeg.Count > 0)
+									SegmentTypes.Add(segment.Key ? "Breakout Segments" : "Main segments", breakOutSeg);
+
 							}
+
 							AccountTypes.Add(accountType.Key, SegmentTypes);
 						}
 						conceptTypes.Add(conceptType.Key, AccountTypes);
