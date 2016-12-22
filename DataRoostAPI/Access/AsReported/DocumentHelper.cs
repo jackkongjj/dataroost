@@ -319,7 +319,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							document.Cells = InsertTINTOffsets(documentId, iconum);
+							if (dcHelper.IsIconumDC(iconum)) {
+								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+								var tableCells = GetTableCells(document.SuperFastDocumentId);
+								foreach (var cell in tableCells) {
+									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+									if (existingCell != null) {
+										existingCell.RowOrder = cell.RowOrder;
+										existingCell.TableName = cell.TableName;
+									} else {
+										document.Cells.Add(cell);
+									}
+								}
+							} else {
+								document.Cells = GetTableCells(document.SuperFastDocumentId);
+							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							return document;
 						}
 					}
@@ -486,13 +501,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			
 		}
 
-		public List<Cell> InsertTINTOffsets(string documentId, int CompanyId) {
+		public void InsertTINTOffsets(string documentId, int CompanyId) {
 			TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
 			Dictionary<byte, Tint> tintFiles = helper.GetTintFiles(documentId);
 			Guid SFDocumentId = GetSuperFastDocumentID(documentId, CompanyId).Value;
 			int documentSeries = GetDocumentSeriesID(SFDocumentId.ToString());
 			List<Cell> tableCells = GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString()).ToList();
-			List<Cell> insertedCells = new List<Cell>();
+		
 			foreach (var root in tintFiles.Keys) {
 				foreach (var tint in tintFiles[root]) {
 					int currentTerm = 0;
@@ -537,7 +552,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 								cc.RowOrder = cell.Line;
 								cc.TableName = tint.Type;
-								insertedCells.Add(cc);
+								
 							}
 
 						} catch (Exception e) {
@@ -549,13 +564,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							if (existingCell != null) {
 								existingCell.RowOrder = cell.Line;
 								existingCell.TableName = tint.Type;
-								insertedCells.Add(existingCell);
+								
 							}
 						}
 				}
 				}
 			}
-			return insertedCells;
+		
+		}
+
+		public List<Cell> GetDocumentTableCells(string documentId, int CompanyId) {
+			return GetTableCells(GetSuperFastDocumentID(documentId,CompanyId).Value.ToString());
 		}
 
 		private List<Cell> GetTableCells(string documentId) {
@@ -692,6 +711,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			}
 
 			return DamDocID;
+		}
+
+		public  Guid? GetSuperFastDocumentID(Guid DamDocId, int iconum) {
+			const string sqltxt = @"prcGet_FFDocHist_GetSuperFastDocumentID";
+
+			try {
+				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
+				using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
+					cmd.CommandType = CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@docId", DamDocId);
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+					sqlConn.Open();
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read())
+							return sdr.GetGuid(0);
+						else
+							return null;
+					}
+				}
+			} catch (Exception e) {
+				return null;
+			}
 		}
 
 		private int GetDocumentSeriesID(string DocumentId) {

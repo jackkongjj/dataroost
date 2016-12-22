@@ -29,22 +29,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 		}
 
 
-		[Route("documents/{documentId}/Testing")]
+		[Route("TableCells/{documentId}")]
 		[HttpGet]
-		public HttpResponseMessage GetDCDocumentDownload(string CompanyId, string documentId) {
+		public List<Cell> GetDCDocumentDownload(string CompanyId, string documentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-			string contents = documentHelper.DownloadFile(iconum, documentId);
-			HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
-			response.Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(contents ?? "")));
-			response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
-			response.Content.Headers.ContentDisposition.FileName = documentId+".csv";
-			
-
-			return response;
+			return documentHelper.GetDocumentTableCells(documentId,iconum);
 		}
 
 
