@@ -68,18 +68,10 @@ end
 				cmd.Parameters.Add(new SqlParameter("@currency", SqlDbType.VarChar, 32) { Value = DbParameterSafe(currency) });
 				cmd.Parameters.Add(new SqlParameter("@currencyCode", SqlDbType.VarChar, 32) { Value = DbParameterSafe(NormalizeCurrency(currency)) });
 				cmd.Parameters.Add(new SqlParameter("@xbrlTag", SqlDbType.VarChar) { Value = DbParameterSafe(xbrlTag) });
-				int periodLength_out;
-				long periodLengthFred_out;
+			
 				ObservableCollection<TableMeta> tm = new ObservableCollection<TableMeta>(TableMeta.GetAll(_sfConnectionString));
 
-				if (!string.IsNullOrEmpty(tableType) && tm.Any(x => x.PITFlag && tableType.ToLower() == x.Name.ToLower()))
-					cmd.Parameters.AddWithValue("@PeriodLength", 0);
-				else if (int.TryParse(cellPeriodLength, out periodLength_out))
-					cmd.Parameters.AddWithValue("@PeriodLength", periodLength_out);
-				else if (EnglishNumberUnspeller.TryParseText(cellPeriodLength, out periodLengthFred_out))
-					cmd.Parameters.AddWithValue("@PeriodLength", (int)periodLengthFred_out);
-				else
-					cmd.Parameters.AddWithValue("@PeriodLength", DBNull.Value);
+				cmd.Parameters.AddWithValue("@PeriodLength", cellPeriodLength);
 
 				//Scaling
 				cmd.Parameters.Add(new SqlParameter("@scale", SqlDbType.Char, 1) { Value = getNormalizedScalingFactorId(scaling) });
