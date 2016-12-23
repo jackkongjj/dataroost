@@ -712,15 +712,21 @@ AND not tcSib.TableCellID is null
             }
             return (TableCell[])tableCells.ToArray(typeof(TableCell));
 		}
-		public TableCell FlipSign(string CellId, Guid DocumentId) {
+        public TableCellResult FlipSign(string CellId, Guid DocumentId)
+        {
+            TableCellResult result = new TableCellResult();
+            result.cells = new List<TableCell>();
+
 			TableCell currCell = GetCell(CellId);
+            result.cells.Add(currCell);
 			if (setIsIncomePositive(CellId, !currCell.IsIncomePositive)) {
 				currCell.IsIncomePositive = !currCell.IsIncomePositive;
                 TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
-				return currCell;
+                result.cells.AddRange(sibilings);
 			} else {
-				return new TableCell();
+                
 			}
+            return result;
 		}
 		public TableCell GetCell(string CellId) {
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {

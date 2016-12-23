@@ -116,21 +116,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTimeSlice(id);
 		}
-      [Route("cells/{id}/flipsign/")]
-      [HttpGet]
-      public TableCell FlipSign(string id)
-      {
-          Guid docId = new Guid(@"00000000-0000-0000-0000-000000000000");
-          return FlipSign(id, docId);
-      }
+        [Route("cells/{id}/flipsign/")]
+        [HttpGet]
+        public TableCellResult FlipSign(string id)
+        {
+            Guid docId = new Guid(@"00000000-0000-0000-0000-000000000000");
+            return FlipSign(id, docId);
+        }
 
-			[Route("cells/{id}/flipsign/{DocumentId}/")]
-			[HttpGet]
-			public TableCell FlipSign(string id, Guid DocumentId) {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.FlipSign(id, DocumentId);
-			}
+        [Route("cells/{id}/flipsign/{DocumentId}/")]
+        [HttpGet]
+        public TableCellResult FlipSign(string id, Guid DocumentId)
+        {
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.FlipSign(id, DocumentId);
+        }
 
 
 		public class StitchInput {
