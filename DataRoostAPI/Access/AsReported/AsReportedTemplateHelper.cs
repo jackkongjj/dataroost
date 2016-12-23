@@ -787,6 +787,34 @@ AND not tcSib.TableCellID is null
 			return new TableCell();
 		}
 
+        public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId)
+        {
+            TableCellResult result = new TableCellResult();
+            result.cells = new List<TableCell>();
+
+            TableCell currCell = GetCell(CellId);
+            currCell.MTMWErrorTypeId = 0;
+            result.cells.Add(currCell);
+            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+            result.cells.AddRange(sibilings);
+            return result;
+        }
+
+        public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId)
+        {
+            TableCellResult result = new TableCellResult();
+            result.cells = new List<TableCell>();
+
+            TableCell currCell = GetCell(CellId);
+            currCell.LikePeriodValidationFlag = true;
+            currCell.MTMWValidationFlag = true;
+            result.cells.Add(currCell);
+            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+            result.cells.AddRange(sibilings);
+            return result;
+        }
+
+
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
 			string query = @"SCARStitchRows";
 

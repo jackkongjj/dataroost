@@ -133,6 +133,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             return helper.FlipSign(id, DocumentId);
         }
 
+        [Route("cells/{id}/addMTMW/{DocumentId}/")]
+        [HttpGet]
+        public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId)
+        {
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.AddMakeTheMathWorkNote(id, DocumentId);
+        }
+
+        [Route("cells/{id}/addLikePeriod/{DocumentId}/")]
+        [HttpGet]
+        public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId)
+        {
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.AddLikePeriodValidationNote(id, DocumentId);
+        }
+
+
 
 		public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
