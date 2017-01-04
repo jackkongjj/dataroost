@@ -28,6 +28,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 			return documentHelper.GetDCDocument(iconum, documentId);
 		}
 
+		[Route("history/{documentId}")]
+		[HttpGet]
+		public AsReportedDocument[] GetHistory(string CompanyId, string documentId, string reportType = null) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			return documentHelper.GetHistory(iconum, documentId, reportType);
+		}
+
 
 		[Route("TableCells/{documentId}")]
 		[HttpGet]

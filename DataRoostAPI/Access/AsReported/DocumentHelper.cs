@@ -484,6 +484,102 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			}
 			return documents.ToArray();
 		}
+		//	AND d.ReportTypeID = @reportType
+		public AsReportedDocument[] GetHistory(int iconum, string documentId, string reportType) {
+			const string queryWithReportType =
+								@"declare @DocumentYear int 
+select @DocumentYear = year(d.documentdate) from document d
+join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+where d.damdocumentid = @DamDocumentId
+
+declare @Years table(Yr int, Diff int)
+
+insert into @Years
+SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+AND d.ReportTypeID = @reportType
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND d.ReportTypeID = @reportType
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+			const string queryWithoutReportType =
+								@"declare @DocumentYear int 
+select @DocumentYear = year(d.documentdate) from document d
+join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+where d.damdocumentid = @DamDocumentId
+
+declare @Years table(Yr int, Diff int)
+
+insert into @Years
+SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+			string query = null;
+			if (string.IsNullOrEmpty(reportType)) {
+				query = queryWithoutReportType;
+			} else {
+				query = queryWithReportType;
+			}
+			List<AsReportedDocument> documents = new List<AsReportedDocument>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@DamDocumentId", documentId);
+					if (reportType != null) {
+						cmd.Parameters.AddWithValue("@reportType", reportType);
+					}
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							AsReportedDocument document = new AsReportedDocument
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+								HasXbrl = reader.GetBoolean(6),
+							};
+							if (dcHelper.IsIconumDC(iconum)) {
+								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+								var tableCells = GetTableCells(document.SuperFastDocumentId);
+								foreach (var cell in tableCells) {
+									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+									if (existingCell != null) {
+										existingCell.RowOrder = cell.RowOrder;
+										existingCell.TableName = cell.TableName;
+									} else {
+										document.Cells.Add(cell);
+									}
+								}
+							} else {
+								document.Cells = GetTableCells(document.SuperFastDocumentId);
+							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
+							documents.Add(document);
+						}
+					}
+				}
+			}
+			return documents.ToArray();
+		}
 
 		public string DownloadFile(int iconum, string documentId) {
 			AsReportedDocument document = GetDCDocument(iconum,documentId);
