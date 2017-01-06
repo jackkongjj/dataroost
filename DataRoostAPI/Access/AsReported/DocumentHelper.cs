@@ -623,8 +623,6 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								}
 							} catch { }
 						}
-
-
 						string CellOffsetValue = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.HasBoundingBox ?
 							new Bookmark(cell.OriginalOffset, root).ToString() : new Bookmark(int.Parse(offset), length, root).ToString();
 
@@ -646,8 +644,6 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								cc.Id =  tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
 																										 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
 
-								cc.RowOrder = cell.Line;
-								cc.TableName = tint.Type;
 								
 							}
 
@@ -655,14 +651,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 							System.Diagnostics.Debug.WriteLine(e.ToString());
 							continue;
 						}
-						} else {
-							Cell existingCell = tableCells.FirstOrDefault(o => o.Offset == CellOffsetValue);
-							if (existingCell != null) {
-								existingCell.RowOrder = cell.Line;
-								existingCell.TableName = tint.Type;
-								
-							}
-						}
+						} 
 				}
 				}
 			}
