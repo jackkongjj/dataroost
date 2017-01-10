@@ -97,7 +97,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					cmd.Parameters.AddWithValue("@DamDocumentId", documentId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						if (reader.Read()) {
+						while (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
 							{
 								ReportDate = reader.GetDateTime(0),
