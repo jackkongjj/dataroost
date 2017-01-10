@@ -28,23 +28,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 			return documentHelper.GetDCDocument(iconum, documentId);
 		}
 
-
-		[Route("documents/{documentId}/Testing")]
+		[Route("history/{documentId}")]
 		[HttpGet]
-		public HttpResponseMessage GetDCDocumentDownload(string CompanyId, string documentId) {
+		public AsReportedDocument[] GetHistory(string CompanyId, string documentId, string reportType = null) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-			string contents = documentHelper.DownloadFile(iconum, documentId);
-			HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.OK);
-			response.Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(contents ?? "")));
-			response.Content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment");
-			response.Content.Headers.ContentDisposition.FileName = documentId+".csv";
-			
+			return documentHelper.GetHistory(iconum, documentId, reportType);
+		}
 
-			return response;
+
+		[Route("TableCells/{documentId}")]
+		[HttpGet]
+		public List<Cell> GetDCDocumentDownload(string CompanyId, string documentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			return documentHelper.GetDocumentTableCells(documentId, iconum);
 		}
 
 

@@ -45,14 +45,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
-																						{
-																							ReportDate = reader.GetDateTime(0),
-																							PublicationDate = reader.GetDateTime(1),
-																							ReportType = reader.GetStringSafe(2),
-																							FormType = reader.GetStringSafe(3),
-																							Id = reader.GetGuid(4).ToString(),
-																							SuperFastDocumentId = reader.GetGuid(5).ToString(),
-																						};
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+							};
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							return document;
 						}
@@ -62,39 +62,39 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return null;
 		}
 
-		public AsReportedDocument[] GetDocuments(int iconum, List<string> documentIds) {
-			const string createTableQuery = @"CREATE TABLE #documentIds ( documentId VARCHAR(50) NOT NULL )";
+		public AsReportedDocument[] GetDocuments(int iconum, string documentId) {
 
-			const string query = @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
-																			FROM DocumentSeries s
-																					JOIN Document d ON d.DocumentSeriesID = s.Id
-																					JOIN #documentIds i ON i.documentId = d.DAMDocumentId
-																			WHERE s.CompanyID = @iconum AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)";
+			const string query = @"declare @DocumentYear int 
+select @DocumentYear = year(d.documentdate) from document d
+join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+where d.damdocumentid = @DamDocumentId
 
-			DataTable table = new DataTable();
-			table.Columns.Add("documentId", typeof(string));
-			foreach (string documentId in documentIds) {
-				table.Rows.Add(documentId);
-			}
+declare @Years table(Yr int, Diff int)
+
+insert into @Years
+SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+
+
 
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
 
 			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 				connection.Open();
 
-				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-					cmd.ExecuteNonQuery();
-				}
-
-				// Upload all iconums to Temp table
-				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#documentIds";
-					bulkCopy.WriteToServer(table);
-				}
-
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@DamDocumentId", documentId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
@@ -156,15 +156,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
-																						{
-																							ReportDate = reader.GetDateTime(0),
-																							PublicationDate = reader.GetDateTime(1),
-																							ReportType = reader.GetStringSafe(2),
-																							FormType = reader.GetStringSafe(3),
-																							Id = reader.GetGuid(4).ToString(),
-																							SuperFastDocumentId = reader.GetGuid(5).ToString(),
-																							HasXbrl = reader.GetBoolean(6),
-																						};
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+								HasXbrl = reader.GetBoolean(6),
+							};
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							documents.Add(document);
 						}
@@ -193,13 +193,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							AsReportedTable table;
 							if (!tables.ContainsKey(tableId)) {
 								table = new AsReportedTable
-												{
-													Id = tableId,
-													TableType = reader.GetStringSafe(1),
-													Cells = new List<Cell>(),
-													Rows = new List<Row>(),
-													Columns = new List<Column>()
-												};
+								{
+									Id = tableId,
+									TableType = reader.GetStringSafe(1),
+									Cells = new List<Cell>(),
+									Rows = new List<Row>(),
+									Columns = new List<Column>()
+								};
 								tables.Add(tableId, table);
 							}
 							table = tables[tableId];
@@ -263,20 +263,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								string companyFinancialTermDescription = reader.GetStringSafe(12);
 								string xbrlTag = reader.GetStringSafe(13);
 								cell = new Cell
-														{
-															Id = cellId,
-															CftId = cftId,
-															Currency = currencyCode,
-															Date = cellDate,
-															Value = value,
-															NumericValue = numericValue,
-															PeriodLength = periodLength,
-															PeriodType = periodType,
-															Offset = offset,
-															ScalingFactor = scalingFactor,
-															CompanyFinancialTermDescription = companyFinancialTermDescription,
-															XbrlTag = xbrlTag,
-														};
+								{
+									Id = cellId,
+									CftId = cftId,
+									Currency = currencyCode,
+									Date = cellDate,
+									Value = value,
+									NumericValue = numericValue,
+									PeriodLength = periodLength,
+									PeriodType = periodType,
+									Offset = offset,
+									ScalingFactor = scalingFactor,
+									CompanyFinancialTermDescription = companyFinancialTermDescription,
+									XbrlTag = xbrlTag,
+								};
 								cells.Add(cellId, cell);
 							}
 
@@ -319,7 +319,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							document.Cells = InsertTINTOffsets(documentId, iconum);
+							if (dcHelper.IsIconumDC(iconum)) {
+								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+								var tableCells = GetTableCells(document.SuperFastDocumentId);
+								foreach (var cell in tableCells) {
+									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+									if (existingCell != null) {
+										existingCell.RowOrder = cell.RowOrder;
+										existingCell.TableName = cell.TableName;
+									} else {
+										document.Cells.Add(cell);
+									}
+								}
+							} else {
+								document.Cells = GetTableCells(document.SuperFastDocumentId);
+							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							return document;
 						}
 					}
@@ -388,6 +403,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							} else {
 								document.Cells = GetTableCells(document.SuperFastDocumentId);
 							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							documents.Add(document);
 						}
 					}
@@ -460,6 +476,103 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 							} else {
 								document.Cells = GetTableCells(document.SuperFastDocumentId);
 							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
+							documents.Add(document);
+						}
+					}
+				}
+			}
+			return documents.ToArray();
+		}
+		//	AND d.ReportTypeID = @reportType
+		public AsReportedDocument[] GetHistory(int iconum, string documentId, string reportType) {
+			const string queryWithReportType =
+								@"declare @DocumentYear int 
+select @DocumentYear = year(d.documentdate) from document d
+join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+where d.damdocumentid = @DamDocumentId
+
+declare @Years table(Yr int, Diff int)
+
+insert into @Years
+SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+AND d.ReportTypeID = @reportType
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND d.ReportTypeID = @reportType
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+			const string queryWithoutReportType =
+								@"declare @DocumentYear int 
+select @DocumentYear = year(d.documentdate) from document d
+join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+where d.damdocumentid = @DamDocumentId
+
+declare @Years table(Yr int, Diff int)
+
+insert into @Years
+SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+			string query = null;
+			if (string.IsNullOrEmpty(reportType)) {
+				query = queryWithoutReportType;
+			} else {
+				query = queryWithReportType;
+			}
+			List<AsReportedDocument> documents = new List<AsReportedDocument>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@DamDocumentId", documentId);
+					if (reportType != null) {
+						cmd.Parameters.AddWithValue("@reportType", reportType);
+					}
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							AsReportedDocument document = new AsReportedDocument
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+								HasXbrl = reader.GetBoolean(6),
+							};
+							if (dcHelper.IsIconumDC(iconum)) {
+								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+								var tableCells = GetTableCells(document.SuperFastDocumentId);
+								foreach (var cell in tableCells) {
+									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+									if (existingCell != null) {
+										existingCell.RowOrder = cell.RowOrder;
+										existingCell.TableName = cell.TableName;
+									} else {
+										document.Cells.Add(cell);
+									}
+								}
+							} else {
+								document.Cells = GetTableCells(document.SuperFastDocumentId);
+							}
+							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							documents.Add(document);
 						}
 					}
@@ -469,28 +582,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		}
 
 		public string DownloadFile(int iconum, string documentId) {
-			AsReportedDocument document = GetDCDocument(iconum,documentId);
+			AsReportedDocument document = GetDCDocument(iconum, documentId);
 			//export Data as CSV
 			StringBuilder sb = new StringBuilder();
 			foreach (var tc in document.Cells.OrderBy(o => o.CftId).GroupBy(o => o.CftId)) {
 				sb.Append(tc.First().Label.Replace(",", "") + ",");
 				foreach (var exportCell in tc) {
-					sb.Append(exportCell.Date + ","+exportCell.Value.Replace(",", "")+" "+ exportCell.ScalingFactor + ",");
+					sb.Append(exportCell.Date + "," + exportCell.Value.Replace(",", "") + " " + exportCell.ScalingFactor + ",");
 				}
 				sb.AppendLine();
 			}
 			string contents = sb.ToString();
 			return contents;
-			
+
 		}
 
-		private List<Cell> InsertTINTOffsets(string documentId, int CompanyId) {
+		public void InsertTINTOffsets(string documentId, int CompanyId) {
 			TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
 			Dictionary<byte, Tint> tintFiles = helper.GetTintFiles(documentId);
 			Guid SFDocumentId = GetSuperFastDocumentID(documentId, CompanyId).Value;
 			int documentSeries = GetDocumentSeriesID(SFDocumentId.ToString());
 			List<Cell> tableCells = GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString()).ToList();
-			List<Cell> insertedCells = new List<Cell>();
+
 			foreach (var root in tintFiles.Keys) {
 				foreach (var tint in tintFiles[root]) {
 					int currentTerm = 0;
@@ -510,50 +623,43 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 								}
 							} catch { }
 						}
-
-
 						string CellOffsetValue = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.HasBoundingBox ?
 							new Bookmark(cell.OriginalOffset, root).ToString() : new Bookmark(int.Parse(offset), length, root).ToString();
 
-						if(tableCells.Count(o => o.Offset == CellOffsetValue) == 0){
-						try {
-							if (cell.ColumnType == "Description") {
-								Label = cell.Value;
-								if (cell.Value.EndsWith("]")) {
-									int start = cell.Value.LastIndexOf("[");
-									String pre = cell.Value.Substring(0, start);
+						if (tableCells.Count(o => o.Offset == CellOffsetValue) == 0) {
+							try {
+								if (cell.ColumnType == "Description") {
+									Label = cell.Value;
+									if (cell.Value.EndsWith("]")) {
+										int start = cell.Value.LastIndexOf("[");
+										String pre = cell.Value.Substring(0, start);
 
-									String value = cell.Value.Substring(start + 1, cell.Value.Length - start - 2);
-									cell.Value = pre + value;
+										String value = cell.Value.Substring(start + 1, cell.Value.Length - start - 2);
+										cell.Value = pre + value;
+									}
+									currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
+
+								} else {
+									Cell cc = new Cell();
+									cc.Id = tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
+																											 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
+
+
 								}
-								currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
 
-							} else {
-								Cell cc = new Cell();
-								cc.Id =  tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
-																										 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
-
-								cc.RowOrder = cell.Line;
-								cc.TableName = tint.Type;
-								insertedCells.Add(cc);
-							}
-
-						} catch (Exception e) {
-							System.Diagnostics.Debug.WriteLine(e.ToString());
-							continue;
-						}
-						} else {
-							Cell existingCell = tableCells.FirstOrDefault(o => o.Offset == CellOffsetValue);
-							if (existingCell != null) {
-								existingCell.RowOrder = cell.Line;
-								existingCell.TableName = tint.Type;
-								insertedCells.Add(existingCell);
+							} catch (Exception e) {
+								System.Diagnostics.Debug.WriteLine(e.ToString());
+								continue;
 							}
 						}
-				}
+					}
 				}
 			}
-			return insertedCells;
+
+		}
+
+		public List<Cell> GetDocumentTableCells(string documentId, int CompanyId) {
+			return GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString());
 		}
 
 		private List<Cell> GetTableCells(string documentId) {
@@ -565,7 +671,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 												left JOIN dbo.TableDimension td  with (NOLOCK) on td.ID = dtc.TableDimensionID
 												left join dbo.DocumentTable dt  with (NOLOCK) on dt.ID = td.DocumentTableID
 												left join dbo.TableType tt  with (NOLOCK) on tt.ID = dt.TableTypeID
-												WHERE c.DocumentId = @documentId and (td.DimensionTypeID is null or TD.DimensionTypeID in (1,3))";
+												WHERE c.DocumentId = @documentId and (td.DimensionTypeID is null or TD.DimensionTypeID in (1,3))  and (tt.id is null or tt.description != 'ReferencedCells') ";
 
 			List<Cell> cells = new List<Cell>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -692,6 +798,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return DamDocID;
 		}
 
+		public Guid? GetSuperFastDocumentID(Guid DamDocId, int iconum) {
+			const string sqltxt = @"prcGet_FFDocHist_GetSuperFastDocumentID";
+
+			try {
+				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
+				using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
+					cmd.CommandType = CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@docId", DamDocId);
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+					sqlConn.Open();
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read())
+							return sdr.GetGuid(0);
+						else
+							return null;
+					}
+				}
+			} catch (Exception e) {
+				return null;
+			}
+		}
+
 		private int GetDocumentSeriesID(string DocumentId) {
 
 			const string sqltxt = @"select DocumentSeriesID from document with (nolock) where ID = @docId";
@@ -741,7 +869,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return timeSlices;
 		}
 
-	
+
 
 		#endregion
 
