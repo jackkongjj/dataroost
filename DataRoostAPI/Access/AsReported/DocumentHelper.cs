@@ -262,7 +262,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								string currencyCode = reader.GetStringSafe(10);
 								string companyFinancialTermDescription = reader.GetStringSafe(12);
 								string xbrlTag = reader.GetStringSafe(13);
-								cell = new Cell
+								cell = new Cell(false)
 								{
 									Id = cellId,
 									CftId = cftId,
@@ -640,7 +640,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 									currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
 
 								} else {
-									Cell cc = new Cell();
+									Cell cc = new Cell(true);
 									cc.Id = tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
 																											 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
 
@@ -687,7 +687,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								periodLength = periodLengthInt.ToString();
 							}
 
-							cells.Add(new Cell
+							cells.Add(new Cell(true)
 							{
 								Id = reader.GetInt32(0),
 								CftId = reader.GetNullable<int>(1),
@@ -739,7 +739,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					&& o.IsAutoCalc == (eboTS.Key.AutoClacFlag == 0 ? false : true) && o.IsRecap == eboTS.Key.EncoreFlag);
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
-					cells.Add(new Cell
+					cells.Add(new Cell(true)
 					{
 						CompanyFinancialTermDescription = eb.CompanyFinancialTerm,
 						CftId = eb.CompanyFinancialTermId,
