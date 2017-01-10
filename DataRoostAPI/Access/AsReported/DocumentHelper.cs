@@ -62,39 +62,39 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			return null;
 		}
 
-		public AsReportedDocument[] GetDocuments(int iconum, List<string> documentIds) {
-			const string createTableQuery = @"CREATE TABLE #documentIds ( documentId VARCHAR(50) NOT NULL )";
+		public AsReportedDocument[] GetDocuments(int iconum, string documentId) {
 
-			const string query = @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
-																			FROM DocumentSeries s
-																					JOIN Document d ON d.DocumentSeriesID = s.Id
-																					JOIN #documentIds i ON i.documentId = d.DAMDocumentId
-																			WHERE s.CompanyID = @iconum AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)";
+			const string query = @"declare @DocumentYear int 
+select @DocumentYear = year(d.documentdate) from document d
+join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+where d.damdocumentid = @DamDocumentId
 
-			DataTable table = new DataTable();
-			table.Columns.Add("documentId", typeof(string));
-			foreach (string documentId in documentIds) {
-				table.Rows.Add(documentId);
-			}
+declare @Years table(Yr int, Diff int)
+
+insert into @Years
+SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+
+	
 
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
 
 			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 				connection.Open();
 
-				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-					cmd.ExecuteNonQuery();
-				}
-
-				// Upload all iconums to Temp table
-				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#documentIds";
-					bulkCopy.WriteToServer(table);
-				}
-
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@DamDocumentId", documentId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
