@@ -319,21 +319,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							if (dcHelper.IsIconumDC(iconum)) {
-								document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
-								var tableCells = GetTableCells(document.SuperFastDocumentId);
-								foreach (var cell in tableCells) {
-									Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
-									if (existingCell != null) {
-										existingCell.RowOrder = cell.RowOrder;
-										existingCell.TableName = cell.TableName;
-									} else {
-										document.Cells.Add(cell);
-									}
-								}
-							} else {
-								document.Cells = GetTableCells(document.SuperFastDocumentId);
-							}
+					
+							document.Cells = GetTableCells(document.SuperFastDocumentId);
+							
 							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							return document;
 						}
