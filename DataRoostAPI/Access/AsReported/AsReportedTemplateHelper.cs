@@ -603,122 +603,35 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
-		private bool setIsIncomePositive(string CellId, bool isIncomePositive) {
-			const string SQL_SetIncomePositive = @"UPDATE TableCell 
-																set IsIncomePositive = @newValue
-																WHERE ID = @id";
 
-			using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
-			using (SqlCommand cmd = new SqlCommand(SQL_SetIncomePositive, sqlConn)) {
-				cmd.Parameters.AddWithValue("@id", CellId);
-				cmd.Parameters.AddWithValue("@newValue", isIncomePositive);
-				sqlConn.Open();
-				cmd.ExecuteNonQuery();
-			}
-
-			return true;
-		}
-		private TableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
-            		string SQL_GetSibilingCellsQuery =
-                                @"
-SELECT *
-FROM vw_SCARDocumentTimeSliceTableCell tc
-JOIN DocumentTimeSlice dts ON tc.DocumentTimeSliceID = dts.ID
-LEFT JOIN DocumentTimeSlice dtsSib ON dts.TimeSlicePeriodEndDate = dtsSib.TimeSlicePeriodEndDate 
-                                                                     AND dts.PeriodType = dtsSib.PeriodType 
-                                                                     AND dts.DocumentSeriesId = dtsSib.DocumentSeriesId
-                                                                     AND dts.ID <> dtsSib.ID
-LEFT JOIN Document d on dtsSib.DocumentID = d.ID
-LEFT JOIN vw_SCARDocumentTimeSliceTableCell tcSib ON tcSib.DocumentTimeSliceID = dtsSib.ID AND tc.CompanyFinancialTermID = tcSib.CompanyFinancialTermID
-WHERE tc.TableCellID = @TCID
-AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-AND not tcSib.TableCellID is null
-
-"; 
-
-            System.Collections.ArrayList tableCells = new System.Collections.ArrayList();
-
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(SQL_GetSibilingCellsQuery, conn))
-                {
-                    conn.Open();
-                    //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
-                    cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
-                    cmd.Parameters.AddWithValue("@TCID", CellId);
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-
-                        int shix = 0;
-
-                        int adjustedOrder = 0;
-                        while (reader.Read())
-                        {
-                            TableCell cell;
-                            if (reader.GetNullable<int>(0).HasValue)
-                            {
-                                cell = new TableCell
-                                {
-                                    ID = reader.GetInt32(1),
-                                    Offset = reader.GetStringSafe(2),
-                                    CellPeriodType = reader.GetStringSafe(3),
-                                    PeriodTypeID = reader.GetStringSafe(4),
-                                    CellPeriodCount = reader.GetStringSafe(5),
-                                    PeriodLength = reader.GetNullable<int>(6),
-                                    CellDay = reader.GetStringSafe(7),
-                                    CellMonth = reader.GetStringSafe(8),
-                                    CellYear = reader.GetStringSafe(9),
-                                    CellDate = reader.GetNullable<DateTime>(10),
-                                    Value = reader.GetStringSafe(11),
-                                    CompanyFinancialTermID = reader.GetNullable<int>(12),
-                                    ValueNumeric = reader.GetNullable<decimal>(13),
-                                    NormalizedNegativeIndicator = reader.GetBoolean(14),
-                                    ScalingFactorID = reader.GetStringSafe(15),
-                                    AsReportedScalingFactor = reader.GetStringSafe(16),
-                                    Currency = reader.GetStringSafe(17),
-                                    CurrencyCode = reader.GetStringSafe(18),
-                                    Cusip = reader.GetStringSafe(19)
-                                    //ScarUpdated = reader.GetBoolean(20),
-                                    //IsIncomePositive = reader.GetBoolean(21),
-                                    //XBRLTag = reader.GetStringSafe(22),
-                                    //UpdateStampUTC = reader.GetNullable<DateTime>(23),
-                                    //DocumentID = reader.IsDBNull(24) ? Guid.Empty : reader.GetGuid(24),
-                                    //Label = reader.GetStringSafe(25),
-                                    //ScalingFactorValue = reader.GetDouble(26),
-                                    //ARDErrorTypeId = reader.GetNullable<int>(1),
-                                    //MTMWErrorTypeId = reader.GetNullable<int>(1)
-                                };
-                                cell.ScarUpdated = reader.GetBoolean(20);
-                                cell.IsIncomePositive = reader.GetBoolean(21);
-                                cell.XBRLTag = reader.GetStringSafe(22);
-                                //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
-                                cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
-                                cell.Label = reader.GetStringSafe(24);
-                                //cell.ScalingFactorValue = reader.GetDouble(25);
-                                //cell.ARDErrorTypeId = reader.GetNullable<int>(1);
-                                //cell.MTMWErrorTypeId = reader.GetNullable<int>(1);
-                                adjustedOrder++;// = reader.GetInt32(1);
-                            }
-                            else
-                            {
-                                cell = new TableCell();
-                                adjustedOrder = reader.GetInt32(28);
-                            }
-                            tableCells.Add(cell);
-                        }
-                    }
-                }
-            }
-            return (TableCell[])tableCells.ToArray(typeof(TableCell));
-		}
         public TableCellResult FlipSign(string CellId, Guid DocumentId)
         {
-            const string SQL_FlipSignDirectly =
-                @"
+//            const string SQL_FlipSignDirectly =
+//                @"
+//
+//UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END
+//																WHERE ID = @cellid
+//
+//SELECT *
+//FROM vw_SCARDocumentTimeSliceTableCell tc
+//JOIN DocumentTimeSlice dts ON tc.DocumentTimeSliceID = dts.ID
+//LEFT JOIN DocumentTimeSlice dtsSib ON dts.TimeSlicePeriodEndDate = dtsSib.TimeSlicePeriodEndDate 
+//                                                                     AND dts.PeriodType = dtsSib.PeriodType 
+//                                                                     AND dts.DocumentSeriesId = dtsSib.DocumentSeriesId
+//                                                                     AND dts.ID <> dtsSib.ID
+//LEFT JOIN Document d on dtsSib.DocumentID = d.ID
+//LEFT JOIN vw_SCARDocumentTimeSliceTableCell tcSib ON tcSib.DocumentTimeSliceID = dtsSib.ID AND tc.CompanyFinancialTermID = tcSib.CompanyFinancialTermID
+//WHERE tc.TableCellID = @cellid
+//AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+//AND not tcSib.TableCellID is null
+//
+//";
+            const string SQL_UpdateFlipIncomeFlag = @"
 
 UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END
-																WHERE ID = @cellid
+																WHERE ID = @cellid; 
+";
+            const string SQL_SelectSibilingCells = @"
 
 SELECT *
 FROM vw_SCARDocumentTimeSliceTableCell tc
@@ -731,17 +644,66 @@ LEFT JOIN Document d on dtsSib.DocumentID = d.ID
 LEFT JOIN vw_SCARDocumentTimeSliceTableCell tcSib ON tcSib.DocumentTimeSliceID = dtsSib.ID AND tc.CompanyFinancialTermID = tcSib.CompanyFinancialTermID
 WHERE tc.TableCellID = @cellid
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-AND not tcSib.TableCellID is null
+AND not tcSib.TableCellID is null;
 
+";
+            const string SQL_SelectCurrenCell = @"
+ 
+";
+            const string SQL_ExecMakeTheMathWork = @"
+ -- DECLARE @ParentCellMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
+
+-- INSERT INTO @ParentCellMTMW
+-- exec SCARGetTableCellMTMW @ParentCells
+
+";
+            const string SQL_ExecLikePeriodValidation = @"
+
+DECLARE @ParentCellMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
+
+INSERT INTO @ParentCellMTMW
+exec SCARGetTableCellMTMW @ParentCells
+
+--TODO: AddParentCells
+SELECT mtmw.StaticHierarchyID, mtmw.DocumentTimeSliceID, TableCellID, tc.ValueNumeric, tc.IsIncomePositive, sf.Value, mtmw.RootStaticHierarchyID, mtmw.RootDocumentTimeSliceID
+FROM @ParentCellMTMW mtmw
+JOIN TableCell tc ON mtmw.TableCellID = tc.ID
+JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID;
+
+
+DECLARE @SHCells CellList
+
+INSERT @SHCells
+SELECT sh.ID, tc.DocumentTimeSliceID
+FROM StaticHierarchy sh
+JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+WHERE sh.ID = @TargetSH
+
+DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
+DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
+
+INSERT INTO @SHCellsMTMW
+EXEC SCARGetTableCellMTMW @SHCells
+
+INSERT INTO @SHCellsLPV
+EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
+
+ 
 ";
             TableCellResult result = new TableCellResult();
             result.cells = new List<TableCell>();
 
 
- 
+            string SQL_FlipSignCommand = 
+                SQL_UpdateFlipIncomeFlag 
+                + SQL_SelectSibilingCells 
+                + SQL_SelectCurrenCell
+                + SQL_ExecMakeTheMathWork
+                + SQL_ExecLikePeriodValidation
+                ;
             using (SqlConnection conn = new SqlConnection(_sfConnectionString))
             {
-                using (SqlCommand cmd = new SqlCommand(SQL_FlipSignDirectly, conn))
+                using (SqlCommand cmd = new SqlCommand(SQL_FlipSignCommand, conn))
                 {
                     conn.Open();
                     //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
@@ -815,113 +777,7 @@ AND not tcSib.TableCellID is null
             return result;
 		}
 
-        private TableCellResult FlipSignSlowWay(string CellId, Guid DocumentId)
-        {
-            TableCellResult result = new TableCellResult();
-            result.cells = new List<TableCell>();
-
-            TableCell currCell = GetCell(CellId);
-            result.cells.Add(currCell);
-            if (setIsIncomePositive(CellId, !currCell.IsIncomePositive))
-            {
-                currCell.IsIncomePositive = !currCell.IsIncomePositive;
-                TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
-                result.cells.AddRange(sibilings);
-            }
-            else
-            {
-
-            }
-            return result;
-        }
-		public TableCell GetCell(string CellId) {
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
-                    conn.Open();
-					cmd.Parameters.AddWithValue("@cellId", CellId);
-
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-
-						int shix = 0;
-
-						int adjustedOrder = 0;
-						while (reader.Read()) {
-							TableCell cell;
-							if (reader.GetNullable<int>(0).HasValue) {
-								cell = new TableCell
-								{
-									ID = reader.GetInt32(0),
-									Offset = reader.GetStringSafe(1),
-									CellPeriodType = reader.GetStringSafe(2),
-									PeriodTypeID = reader.GetStringSafe(3),
-									CellPeriodCount = reader.GetStringSafe(4),
-									PeriodLength = reader.GetNullable<int>(5),
-									CellDay = reader.GetStringSafe(6),
-									CellMonth = reader.GetStringSafe(7),
-									CellYear = reader.GetStringSafe(8),
-									CellDate = reader.GetNullable<DateTime>(9),
-									Value = reader.GetStringSafe(10),
-									CompanyFinancialTermID = reader.GetNullable<int>(11),
-									ValueNumeric = reader.GetNullable<decimal>(12),
-									NormalizedNegativeIndicator = reader.GetBoolean(13),
-									ScalingFactorID = reader.GetStringSafe(14),
-									AsReportedScalingFactor = reader.GetStringSafe(15),
-									Currency = reader.GetStringSafe(16),
-									CurrencyCode = reader.GetStringSafe(17),
-									Cusip = reader.GetStringSafe(18),
-									ScarUpdated = reader.GetBoolean(19),
-									IsIncomePositive = reader.GetBoolean(20),
-									XBRLTag = reader.GetStringSafe(21),
-									UpdateStampUTC = reader.GetNullable<DateTime>(22),
-									DocumentID = reader.GetGuid(23),
-									Label = reader.GetStringSafe(24),
-									ScalingFactorValue = reader.GetDouble(25),
-									ARDErrorTypeId = reader.GetNullable<int>(26),
-									MTMWErrorTypeId = reader.GetNullable<int>(27)
-								};
-
-								adjustedOrder = reader.GetInt32(28);
-							} else {
-								cell = new TableCell();
-								adjustedOrder = reader.GetInt32(28);
-							}
-							return cell;
-						}
-					}
-				}
-			}
-			return new TableCell();
-		}
-
-        public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId)
-        {
-            TableCellResult result = new TableCellResult();
-            result.cells = new List<TableCell>();
-
-            TableCell currCell = GetCell(CellId);
-            currCell.MTMWErrorTypeId = 0;
-            result.cells.Add(currCell);
-            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
-            result.cells.AddRange(sibilings);
-            return result;
-        }
-
-        public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId)
-        {
-            TableCellResult result = new TableCellResult();
-            result.cells = new List<TableCell>();
-
-            TableCell currCell = GetCell(CellId);
-            currCell.LikePeriodValidationFlag = true;
-            currCell.MTMWValidationFlag = true;
-            result.cells.Add(currCell);
-            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
-            result.cells.AddRange(sibilings);
-            return result;
-        }
-
-
-		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
+        public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
 			string query = @"SCARStitchRows";
 
 			DataTable dt = new DataTable();
@@ -1238,5 +1094,232 @@ AND not tcSib.TableCellID is null
 
 			return res;
 		}
+
+        #region Deprecated Methods
+        private TableCellResult FlipSignSlowWay(string CellId, Guid DocumentId)
+        {
+            TableCellResult result = new TableCellResult();
+            result.cells = new List<TableCell>();
+
+            TableCell currCell = GetCell(CellId);
+            result.cells.Add(currCell);
+            if (setIsIncomePositive(CellId, !currCell.IsIncomePositive))
+            {
+                currCell.IsIncomePositive = !currCell.IsIncomePositive;
+                TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+                result.cells.AddRange(sibilings);
+            }
+            else
+            {
+
+            }
+            return result;
+        }
+        public TableCell GetCell(string CellId)
+        {
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@cellId", CellId);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+
+                        int shix = 0;
+
+                        int adjustedOrder = 0;
+                        while (reader.Read())
+                        {
+                            TableCell cell;
+                            if (reader.GetNullable<int>(0).HasValue)
+                            {
+                                cell = new TableCell
+                                {
+                                    ID = reader.GetInt32(0),
+                                    Offset = reader.GetStringSafe(1),
+                                    CellPeriodType = reader.GetStringSafe(2),
+                                    PeriodTypeID = reader.GetStringSafe(3),
+                                    CellPeriodCount = reader.GetStringSafe(4),
+                                    PeriodLength = reader.GetNullable<int>(5),
+                                    CellDay = reader.GetStringSafe(6),
+                                    CellMonth = reader.GetStringSafe(7),
+                                    CellYear = reader.GetStringSafe(8),
+                                    CellDate = reader.GetNullable<DateTime>(9),
+                                    Value = reader.GetStringSafe(10),
+                                    CompanyFinancialTermID = reader.GetNullable<int>(11),
+                                    ValueNumeric = reader.GetNullable<decimal>(12),
+                                    NormalizedNegativeIndicator = reader.GetBoolean(13),
+                                    ScalingFactorID = reader.GetStringSafe(14),
+                                    AsReportedScalingFactor = reader.GetStringSafe(15),
+                                    Currency = reader.GetStringSafe(16),
+                                    CurrencyCode = reader.GetStringSafe(17),
+                                    Cusip = reader.GetStringSafe(18),
+                                    ScarUpdated = reader.GetBoolean(19),
+                                    IsIncomePositive = reader.GetBoolean(20),
+                                    XBRLTag = reader.GetStringSafe(21),
+                                    UpdateStampUTC = reader.GetNullable<DateTime>(22),
+                                    DocumentID = reader.GetGuid(23),
+                                    Label = reader.GetStringSafe(24),
+                                    ScalingFactorValue = reader.GetDouble(25),
+                                    ARDErrorTypeId = reader.GetNullable<int>(26),
+                                    MTMWErrorTypeId = reader.GetNullable<int>(27)
+                                };
+
+                                adjustedOrder = reader.GetInt32(28);
+                            }
+                            else
+                            {
+                                cell = new TableCell();
+                                adjustedOrder = reader.GetInt32(28);
+                            }
+                            return cell;
+                        }
+                    }
+                }
+            }
+            return new TableCell();
+        }
+
+        public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId)
+        {
+            TableCellResult result = new TableCellResult();
+            result.cells = new List<TableCell>();
+
+            TableCell currCell = GetCell(CellId);
+            currCell.MTMWErrorTypeId = 0;
+            result.cells.Add(currCell);
+            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+            result.cells.AddRange(sibilings);
+            return result;
+        }
+
+        public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId)
+        {
+            TableCellResult result = new TableCellResult();
+            result.cells = new List<TableCell>();
+
+            TableCell currCell = GetCell(CellId);
+            currCell.LikePeriodValidationFlag = true;
+            currCell.MTMWValidationFlag = true;
+            result.cells.Add(currCell);
+            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+            result.cells.AddRange(sibilings);
+            return result;
+        }
+        private bool setIsIncomePositive(string CellId, bool isIncomePositive)
+        {
+            const string SQL_SetIncomePositive = @"UPDATE TableCell 
+																set IsIncomePositive = @newValue
+																WHERE ID = @id";
+
+            using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
+            using (SqlCommand cmd = new SqlCommand(SQL_SetIncomePositive, sqlConn))
+            {
+                cmd.Parameters.AddWithValue("@id", CellId);
+                cmd.Parameters.AddWithValue("@newValue", isIncomePositive);
+                sqlConn.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            return true;
+        }
+        private TableCell[] getSibilingsCells(string CellId, Guid DocumentId)
+        {
+            string SQL_GetSibilingCellsQuery =
+                        @"
+SELECT *
+FROM vw_SCARDocumentTimeSliceTableCell tc
+JOIN DocumentTimeSlice dts ON tc.DocumentTimeSliceID = dts.ID
+LEFT JOIN DocumentTimeSlice dtsSib ON dts.TimeSlicePeriodEndDate = dtsSib.TimeSlicePeriodEndDate 
+                                                                     AND dts.PeriodType = dtsSib.PeriodType 
+                                                                     AND dts.DocumentSeriesId = dtsSib.DocumentSeriesId
+                                                                     AND dts.ID <> dtsSib.ID
+LEFT JOIN Document d on dtsSib.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tcSib ON tcSib.DocumentTimeSliceID = dtsSib.ID AND tc.CompanyFinancialTermID = tcSib.CompanyFinancialTermID
+WHERE tc.TableCellID = @TCID
+AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+AND not tcSib.TableCellID is null
+
+";
+
+            System.Collections.ArrayList tableCells = new System.Collections.ArrayList();
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(SQL_GetSibilingCellsQuery, conn))
+                {
+                    conn.Open();
+                    //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
+                    cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+                    cmd.Parameters.AddWithValue("@TCID", CellId);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+
+                        int shix = 0;
+
+                        int adjustedOrder = 0;
+                        while (reader.Read())
+                        {
+                            TableCell cell;
+                            if (reader.GetNullable<int>(0).HasValue)
+                            {
+                                cell = new TableCell
+                                {
+                                    ID = reader.GetInt32(1),
+                                    Offset = reader.GetStringSafe(2),
+                                    CellPeriodType = reader.GetStringSafe(3),
+                                    PeriodTypeID = reader.GetStringSafe(4),
+                                    CellPeriodCount = reader.GetStringSafe(5),
+                                    PeriodLength = reader.GetNullable<int>(6),
+                                    CellDay = reader.GetStringSafe(7),
+                                    CellMonth = reader.GetStringSafe(8),
+                                    CellYear = reader.GetStringSafe(9),
+                                    CellDate = reader.GetNullable<DateTime>(10),
+                                    Value = reader.GetStringSafe(11),
+                                    CompanyFinancialTermID = reader.GetNullable<int>(12),
+                                    ValueNumeric = reader.GetNullable<decimal>(13),
+                                    NormalizedNegativeIndicator = reader.GetBoolean(14),
+                                    ScalingFactorID = reader.GetStringSafe(15),
+                                    AsReportedScalingFactor = reader.GetStringSafe(16),
+                                    Currency = reader.GetStringSafe(17),
+                                    CurrencyCode = reader.GetStringSafe(18),
+                                    Cusip = reader.GetStringSafe(19)
+                                    //ScarUpdated = reader.GetBoolean(20),
+                                    //IsIncomePositive = reader.GetBoolean(21),
+                                    //XBRLTag = reader.GetStringSafe(22),
+                                    //UpdateStampUTC = reader.GetNullable<DateTime>(23),
+                                    //DocumentID = reader.IsDBNull(24) ? Guid.Empty : reader.GetGuid(24),
+                                    //Label = reader.GetStringSafe(25),
+                                    //ScalingFactorValue = reader.GetDouble(26),
+                                    //ARDErrorTypeId = reader.GetNullable<int>(1),
+                                    //MTMWErrorTypeId = reader.GetNullable<int>(1)
+                                };
+                                cell.ScarUpdated = reader.GetBoolean(20);
+                                cell.IsIncomePositive = reader.GetBoolean(21);
+                                cell.XBRLTag = reader.GetStringSafe(22);
+                                //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+                                cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+                                cell.Label = reader.GetStringSafe(24);
+                                //cell.ScalingFactorValue = reader.GetDouble(25);
+                                //cell.ARDErrorTypeId = reader.GetNullable<int>(1);
+                                //cell.MTMWErrorTypeId = reader.GetNullable<int>(1);
+                                adjustedOrder++;// = reader.GetInt32(1);
+                            }
+                            else
+                            {
+                                cell = new TableCell();
+                                adjustedOrder = reader.GetInt32(28);
+                            }
+                            tableCells.Add(cell);
+                        }
+                    }
+                }
+            }
+            return (TableCell[])tableCells.ToArray(typeof(TableCell));
+        }
+        #endregion
 	}
 }
