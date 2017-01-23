@@ -601,16 +601,14 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 						string offset = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.OriginalOffset;
 
 						int length = cell.Value.Length;
-						if (rxHtmlBookmark.IsMatch(offset)) {
-							Match m = rxHtmlBookmark.Match(offset);
-							offset = m.Groups[1].Value;
+						if(!string.IsNullOrEmpty(cell.OffSet)  &&  cell.OffSet.ToLower()[0] != 'p'){
 							try {
-								if (!string.IsNullOrEmpty(cell.OffSet)) {
 									string[] offsets = cell.OffSet.Split('|');
 									length = int.Parse(offsets[1].Replace('l', ' '));
-								}
 							} catch { }
 						}
+						
+						
 						string CellOffsetValue = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.HasBoundingBox ?
 							new Bookmark(cell.OriginalOffset, root).ToString() : new Bookmark(int.Parse(offset), length, root).ToString();
 
