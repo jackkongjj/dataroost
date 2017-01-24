@@ -58,6 +58,18 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FactSet.Data.SqlClient">
+      <HintPath>..\packages\CommonLib.Data.SqlClient.1.0.0.0\lib\net45\FactSet.Data.SqlClient.dll</HintPath>
+    </Reference>
+    <Reference Include="FactSet.Fundamentals.Data">
+      <HintPath>..\packages\FundamentalsLib.Data.1.0.0.0\lib\net45\FactSet.Fundamentals.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="FactSet.Fundamentals.Sourcelinks">
+      <HintPath>..\packages\FundamentalsLib.Sourcelinks.1.0.0.0\lib\net45\FactSet.Fundamentals.Sourcelinks.dll</HintPath>
+    </Reference>
+    <Reference Include="FactSet.Parsing.Translation.Patterns">
+      <HintPath>..\packages\FactSet.Parsing.Translation.Patterns.1.0.0\lib\net45\FactSet.Parsing.Translation.Patterns.dll</HintPath>
+    </Reference>
     <Reference Include="FFDotNetHelpers, Version=1.0.9.22, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FFDotNetHelpers.1.0.9.22\lib\net45\FFDotNetHelpers.dll</HintPath>
@@ -70,9 +82,9 @@
       <HintPath>..\packages\Microsoft.Data.OData.5.8.1\lib\net40\Microsoft.Data.OData.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -109,6 +121,8 @@
     <Compile Include="Models\AsReported\Column.cs" />
     <Compile Include="Models\AsReported\CompanyFinancialTerm.cs" />
     <Compile Include="Models\AsReported\Row.cs" />
+    <Compile Include="Models\AsReported\TableCell.cs" />
+    <Compile Include="Models\AsReported\TableMeta.cs" />
     <Compile Include="Models\CompanyDTO.cs" />
     <Compile Include="Models\CompanyPriority.cs" />
     <Compile Include="Models\CountryDTO.cs" />
@@ -121,6 +135,7 @@
     <Compile Include="Models\ShareClassDataDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
     <Compile Include="Models\StandardizationType.cs" />
+    <Compile Include="Models\SuperFast\ElasticObjectTree.cs" />
     <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />
     <Compile Include="Models\SuperFast\SFTemplateDTO.cs" />
     <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
@@ -134,6 +149,9 @@
     <Compile Include="Models\TimeseriesValues\SegmentNode.cs" />
     <Compile Include="Models\TimeseriesValues\TimeseriesValueDTO.cs" />
     <Compile Include="Models\ExportedVersionInfo.cs" />
+    <Compile Include="Models\TINT\Cell.cs" />
+    <Compile Include="Models\TINT\Table.cs" />
+    <Compile Include="Models\TINT\Tint.cs" />
     <Compile Include="Models\Voyager\VoyagerTemplateDTO.cs" />
     <Compile Include="Models\Voyager\VoyagerTimeseriesDTO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

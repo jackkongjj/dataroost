@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
 
@@ -22,18 +21,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetDocument(iconum, documentId);
 		}
 
-		[Route("documents/")]
-		[HttpPost]
-		public AsReportedDocument[] GetDocuments(string CompanyId, List<string> documentIds) {
+		[Route("history/{documentId}")]
+		[HttpGet]
+		public AsReportedDocument[] GetDocuments(string CompanyId, string documentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
-			return documentHelper.GetDocuments(iconum, documentIds);
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			return documentHelper.GetDocuments(iconum, documentId);
 		}
 
 		[Route("documents/")]
@@ -42,7 +43,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString);
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 
 			DateTime startDate = new DateTime(1900, 1, 1);
 			if (startYear != null) {
