@@ -61,25 +61,5 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("rowOrder")]
 		public int? RowOrder { get; set; }
-
-		[JsonIgnore]
-		public bool IsDC { get; set; }
-
-		public bool ShouldSerializeLabel() {
-			return IsDC;
-		}
-
-		public bool ShouldSerializeTableName() {
-			return IsDC;
-		}
-
-		public bool ShouldSerializeRowOrder() {
-			return IsDC;
-		}
-
-		public Cell(bool isDC) {
-			IsDC = isDC;
-		}
-
 	}
 }

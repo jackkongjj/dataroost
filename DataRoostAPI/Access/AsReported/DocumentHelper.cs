@@ -262,7 +262,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								string currencyCode = reader.GetStringSafe(10);
 								string companyFinancialTermDescription = reader.GetStringSafe(12);
 								string xbrlTag = reader.GetStringSafe(13);
-								cell = new Cell(false)
+								cell = new Cell
 								{
 									Id = cellId,
 									CftId = cftId,
@@ -319,8 +319,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-							
+
 							document.Cells = GetTableCells(document.SuperFastDocumentId);
+
 							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							return document;
 						}
@@ -600,16 +601,14 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 						string offset = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.OriginalOffset;
 
 						int length = cell.Value.Length;
-						if (rxHtmlBookmark.IsMatch(offset)) {
-							Match m = rxHtmlBookmark.Match(offset);
-							offset = m.Groups[1].Value;
+						if (!string.IsNullOrEmpty(cell.OffSet) && cell.OffSet.ToLower()[0] != 'p') {
 							try {
-								if (!string.IsNullOrEmpty(cell.OffSet)) {
-									string[] offsets = cell.OffSet.Split('|');
-									length = int.Parse(offsets[1].Replace('l', ' '));
-								}
+								string[] offsets = cell.OffSet.Split('|');
+								length = int.Parse(offsets[1].Replace('l', ' '));
 							} catch { }
 						}
+
+
 						string CellOffsetValue = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.HasBoundingBox ?
 							new Bookmark(cell.OriginalOffset, root).ToString() : new Bookmark(int.Parse(offset), length, root).ToString();
 
@@ -627,7 +626,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 									currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
 
 								} else {
-									Cell cc = new Cell(true);
+									Cell cc = new Cell();
 									cc.Id = tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
 																											 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
 
@@ -651,7 +650,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 
 		private List<Cell> GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, c.Label ,isnull(tt.Description,''), td.AdjustedOrder
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.origlabel,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder
 												from dbo.TableCell c with (NOLOCK)
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
@@ -674,7 +673,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								periodLength = periodLengthInt.ToString();
 							}
 
-							cells.Add(new Cell(true)
+							cells.Add(new Cell
 							{
 								Id = reader.GetInt32(0),
 								CftId = reader.GetNullable<int>(1),
@@ -726,7 +725,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					&& o.IsAutoCalc == (eboTS.Key.AutoClacFlag == 0 ? false : true) && o.IsRecap == eboTS.Key.EncoreFlag);
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
-					cells.Add(new Cell(true)
+					cells.Add(new Cell
 					{
 						CompanyFinancialTermDescription = eb.CompanyFinancialTerm,
 						CftId = eb.CompanyFinancialTermId,
