@@ -496,7 +496,7 @@ JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND d.ReportTypeID = @reportType
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+and YEAR(d.DocumentDate) in (select top 1 Yr from @Years where Diff in (1,2,3,-1,-2,-3) order by Yr  desc)";
 			const string queryWithoutReportType =
 								@"declare @DocumentYear int 
 select @DocumentYear = year(d.documentdate) from document d
@@ -517,7 +517,7 @@ FROM DocumentSeries s
 JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+and YEAR(d.DocumentDate) in (select top 1 Yr from @Years where Diff in (1,2,3,-1,-2,-3) order by Yr  desc)";
 			string query = null;
 			if (string.IsNullOrEmpty(reportType)) {
 				query = queryWithoutReportType;
