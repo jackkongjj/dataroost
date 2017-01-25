@@ -38,26 +38,8 @@ end
 				cmd.Parameters.AddWithValue("@TermID", termId);
 				cmd.Parameters.AddWithValue("@DocumentId", DocumentId);
 				cmd.Parameters.AddWithValue("@Label", Label);
-
-				string offset = string.IsNullOrEmpty(cellOffset) ? "" : cellOffset;
-
-				int length = cellValue.Length;
-				if (rxHtmlBookmark.IsMatch(offset)) {
-					Match m = rxHtmlBookmark.Match(offset);
-					offset = m.Groups[1].Value;
-					try {
-						if (!string.IsNullOrEmpty(tintOffSet)) {
-							string[] offsets = tintOffSet.Split('|');
-							length = int.Parse(offsets[1].Replace('l', ' '));
-						}
-					} catch { }
-				}
-
-				cmd.Parameters.Add(new SqlParameter("@Offset", SqlDbType.VarChar, 30)
-				{
-					Value = string.IsNullOrEmpty(cellOffset) ? "" : cellHasBoundingBox ?
-						new Bookmark(cellOffset, rootId).ToString() : new Bookmark(int.Parse(offset), length, rootId).ToString()
-				});
+				cmd.Parameters.AddWithValue("@Offset", cellOffset);
+				
 				cmd.Parameters.Add(new SqlParameter("@CellDay", SqlDbType.VarChar, 6) { Value = DbParameterSafe(cellDay) });
 				cmd.Parameters.Add(new SqlParameter("@Value", SqlDbType.NVarChar, 2048) { Value = cellValue == null ? "" : cellValue });
 				cmd.Parameters.Add(new SqlParameter("@CellYear", SqlDbType.VarChar, 4) { Value = DbParameterSafe(cellYear) });
