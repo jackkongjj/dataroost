@@ -627,7 +627,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 
 								} else {
 									Cell cc = new Cell();
-									cc.Id = tc.Create(cell.Value, cell.OriginalOffset, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
+									cc.Id = tc.Create(cell.Value, CellOffsetValue, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
 																											 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
 
 
