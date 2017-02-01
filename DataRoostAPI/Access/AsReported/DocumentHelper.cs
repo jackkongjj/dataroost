@@ -629,7 +629,7 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 
 		private List<Cell> GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.origlabel,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder
 												from dbo.TableCell c with (NOLOCK)
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
