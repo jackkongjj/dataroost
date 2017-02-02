@@ -45,14 +45,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
-																						{
-																							ReportDate = reader.GetDateTime(0),
-																							PublicationDate = reader.GetDateTime(1),
-																							ReportType = reader.GetStringSafe(2),
-																							FormType = reader.GetStringSafe(3),
-																							Id = reader.GetGuid(4).ToString(),
-																							SuperFastDocumentId = reader.GetGuid(5).ToString(),
-																						};
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+							};
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							return document;
 						}
@@ -85,7 +85,7 @@ WHERE s.CompanyID = @iconum
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
 
-	
+
 
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
 
@@ -156,15 +156,15 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							AsReportedDocument document = new AsReportedDocument
-																						{
-																							ReportDate = reader.GetDateTime(0),
-																							PublicationDate = reader.GetDateTime(1),
-																							ReportType = reader.GetStringSafe(2),
-																							FormType = reader.GetStringSafe(3),
-																							Id = reader.GetGuid(4).ToString(),
-																							SuperFastDocumentId = reader.GetGuid(5).ToString(),
-																							HasXbrl = reader.GetBoolean(6),
-																						};
+							{
+								ReportDate = reader.GetDateTime(0),
+								PublicationDate = reader.GetDateTime(1),
+								ReportType = reader.GetStringSafe(2),
+								FormType = reader.GetStringSafe(3),
+								Id = reader.GetGuid(4).ToString(),
+								SuperFastDocumentId = reader.GetGuid(5).ToString(),
+								HasXbrl = reader.GetBoolean(6),
+							};
 							document.Tables = GetDocumentTables(document.SuperFastDocumentId);
 							documents.Add(document);
 						}
@@ -193,13 +193,13 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 							AsReportedTable table;
 							if (!tables.ContainsKey(tableId)) {
 								table = new AsReportedTable
-												{
-													Id = tableId,
-													TableType = reader.GetStringSafe(1),
-													Cells = new List<Cell>(),
-													Rows = new List<Row>(),
-													Columns = new List<Column>()
-												};
+								{
+									Id = tableId,
+									TableType = reader.GetStringSafe(1),
+									Cells = new List<Cell>(),
+									Rows = new List<Row>(),
+									Columns = new List<Column>()
+								};
 								tables.Add(tableId, table);
 							}
 							table = tables[tableId];
@@ -263,20 +263,20 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								string companyFinancialTermDescription = reader.GetStringSafe(12);
 								string xbrlTag = reader.GetStringSafe(13);
 								cell = new Cell
-														{
-															Id = cellId,
-															CftId = cftId,
-															Currency = currencyCode,
-															Date = cellDate,
-															Value = value,
-															NumericValue = numericValue,
-															PeriodLength = periodLength,
-															PeriodType = periodType,
-															Offset = offset,
-															ScalingFactor = scalingFactor,
-															CompanyFinancialTermDescription = companyFinancialTermDescription,
-															XbrlTag = xbrlTag,
-														};
+								{
+									Id = cellId,
+									CftId = cftId,
+									Currency = currencyCode,
+									Date = cellDate,
+									Value = value,
+									NumericValue = numericValue,
+									PeriodLength = periodLength,
+									PeriodType = periodType,
+									Offset = offset,
+									ScalingFactor = scalingFactor,
+									CompanyFinancialTermDescription = companyFinancialTermDescription,
+									XbrlTag = xbrlTag,
+								};
 								cells.Add(cellId, cell);
 							}
 
@@ -319,9 +319,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 								Id = reader.GetGuid(4).ToString(),
 								SuperFastDocumentId = reader.GetGuid(5).ToString(),
 							};
-					
+
 							document.Cells = GetTableCells(document.SuperFastDocumentId);
-							
+
 							document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
 							return document;
 						}
@@ -475,20 +475,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 		//	AND d.ReportTypeID = @reportType
 		public AsReportedDocument[] GetHistory(int iconum, string documentId, string reportType) {
 			const string queryWithReportType =
-								@"declare @DocumentYear int 
-select @DocumentYear = year(d.documentdate) from document d
-join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+								@"declare @DocDate datetime
+select  @DocDate = d.documentdate  from document d
 where d.damdocumentid = @DamDocumentId
-
-declare @Years table(Yr int, Diff int)
-
-insert into @Years
-SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
-FROM DocumentSeries s
-JOIN Document d ON d.DocumentSeriesID = s.Id
-WHERE s.CompanyID = @iconum
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-AND d.ReportTypeID = @reportType
 
 SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 FROM DocumentSeries s
@@ -496,28 +485,18 @@ JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND d.ReportTypeID = @reportType
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, @DocDate) ";
 			const string queryWithoutReportType =
-								@"declare @DocumentYear int 
-select @DocumentYear = year(d.documentdate) from document d
-join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+								@"declare @DocDate datetime
+select  @DocDate = d.documentdate  from document d
 where d.damdocumentid = @DamDocumentId
-
-declare @Years table(Yr int, Diff int)
-
-insert into @Years
-SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
-FROM DocumentSeries s
-JOIN Document d ON d.DocumentSeriesID = s.Id
-WHERE s.CompanyID = @iconum
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 
 SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 FROM DocumentSeries s
 JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, @DocDate) ";
 			string query = null;
 			if (string.IsNullOrEmpty(reportType)) {
 				query = queryWithoutReportType;
@@ -553,6 +532,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 									if (existingCell != null) {
 										existingCell.RowOrder = cell.RowOrder;
 										existingCell.TableName = cell.TableName;
+										existingCell.CftId = cell.CftId;
+										existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
+										existingCell.Id = cell.Id;
 									} else {
 										document.Cells.Add(cell);
 									}
@@ -570,19 +552,19 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 		}
 
 		public string DownloadFile(int iconum, string documentId) {
-			AsReportedDocument document = GetDCDocument(iconum,documentId);
+			AsReportedDocument document = GetDCDocument(iconum, documentId);
 			//export Data as CSV
 			StringBuilder sb = new StringBuilder();
 			foreach (var tc in document.Cells.OrderBy(o => o.CftId).GroupBy(o => o.CftId)) {
 				sb.Append(tc.First().Label.Replace(",", "") + ",");
 				foreach (var exportCell in tc) {
-					sb.Append(exportCell.Date + ","+exportCell.Value.Replace(",", "")+" "+ exportCell.ScalingFactor + ",");
+					sb.Append(exportCell.Date + "," + exportCell.Value.Replace(",", "") + " " + exportCell.ScalingFactor + ",");
 				}
 				sb.AppendLine();
 			}
 			string contents = sb.ToString();
 			return contents;
-			
+
 		}
 
 		public void InsertTINTOffsets(string documentId, int CompanyId) {
@@ -591,7 +573,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 			Guid SFDocumentId = GetSuperFastDocumentID(documentId, CompanyId).Value;
 			int documentSeries = GetDocumentSeriesID(SFDocumentId.ToString());
 			List<Cell> tableCells = GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString()).ToList();
-		
+
 			foreach (var root in tintFiles.Keys) {
 				foreach (var tint in tintFiles[root]) {
 					int currentTerm = 0;
@@ -601,51 +583,51 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 						string offset = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.OriginalOffset;
 
 						int length = cell.Value.Length;
-						if(!string.IsNullOrEmpty(cell.OffSet)  &&  cell.OffSet.ToLower()[0] != 'p'){
+						if (!string.IsNullOrEmpty(cell.OffSet) && cell.OffSet.ToLower()[0] != 'p') {
 							try {
-									string[] offsets = cell.OffSet.Split('|');
-									length = int.Parse(offsets[1].Replace('l', ' '));
+								string[] offsets = cell.OffSet.Split('|');
+								length = int.Parse(offsets[1].Replace('l', ' '));
 							} catch { }
 						}
-						
-						
+
+
 						string CellOffsetValue = string.IsNullOrEmpty(cell.OriginalOffset) ? "" : cell.HasBoundingBox ?
 							new Bookmark(cell.OriginalOffset, root).ToString() : new Bookmark(int.Parse(offset), length, root).ToString();
 
-						if(tableCells.Count(o => o.Offset == CellOffsetValue) == 0){
-						try {
-							if (cell.ColumnType == "Description") {
-								Label = cell.Value;
-								if (cell.Value.EndsWith("]")) {
-									int start = cell.Value.LastIndexOf("[");
-									String pre = cell.Value.Substring(0, start);
+						if (tableCells.Count(o => o.Offset == CellOffsetValue) == 0) {
+							try {
+								if (cell.ColumnType == "Description") {
+									Label = cell.Value;
+									if (cell.Value.EndsWith("]")) {
+										int start = cell.Value.LastIndexOf("[");
+										String pre = cell.Value.Substring(0, start);
 
-									String value = cell.Value.Substring(start + 1, cell.Value.Length - start - 2);
-									cell.Value = pre + value;
+										String value = cell.Value.Substring(start + 1, cell.Value.Length - start - 2);
+										cell.Value = pre + value;
+									}
+									currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
+
+								} else {
+									Cell cc = new Cell();
+									cc.Id = tc.Create(cell.Value, CellOffsetValue, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
+																											 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
+
+
 								}
-								currentTerm = tc.CreateNewTerm(documentSeries, cell.Value);
 
-							} else {
-								Cell cc = new Cell();
-								cc.Id = tc.Create(cell.Value, CellOffsetValue, cell.HasBoundingBox, cell.PeriodType, cell.PeriodLength,
-																										 cell.ColumnDay, cell.ColumnMonth, cell.ColumnYear, currentTerm, tint.Unit, tint.Type, root, tint.Currency, cell.XbrlTag, SFDocumentId, Label, cell.OffSet);
-
-								
+							} catch (Exception e) {
+								System.Diagnostics.Debug.WriteLine(e.ToString());
+								continue;
 							}
-
-						} catch (Exception e) {
-							System.Diagnostics.Debug.WriteLine(e.ToString());
-							continue;
 						}
-						} 
-				}
+					}
 				}
 			}
-		
+
 		}
 
 		public List<Cell> GetDocumentTableCells(string documentId, int CompanyId) {
-			return GetTableCells(GetSuperFastDocumentID(documentId,CompanyId).Value.ToString());
+			return GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString());
 		}
 
 		private List<Cell> GetTableCells(string documentId) {
@@ -784,7 +766,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 			return DamDocID;
 		}
 
-		public  Guid? GetSuperFastDocumentID(Guid DamDocId, int iconum) {
+		public Guid? GetSuperFastDocumentID(Guid DamDocId, int iconum) {
 			const string sqltxt = @"prcGet_FFDocHist_GetSuperFastDocumentID";
 
 			try {
@@ -855,7 +837,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 			return timeSlices;
 		}
 
-	
+
 
 		#endregion
 
