@@ -475,20 +475,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 		//	AND d.ReportTypeID = @reportType
 		public AsReportedDocument[] GetHistory(int iconum, string documentId, string reportType) {
 			const string queryWithReportType =
-								@"declare @DocumentYear int 
-select @DocumentYear = year(d.documentdate) from document d
-join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+								@"declare @DocDate datetime
+select  @DocDate = d.documentdate  from document d
 where d.damdocumentid = @DamDocumentId
-
-declare @Years table(Yr int, Diff int)
-
-insert into @Years
-SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
-FROM DocumentSeries s
-JOIN Document d ON d.DocumentSeriesID = s.Id
-WHERE s.CompanyID = @iconum
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-AND d.ReportTypeID = @reportType
 
 SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 FROM DocumentSeries s
@@ -496,28 +485,18 @@ JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND d.ReportTypeID = @reportType
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, @DocDate) ";
 			const string queryWithoutReportType =
-								@"declare @DocumentYear int 
-select @DocumentYear = year(d.documentdate) from document d
-join dbo.DocumentSeries ds on ds.ID = d.documentseriesid 
+								@"declare @DocDate datetime
+select  @DocDate = d.documentdate  from document d
 where d.damdocumentid = @DamDocumentId
-
-declare @Years table(Yr int, Diff int)
-
-insert into @Years
-SELECT DISTINCT year(d.DocumentDate) , year(d.DocumentDate) - @DocumentYear
-FROM DocumentSeries s
-JOIN Document d ON d.DocumentSeriesID = s.Id
-WHERE s.CompanyID = @iconum
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 
 SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 FROM DocumentSeries s
 JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
-and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
+and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, @DocDate) ";
 			string query = null;
 			if (string.IsNullOrEmpty(reportType)) {
 				query = queryWithoutReportType;
@@ -553,6 +532,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 									if (existingCell != null) {
 										existingCell.RowOrder = cell.RowOrder;
 										existingCell.TableName = cell.TableName;
+										existingCell.CftId = cell.CftId;
+										existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
+										existingCell.Id = cell.Id;
 									} else {
 										document.Cells.Add(cell);
 									}
