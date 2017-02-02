@@ -532,6 +532,9 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 									if (existingCell != null) {
 										existingCell.RowOrder = cell.RowOrder;
 										existingCell.TableName = cell.TableName;
+										existingCell.CftId = cell.CftId;
+										existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
+										existingCell.Id = cell.Id;
 									} else {
 										document.Cells.Add(cell);
 									}
