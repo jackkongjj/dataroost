@@ -5,17 +5,17 @@ using System.Net.Http;
 using System.Web;
 using System.Web.Http.Filters;
 
-using log4net;
+using NLog;
 
 namespace CCS.Fundamentals.DataRoostAPI.Filters {
 
 	public class ExceptionHandlerFilter : ExceptionFilterAttribute {
 
-		private static readonly ILog logger = LogManager.GetLogger(typeof(ExceptionHandlerFilter));
+		private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-		public override void OnException(HttpActionExecutedContext actionExecutedContext) {
+        public override void OnException(HttpActionExecutedContext actionExecutedContext) {
 			string message = string.Format("URL: {0}", actionExecutedContext.Request.RequestUri);
-			logger.Error(message, actionExecutedContext.Exception);
+            Logger.Error(actionExecutedContext.Exception, message);
 		}
 	}
 }
