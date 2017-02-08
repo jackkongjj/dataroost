@@ -38,13 +38,6 @@ end
 				cmd.Parameters.AddWithValue("@TermID", termId);
 				cmd.Parameters.AddWithValue("@DocumentId",DocumentId);
 				cmd.Parameters.AddWithValue("@Label", Label);
-<<<<<<< HEAD
-	
-				
-=======
-
-
->>>>>>> 8150b6a60c97bbef659b6eb42df88102bf947820
 				cmd.Parameters.AddWithValue("@Offset", cellOffset);
 				cmd.Parameters.Add(new SqlParameter("@CellDay", SqlDbType.VarChar, 6) { Value = DbParameterSafe(cellDay) });
 				cmd.Parameters.Add(new SqlParameter("@Value", SqlDbType.NVarChar, 2048) { Value = cellValue == null ? "" : cellValue });
