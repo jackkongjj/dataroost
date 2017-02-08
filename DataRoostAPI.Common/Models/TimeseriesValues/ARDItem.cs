@@ -18,7 +18,7 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 		[JsonProperty("DocumentId")]
 		public Guid? DocumentID { get; set; }
 		public string Label { get; set; }
-	
+
 
 	}
 }
