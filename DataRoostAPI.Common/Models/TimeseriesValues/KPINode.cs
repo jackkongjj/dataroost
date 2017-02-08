@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.TimeseriesValues {
+
   public class KPINode {
+
 		[JsonIgnore]
 		public string ItemDescription { get; set; }
 		public string AAAValue { get; set; }

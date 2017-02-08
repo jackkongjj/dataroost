@@ -15,4 +15,5 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public List<Cell> Cells { get; set; }
 
     }
+
 }

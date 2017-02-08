@@ -31,8 +31,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 						list.AddRange(
 										reader.Cast<IDataRecord>().Select(r => new ExportedVersionInfo()
 										{
-											Id=reader.GetInt32(0).ToString(),
-											ExportDateUtc=reader.GetDateTime(1)
+											Id = reader.GetInt32(0).ToString(),
+											ExportDateUtc = reader.GetDateTime(1)
 										}));
 					}
 				}

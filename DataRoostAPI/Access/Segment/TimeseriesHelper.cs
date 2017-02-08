@@ -89,8 +89,10 @@ ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.Ve
 
 		public Dictionary<string, object> GetTimeseriesSTDValues(string timeSliceId, string versionId, string secPermId) {
 			Dictionary<string, object> toRet = new System.Collections.Generic.Dictionary<string, object>();
+
 			const string query_g = @"
 select null as ConceptName, gai.Name as AccountTitle , null as SegmentTitle, gvv.AsReportedLabel ,null as AsRepStdCode,null as STDCode, null as SICCode, null as NAICCode, gvv.Value , gvv.MathML,  null as IsCorpElim ,null as IsExceptionalCharges, null as IsDiscontinued , 'GeoRev' as Type, null , convert(bit,0 ) as IsBreakOut
+
 
  from [SegEx].[GeoRevValues] gvv
        join SegEx.TimeSeries t on gvv.tsid = t.id and gvv.VersionId= t.VersionId
@@ -104,7 +106,9 @@ select null as ConceptName, gai.Name as AccountTitle , null as SegmentTitle, gvv
        on gai.areaid = gsn.areaid
 	   where  gvv.VersionID =@VersionId and gsn.TimeSliceID = @TimeSeriesId
 union
+
 select a.ConceptName , a.AccountTitle , b.SegmentTitle ,b.AsReportedLabel, b.AsRepStdCode ,b.STDCode,b.SICCode , b.NAICCode , b.Value , b.Mathml , b.IsCorpElim , b.IsExceptionalCharges , b.IsDiscontinued, isnull(b.Type,'Segments'), b.SegmentId , case when (b.STDCode is not null and b.STDCode > 65999) then convert(bit,1 ) else  convert(bit,0 ) end as IsBreakOut
+
  from (
 select ac.ID as AccountId , ac.Title as AccountTitle , ct.ID as ConceptId , ct.ConceptName as ConceptName  from 
 SegEx.SegmentConceptTypes ct 
@@ -128,6 +132,7 @@ from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
                              join SegEx.SegmentConceptTypes sc on sc.id = t.SegConceptTypeId 
  WHERE V.PermSecId = @PermId AND  v.id = @VersionId and ts.Id = @TimeSeriesId
 ";
+
 
 			List<SegmentNode> list = new List<SegmentNode>();
 			using (SqlConnection sqlConn = new SqlConnection(connectionString))
@@ -157,6 +162,7 @@ from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
 								SegmentId = sdr.GetNullable<int>(14), 
 								IsBreakOut = sdr.GetBoolean(15)
 							});
+
 					}
 				}
 			}
@@ -197,7 +203,7 @@ from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
 								}
 							    if(breakOutSeg.Count > 0)
 										SegmentTypes.Add(segment.Key ? "Breakout Segments" : "Main segments",breakOutSeg);
-							
+
 							}
 							
 							AccountTypes.Add(accountType.Key, SegmentTypes);

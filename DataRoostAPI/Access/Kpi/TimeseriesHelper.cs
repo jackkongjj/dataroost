@@ -24,7 +24,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 			const string query = @"select DISTINCT ar.DocumentID from STDValue st
 															join ARValue ar on ar.STDValueID = st.ID
 															where st.TimeSliceID = @TimeSeriesId";
-	
+
 			using (SqlConnection sqlConn = new SqlConnection(connectionString))
 			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
 				cmd.CommandType = CommandType.Text;
@@ -56,13 +56,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 
 			Dictionary<int, Dictionary<Guid, KpiTimeSeriesDTO>> result = new Dictionary<int, Dictionary<Guid, KpiTimeSeriesDTO>>();
 			List<KpiTimeSeriesDTO> list = new List<KpiTimeSeriesDTO>();
- 
+
 			using (SqlConnection sqlConn = new SqlConnection(connectionString))
 			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
 				cmd.CommandType = CommandType.Text;
 				cmd.Parameters.AddWithValue("@VersionId", versionId);
 				cmd.Parameters.AddWithValue("@PermId", secPermId);
-		
 				sqlConn.Open();
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
 					while (sdr.Read()) {
@@ -114,14 +113,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Kpi {
 				sqlConn.Open();
 				using (SqlDataReader reader = cmd.ExecuteReader()) {
 					while (reader.Read()) {
-						toRet.Add(
-							reader.GetStringSafe(0) + " - " + reader.GetStringSafe(1), 
-							new KPINode{
-								ItemDescription = reader.GetStringSafe(0) + " - " + reader.GetStringSafe(1), 
-								AAAValue =  string.Format("{0:###,###,###,###,###,##0.#####}", reader.GetDecimal(2)) + "  " + reader.GetStringSafe(3),
-								ItemId = reader.GetInt32(4),
-								MathMl = reader.GetStringSafe(5)
-							});
+					    toRet.Add(
+
+					        reader.GetStringSafe(0) + " - " + reader.GetStringSafe(1),
+					        new KPINode
+					        {
+					            ItemDescription = reader.GetStringSafe(0) + " - " + reader.GetStringSafe(1),
+					            AAAValue =
+					                string.Format("{0:###,###,###,###,###,##0.#####}", reader.GetDecimal(2)) + "  " +
+					                reader.GetStringSafe(3),
+
+					            ItemId = reader.GetInt32(4),
+					            MathMl = reader.GetStringSafe(5)
+					        });
 					}
 				}
 			}

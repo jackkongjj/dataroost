@@ -48,7 +48,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-
 			return documentHelper.GetDocumentTableCells(documentId, iconum);
 		}
 

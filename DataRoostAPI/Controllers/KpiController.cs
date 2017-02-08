@@ -69,12 +69,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			TimeseriesHelper tsh = new TimeseriesHelper(kpiConnectionString);
 
 
-			return tsh.GetTimeseriesSTDValues(TimeseriesId,VersionId);
+			return tsh.GetTimeseriesSTDValues(TimeseriesId, VersionId);
 		}
 
 		[Route("ARDItems/{itemId}")]
 		[HttpGet]
-		public List<ARDItem> GetARDItems(string CompanyId,int itemId) {
+		public List<ARDItem> GetARDItems(string CompanyId, int itemId) {
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["KPI-Diff"].ConnectionString;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;

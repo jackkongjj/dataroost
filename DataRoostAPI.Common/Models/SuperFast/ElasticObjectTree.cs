@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.SuperFast {
 	public class ElasticObjectTree  {
+
 		public int? ItemDetailId;
 		public int Iconum;
 		public string ItemCode;
