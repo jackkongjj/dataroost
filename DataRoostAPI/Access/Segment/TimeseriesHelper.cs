@@ -60,7 +60,7 @@ ts.Currency , ts.ContentSource , ts.IsFish from  SegEx.TimeSeries ts WHERE ts.Ve
 					while (sdr.Read()) {
 						list.Add(new SegmentsTimeSeriesDTO
 						{
-							Id = sdr.GetInt32(0),		
+							Id = sdr.GetInt32(0),
 							PeriodEndDate = sdr.GetDateTime(1),
 							Duration = sdr.GetInt32(2),
 							PeriodType = sdr.GetStringSafe(3),
@@ -137,7 +137,7 @@ from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
 				cmd.Parameters.AddWithValue("@PermId", secPermId);
 				sqlConn.Open();
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
-					while (sdr.Read()) {						
+					while (sdr.Read()) {
 						list.Add(new SegmentNode()
 							{
 								ConceptName = sdr.GetStringSafe(0),
@@ -173,7 +173,6 @@ from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
 							foreach (var segment in accountType.GroupBy(o => o.IsBreakOut)) {
 								Dictionary<string, object> breakOutSeg = new Dictionary<string, object>();
 								foreach (var seg in segment) {
-								
 									if (!string.IsNullOrWhiteSpace(seg.SegmentTitle)) {
 										string segmentCode = conceptType.Key == "Total" ? seg.SegmentTitle + " - " + seg.STDCode : seg.SegmentTitle;
 
@@ -214,7 +213,7 @@ from SegEx.Totals T JOIN SegEx.Versions V ON T.VersionId = v.ID
 					toRet.Add(vTypes.Key, sg);
 				}
 			}
-			
+
 			return toRet;
 		}
 

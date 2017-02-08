@@ -31,7 +31,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.TINT {
 				XElement TintElement = null;
 				((Action)delegate { TintElement = UnZip(tintFile.Fetch(true)); }).TryTimes(3);
 				if (TintElement != null) {
-					tintFiles.Add(documentFiles.Key,new Tint(TintElement));
+					tintFiles.Add(documentFiles.Key, new Tint(TintElement));
 				}
 			}
 			return tintFiles;

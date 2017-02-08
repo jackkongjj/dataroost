@@ -14,11 +14,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 		private readonly string _connectionString;
 
-		private DirectCollectionHelper dcHelper;
-
 		public SuperFastSharesHelper(string connectionString) {
 			_connectionString = connectionString;
-			dcHelper = new DirectCollectionHelper(_connectionString);
 		}
 
 		public Dictionary<string, List<ShareClassDataItem>> GetLatestCompanyFPEShareData(int iconum, DateTime? reportDate, DateTime? since) {
@@ -75,7 +72,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 																						and ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since)
 																						) temp
                                         where temp.rank = 1";
-			bool isIconumDC = dcHelper.IsIconumDC(iconum);
+			bool isIconumDC = IsIconumDC(iconum);
 
 			string query = isIconumDC ? queryDC : queryNonDC;
 			DateTime searchDate = DateTime.Now;
@@ -119,68 +116,62 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		}
 
 		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate, DateTime? since) {
-			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum FROM 
-                                        (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, fds.iconum iconum,
-	                                        row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc) as rank 
-	                                        from STDTimeSeriesDetailSecurity stds (nolock)
-																						join FdsTriPpiMap fds (nolock)
-																							on fds.cusip = stds.SecurityID
-																						join STDItem std (nolock)
-																							on stds.STDItemId = std.ID
-																							and std.SecurityFlag = 1
-																						join STDTemplateItem t (nolock)
-																							on t.STDItemID = std.ID
-																							and t.STDTemplateMasterCode = 'PSIT'
-																						join TimeSeries ts (nolock)
-																							on stds.TimeSeriesID = ts.Id
-																							and ts.AutoCalcFlag = 0
-																							and ts.EncoreFlag = 0
-																						join InterimType it (nolock)
-																							on ts.InterimTypeID = it.ID
-																						join Document d (nolock)
-																							on ts.DocumentID = d.ID
-																							and d.ExportFlag = 1 
-																					
-                                          where ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since)
-										  and 
-										  fds.iconum in (select iconum from #CompanyIds  where iconum not in (SELECT Iconum from dbo.MigrateToTimeSlice with (NOLOCK) where MigrationStatusID = 1 ))
-										  
-										  ) temp
-                                        where temp.rank = 1
-
-union 
-
+			const string query = @"
 SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum FROM 
-                                        (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, fds.iconum iconum,
-	                                        row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc) as rank 
-	                                        from STDTimeSliceDetailSecurity stds (nolock)
-																						join FdsTriPpiMap fds (nolock)
-																							on fds.cusip = stds.SecurityID
-																						join STDItem std (nolock)
-																							on stds.STDItemId = std.ID
-																							and std.SecurityFlag = 1
-																						join STDTemplateItem t (nolock)
-																							on t.STDItemID = std.ID
-																							and t.STDTemplateMasterCode = 'PSIT'
-																						join dbo.TimeSlice ts (nolock)
-																							on stds.TimeSliceID = ts.Id
-																							and ts.AutoCalcFlag = 0
-																							and ts.EncoreFlag = 0
-																						join InterimType it (nolock)
-																							on ts.InterimTypeID = it.ID
-																						join Document d (nolock)
-																							on ts.DocumentID = d.ID
-																							and d.ExportFlag = 1 
-																					
-                                          where 
-										  ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since)
-										  and 
-										  fds.iconum in (select iconum from #CompanyIds  where iconum in (SELECT Iconum from dbo.MigrateToTimeSlice with (NOLOCK) where MigrationStatusID = 1 ))
-										  
-										  ) temp
-                                        where temp.rank = 1";
+        (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, fds.iconum iconum,
+	        row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc) as rank 
+	        from STDTimeSeriesDetailSecurity stds (nolock)
+														join FdsTriPpiMap fds (nolock)
+															on fds.cusip = stds.SecurityID
+														join STDItem std (nolock)
+															on stds.STDItemId = std.ID
+															and std.SecurityFlag = 1
+														join STDTemplateItem t (nolock)
+															on t.STDItemID = std.ID
+															and t.STDTemplateMasterCode = 'PSIT'
+														join TimeSeries ts (nolock)
+															on stds.TimeSeriesID = ts.Id
+															and ts.AutoCalcFlag = 0
+															and ts.EncoreFlag = 0
+														join Document d (nolock)
+															on ts.DocumentID = d.ID
+														join #CompanyIds i (nolock)
+															on i.iconum = fds.iconum
+														left join MigrateToTimeSlice mi (nolock)
+															on mi.Iconum = i.iconum
+															and mi.MigrationStatusID != 1					
+            where ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
+			) temp
+        where temp.rank = 1
+union 
+SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum FROM 
+        (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, fds.iconum iconum,
+	        row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc) as rank 
+	        from STDTimeSliceDetailSecurity stds (nolock)
+														join FdsTriPpiMap fds (nolock)
+															on fds.cusip = stds.SecurityID
+														join STDItem std (nolock)
+															on stds.STDItemId = std.ID
+															and std.SecurityFlag = 1
+														join STDTemplateItem t (nolock)
+															on t.STDItemID = std.ID
+															and t.STDTemplateMasterCode = 'PSIT'
+														join dbo.TimeSlice ts (nolock)
+															on stds.TimeSliceID = ts.Id
+															and ts.AutoCalcFlag = 0
+															and ts.EncoreFlag = 0
+														join Document d (nolock)
+															on ts.DocumentID = d.ID
+														join #CompanyIds i (nolock)
+															on i.iconum = fds.iconum
+														join MigrateToTimeSlice mi (nolock)
+															on mi.Iconum = i.iconum
+															and mi.MigrationStatusID = 1
+            where ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
+			) temp
+        where temp.rank = 1";
 
 		
 			DateTime searchDate = DateTime.Now;
@@ -310,7 +301,7 @@ SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.icon
                                     JOIN STDItem i ON i.ID = s.STDItemID
                                 WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
 
-			bool isIconumDC = dcHelper.IsIconumDC(iconum);
+			bool isIconumDC = IsIconumDC(iconum);
 
 			string query = isIconumDC ? queryDC : queryNonDC;
 
@@ -361,5 +352,28 @@ SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.icon
 			return perShareData;
 		}
 
+		private bool IsIconumDC(int iconum) {
+			bool result = false;
+			const string query = @"if exists (SELECT * from dbo.MigrateToTimeSlice where MigrationStatusID = 1 and Iconum = @iconum)
+														begin 
+														 select convert(bit,1)
+														end else 
+														begin 
+														 select convert(bit,0)
+														end";
+			using (SqlConnection connection = new SqlConnection(_connectionString)) {
+				connection.Open();
+				using (var cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+
+					using (var reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							result = reader.GetBoolean(0);
+						}
+					}
+				}
+			}
+			return result;
+		}
 	}
 }

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models {
+
 	public class TimeSlice  {
+
 		public Guid Id { get; set; }
 		public DateTime PeriodEndDate { get; set; }
 		public int PeriodLength { get; set; }
@@ -52,3 +54,4 @@ namespace DataRoostAPI.Common.Models {
 		public bool isEdited { get; set; }
 	}
 }
+

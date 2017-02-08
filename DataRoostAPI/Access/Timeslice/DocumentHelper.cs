@@ -11,14 +11,15 @@ using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.Timeslice {
 	public class DocumentHelper {
-		
+
 		private readonly string _sfConnectionString;
 		private readonly string _kpiConnectionString;
 		private readonly string _segmentsConnectionString;
 		private readonly string _sfarConnectionString;
 		private readonly string _damConnectionString;
 		enum Months : int { Jan = 1, Feb = 2, Mar = 3, Apr = 4, May = 5, Jun = 6, Jul = 7, Aug = 8, Sep = 9, Oct = 10, Nov = 11, Dec = 12 };
-		public DocumentHelper(string sfConnectionString, string kpiConnectionString, string segmentsConnectionString, string sfarConnectionString , string damConnectionString) {
+
+		public DocumentHelper(string sfConnectionString, string kpiConnectionString, string segmentsConnectionString, string sfarConnectionString, string damConnectionString) {
 			_sfConnectionString = sfConnectionString;
 			_kpiConnectionString = kpiConnectionString;
 			_segmentsConnectionString = segmentsConnectionString;
@@ -31,17 +32,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Timeslice {
 			if (EntityExists(Iconum)) {
 				return true;
 			}
-				int? EntityId = InsertEntity(Iconum);
-				foreach (var timeSlice in GetSfTimeSeries(Iconum)) {
-					InsertTimeSlice(timeSlice, EntityId.Value, "Supercore");
-				}
-				foreach (var timeSlice in GetKPITimeSeries(Iconum)) {
-					InsertTimeSlice(timeSlice, EntityId.Value, "KPI");
-				}
-				foreach (var timeSlice in GetSegmentsTimeSeries(Iconum)) {
-					InsertTimeSlice(timeSlice, EntityId.Value, "Segments");
-				}
-		
+			int? EntityId = InsertEntity(Iconum);
+			foreach (var timeSlice in GetSfTimeSeries(Iconum)) {
+				InsertTimeSlice(timeSlice, EntityId.Value, "Supercore");
+			}
+			foreach (var timeSlice in GetKPITimeSeries(Iconum)) {
+				InsertTimeSlice(timeSlice, EntityId.Value, "KPI");
+			}
+			foreach (var timeSlice in GetSegmentsTimeSeries(Iconum)) {
+				InsertTimeSlice(timeSlice, EntityId.Value, "Segments");
+			}
+
 			return true;
 		}
 
@@ -55,7 +56,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Timeslice {
 			return true;
 		}
 
-		private void InsertTimeSlice(TimeSlice timeSlice, int EntityId,  string Product = "") {
+
+		private void InsertTimeSlice(TimeSlice timeSlice, int EntityId, string Product = "") {
+
 			string insertQuery = @"
 						declare @TimeSliceId uniqueidentifier = null;					
 declare @duration int 
@@ -112,7 +115,7 @@ values (@Product,@ProductTimeSliceId,@TimeSliceDocumentMap)
 
 ";
 			}
-			
+
 			Guid TimeSliceId = Guid.Empty;
 			if (timeSlice.isEdited) {
 				TimeSliceId = timeSlice.Id;
@@ -120,42 +123,41 @@ values (@Product,@ProductTimeSliceId,@TimeSliceDocumentMap)
 			using (SqlConnection sqlConn = new SqlConnection(_sfarConnectionString)) {
 				sqlConn.Open();
 				using (SqlCommand cmd = new SqlCommand(timeSlice.isNew ? insertQuery : updateQuery, sqlConn)) {
-						cmd.CommandType = CommandType.Text;
-						cmd.Parameters.AddWithValue("@EntityId", EntityId);
-						cmd.Parameters.AddWithValue("@TimeSlicePeriodEndDate", timeSlice.PeriodEndDate);
-						cmd.Parameters.AddWithValue("@PeriodLength", timeSlice.PeriodLength);
-						cmd.Parameters.AddWithValue("@PeriodTypeID", timeSlice.PeriodType);
-						cmd.Parameters.AddWithValue("@FiscalYear", timeSlice.FiscalYear);
-						cmd.Parameters.AddWithValue("@InterimTypeID", timeSlice.InterimType);
-						cmd.Parameters.AddWithValue("@IsConsolidated", timeSlice.IsConsolidated);
-						cmd.Parameters.AddWithValue("@IsProforma", timeSlice.IsProforma);
-						cmd.Parameters.AddWithValue("@AcquisitionStatusID", timeSlice.AcquisitionStatus);
-						cmd.Parameters.AddWithValue("@FiscalDistance", timeSlice.FiscalDistance);
-						cmd.Parameters.AddWithValue("@ReportingPeriodEndDate", timeSlice.ReportingPeriodEndDate);
-						if (timeSlice.isEdited) {
-							cmd.Parameters.AddWithValue("@TimeSliceId", TimeSliceId);
-						} 
-						using(SqlDataReader sdr = cmd.ExecuteReader()){
-							if(sdr.Read())
-							TimeSliceId = sdr.GetGuid(0);
-						}
+					cmd.CommandType = CommandType.Text;
+					cmd.Parameters.AddWithValue("@EntityId", EntityId);
+					cmd.Parameters.AddWithValue("@TimeSlicePeriodEndDate", timeSlice.PeriodEndDate);
+					cmd.Parameters.AddWithValue("@PeriodLength", timeSlice.PeriodLength);
+					cmd.Parameters.AddWithValue("@PeriodTypeID", timeSlice.PeriodType);
+					cmd.Parameters.AddWithValue("@FiscalYear", timeSlice.FiscalYear);
+					cmd.Parameters.AddWithValue("@InterimTypeID", timeSlice.InterimType);
+					cmd.Parameters.AddWithValue("@IsConsolidated", timeSlice.IsConsolidated);
+					cmd.Parameters.AddWithValue("@IsProforma", timeSlice.IsProforma);
+					cmd.Parameters.AddWithValue("@AcquisitionStatusID", timeSlice.AcquisitionStatus);
+					cmd.Parameters.AddWithValue("@FiscalDistance", timeSlice.FiscalDistance);
+					cmd.Parameters.AddWithValue("@ReportingPeriodEndDate", timeSlice.ReportingPeriodEndDate);
+					if (timeSlice.isEdited) {
+						cmd.Parameters.AddWithValue("@TimeSliceId", TimeSliceId);
 					}
-						foreach(var doc in timeSlice.Documents.Where(o => o.isNew || o.isEdited)){
-							using (SqlCommand cmd = new SqlCommand(docSql, sqlConn)) {
-								cmd.CommandType = CommandType.Text;
-								cmd.Parameters.AddWithValue("@ReportTypeID", doc.ReportType);
-								cmd.Parameters.AddWithValue("@IsAmended", doc.IsAmended);
-						    cmd.Parameters.AddWithValue("@IsRestated", doc.IsRestated);
-								cmd.Parameters.AddWithValue("@DocumentId", doc.DocumentId);
-								cmd.Parameters.AddWithValue("@PublicationStampUtc", doc.PublicationStamp);
-								cmd.Parameters.AddWithValue("@FormType", doc.FormType);
-								cmd.Parameters.AddWithValue("@TimeSliceId", TimeSliceId);
-								cmd.Parameters.AddWithValue("@Product", Product);
-							  cmd.Parameters.AddWithValue("@ProductTimeSliceId", doc.ProductTimeSliceId);
-								cmd.ExecuteNonQuery();
-							}
-						}
-					
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read())
+							TimeSliceId = sdr.GetGuid(0);
+					}
+				}
+				foreach (var doc in timeSlice.Documents.Where(o => o.isNew || o.isEdited)) {
+					using (SqlCommand cmd = new SqlCommand(docSql, sqlConn)) {
+						cmd.CommandType = CommandType.Text;
+						cmd.Parameters.AddWithValue("@ReportTypeID", doc.ReportType);
+						cmd.Parameters.AddWithValue("@IsAmended", doc.IsAmended);
+						cmd.Parameters.AddWithValue("@IsRestated", doc.IsRestated);
+						cmd.Parameters.AddWithValue("@DocumentId", doc.DocumentId);
+						cmd.Parameters.AddWithValue("@PublicationStampUtc", doc.PublicationStamp);
+						cmd.Parameters.AddWithValue("@FormType", doc.FormType);
+						cmd.Parameters.AddWithValue("@TimeSliceId", TimeSliceId);
+						cmd.Parameters.AddWithValue("@Product", Product);
+						cmd.Parameters.AddWithValue("@ProductTimeSliceId", doc.ProductTimeSliceId);
+						cmd.ExecuteNonQuery();
+					}
+				}
 			}
 
 		}
@@ -189,9 +191,8 @@ where ds.CompanyID = @Iconum";
 							IsProforma = sdr.GetBoolean(7),
 							AcquisitionStatus = sdr.GetStringSafe(10),
 							FiscalDistance = sdr.GetInt32(11),
-							ReportingPeriodEndDate = sdr.GetDateTime(16), 
+							ReportingPeriodEndDate = sdr.GetDateTime(16),
 							isNew = true
-							
 						};
 						TimeSlice temp = ts.FirstOrDefault(o => o.Equals(t));
 						if (temp != null) {
@@ -209,7 +210,6 @@ where ds.CompanyID = @Iconum";
 							isNew = true
 						});
 						ts.Add(t);
-						
 					}
 				}
 			}
@@ -282,7 +282,7 @@ where Iconum = @Iconum";
 			}
 			return ts;
 		}
-		
+
 		private List<TimeSlice> GetSegmentsTimeSeries(int Iconum) {
 			List<TimeSlice> ts = new List<TimeSlice>();
 			string query = @"SELECT ts.PeriodEndDate,1 ,'Y',ts.FiscalYear,ts.ReportType,'AR',case ts.Consolidated when 'C' then convert(bit,1) else convert(bit,0) end,ts.IsProForma,
@@ -305,7 +305,6 @@ where v.Iconum = @Iconum
 							PeriodLength = sdr.GetInt32(1),
 							PeriodType = sdr.GetStringSafe(2),
 							FiscalYear = sdr.GetInt32(3),
-							
 							InterimType = sdr.GetStringSafe(5),
 							IsConsolidated = sdr.GetBoolean(6),
 							IsProforma = sdr.GetBoolean(7),
@@ -365,7 +364,6 @@ end
 					cmd.Parameters.AddWithValue("@FiscalYear", Year);
 					cmd.Parameters.AddWithValue("@DocumentId", DBNull.Value);
 				}
-				
 				cmd.Parameters.AddWithValue("@Product", Product);
 				sqlConn.Open();
 				using (SqlDataReader rdr = cmd.ExecuteReader()) {
@@ -379,7 +377,8 @@ end
 			return timeSlices;
 		}
 
-		public object GetProductTimeSlices(int Iconum, string Product,string Year = "" , Guid? DocumentId = null) {
+		public object GetProductTimeSlices(int Iconum, string Product, string Year = "", Guid? DocumentId = null) {
+
 			var details = new List<object>();
 			string query = "";
 			string connectionString = "";
@@ -400,8 +399,10 @@ ts.IsAuto , dv.DocumentID , d.ReportTypeID , d.IsAmended , d.FormType , d.Public
 join DocumentView dv on dv.TimeSliceID = ts.ID
 join Document d on d.ID = dv.DocumentID
 join @mappedTimeSlice mts on mts.id = ts.ID";
-				 connectionString = _kpiConnectionString;
-				 dt.Columns.Add("ID", typeof(Guid));
+
+				connectionString = _kpiConnectionString;
+				dt.Columns.Add("ID", typeof(Guid));
+
 			} else if (Product == "Segments") {
 				query = @"
 SELECT ts.PeriodEndDate,
@@ -465,10 +466,11 @@ join @mappedTimeSlice mts on mts.id = ts.ID";
 				connectionString = _sfConnectionString;
 				dt.Columns.Add("ID", typeof(Guid));
 			}
-			List<object> timeSlices = GetMappedTimeSlices(Iconum,Product,Year,DocumentId);
+
+			List<object> timeSlices = GetMappedTimeSlices(Iconum, Product, Year, DocumentId);
 
 			timeSlices.ForEach(o => dt.Rows.Add(o));
-		
+
 			using (SqlConnection sqlConn = new SqlConnection(connectionString))
 			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
 				cmd.CommandType = CommandType.Text;
@@ -480,11 +482,12 @@ join @mappedTimeSlice mts on mts.id = ts.ID";
 				sqlConn.Open();
 				using (SqlDataReader rdr = cmd.ExecuteReader()) {
 					while (rdr.Read()) {
-						Dictionary<string, object> ts = new Dictionary<string,object>();
-						
+
+						Dictionary<string, object> ts = new Dictionary<string, object>();
+
 						for (int i = 0; i < rdr.FieldCount; i++) {
 							ts.Add(rdr.GetName(i), rdr.IsDBNull(i) ? null : rdr.GetValue(i));
-							
+
 						}
 						details.Add(ts);
 					}
@@ -671,7 +674,8 @@ join TimeSlice.TimeSliceDocumentMap tsd on tsd.TimeSliceId = ts.ID";
 				query += @" where ts.ID in (
 select tdm.TimeSliceId from TimeSlice.TimeSliceDocumentMap tdm where tdm.DocumentId = @DocumentId
 )";
-			}	
+
+			}
 
 			using (SqlConnection sqlConn = new SqlConnection(_sfarConnectionString))
 			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
@@ -691,7 +695,7 @@ select tdm.TimeSliceId from TimeSlice.TimeSliceDocumentMap tdm where tdm.Documen
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
 					while (sdr.Read()) {
 						TimeSlice t = ts.FirstOrDefault(o => o.Id == sdr.GetGuid(0));
-						
+
 						if (t == null) {
 							t = new TimeSlice
 							{
@@ -705,11 +709,11 @@ select tdm.TimeSliceId from TimeSlice.TimeSliceDocumentMap tdm where tdm.Documen
 								IsProforma = sdr.GetBoolean(8),
 								AcquisitionStatus = sdr.GetStringSafe(11),
 								FiscalDistance = sdr.GetInt32(12),
-						    ReportingPeriodEndDate = sdr.GetDateTime(16)
+								ReportingPeriodEndDate = sdr.GetDateTime(16)
 							};
 							ts.Add(t);
-						} 
-					
+						}
+
 						t.Documents.Add(new TimeSliceDocument
 						{
 
@@ -721,7 +725,6 @@ select tdm.TimeSliceId from TimeSlice.TimeSliceDocumentMap tdm where tdm.Documen
 							FormType = sdr.GetStringSafe(15)
 						});
 
-						
 					}
 				}
 			}
@@ -749,7 +752,7 @@ where d.id   = @DocumentId";
 		}
 
 		public object GetDocumentMeta(string DocumentId) {
-			
+
 			string query = @"
 										select dvc.iconum,year(d.PublicationStampUtc), d.PublicationStampUtc,dvm.FormType,d.id,dvm.Period  from Documents d 
 join DocumentVersionCompanies dvc on dvc.DocumentVersionId = d.CurrentVersion
@@ -759,14 +762,19 @@ where dvc.IsPrimary = 1 and dvc.Confidence = 1 and d.id = @DocumentId";
 			using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
 				cmd.CommandType = CommandType.Text;
 				cmd.Parameters.AddWithValue("@DocumentId", DocumentId);
-				
 				sqlConn.Open();
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
 					if (sdr.Read()) {
-						return new { Iconum = sdr.GetInt32(0), Year = sdr.GetInt32(1), PublicationStampUtc = sdr.GetDateTime(2) , FormType = sdr.GetStringSafe(3),
-												 DocumentId = sdr.GetGuid(4),
-												 ReportPED = sdr.GetDateTime(5),
-												 ReportType = GetReporttype(sdr.GetGuid(4))
+						return new
+						{
+							Iconum = sdr.GetInt32(0),
+							Year = sdr.GetInt32(1),
+							PublicationStampUtc = sdr.GetDateTime(2),
+							FormType = sdr.GetStringSafe(3),
+							DocumentId = sdr.GetGuid(4),
+							ReportPED = sdr.GetDateTime(5),
+							ReportType = GetReporttype(sdr.GetGuid(4))
+
 						};
 					}
 				}
@@ -789,8 +797,12 @@ where dvc.IsPrimary = 1 and dvc.Confidence = 1 and dvc.iconum = @Iconum and dvm.
 				sqlConn.Open();
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
 					while (sdr.Read()) {
-						documents.Add(new { PublicationStampUtc = sdr.GetDateTime(0) , DocumentId = sdr.GetGuid(2), 
-							FormType = sdr.GetStringSafe(1) , ReportingPeriodEndDate = sdr.GetDateTimeSafe(3) ,
+						documents.Add(new
+						{
+							PublicationStampUtc = sdr.GetDateTime(0),
+							DocumentId = sdr.GetGuid(2),
+							FormType = sdr.GetStringSafe(1),
+							ReportingPeriodEndDate = sdr.GetDateTimeSafe(3),
 							ReportType = GetReporttype(sdr.GetGuid(2))
 						});
 					}
@@ -799,7 +811,8 @@ where dvc.IsPrimary = 1 and dvc.Confidence = 1 and dvc.iconum = @Iconum and dvm.
 			return documents;
 		}
 
-		private string GetReporttype(Guid DocumentId){
+		private string GetReporttype(Guid DocumentId) {
+
 			string ReportType = "";
 			string query = @"
 									SELECT ReportTypeID from TimeSlice.TimeSliceDocumentMap where DocumentId = @DocumentId";
@@ -817,10 +830,9 @@ where dvc.IsPrimary = 1 and dvc.Confidence = 1 and dvc.iconum = @Iconum and dvm.
 			return ReportType;
 		}
 
-		public bool RemoveDocumentLink(Guid DocumentId , Guid TimeSliceId) {
-	
-			string query = @"
-										delete from  [TimeSlice].[TimeSliceDocumentMap] where TimeSliceId = @TimeSliceId and DocumentId = @DocumentId";
+		public bool RemoveDocumentLink(Guid DocumentId, Guid TimeSliceId) {
+
+			string query = @"delete from  [TimeSlice].[TimeSliceDocumentMap] where TimeSliceId = @TimeSliceId and DocumentId = @DocumentId";
 			try {
 				using (SqlConnection sqlConn = new SqlConnection(_sfarConnectionString))
 				using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
@@ -883,12 +895,12 @@ values  (@TimeSliceId,@DocumentId,@ReportTypeID,@IsAmended,@IsRestated,@Publicat
 				case "T2": return "T2";
 				case "T3": return "T3";
 				case "AR": return "A";
-					
 			}
 			return "AR";
 		}
 
-		private int ConvertToKPIDuration(string PeriodType , int PeriodLength) {
+		private int ConvertToKPIDuration(string PeriodType, int PeriodLength) {
+
 			if (PeriodLength == 1 && PeriodType == "Y") {
 				return 360;
 			} else if (PeriodLength == 3 && PeriodType == "M") {
@@ -920,58 +932,58 @@ values  (@TimeSliceId,@DocumentId,@ReportTypeID,@IsAmended,@IsRestated,@Publicat
 				productTimeSlices = productTimeSlices.Where(o => o.FiscalYear == decimal.Parse(FiscalYear)).ToList();
 			}
 
-			List<TimeSlice> diffTimeSlices = standardizedTimeSlices.Where(o => productTimeSlices.Count(a => a.Equals(o) ) == 0 ).ToList();
+			List<TimeSlice> diffTimeSlices = standardizedTimeSlices.Where(o => productTimeSlices.Count(a => a.Equals(o)) == 0).ToList();
 			var details = new List<object>();
-		
-				foreach (var diffTs in diffTimeSlices) {
-					foreach (var doc in diffTs.Documents) {
-						Dictionary<string, object> ts = new Dictionary<string, object>();
-						if (Product == "KPI") {
-							ts.Add("TimeSlicePeriodEndDate", diffTs.PeriodEndDate);
-							ts.Add("Duration", ConvertToKPIDuration(diffTs.PeriodType, diffTs.PeriodLength));
-							ts.Add("PeriodTypeID", ConvertToKPIPeriodType(diffTs.InterimType));
-							ts.Add("AcquisitionStatusID", diffTs.AcquisitionStatus == "P" ? "P" : (diffTs.AcquisitionStatus == "U" ? "S" : "N"));
-							ts.Add("ConsolidatedTypeID", diffTs.IsConsolidated ? "C" : "U");
-							ts.Add("IsProforma", diffTs.IsProforma);
-							ts.Add("FiscalDistance", diffTs.FiscalDistance);
-							ts.Add("IsRestated", doc.IsRestated);
-							ts.Add("DocumentID",doc.DocumentId);
-							ts.Add("ReportTypeID",doc.ReportType);
-							ts.Add("IsAmended",doc.IsAmended);
-							ts.Add("FormType",doc.FormType);
-							ts.Add("PublicationDateTime",doc.PublicationStamp);
-						} else if (Product == "Segments") {
-							ts.Add("PeriodEndDate", diffTs.PeriodEndDate);
-							ts.Add("FiscalDistance", diffTs.FiscalDistance);
-							ts.Add("Duration", 360);
-							ts.Add("PeriodType", "A");
-							ts.Add("Predecessor", diffTs.AcquisitionStatus == "P" ? "P" : (diffTs.AcquisitionStatus == "U" ? "S" : "N"));
-							ts.Add("Consolidated", diffTs.IsConsolidated ? "C" : "P");
-							ts.Add("IsProForma", diffTs.IsProforma);
-							ts.Add("ReportingPeriodEndDate", diffTs.ReportingPeriodEndDate);
-							ts.Add("ReportType",doc.ReportType);           
-							ts.Add("IsAmended",doc.IsAmended);            
-							ts.Add("IsRestated",doc.IsRestated);           
-							ts.Add("FiscalYear", diffTs.FiscalYear);
-						} else if (Product == "Supercore") {
-							ts.Add("DocumentID",doc.DocumentId);        
-							ts.Add("TimeSliceDate", diffTs.PeriodEndDate);
-							ts.Add("PeriodLength", diffTs.PeriodLength);
-							ts.Add("PeriodTypeID", diffTs.PeriodType);
-							ts.Add("CompanyFiscalYear", diffTs.FiscalYear);
-							ts.Add("ReportTypeID",doc.ReportType);      
-							ts.Add("InterimTypeID", diffTs.InterimType == "AR" ? "XX" : diffTs.InterimType);
-							ts.Add("ConsolidatedTypeID", diffTs.IsConsolidated ? "C" : "U");
-							ts.Add("AccountTypeID", diffTs.IsProforma ? "P" : (diffTs.AcquisitionStatus == "P" ? "E" : diffTs.AcquisitionStatus));
-							ts.Add("EncoreFlag", diffTs.FiscalDistance == 0 ? false : true);
-							ts.Add("ReportingPeriodEndDate",diffTs.ReportingPeriodEndDate);
-							ts.Add("PublicationDateTime",doc.PublicationStamp);
-							ts.Add("FormTypeID",doc.FormType);
-						}
-						details.Add(ts);
-					}		
+
+			foreach (var diffTs in diffTimeSlices) {
+				foreach (var doc in diffTs.Documents) {
+					Dictionary<string, object> ts = new Dictionary<string, object>();
+					if (Product == "KPI") {
+						ts.Add("TimeSlicePeriodEndDate", diffTs.PeriodEndDate);
+						ts.Add("Duration", ConvertToKPIDuration(diffTs.PeriodType, diffTs.PeriodLength));
+						ts.Add("PeriodTypeID", ConvertToKPIPeriodType(diffTs.InterimType));
+						ts.Add("AcquisitionStatusID", diffTs.AcquisitionStatus == "P" ? "P" : (diffTs.AcquisitionStatus == "U" ? "S" : "N"));
+						ts.Add("ConsolidatedTypeID", diffTs.IsConsolidated ? "C" : "U");
+						ts.Add("IsProforma", diffTs.IsProforma);
+						ts.Add("FiscalDistance", diffTs.FiscalDistance);
+						ts.Add("IsRestated", doc.IsRestated);
+						ts.Add("DocumentID", doc.DocumentId);
+						ts.Add("ReportTypeID", doc.ReportType);
+						ts.Add("IsAmended", doc.IsAmended);
+						ts.Add("FormType", doc.FormType);
+						ts.Add("PublicationDateTime", doc.PublicationStamp);
+					} else if (Product == "Segments") {
+						ts.Add("PeriodEndDate", diffTs.PeriodEndDate);
+						ts.Add("FiscalDistance", diffTs.FiscalDistance);
+						ts.Add("Duration", 360);
+						ts.Add("PeriodType", "A");
+						ts.Add("Predecessor", diffTs.AcquisitionStatus == "P" ? "P" : (diffTs.AcquisitionStatus == "U" ? "S" : "N"));
+						ts.Add("Consolidated", diffTs.IsConsolidated ? "C" : "P");
+						ts.Add("IsProForma", diffTs.IsProforma);
+						ts.Add("ReportingPeriodEndDate", diffTs.ReportingPeriodEndDate);
+						ts.Add("ReportType", doc.ReportType);
+						ts.Add("IsAmended", doc.IsAmended);
+						ts.Add("IsRestated", doc.IsRestated);
+						ts.Add("FiscalYear", diffTs.FiscalYear);
+					} else if (Product == "Supercore") {
+						ts.Add("DocumentID", doc.DocumentId);
+						ts.Add("TimeSliceDate", diffTs.PeriodEndDate);
+						ts.Add("PeriodLength", diffTs.PeriodLength);
+						ts.Add("PeriodTypeID", diffTs.PeriodType);
+						ts.Add("CompanyFiscalYear", diffTs.FiscalYear);
+						ts.Add("ReportTypeID", doc.ReportType);
+						ts.Add("InterimTypeID", diffTs.InterimType == "AR" ? "XX" : diffTs.InterimType);
+						ts.Add("ConsolidatedTypeID", diffTs.IsConsolidated ? "C" : "U");
+						ts.Add("AccountTypeID", diffTs.IsProforma ? "P" : (diffTs.AcquisitionStatus == "P" ? "E" : diffTs.AcquisitionStatus));
+						ts.Add("EncoreFlag", diffTs.FiscalDistance == 0 ? false : true);
+						ts.Add("ReportingPeriodEndDate", diffTs.ReportingPeriodEndDate);
+						ts.Add("PublicationDateTime", doc.PublicationStamp);
+						ts.Add("FormTypeID", doc.FormType);
+					}
+					details.Add(ts);
 				}
-		
+			}
+
 			return details;
 
 		}

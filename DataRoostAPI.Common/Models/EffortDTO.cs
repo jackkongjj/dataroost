@@ -9,7 +9,7 @@ namespace DataRoostAPI.Common.Models {
 
         public static EffortDTO SuperCore()
         {
-            return new EffortDTO() { Name = "SuperCore" };
+            return new EffortDTO() { Name = "Supercore" };
         }
 
         public static EffortDTO Voyager()

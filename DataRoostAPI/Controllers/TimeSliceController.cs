@@ -24,14 +24,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString,segmentsConnectionString,sfarConnectionString,damConnectionString);
-		  return documentHelper.MigrateIconumTimeSlices(iconum);
+
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.MigrateIconumTimeSlices(iconum);
 		}
 
 
 		[Route("create")]
 		[HttpPost]
-		public bool CreateTimeSlice(string CompanyId , [FromBody] TimeSlice TimeSlice) {
+		public bool CreateTimeSlice(string CompanyId, [FromBody] TimeSlice TimeSlice) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -39,8 +40,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString,damConnectionString);
-			return documentHelper.CreateTimeSlice(iconum,TimeSlice);
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+			return documentHelper.CreateTimeSlice(iconum, TimeSlice);
 		}
 
 		[Route("Iconum")]
@@ -53,7 +54,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString,damConnectionString);
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
 			return documentHelper.GetTimeSlices(iconum);
 		}
 
@@ -61,13 +62,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("DocumentMeta/{DocumentId}")]
 		[HttpGet]
 		public object GetDocumentMeta(string DocumentId) {
-		
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
-			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString,damConnectionString);
+
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
+
 			return documentHelper.GetDocumentMeta(DocumentId);
 		}
 
@@ -113,7 +115,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
-			return IsDiff ? documentHelper.DiffTimeSlices(iconum,ProductId,Year,null) : documentHelper.GetProductTimeSlices(iconum, ProductId,Year);
+
+			return IsDiff ? documentHelper.DiffTimeSlices(iconum, ProductId, Year, null) : documentHelper.GetProductTimeSlices(iconum, ProductId, Year);
 		}
 
 		[Route("Product/{ProductId}/Document/{DocumentId}/Diff/{IsDiff}")]
@@ -127,7 +130,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
-			return IsDiff ? documentHelper.DiffTimeSlices(iconum, ProductId, "", DocumentId) :  documentHelper.GetProductTimeSlices(iconum, ProductId, "", DocumentId);
+
+			return IsDiff ? documentHelper.DiffTimeSlices(iconum, ProductId, "", DocumentId) : documentHelper.GetProductTimeSlices(iconum, ProductId, "", DocumentId);
 		}
 
 
@@ -157,13 +161,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, kpiConnectionString, segmentsConnectionString, sfarConnectionString, damConnectionString);
-			return documentHelper.RemoveDocumentLink(DocumentId,TimeSliceId);
+
+			return documentHelper.RemoveDocumentLink(DocumentId, TimeSliceId);
 		}
 
 		[Route("{TimeSliceId}")]
 		[HttpPost]
-		public bool UpsertDocumentLink(Guid TimeSliceId,[FromBody]TimeSliceDocument Document) {
-	
+
+		public bool UpsertDocumentLink(Guid TimeSliceId, [FromBody]TimeSliceDocument Document) {
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();

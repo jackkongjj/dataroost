@@ -32,7 +32,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 		public CompanyDTO GetCompany(int iconum) {
-			string query = @"SELECT f.Firm_Name, t.Descrip, c.name_long, c.name_short, c.iso_country
+
+		    iconum = LookForStitchedIconum(iconum);
+
+            string query = @"SELECT f.Firm_Name, t.Descrip, c.name_long, c.name_short, c.iso_country
                                 FROM FilerMst f
 	                                LEFT JOIN FilerTypes t ON t.Code = f.Filer_Type
 	                                LEFT JOIN Countries c ON c.iso_country = f.ISO_Country
@@ -122,7 +125,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
 			Dictionary<int, List<ShareClassDataDTO>> shareClassDictionary = GetCompanyShareClasses(new List<int> { iconum });
-			return shareClassDictionary.Values.First();
+		    if (shareClassDictionary.Count() > 0) {
+		        return shareClassDictionary.Values.First();
+		    }
+
+		    return null;
 		}
 
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
@@ -132,13 +139,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		    foreach (int iconum in iconums) {
 		        if (!companyShareClasses.ContainsKey(iconum)) {
 		            missingIconums.Add(iconum);
-		        }
-		    }
-		    Dictionary<int, int> iconumMap = LookForStitchedIconums(missingIconums);
-		    Dictionary<int, List<ShareClassDataDTO>> missingShareClasses = ShareClasses(iconumMap.Values.Distinct().ToList());
-		    foreach (KeyValuePair<int, List<ShareClassDataDTO>> pair in missingShareClasses) {
-		        if (!companyShareClasses.ContainsKey(pair.Key)) {
-		            companyShareClasses.Add(pair.Key, pair.Value);
 		        }
 		    }
 
@@ -161,7 +161,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		}
 
 	    private Dictionary<int, List<ShareClassDataDTO>> ShareClasses(List<int> iconums) {
-            const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
+            const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
 
             const string query = @"SELECT p.Cusip,
                                         p.Iconum,
@@ -180,16 +180,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                         p.PPI,
                                         x.permid
                                     FROM PpiIconumMap p
-									    LEFT JOIN #CompanyIds ico ON ico.iconum = p.iconum
+									    LEFT JOIN #iconums ico ON ico.iconum = p.iconum
 									    LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
 									    LEFT JOIN IssueTypes i ON i.Code = s.Issue_Type
 									    LEFT JOIN SecMasExchanges e ON e.Exchange_Code = s.Exchange_Code
 									    LEFT JOIN AssetClasses a ON a.Code = i.Asset_Code
 									    LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
-								    WHERE ico.Iconum IS NOT NULL
-                                        --AND RIGHT(p.PPI, 1) != '0'
-                                        --AND s.term_date IS NULL
-                                        --AND s.Cusip in (SELECT DISTINCT d.SecurityID FROM SDBTimeSeriesDetailSecurity d JOIN secmas s ON s.Cusip = d.SecurityID WHERE s.iconum = @iconum)";
+								    WHERE ico.Iconum IS NOT NULL";
 
             Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
             DataTable table = new DataTable();
@@ -212,9 +209,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                 using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null))
                 {
                     bulkCopy.BatchSize = table.Rows.Count;
-                    bulkCopy.DestinationTableName = "#CompanyIds";
+                    bulkCopy.DestinationTableName = "#iconums";
                     bulkCopy.WriteToServer(table);
                 }
+
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
 
@@ -258,49 +256,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 	        return companyShareClasses;
 	    }
 
-	    private Dictionary<int, int> LookForStitchedIconums(List<int> iconums) {
+	    private int LookForStitchedIconum(int iconum) {
+            
+	        const string query = @"
+SELECT h.iconum, m.iconum
+FROM PpiIconumMapHistory h (nolock)
+	JOIN PPiIconumMap m (nolock) ON h.PPI = m.PPI
+WHERE h.iconum = @iconum AND m.iconum > 0
+ORDER BY ChangeDate DESC";
 
-			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
-
-            const string query = @"SELECT TOP 1 o.iconum, n.iconum, n.ppi, n.UpdateStampUtc
-                                    FROM IconumPpiMap o
-			                            JOIN IconumPpiMap n ON o.ppi = n.ppi
-                                        JOIN #CompanyIds i ON i.iconum = o.iconum
-		                            ORDER BY n.UpdateStampUtc DESC";
-
-            DataTable table = new DataTable();
-            table.Columns.Add("iconum", typeof(int));
-            foreach (int iconum in iconums)
-            {
-                table.Rows.Add(iconum);
-            }
-
-            Dictionary<int, int> iconumMap = new Dictionary<int, int>();
-            using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+            int newIconum = iconum;
+            using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 	            connection.Open();
-	            using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-	                cmd.ExecuteNonQuery();
-	            }
 
-	            // Upload all iconums to Temp table
-	            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-	                bulkCopy.BatchSize = table.Rows.Count;
-	                bulkCopy.DestinationTableName = "#CompanyIds";
-	                bulkCopy.WriteToServer(table);
-	            }
 	            using (SqlCommand cmd = new SqlCommand(query, connection)) {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
 
 	                using (SqlDataReader sdr = cmd.ExecuteReader()) {
 	                    while (sdr.Read()) {
 	                        int oldIconum = sdr.GetInt32(0);
-	                        int newIconum = sdr.GetInt32(1);
-                            iconumMap.Add(oldIconum, newIconum);
+	                        newIconum = sdr.GetInt32(1);
 	                    }
 	                }
 	            }
 	        }
 
-            return iconumMap;
+            return newIconum;
 	    }
 
 	    public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
@@ -391,12 +372,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return effortDictionary[iconum];
 		}
 
-		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
+        public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
 
-			List<string> countries = GetWhiteListedCountries();
-			string countryString = string.Join("', '", countries);
-
-			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
+            Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
 			DataTable table = new DataTable();
 			table.Columns.Add("iconum", typeof (int));
 			foreach (int iconum in companies) {
@@ -404,20 +382,47 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				effortDictionary.Add(iconum, EffortDTO.Voyager());
 			}
 
-			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
-			string query = string.Format(@"select i.iconum
-												from dbo.CompanyLists cl (nolock)
-													join dbo.CompanyListCompanies clc (nolock) on cl.id = clc.CompanyListId
-													join #CompanyIds i on i.iconum = clc.iconum
-												where cl.ShortName = 'SF_NewMarketWhiteList'
-											 union
-											 select i.iconum
-												from dbo.FdsTriPpiMap fds
-													join #CompanyIds i on i.iconum = fds.iconum 
-												where IsAdr = 0 AND IsoCountry IN ('{0}')", countryString);
+			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
+            const string query = @"
+with ico as
+(
+       select c.iconum, IsoCountry 
+       from #iconums c
+       join fdstrippimap fds on fds.iconum = c.iconum
+       where IsAdr = 0 and IsActive=1 --order by ClientAddDate, [Priority]
+)      
+select  fds.iconum
+from fce.rules r
+join ico fds on r.country = fds.IsoCountry
+join fce.RulesToPath rtp on r.id = rtp.RuleId
+join fce.Paths p on p.Id = rtp.PathId
+join fce.PathTransitions pt on p.Id = pt.PathId
+join WorkQueueTasks wqt on wqt.id = pt.taskid
+left join fce.CompanyListRulesToPath clr on clr.RulesToPathId = rtp.Id
+where wqt.name = 'Finantula' and clr.RulesToPathId is null
+union
+select matchList.iconum from
+(
+       select fds.iconum, rulestopathid, matchcount = count(distinct 1)
+       from fce.rules r
+       join ico fds on r.country = fds.IsoCountry
+       join fce.RulesToPath rtp on r.id = rtp.RuleId
+       join fce.Paths p on p.Id = rtp.PathId
+       join fce.PathTransitions pt on p.Id = pt.PathId
+       join WorkQueueTasks wqt on wqt.id = pt.taskid
+       join fce.CompanyListRulesToPath clr on clr.RulesToPathId = rtp.Id
+       join companylistcompanies clc on clc.companylistid = clr.companylistid and clc.iconum = fds.iconum
+       where wqt.name = 'Finantula'
+       group by clr.RulesToPathId, fds.iconum
+) as matchList
+join (
+       select rulestopathid, matchcount = count(1)
+       from fce.CompanyListRulesToPath
+       group by rulestopathid
+) as reqList on matchList.RulesToPathId = reqList.RulesToPathId and matchList.matchcount = reqList.matchcount";
 
-			// Create Global Temp Table
-			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+            // Create Global Temp Table
+            using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
 				connection.Open();
 				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
 					cmd.ExecuteNonQuery();
@@ -426,15 +431,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				// Upload all iconums to Temp table
 				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
 					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#CompanyIds";
+					bulkCopy.DestinationTableName = "#iconums";
 					bulkCopy.WriteToServer(table);
 				}
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
-
-
 							int iconum = reader.GetInt32(0);
                             EffortDTO superfastEffort = EffortDTO.SuperCore();
 							effortDictionary[iconum] = superfastEffort;
@@ -444,27 +447,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			}
 
 			return effortDictionary;
-		}
-
-		private List<string> GetWhiteListedCountries() {
-
-			const string query =
-				@"SELECT DISTINCT iso_country FROM ppi_check where IsEnable = 1 GROUP BY iso_country HAVING SUM(CAST(isWhiteList AS INT)) = 0";
-
-			List<string> countries = new List<string>();
-			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
-				connection.Open();
-				using (SqlCommand cmd = new SqlCommand(query, connection)) {
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							string country = reader.GetString(0);
-							countries.Add(country);
-						}
-					}
-				}
-			}
-
-			return countries;
 		}
 
 		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {

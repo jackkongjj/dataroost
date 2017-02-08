@@ -52,6 +52,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return GetTimeseries(CompanyId, TemplateId, startYear, endYear, StandardizationType.SDB);
 		}
 
+		[Route("datatypes/std/hasPension")]
+		[HttpGet]
+		public bool HasPensionData(string CompanyId, [FromUri]int DataYear, [FromUri]DateTime ReportDate, [FromUri]string AccountType, [FromUri]string InterimType) {
+			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			int iconum = 0;
+			if (!int.TryParse(CompanyId, out iconum))
+				iconum = PermId.PermId2Iconum(CompanyId);
+
+
+			return TimeseriesHelper.HasPensionData(iconum, ReportDate.ToString("dd-MMM-yy"), DataYear, AccountType, InterimType, connString);
+		}
+
 		[Route("datatypes/std/templates/")]
 		[HttpGet]
 		public TemplateDTO[] QuerySTDTemplates(string CompanyId) {

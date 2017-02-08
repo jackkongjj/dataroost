@@ -363,5 +363,36 @@ order by RM.timeseries desc, RM.co_temp_item_id, RM.rep_type, RM.account_type, R
 			}
 			return cells;
 		}
+
+		public static bool HasPensionData(int iconum, string reportDate, int dataYear, string accountType, string interimType, string connectionString) {
+			string query = @"select count(1) from std_details where master_id in
+												(
+												select master_id from std_master sm
+												JOIN MAP_SDB_TIME_SERIES mts on mts.time_series_code = sm.time_series_code
+												JOIN FDS_TRI_PPI_MAP fds on ppi_oper = sm.ppi
+												where fds.ico_oper = :iconum and sm.report_date = :report_date and sm.data_year = :datayear and mts.account_type = :acct_type and mts.interim_type = :interim_type
+												) and item_code in (18806,18805,18807,18809,18810,18811,18813,18832,18831,18833,18834,18836,18837,18839)";
+			if (interimType == "XX")
+				interimType = " ";
+
+			using (OracleConnection connection = new OracleConnection(connectionString)) {
+				connection.Open();
+				using (OracleCommand command = new OracleCommand(query, connection)) {
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Int32, Direction = ParameterDirection.Input, ParameterName = "iconum", Value = iconum });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "report_date", Value = reportDate });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Int32, Direction = ParameterDirection.Input, ParameterName = "datayear", Value = dataYear });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "acct_type", Value = accountType });
+					command.Parameters.Add(new OracleParameter() { OracleDbType = OracleDbType.Varchar2, Direction = ParameterDirection.Input, ParameterName = "interim_type", Value = interimType });
+
+					using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.SingleResult)) {
+						if (sdr.Read()) {
+							return sdr.GetInt16(0) > 0;
+						}
+					}
+				}
+				connection.Close();
+			}
+			return false;
+		}
 	}
 }
