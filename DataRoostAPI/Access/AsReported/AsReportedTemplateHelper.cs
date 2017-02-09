@@ -650,19 +650,38 @@ AND not tcSib.TableCellID is null;
             const string SQL_SelectCurrenCell = @"
  
 ";
-            const string SQL_ExecMakeTheMathWork = @"
- -- DECLARE @ParentCellMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
 
--- INSERT INTO @ParentCellMTMW
--- exec SCARGetTableCellMTMW @ParentCells
+            const string SQL_ValidateCells= @"
+DECLARE @TargetSH INT
+SET @TargetSH = @cellid
 
-";
-            const string SQL_ExecLikePeriodValidation = @"
+DECLARE @ParentCells CellList
+
+INSERT INTO @ParentCells
+SELECT shp.ID, dts.DocumentTimeSliceID
+FROM @StaticHierarchyList shl
+JOIN StaticHierarchy sh ON shl.StaticHierarchyID = sh.ID
+JOIN StaticHierarchy sht ON sht.ID = @TargetSH
+JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+JOIN TableCell tc ON sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+JOIN DocumentTimeSliceTableCell dts on tc.ID = dts.TableCellID
+WHERE sh.ParentID <> sht.ParentID
+
+INSERT INTO @ParentCells
+SELECT DISTINCT sht.ID, dts.DocumentTimeSliceID
+FROM @StaticHierarchyList shl
+JOIN StaticHierarchy sh ON shl.StaticHierarchyID = sh.ID
+JOIN StaticHierarchy sht ON sht.ID = @TargetSH
+JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+JOIN TableCell tc ON sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+JOIN DocumentTimeSliceTableCell dts on tc.ID = dts.TableCellID
+
 
 DECLARE @ParentCellMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
 
 INSERT INTO @ParentCellMTMW
 exec SCARGetTableCellMTMW @ParentCells
+
 
 --TODO: AddParentCells
 SELECT mtmw.StaticHierarchyID, mtmw.DocumentTimeSliceID, TableCellID, tc.ValueNumeric, tc.IsIncomePositive, sf.Value, mtmw.RootStaticHierarchyID, mtmw.RootDocumentTimeSliceID
@@ -688,6 +707,51 @@ EXEC SCARGetTableCellMTMW @SHCells
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
 
+SELECT mtmw.StaticHierarchyID, mtmw.DocumentTimeSliceID, TableCellID, tc.ValueNumeric, tc.IsIncomePositive, sf.Value, mtmw.RootStaticHierarchyID, mtmw.RootDocumentTimeSliceID
+FROM @SHCellsMTMW mtmw
+JOIN TableCell tc ON mtmw.TableCellID = tc.ID
+JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID;
+
+WITH cte_level(SHRootID, SHID, level)
+AS
+(
+	SELECT @TargetSH, @TargetSH, 0
+	UNION ALL
+	SELECT cte.SHRootID, shp.ID, cte.level+1
+	FROM cte_level cte
+	JOIN StaticHierarchy sh ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+)
+SELECT MAX(level)
+FROM cte_level
+GROUP BY SHRootID
+
+SELECT * 
+FROM StaticHierarchy 
+WHERE ID = @TargetSH
+
+
+SELECT distinct tc.TableCellID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+				tc.XBRLTag, 
+				--tc.UpdateStampUTC
+				null
+				, tc.DocumentId, tc.Label, sf.Value,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.TableCellId = aetc.TableCellId),
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
+				lpv.LPVFail, 
+				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+FROM StaticHierarchy sh
+JOIN vw_SCARDocumentTimeSlices dts ON dts.CompanyID = @Iconum
+JOIN Document d on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN @SHCellsLPV lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
+LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
+WHERE sh.ID = @TargetSH
+AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
+
  
 ";
             TableCellResult result = new TableCellResult();
@@ -698,8 +762,7 @@ EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
                 SQL_UpdateFlipIncomeFlag 
                 + SQL_SelectSibilingCells 
                 + SQL_SelectCurrenCell
-                + SQL_ExecMakeTheMathWork
-                + SQL_ExecLikePeriodValidation
+                + SQL_ValidateCells
                 ;
             using (SqlConnection conn = new SqlConnection(_sfConnectionString))
             {
