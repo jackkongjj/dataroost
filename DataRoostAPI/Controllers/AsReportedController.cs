@@ -128,9 +128,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         [HttpGet]
         public TableCellResult FlipSign(string id, Guid DocumentId)
         {
+            string CompanyId = "36468";
+            int iconum = PermId.PermId2Iconum(CompanyId);
             string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
             AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.FlipSign(id, DocumentId);
+            return helper.FlipSign(id, DocumentId, iconum, 0);
+        }
+        /*
+ * 			if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
+        return null;
+
+    string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+    AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+    return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
+}
+ */
+        [Route("cells/{id}/flipsign/{DocumentId}/")]
+        [HttpPost]
+        public TableCellResult FlipSign(string id, Guid DocumentId, GenericInput input)
+        {
+            string CompanyId = "36468";
+            int iconum = PermId.PermId2Iconum(CompanyId);
+            if (input == null || input.TargetStaticHierarchyID == 0)
+                return null;
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
         }
 
         [Route("cells/{id}/addMTMW/{DocumentId}/")]
@@ -162,6 +185,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public int TargetStaticHierarchyID { get; set; }
 		}
 
+        public class GenericInput
+        {
+            public int TargetStaticHierarchyID { get; set; }
+            public List<int> StitchingStaticHierarchyIDs { get; set; }
+        }
 
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]

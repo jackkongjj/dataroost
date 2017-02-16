@@ -329,33 +329,39 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 				}
 
 				for (int i = 0; i < sh.Cells.Count; i++) {
-					TimeSlice ts = temp.TimeSlices[i];
+                    try
+                    {
+                        TimeSlice ts = temp.TimeSlices[i];
 
-					TableCell tc = sh.Cells[i];
-					List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
-					foreach (int j in matches) {
-						if (sh.Cells[j] == tc)
-							continue;
+                        TableCell tc = sh.Cells[i];
+                        List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
+                        foreach (int j in matches)
+                        {
+                            if (sh.Cells[j] == tc)
+                                continue;
 
-						bool whatever = false;
+                            bool whatever = false;
 
-						decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup, ref whatever);
-						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
-						bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
+                            decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup, ref whatever);
+                            decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
+                            bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
 
-						if (matchValue != cellValue &&//TODO: remove double checks
-							!((ts.PublicationDate > temp.TimeSlices[j].PublicationDate && cellValue == 0) || (temp.TimeSlices[j].PublicationDate > ts.PublicationDate && matchValue == 0)) &&
-							!anyValidationPasses &&
-							tc.ValueNumeric.HasValue
-							) {
-							tc.LikePeriodValidationFlag = true;
-						}
-					}
+                            if (matchValue != cellValue &&//TODO: remove double checks
+                                !((ts.PublicationDate > temp.TimeSlices[j].PublicationDate && cellValue == 0) || (temp.TimeSlices[j].PublicationDate > ts.PublicationDate && matchValue == 0)) &&
+                                !anyValidationPasses &&
+                                tc.ValueNumeric.HasValue
+                                )
+                            {
+                                tc.LikePeriodValidationFlag = true;
+                            }
+                        }
 
-					bool hasChildren = false;
-					bool whatever2 = false;
+                        bool hasChildren = false;
+                        bool whatever2 = false;
 
-					tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && (CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) && !tc.MTMWErrorTypeId.HasValue && hasChildren;
+                        tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && (CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) && !tc.MTMWErrorTypeId.HasValue && hasChildren;
+                    }
+                    catch { break; }
 				}
 			}
 
@@ -604,7 +610,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 		}
 
 
-        public TableCellResult FlipSign(string CellId, Guid DocumentId)
+        public TableCellResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID)
         {
 //            const string SQL_FlipSignDirectly =
 //                @"
@@ -652,8 +658,6 @@ AND not tcSib.TableCellID is null;
 ";
 
             const string SQL_ValidateCells= @"
-DECLARE @TargetSH INT
-SET @TargetSH = @cellid
 
 DECLARE @ParentCells CellList
 
@@ -772,6 +776,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
                     cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
                     cmd.Parameters.AddWithValue("@cellid", CellId);
+                    cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
+                    cmd.Parameters.AddWithValue("@Iconum", iconum);
+                    
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
