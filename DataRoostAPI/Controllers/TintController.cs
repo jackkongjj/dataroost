@@ -23,8 +23,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 
-		[Route("insert/{documentId}")]
-		[HttpGet]
+		//[Route("insert/{documentId}")]
+		//[HttpGet]
 		public void GetTINT(string documentId, string CompanyId) {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
