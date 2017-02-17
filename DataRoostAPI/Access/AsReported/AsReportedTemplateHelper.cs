@@ -652,6 +652,11 @@ WHERE tc.TableCellID = @cellid
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 AND not tcSib.TableCellID is null;
 
+DECLARE @StaticHierarchyList StaticHierarchyList
+
+INSERT INTO @StaticHierarchyList (StaticHierarchyID)
+VALUES (@TargetSH)
+
 ";
             const string SQL_SelectCurrenCell = @"
  
@@ -760,8 +765,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 ";
             TableCellResult result = new TableCellResult();
             result.cells = new List<TableCell>();
-
-
+            DataTable dt = new DataTable();
+            dt.Columns.Add("StaticHierarchyID", typeof(Int32));
+            dt.Rows.Add(TargetStaticHierarchyID);
+ 
             string SQL_FlipSignCommand = 
                 SQL_UpdateFlipIncomeFlag 
                 + SQL_SelectSibilingCells 
@@ -778,7 +785,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     cmd.Parameters.AddWithValue("@cellid", CellId);
                     cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
                     cmd.Parameters.AddWithValue("@Iconum", iconum);
-                    
+                    ////cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
+                    //SqlParameter p = cmd.Parameters.Add(new SqlParameter("@StaticHierarchyList", SqlDbType.Structured));
+                    //p.Value = dt;
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {

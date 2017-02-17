@@ -143,6 +143,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
     return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
 }
  */
+        //"http://localhost:61581/api/v1/companies/36468/efforts/asreported/templates/IS/unstitch/E6059509-1F34-DE11-9566-0019BB2A8F9C/",
+        //[Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
+        //http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/{id}/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/
+        //http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/229550945/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/
+        
+
         [Route("cells/{id}/flipsign/{DocumentId}/")]
         [HttpPost]
         public TableCellResult FlipSign(string id, Guid DocumentId, GenericInput input)
