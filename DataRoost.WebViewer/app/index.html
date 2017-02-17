@@ -72,7 +72,7 @@
               $http.post("http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/229550945/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/",
                       {"TargetStaticHierarchyID": targetRow})
                       .then(function (response) {
-                          insertUnStitchData($scope.staticHierarchies, $scope.timeSlices, targetRow, response.data, $scope);
+                          insertScarData($scope.staticHierarchies, $scope.timeSlices, targetRow, response.data, $scope);
                       });
 
               $scope.selectedRows = [];
@@ -98,6 +98,67 @@
       }
   });
 
+    function insertScarData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
+      //Assume both ordered by AdjustedOrder
+      var shix = 0;
+      for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
+          while (staticHierarchies[shix].id != update.staticHierarchyAdjustedOrders[i].staticHierarchyID) {
+              shix++;
+
+              if (shix >= staticHierarchies.length) {
+                  return;
+              }
+
+              if(staticHierarchies[shix].id == unstitchRow){
+                  staticHierarchies.splice(shix, 1);
+
+                  for(var j = update.staticHierarchies.length-1; j >= 0; j--) {
+                      //$scope.$apply(function() {
+                                  staticHierarchies.splice(shix, 0, update.staticHierarchies[j]);
+                              //});
+                  }
+              }
+          }
+          staticHierarchies[shix].adjustedOrder = update.staticHierarchyAdjustedOrders[i].newAdjustedOrder;
+
+      }
+      $scope.$digest();
+	  
+	        //Assume both ordered by AdjustedOrder
+      var shix = 0;
+      for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
+          while (staticHierarchies[shix].id != update.staticHierarchyAdjustedOrders[i].staticHierarchyID) {
+              shix++;
+
+              while (deleteRows.indexOf(staticHierarchies[shix].id) > -1) {
+                  staticHierarchies.splice(shix, 1);
+              }
+
+              if (shix >= staticHierarchies.length) {
+                  return;
+              }
+
+              if (staticHierarchies[shix].id == update.staticHierarchy.id) {
+                  staticHierarchies[shix] = update.staticHierarchy;
+              }
+          }
+          staticHierarchies[shix].adjustedOrder = update.staticHierarchyAdjustedOrders[i].newAdjustedOrder;
+
+      }
+
+      for (var s = 0; s < staticHierarchies.length; s++) {
+          var mtmw = update.parentMTMWChanges[staticHierarchies[s].id];
+          if (typeof mtmw != 'undefined') {
+              for(var t = 0; t < timeSlices.length; t++){
+                  var ts = mtmw[timeSlices[t].Id];
+                  if(typeof ts != 'undefined'){
+                      staticHierarchies[s].cells[t].MTMWValidationFlag = ts
+                  }
+              }
+          }
+      }
+  }
+  
   function insertUnStitchData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
       //Assume both ordered by AdjustedOrder
       var shix = 0;

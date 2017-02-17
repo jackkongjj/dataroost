@@ -118,7 +118,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
         [Route("cells/{id}/flipsign/")]
         [HttpGet]
-        public TableCellResult FlipSign(string id)
+        public ScarResult FlipSign(string id)
         {
             Guid docId = new Guid(@"00000000-0000-0000-0000-000000000000");
             return FlipSign(id, docId);
@@ -126,7 +126,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         [Route("cells/{id}/flipsign/{DocumentId}/")]
         [HttpGet]
-        public TableCellResult FlipSign(string id, Guid DocumentId)
+        public ScarResult FlipSign(string id, Guid DocumentId)
         {
             string CompanyId = "36468";
             int iconum = PermId.PermId2Iconum(CompanyId);
@@ -151,7 +151,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         [Route("cells/{id}/flipsign/{DocumentId}/")]
         [HttpPost]
-        public TableCellResult FlipSign(string id, Guid DocumentId, GenericInput input)
+        public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input)
         {
             string CompanyId = "36468";
             int iconum = PermId.PermId2Iconum(CompanyId);
@@ -191,7 +191,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public int TargetStaticHierarchyID { get; set; }
 		}
 
-        public class GenericInput
+        public class ScarInput
         {
             public int TargetStaticHierarchyID { get; set; }
             public List<int> StitchingStaticHierarchyIDs { get; set; }

@@ -610,7 +610,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 		}
 
 
-        public TableCellResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID)
+        public ScarResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID)
         {
 //            const string SQL_FlipSignDirectly =
 //                @"
@@ -763,8 +763,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
  
 ";
-            TableCellResult result = new TableCellResult();
-            result.cells = new List<TableCell>();
+            ScarResult result = new ScarResult();
+            result.CellToDTS = new Dictionary<TableCell, int>();
             DataTable dt = new DataTable();
             dt.Columns.Add("StaticHierarchyID", typeof(Int32));
             dt.Rows.Add(TargetStaticHierarchyID);
@@ -791,6 +791,64 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
+                        result.StaticHierarchyAdjustedOrders = reader.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
+                        reader.NextResult();
+
+                        result.ParentCellChangeComponents = reader.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+                        {
+                            StaticHierarchyID = r.GetInt32(0),
+                            DocumentTimeSliceID = r.GetInt32(1),
+                            TableCellID = r.GetInt32(2),
+                            ValueNumeric = r.GetDecimal(3),
+                            IsIncomePositive = r.GetBoolean(4),
+                            ScalingFactorValue = r.GetDouble(5),
+                            RootStaticHierarchyID = r.GetInt32(6),
+                            RootDocumentTimeSliceID = r.GetInt32(7)
+                        }).ToList();
+
+                        reader.NextResult();
+                        List<CellMTMWComponent> comps = reader.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+                        {
+                            StaticHierarchyID = r.GetInt32(0),
+                            DocumentTimeSliceID = r.GetInt32(1),
+                            TableCellID = r.GetInt32(2),
+                            ValueNumeric = r.GetDecimal(3),
+                            IsIncomePositive = r.GetBoolean(4),
+                            ScalingFactorValue = r.GetDouble(5),
+                            RootStaticHierarchyID = r.GetInt32(6),
+                            RootDocumentTimeSliceID = r.GetInt32(7)
+                        }
+                            ).ToList();
+                        foreach (CellMTMWComponent comp in comps)
+                        {
+                            if (!result.DTSToMTMWComponent.ContainsKey(comp.DocumentTimeSliceID))
+                                result.DTSToMTMWComponent.Add(comp.DocumentTimeSliceID, new List<CellMTMWComponent>());
+                            result.DTSToMTMWComponent[comp.DocumentTimeSliceID].Add(comp);
+                        }
+                        reader.NextResult();
+                        reader.Read();
+                        int level = reader.GetInt32(0);
+                        reader.NextResult();
+                        reader.Read();
+                        StaticHierarchy document = new StaticHierarchy
+                        {
+                            Id = reader.GetInt32(0),
+                            CompanyFinancialTermId = reader.GetInt32(1),
+                            AdjustedOrder = reader.GetInt32(2),
+                            TableTypeId = reader.GetInt32(3),
+                            Description = reader.GetStringSafe(4),
+                            HierarchyTypeId = reader.GetStringSafe(5)[0],
+                            SeparatorFlag = reader.GetBoolean(6),
+                            StaticHierarchyMetaId = reader.GetInt32(7),
+                            UnitTypeId = reader.GetInt32(8),
+                            IsIncomePositive = reader.GetBoolean(9),
+                            ChildrenExpandDown = reader.GetBoolean(10),
+                            ParentID = reader.GetNullable<int>(11),
+                            Cells = new List<TableCell>(),
+                            Level = level
+                        };
+                        result.StaticHierarchy = document;
+                        reader.NextResult();
 
                         int shix = 0;
 
@@ -846,14 +904,15 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                             {
                                 continue;
                             }
-                            result.cells.Add(cell);
+                            result.CellToDTS.Add(cell, adjustedOrder);
                         }
                     }
                 }
             }
             TableCell currCell = GetCell(CellId);
-            result.cells.Add(currCell);
-            return result;
+            result.CellToDTS.Add(currCell, 0);
+            return new ScarResult();
+            //return result;
 		}
 
         public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
