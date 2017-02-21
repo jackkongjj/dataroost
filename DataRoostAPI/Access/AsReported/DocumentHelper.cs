@@ -694,12 +694,12 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 
 			List<Cell> cells = new List<Cell>();
 			ISearchResponse<ElasticObjectTree> request = elastic.Search<ElasticObjectTree>(s => s
-			.Index("ffcore")
-			.AllTypes()
-			.From(0)
-			.Size(5000)
-			.Query(q => q.Term(p => p.DocumentId, documentId) && q.Term(p => p.Iconum, Iconum))
-			);
+				.Index("ffcore")
+				.AllTypes()
+				.From(0)
+				.Size(10000)
+				.Query(q => q.Term(p => p.DocumentId, documentId) && q.Term(p => p.Iconum, Iconum) && (q.Term(p => p.Name, "mi") || q.Term(p => p.Name, "mn")))
+				);
 
 			List<ElasticObjectTree> ebObjects = new List<ElasticObjectTree>(request.Documents);
 			foreach (var eboTS in ebObjects.GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID, o.AutoClacFlag, o.EncoreFlag })) {
