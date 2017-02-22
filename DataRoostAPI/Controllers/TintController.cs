@@ -23,10 +23,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 
-		//[Route("insert/{documentId}")]
-		//[HttpGet]
+		[Route("insert/{documentId}")]
+		[HttpGet]
 		public void GetTINT(string documentId, string CompanyId) {
-
+			return; // temporary fix for SC freezing issue 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			CCS.Fundamentals.DataRoostAPI.Access.AsReported.DocumentHelper documentHelper = new CCS.Fundamentals.DataRoostAPI.Access.AsReported.DocumentHelper(sfConnectionString, damConnectionString);
