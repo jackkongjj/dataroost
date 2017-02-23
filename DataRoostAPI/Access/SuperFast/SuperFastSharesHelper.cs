@@ -141,7 +141,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 					                on ts.DocumentID = d.ID
 				                join DocumentSeries ds (nolock)
 					                on d.DocumentSeriesId = ds.Id 
-				                join dbo.##CompanyIds i (nolock)
+				                join #CompanyIds i (nolock)
 					                on i.iconum = ds.CompanyID
 				                left join MigrateToTimeSlice mi (nolock)
 					                on mi.Iconum = i.iconum
@@ -171,7 +171,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 					                on ts.DocumentID = d.ID
 				                join DocumentSeries ds (nolock)
 					                on d.DocumentSeriesId = ds.Id 
-				                join dbo.##CompanyIds i (nolock)
+				                join #CompanyIds i (nolock)
 					                on i.iconum = ds.CompanyID
 				                join MigrateToTimeSlice mi (nolock)
 					                on mi.Iconum = i.iconum
