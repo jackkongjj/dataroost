@@ -13,6 +13,7 @@ using Nest;
 using System.Configuration;
 using DataRoostAPI.Common.Models.SuperFast;
 using System.Web.Mvc;
+using System.Globalization;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
@@ -713,7 +714,7 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 						CftId = eb.CompanyFinancialTermId,
 						Currency = eb.CurrencyCode,
 						Value = eb.Value,
-						NumericValue = decimal.Parse(eb.Value),
+						NumericValue = string.IsNullOrEmpty(eb.Value) ? 0 : decimal.Parse(eb.Value, NumberStyles.Float),
 						Offset = eb.Offset,
 						ScalingFactor = eb.ScalingFactor,
 						XbrlTag = eb.XbrlTag,
