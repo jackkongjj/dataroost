@@ -57,10 +57,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			List<int> iconums = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
 			iconums = iconums.Distinct().ToList();
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString,
-																				 voyConnectionString,
-																				 lionConnectionString,
-																				 damConnectionString);
+		    CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString,
+		        damConnectionString);
 			return helper.GetCompanyShareClassData(iconums, reportDate, since);
 		}
 
