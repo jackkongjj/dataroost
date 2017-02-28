@@ -537,7 +537,9 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 										existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
 										existingCell.Id = cell.Id;
 									} else {
-										document.Cells.Add(cell);
+                                        if(cell.TableName == "IS" || cell.TableName == "BS" || cell.TableName == "CF") { 
+                                            document.Cells.Add(cell);
+                                        }
 									}
 								}
 							} else {
@@ -714,7 +716,7 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 						CftId = eb.CompanyFinancialTermId,
 						Currency = eb.CurrencyCode,
 						Value = eb.Value,
-						NumericValue = string.IsNullOrEmpty(eb.Value) ? 0 : decimal.Parse(eb.Value, NumberStyles.Float),
+						NumericValue = string.IsNullOrEmpty(eb.Value) ? 0 : decimal.Parse(eb.Value, NumberStyles.Any),
 						Offset = eb.Offset,
 						ScalingFactor = eb.ScalingFactor,
 						XbrlTag = eb.XbrlTag,
