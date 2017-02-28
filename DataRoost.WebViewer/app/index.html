@@ -16,7 +16,7 @@
       </tr>
     <tr ng-repeat="x in staticHierarchies">
       <td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}</td>
-        <td ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null }">
+        <td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
             <div ng-if="y.ARDErrorTypeId != null" id="rectangle"></div>
             {{ y.displayValue | number }}
             <div ng-if="y.MTMWErrorTypeId != null" class="mtmwPass"><strong>&#8800;</strong></div>
@@ -24,7 +24,11 @@
         </td>
     </tr>
   </table>
-    <span>{{selectedRows}}</span>
+  <br/>
+    Selected Rows: 
+    <span>{{selectedRows}}</span> <br/>
+	Selected Cells:
+	<span>{{selectedCells}}</span>
 </div>
 
 
@@ -52,6 +56,7 @@
                       });
 
               $scope.selectedRows = [];
+			  $scope.selectedCells = [];
           }
       };
       $scope.unstitchItem = function () {
@@ -64,6 +69,7 @@
                       });
 
               $scope.selectedRows = [];
+			  $scope.selectedCells = [];
           }
       };
       $scope.flipsign = function () {
@@ -76,10 +82,11 @@
                       });
 
               $scope.selectedRows = [];
+			  $scope.selectedCells = [];
           }
       };
       $scope.selectedRows = [];
-
+	  $scope.selectedCells = [];
       $scope.rowClick = function(staticHierarchy) {
 
 
@@ -93,6 +100,23 @@
               staticHierarchy.clicked = true;
           else
               staticHierarchy.clicked = false;
+
+          $scope.$digest();
+      }
+	  
+	  $scope.cellClick = function(cell) {
+	      if($scope.selectedCells.indexOf(cell._id) > -1)
+              $scope.selectedCells.splice( $scope.selectedCells.indexOf(cell._id), 1 );
+          else
+		  {
+			$scope.selectedCells.push(cell._id);
+		  }
+              
+			  
+          if(cell.clicked == null || !cell.clicked)
+              cell.clicked = true;
+          else
+              cell.clicked = false;
 
           $scope.$digest();
       }
