@@ -253,7 +253,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 			const string query = @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode FROM 
                                         (SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, 
-	                                        row_number() over (partition by stds.STDItemID order by ts.TimeSeriesDate desc) as rank 
+	                                        row_number() over (partition by stds.STDItemID order by ts.TimeSeriesDate desc, ts.AutoCalcFlag ASC) as rank 
 	                                        from STDTimeSeriesDetailSecurity stds (nolock)
 	                                        join STDItem std (nolock)
 		                                        on stds.STDItemId = std.ID
@@ -263,7 +263,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 												and t.STDTemplateMasterCode = 'PSIT'
 	                                        join TimeSeries ts (nolock)
 		                                        on stds.TimeSeriesID = ts.Id
-		                                        and ts.AutoCalcFlag = 0
 		                                        and ts.EncoreFlag = 0
 	                                        join InterimType it (nolock)
 		                                        on ts.InterimTypeID = it.ID
