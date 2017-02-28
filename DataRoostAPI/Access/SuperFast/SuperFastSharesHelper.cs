@@ -126,7 +126,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc) as rank 
 			                FROM STDTimeSeriesDetailSecurity stds (nolock)
 				                join PpiIconumMap p (nolock) 
-					                on p.cusip = stds.SecurityID
+					                on p.cusip = stds.SecurityID and p.Iconum > 0
 				                join STDItem std (nolock)
 					                on stds.STDItemId = std.ID
 					                and std.SecurityFlag = 1
@@ -145,8 +145,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 					                on i.iconum = ds.CompanyID
 				                left join MigrateToTimeSlice mi (nolock)
 					                on mi.Iconum = i.iconum
-					                and mi.MigrationStatusID != 1					
 			                WHERE ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
+                                and (mi.Iconum is NULL or mi.MigrationStatusID != 1)
 	                ) temp
 	                WHERE temp.rank = 1
                 UNION
@@ -156,7 +156,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc) as rank 
 			                FROM STDTimeSliceDetailSecurity stds (nolock)
 				                join PpiIconumMap p (nolock)
-					                on p.cusip = stds.SecurityID
+					                on p.cusip = stds.SecurityID and p.Iconum > 0
 				                join STDItem std (nolock)
 					                on stds.STDItemId = std.ID
 					                and std.SecurityFlag = 1
@@ -224,6 +224,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 						while (reader.Read()) {
 							string cusip = reader.GetStringSafe(0);
 							int iconum = reader.GetInt32(5);
+						    if (!companyShareData.ContainsKey(iconum)) {
+                                // This is possible if PpiIconumMap has same Cusip associated with two different Iconums and we 
+                                // received request for only one of them. Hence, ignore that extra iconum returned from above query
+						        continue;
+						    }
 							Dictionary<string, List<ShareClassDataItem>> perShareData = companyShareData[iconum];
 							ShareClassDataItem item = new ShareClassNumericItem
 							{
