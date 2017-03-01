@@ -821,6 +821,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                             ).ToList();
                         foreach (CellMTMWComponent comp in comps)
                         {
+                            if (result == null || result.DTSToMTMWComponent == null) continue;
                             if (!result.DTSToMTMWComponent.ContainsKey(comp.DocumentTimeSliceID))
                                 result.DTSToMTMWComponent.Add(comp.DocumentTimeSliceID, new List<CellMTMWComponent>());
                             result.DTSToMTMWComponent[comp.DocumentTimeSliceID].Add(comp);
@@ -830,23 +831,29 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                         int level = reader.GetInt32(0);
                         reader.NextResult();
                         reader.Read();
-                        StaticHierarchy document = new StaticHierarchy
+                        StaticHierarchy document = null ;
+                        try
                         {
-                            Id = reader.GetInt32(0),
-                            CompanyFinancialTermId = reader.GetInt32(1),
-                            AdjustedOrder = reader.GetInt32(2),
-                            TableTypeId = reader.GetInt32(3),
-                            Description = reader.GetStringSafe(4),
-                            HierarchyTypeId = reader.GetStringSafe(5)[0],
-                            SeparatorFlag = reader.GetBoolean(6),
-                            StaticHierarchyMetaId = reader.GetInt32(7),
-                            UnitTypeId = reader.GetInt32(8),
-                            IsIncomePositive = reader.GetBoolean(9),
-                            ChildrenExpandDown = reader.GetBoolean(10),
-                            ParentID = reader.GetNullable<int>(11),
-                            Cells = new List<TableCell>(),
-                            Level = level
-                        };
+                            document = new StaticHierarchy
+                            {
+                                Id = reader.GetInt32(0),
+                                CompanyFinancialTermId = reader.GetInt32(1),
+                                AdjustedOrder = reader.GetInt32(2),
+                                TableTypeId = reader.GetInt32(3),
+                                Description = reader.GetStringSafe(4),
+                                HierarchyTypeId = reader.GetStringSafe(5)[0],
+                                SeparatorFlag = reader.GetBoolean(6),
+                                StaticHierarchyMetaId = reader.GetInt32(7),
+                                UnitTypeId = reader.GetInt32(8),
+                                IsIncomePositive = reader.GetBoolean(9),
+                                ChildrenExpandDown = reader.GetBoolean(10),
+                                ParentID = reader.GetNullable<int>(11),
+                                Cells = new List<TableCell>(),
+                                Level = level
+                            };
+                        }
+                        catch { }
+
                         result.StaticHierarchy = document;
                         reader.NextResult();
 
