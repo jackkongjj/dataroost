@@ -116,13 +116,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTimeSlice(id);
 		}
-        [Route("cells/{id}/flipsign/")]
-        [HttpGet]
-        public ScarResult FlipSign(string id)
-        {
-            Guid docId = new Guid(@"00000000-0000-0000-0000-000000000000");
-            return FlipSign(id, docId);
-        }
 
         [Route("cells/{id}/flipsign/{DocumentId}/")]
         [HttpGet]
@@ -134,20 +127,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
             return helper.FlipSign(id, DocumentId, iconum, 0);
         }
-        /*
- * 			if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
-        return null;
-
-    string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-    AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-    return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
-}
- */
-        //"http://localhost:61581/api/v1/companies/36468/efforts/asreported/templates/IS/unstitch/E6059509-1F34-DE11-9566-0019BB2A8F9C/",
-        //[Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
-        //http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/{id}/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/
-        //http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/229550945/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/
-        
 
         [Route("cells/{id}/flipsign/{DocumentId}/")]
         [HttpPost]
