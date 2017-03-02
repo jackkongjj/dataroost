@@ -128,37 +128,44 @@
   });
 
     function insertScarData(staticHierarchies, timeSlices, rowId, cellId, update, $scope) {
-      if (rowId > 0) {   
+      <!-- if (rowId > 0) {    -->
+		  <!-- for (var s = 0; s < staticHierarchies.length; s++) { -->
+			  <!-- var mtmw = update.parentMTMWChanges[staticHierarchies[s].id]; -->
+			  <!-- if (typeof mtmw != 'undefined') { -->
+				  <!-- for(var t = 0; t < timeSlices.length; t++){ -->
+					  <!-- var ts = mtmw[timeSlices[t].Id]; -->
+					  <!-- if(typeof ts != 'undefined'){ -->
+						  <!-- staticHierarchies[s].cells[t].MTMWValidationFlag = ts; -->
+					  <!-- } -->
+				  <!-- } -->
+			  <!-- } -->
+		  <!-- } -->
+	  <!-- } -->
+	  <!-- if (cellId > 0) -->
+	  <!-- { -->
+		  <!-- for (var s = 0; s < staticHierarchies.length; s++) { -->
+				  <!-- for(var t = 0; t < timeSlices.length; t++){ -->
+					 <!-- if (staticHierarchies[s].cells[t]._id == cellId) -->
+					 <!-- { -->
+						<!-- staticHierarchies[s].cells[t].displayValue *= -1; -->
+					 <!-- } -->
+				<!-- } -->
+			<!-- } -->
+	  <!-- } -->
+	  for (var i = 0; i < update.changedCells.length; i++) {
 		  for (var s = 0; s < staticHierarchies.length; s++) {
-			  var mtmw = update.parentMTMWChanges[staticHierarchies[s].id];
-			  if (typeof mtmw != 'undefined') {
 				  for(var t = 0; t < timeSlices.length; t++){
-					  var ts = mtmw[timeSlices[t].Id];
-					  if(typeof ts != 'undefined'){
-						  staticHierarchies[s].cells[t].MTMWValidationFlag = ts;
-					  }
-				  }
-			  }
-		  }
-	  }
-	  if (cellId > 0)
-	  {
-		  for (var s = 0; s < staticHierarchies.length; s++) {
-				  for(var t = 0; t < timeSlices.length; t++){
-					 if (staticHierarchies[s].cells[t]._id == cellId)
+					 if (staticHierarchies[s].cells[t]._id == update.changedCells[i]._id)
 					 {
-						staticHierarchies[s].cells[t].isIncomePositive = !staticHierarchies[s].cells[t].isIncomePositive; 
-						staticHierarchies[s].cells[t-1].displayValue = "1234656";
+						staticHierarchies[s].cells[t] = update.changedCells[i];
 					 }
 				}
 			}
- 
-	  
 	  }
+	  $scope.$digest();
   }
   
   function insertUnStitchData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
-      //Assume both ordered by AdjustedOrder
       var shix = 0;
       for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
           while (staticHierarchies[shix].id != update.staticHierarchyAdjustedOrders[i].staticHierarchyID) {
@@ -185,7 +192,6 @@
   }
 
   function insertStitchData(staticHierarchies, timeSlices, update, deleteRows, $scope) {
-      //Assume both ordered by AdjustedOrder
       var shix = 0;
       for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
           while (staticHierarchies[shix].id != update.staticHierarchyAdjustedOrders[i].staticHierarchyID) {

@@ -311,13 +311,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 			}
 
-			//foreach (Tuple<StaticHierarchy, int, TableCell> tup in BlankCells) {
-			//	StaticHierarchy sh = tup.Item1;
-			//	int cellIndex = tup.Item2;
-			//	TableCell tc = tup.Item3;
-
-
-			//}
 
 			foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
 
@@ -745,9 +738,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 ";
             ScarResult result = new ScarResult();
             result.CellToDTS = new Dictionary<TableCell, int>();
-            DataTable dt = new DataTable();
-            dt.Columns.Add("StaticHierarchyID", typeof(Int32));
-            dt.Rows.Add(TargetStaticHierarchyID);
+            result.ChangedCellIds = new List<string>();
+            result.ChangedCells = new List<TableCell>();
  
             string SQL_FlipSignCommand = 
                 SQL_UpdateFlipIncomeFlag 
@@ -760,14 +752,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                 using (SqlCommand cmd = new SqlCommand(SQL_FlipSignCommand, conn))
                 {
                     conn.Open();
-                    //cmd.Parameters.AddWithValue("@DocumentID ", new Guid(@"E6059509-1F34-DE11-9566-0019BB2A8F9C"));
                     cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
                     cmd.Parameters.AddWithValue("@cellid", CellId);
                     cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
                     cmd.Parameters.AddWithValue("@Iconum", iconum);
-                    ////cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
-                    //SqlParameter p = cmd.Parameters.Add(new SqlParameter("@StaticHierarchyList", SqlDbType.Structured));
-                    //p.Value = dt;
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
@@ -882,6 +870,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                                 //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
                                 cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
                                 cell.Label = reader.GetStringSafe(24);
+                                result.ChangedCellIds.Add(cell.ID.ToString());
                                 //cell.ScalingFactorValue = reader.GetDouble(25);
                                 //cell.ARDErrorTypeId = reader.GetNullable<int>(1);
                                 //cell.MTMWErrorTypeId = reader.GetNullable<int>(1);
@@ -898,8 +887,16 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
             }
             TableCell currCell = GetCell(CellId);
             result.CellToDTS.Add(currCell, 0);
-            return new ScarResult();
-            //return result;
+            if (currCell != null)
+            {
+                result.ChangedCells.Add(currCell);
+            }
+            //return new ScarResult();
+            if (!result.ChangedCellIds.Contains(CellId))
+            {
+                result.ChangedCellIds.Add(CellId);
+            }
+            return result;
 		}
 
         public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {

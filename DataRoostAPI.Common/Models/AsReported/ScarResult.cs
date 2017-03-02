@@ -21,6 +21,12 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("staticHierarchy")]
 		public StaticHierarchy StaticHierarchy { get; set; }
 
+        [JsonProperty("changedCells")]
+        public List<TableCell> ChangedCells { get; set; }
+
+        [JsonProperty("changedCellIds")]
+        public List<string> ChangedCellIds { get; set; }
+
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]
