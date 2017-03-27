@@ -47,6 +47,9 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("companyPriority")]
 		public int? Priority { get; set; }
 
+        [JsonProperty("isNationCode")]
+        public bool IsNationCode { get; set; }
+
 		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }
 

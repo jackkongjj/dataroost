@@ -72,6 +72,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			company.CollectionEffort = GetCompanyEffort(iconum);
 			company.AbsolutePriority = GetAbsolutePriority(iconum);
 			company.Priority = GetPriorityBucket(iconum);
+		    company.IsNationCode = GetIsNationCode(iconum);
 
 			return company;
 		}
@@ -511,7 +512,30 @@ join (
 			return priorityDictionary;
 		}
 
-		public int? GetPriorityBucket(int iconum) {
+	    private bool GetIsNationCode(int iconum ) {
+            const string query = @"SELECT isnationcode FROM ppiiconummap WHERE iconum = @iconum";
+
+            // Create Global Temp Table
+            using (SqlConnection connection = new SqlConnection(_sfConnectionString))
+            {
+                connection.Open();
+                using (SqlCommand cmd = new SqlCommand(query, connection))
+                {
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read()) {
+                            return reader.GetBoolean(0);
+                        }
+                    }
+                }
+            }
+
+	        return false;
+	    }
+
+
+        public int? GetPriorityBucket(int iconum) {
 			Dictionary<int, int?> companyPriority = GetPriorityBucket(new List<int> { iconum });
 			if (!companyPriority.ContainsKey(iconum)) {
 				throw new MissingIconumException(iconum);
