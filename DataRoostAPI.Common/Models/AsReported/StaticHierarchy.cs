@@ -32,10 +32,13 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public char HierarchyTypeId { get; set; }
 
 		[JsonProperty("separatorFlag")]
-		public bool SeparatorFlag { get; set; }
+        public bool SeparatorFlag { get; set; }
 
-		[JsonProperty("staticHierarchyMetaId")]
-		public int StaticHierarchyMetaId { get; set; }
+        [JsonProperty("staticHierarchyMetaId")]
+        public int StaticHierarchyMetaId { get; set; }
+
+        [JsonProperty("staticHierarchyMetaType")]
+        public string StaticHierarchyMetaType { get; set; }
 
 		[JsonProperty("unitTypeId")]
 		public int UnitTypeId { get; set; }
