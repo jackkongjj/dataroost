@@ -63,12 +63,13 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
 
 			string query =
-				@"
-SELECT DISTINCT sh.*
+                @"
+SELECT DISTINCT sh.*, shm.Code
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
 	JOIN TableType tt on sh.TableTypeID = tt.ID
+    JOIN HierarchyMetaTypes shm on sh.StaticHierarchyMetaId = shm.id
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc";
@@ -175,6 +176,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
 								ParentID = reader.GetNullable<int>(11),
+                                StaticHierarchyMetaType = reader.GetStringSafe(12),
 								Cells = new List<TableCell>()
 							};
 							StaticHierarchies.Add(document);
@@ -352,7 +354,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                         bool hasChildren = false;
                         bool whatever2 = false;
 
-                        tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && (CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) && !tc.MTMWErrorTypeId.HasValue && hasChildren;
+                        tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && 
+                            (CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) && 
+                                !tc.MTMWErrorTypeId.HasValue && hasChildren;
                     }
                     catch { break; }
 				}
@@ -394,7 +398,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 				StaticHierarchy sh = CellLookup[cell].Item1;
 				int timesliceIndex = CellLookup[cell].Item2;
 
-				foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
+				foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s=>s.StaticHierarchyMetaType != "FN")) {
 					sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
 				}
 				if (SHChildLookup[sh.Id].Count > 0) {
