@@ -398,15 +398,21 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 				StaticHierarchy sh = CellLookup[cell].Item1;
 				int timesliceIndex = CellLookup[cell].Item2;
 
-				foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s=>s.StaticHierarchyMetaType != "FN")) {
-					sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
-				}
-				if (SHChildLookup[sh.Id].Count > 0) {
-					if (!cell.ValueNumeric.HasValue)
-						cell.VirtualValueNumeric = sum;
+                if (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6)
+                {
 
-					return sum;
-				}
+                    foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6))
+                    {
+                        sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
+                    }
+                    if (SHChildLookup[sh.Id].Count > 0)
+                    {
+                        if (!cell.ValueNumeric.HasValue)
+                            cell.VirtualValueNumeric = sum;
+
+                        return sum;
+                    }
+                }
 			}
 			return 0;
 		}
