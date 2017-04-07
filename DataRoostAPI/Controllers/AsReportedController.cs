@@ -67,5 +67,142 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			CompanyFinancialTermsHelper companyFinancialTermsHelper = new CompanyFinancialTermsHelper(sfConnectionString);
 			return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
 		}
+
+		//TODO: Add IsSummary for timeslices and Derivation Meta for cells, add MTMW.
+		[Route("templates/{TemplateName}/{DocumentId}")]
+		[HttpGet]
+		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplate(iconum, TemplateName, DocumentId);
+		}
+
+		[Route("templates/{TemplateName}/skeleton/")]
+		[HttpGet]
+		public AsReportedTemplateSkeleton GetTemplateSkeleton(string CompanyId, string TemplateName) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplateSkeleton(iconum, TemplateName);
+		}
+
+		//TODO: Add Derivation Meta for cells, add MTMW and like period validation indicators.
+		[Route("staticHierarchy/{id}")]
+		[HttpGet]
+		public StaticHierarchy GetStaticHierarchy(string CompanyId, int id) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (id == 0 || id == -1)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetStaticHierarchy(id);
+		}
+
+		//TODO: Add IsSummary
+		[Route("timeSlice/{id}")]
+		[HttpGet]
+		public TimeSlice GetTimeSlice(string CompanyId, int id) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (id == 0 || id == -1)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTimeSlice(id);
+		}
+
+        [Route("cells/{id}/flipsign/{DocumentId}/")]
+        [HttpGet]
+        public ScarResult FlipSign(string id, Guid DocumentId)
+        {
+            string CompanyId = "36468";
+            int iconum = PermId.PermId2Iconum(CompanyId);
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.FlipSign(id, DocumentId, iconum, 0);
+        }
+
+        [Route("cells/{id}/flipsign/{DocumentId}/")]
+        [HttpPost]
+        public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input)
+        {
+            string CompanyId = "36468";
+            int iconum = PermId.PermId2Iconum(CompanyId);
+            if (input == null || input.TargetStaticHierarchyID == 0)
+                return null;
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
+        }
+
+        [Route("cells/{id}/addMTMW/{DocumentId}/")]
+        [HttpGet]
+        public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId)
+        {
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.AddMakeTheMathWorkNote(id, DocumentId);
+        }
+
+        [Route("cells/{id}/addLikePeriod/{DocumentId}/")]
+        [HttpGet]
+        public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId)
+        {
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+            return helper.AddLikePeriodValidationNote(id, DocumentId);
+        }
+
+
+
+		public class StitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
+		public class UnStitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+		}
+
+        public class ScarInput
+        {
+            public int TargetStaticHierarchyID { get; set; }
+            public List<int> StitchingStaticHierarchyIDs { get; set; }
+        }
+
+		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
+		[HttpPost]
+		public StitchResult PostStitch(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
+		}
+
+
+		[Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
+		[HttpPost]
+		public UnStitchResult PostUnStitch(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
+		}
 	}
 }
