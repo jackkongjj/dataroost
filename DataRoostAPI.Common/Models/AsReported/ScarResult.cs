@@ -22,7 +22,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public StaticHierarchy StaticHierarchy { get; set; }
 
         [JsonProperty("changedCells")]
-        public List<TableCell> ChangedCells { get; set; }
+        public List<SCARAPITableCell> ChangedCells { get; set; }
 
         [JsonProperty("changedCellIds")]
         public List<string> ChangedCellIds { get; set; }
@@ -30,6 +30,6 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]
-		public Dictionary<TableCell, int> CellToDTS { get; set; }
+        public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
 	}
 }

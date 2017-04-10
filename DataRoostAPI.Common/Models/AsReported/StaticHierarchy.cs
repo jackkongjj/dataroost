@@ -50,7 +50,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public bool ChildrenExpandDown { get; set; }
 
 		[JsonProperty("cells")]
-		public List<TableCell> Cells { get; set; }
+        public List<SCARAPITableCell> Cells { get; set; }
 
 		[JsonProperty("parentId")]
 		public int? ParentID { get; set; }

@@ -141,15 +141,15 @@ AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSet
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc";
 
 
-			Dictionary<Tuple<StaticHierarchy, TimeSlice>, TableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, TableCell>();
+            Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
 
 			AsReportedTemplate temp = new AsReportedTemplate();
 
 			temp.StaticHierarchies = new List<StaticHierarchy>();
-			Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<TableCell, Tuple<StaticHierarchy, int>>();
-			Dictionary<TableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<TableCell, Tuple<StaticHierarchy, int>>();
+            Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+            Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 			Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
@@ -177,7 +177,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 								ChildrenExpandDown = reader.GetBoolean(10),
 								ParentID = reader.GetNullable<int>(11),
                                 StaticHierarchyMetaType = reader.GetStringSafe(12),
-								Cells = new List<TableCell>()
+                                Cells = new List<SCARAPITableCell>()
 							};
 							StaticHierarchies.Add(document);
 							SHLookup.Add(document.Id, document);
@@ -200,9 +200,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 						int adjustedOrder = 0;
 						while (reader.Read()) {
-							TableCell cell;
+							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(0).HasValue) {
-								cell = new TableCell
+                                cell = new SCARAPITableCell
 								{
 									ID = reader.GetInt32(0),
 									Offset = reader.GetStringSafe(1),
@@ -236,7 +236,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 								adjustedOrder = reader.GetInt32(28);
 							} else {
-								cell = new TableCell();
+                                cell = new SCARAPITableCell();
 								adjustedOrder = reader.GetInt32(28);
 							}
 
@@ -328,7 +328,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     {
                         TimeSlice ts = temp.TimeSlices[i];
 
-                        TableCell tc = sh.Cells[i];
+                        SCARAPITableCell tc = sh.Cells[i];
                         List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
                         foreach (int j in matches)
                         {
@@ -365,7 +365,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			return temp;
 		}
 
-		private decimal CalculateCellValue(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren) {
+        private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren)
+        {
 			if (cell.ValueNumeric.HasValue) {
 				hasChildren = true;
 				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
@@ -392,7 +393,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			return 0;
 		}
 
-		private decimal CalculateChildSum(TableCell cell, Dictionary<TableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren) {
+        private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren)
+        {
 			if (CellLookup.ContainsKey(cell)) {
 				decimal sum = 0;
 				StaticHierarchy sh = CellLookup[cell].Item1;
@@ -520,7 +522,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							UnitTypeId = reader.GetInt32(8),
 							IsIncomePositive = reader.GetBoolean(9),
 							ChildrenExpandDown = reader.GetBoolean(10),
-							Cells = new List<TableCell>()
+                            Cells = new List<SCARAPITableCell>()
 						};
 					}
 				}
@@ -531,7 +533,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
 						while (reader.Read()) {
-							TableCell cell = new TableCell
+                            SCARAPITableCell cell = new SCARAPITableCell
 							{
 								ID = reader.GetInt32(0),
 								Offset = reader.GetStringSafe(1),
@@ -747,9 +749,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
  
 ";
             ScarResult result = new ScarResult();
-            result.CellToDTS = new Dictionary<TableCell, int>();
+            result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
             result.ChangedCellIds = new List<string>();
-            result.ChangedCells = new List<TableCell>();
+            result.ChangedCells = new List<SCARAPITableCell>();
  
             string SQL_FlipSignCommand = 
                 SQL_UpdateFlipIncomeFlag 
@@ -826,7 +828,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                                 IsIncomePositive = reader.GetBoolean(9),
                                 ChildrenExpandDown = reader.GetBoolean(10),
                                 ParentID = reader.GetNullable<int>(11),
-                                Cells = new List<TableCell>(),
+                                Cells = new List<SCARAPITableCell>(),
                                 Level = level
                             };
                         }
@@ -840,10 +842,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                         int adjustedOrder = 0;
                         while (reader.Read())
                         {
-                            TableCell cell;
+                            SCARAPITableCell cell;
                             if (reader.GetNullable<int>(0).HasValue)
                             {
-                                cell = new TableCell
+                                cell = new SCARAPITableCell
                                 {
                                     ID = reader.GetInt32(1),
                                     Offset = reader.GetStringSafe(2),
@@ -895,7 +897,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     }
                 }
             }
-            TableCell currCell = GetCell(CellId);
+            SCARAPITableCell currCell = GetCell(CellId);
             result.CellToDTS.Add(currCell, 0);
             if (currCell != null)
             {
@@ -920,7 +922,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 			StitchResult res = new StitchResult()
 			{
-				CellToDTS = new Dictionary<TableCell, int>(),
+                CellToDTS = new Dictionary<SCARAPITableCell, int>(),
 				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
 				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
 			};
@@ -988,15 +990,15 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 							IsIncomePositive = sdr.GetBoolean(9),
 							ChildrenExpandDown = sdr.GetBoolean(10),
 							ParentID = sdr.GetNullable<int>(11),
-							Cells = new List<TableCell>(),
+                            Cells = new List<SCARAPITableCell>(),
 							Level = level
 						};
 						res.StaticHierarchy = document;
 						sdr.NextResult();
 						while (sdr.Read()) {
-							TableCell cell;
+                            SCARAPITableCell cell;
 							if (sdr.GetNullable<int>(0).HasValue) {
-								cell = new TableCell
+                                cell = new SCARAPITableCell
 								{
 									ID = sdr.GetInt32(0),
 									Offset = sdr.GetStringSafe(1),
@@ -1029,7 +1031,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									LikePeriodValidationFlag = sdr.GetBoolean(28)
 								};
 							} else {
-								cell = new TableCell();
+                                cell = new SCARAPITableCell();
 							}
 							document.Cells.Add(cell);
 
@@ -1039,7 +1041,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 				}
 			}
 
-			foreach (TableCell cell in res.StaticHierarchy.Cells) {
+            foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells)
+            {
 				decimal value = cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
 				decimal sum = 0;
 				bool any = false;
@@ -1083,7 +1086,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 				StaticHierarchies = new List<StaticHierarchy>()
 			};
 
-			Dictionary<Tuple<int, int>, TableCell> CellMap = new Dictionary<Tuple<int, int>, TableCell>();
+            Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
 			List<CellMTMWComponent> CellChangeComponents;
 			Dictionary<int, int> SHLevels;
 
@@ -1120,7 +1123,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 								IsIncomePositive = sdr.GetBoolean(9),
 								ChildrenExpandDown = sdr.GetBoolean(10),
 								ParentID = sdr.GetNullable<int>(11),
-								Cells = new List<TableCell>()
+                                Cells = new List<SCARAPITableCell>()
 							};
 							res.StaticHierarchies.Add(document);
 						}
@@ -1131,9 +1134,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						int adjustedOrder = 0;
 
 						while (sdr.Read()) {
-							TableCell cell;
+                            SCARAPITableCell cell;
 							if (sdr.GetNullable<int>(0).HasValue) {
-								cell = new TableCell
+                                cell = new SCARAPITableCell
 								{
 									ID = sdr.GetInt32(0),
 									Offset = sdr.GetStringSafe(1),
@@ -1168,7 +1171,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 								adjustedOrder = sdr.GetInt32(29);
 							} else {
-								cell = new TableCell();
+                                cell = new SCARAPITableCell();
 								adjustedOrder = sdr.GetInt32(29);
 							}
 
@@ -1215,7 +1218,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			}
 
 			foreach(Tuple<int, int> key in CellMap.Keys){
-				TableCell cell = CellMap[key];
+                SCARAPITableCell cell = CellMap[key];
 				if(CellValueMap.ContainsKey(key))
 				cell.MTMWValidationFlag = (cell.ValueNumeric * (decimal)cell.ScalingFactorValue * (cell.IsIncomePositive ? 1 : -1)) != CellValueMap[key];
 			}
@@ -1228,7 +1231,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 		}
 
         #region Deprecated Methods
-        public TableCell GetCell(string CellId)
+        public SCARAPITableCell GetCell(string CellId)
         {
             using (SqlConnection conn = new SqlConnection(_sfConnectionString))
             {
@@ -1245,10 +1248,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                         int adjustedOrder = 0;
                         while (reader.Read())
                         {
-                            TableCell cell;
+                            SCARAPITableCell cell;
                             if (reader.GetNullable<int>(0).HasValue)
                             {
-                                cell = new TableCell
+                                cell = new SCARAPITableCell
                                 {
                                     ID = reader.GetInt32(0),
                                     Offset = reader.GetStringSafe(1),
@@ -1284,7 +1287,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                             }
                             else
                             {
-                                cell = new TableCell();
+                                cell = new SCARAPITableCell();
                                 adjustedOrder = reader.GetInt32(28);
                             }
                             return cell;
@@ -1292,18 +1295,18 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     }
                 }
             }
-            return new TableCell();
+            return new SCARAPITableCell();
         }
 
         public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId)
         {
             TableCellResult result = new TableCellResult();
-            result.cells = new List<TableCell>();
+            result.cells = new List<SCARAPITableCell>();
 
-            TableCell currCell = GetCell(CellId);
+            SCARAPITableCell currCell = GetCell(CellId);
             currCell.MTMWErrorTypeId = 0;
             result.cells.Add(currCell);
-            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+            SCARAPITableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
             result.cells.AddRange(sibilings);
             return result;
         }
@@ -1311,18 +1314,18 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
         public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId)
         {
             TableCellResult result = new TableCellResult();
-            result.cells = new List<TableCell>();
+            result.cells = new List<SCARAPITableCell>();
 
-            TableCell currCell = GetCell(CellId);
+            SCARAPITableCell currCell = GetCell(CellId);
             currCell.LikePeriodValidationFlag = true;
             currCell.MTMWValidationFlag = true;
             result.cells.Add(currCell);
-            TableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+            SCARAPITableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
             result.cells.AddRange(sibilings);
             return result;
         }
- 
-        private TableCell[] getSibilingsCells(string CellId, Guid DocumentId)
+
+        private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId)
         {
             return null;
         }

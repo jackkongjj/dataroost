@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.AsReported {
 	public class TableCellResult {
-        public List<TableCell> cells { get; set; }
+        public List<SCARAPITableCell> cells { get; set; }
 	}
 
 }

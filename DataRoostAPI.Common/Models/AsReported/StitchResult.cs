@@ -25,7 +25,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]
-		public Dictionary<TableCell, int> CellToDTS { get; set; }
+        public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
 
 	}
 
