@@ -52,8 +52,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return -1;
 			}
 		}
-		static PerformanceCounter CpuCounter = new PerformanceCounter("Processor",
+		static PerformanceCounter CpuCounterTotal = new PerformanceCounter("Processor",
 "% Processor Time", "_Total");
+		static PerformanceCounter CpuCounter0 = new PerformanceCounter("Processor",
+"% Processor Time", "0");
+		static PerformanceCounter CpuCounter1 = new PerformanceCounter("Processor",
+"% Processor Time", "1");
+		static PerformanceCounter CpuCounter2 = new PerformanceCounter("Processor",
+"% Processor Time", "2");
+		static PerformanceCounter CpuCounter3 = new PerformanceCounter("Processor",
+"% Processor Time", "3");
+		static PerformanceCounter CpuCounter4 = new PerformanceCounter("Processor",
+"% Processor Time", "4");
+		static PerformanceCounter CpuCounter5 = new PerformanceCounter("Processor",
+"% Processor Time", "5");
+		static PerformanceCounter CpuCounter6 = new PerformanceCounter("Processor",
+"% Processor Time", "6");
+		static PerformanceCounter CpuCounter7 = new PerformanceCounter("Processor",
+"% Processor Time", "7");
+		static PerformanceCounter CpuCounter8 = new PerformanceCounter("Processor",
+"% Processor Time", "8");
 		static string ProcessName = null;
 		public static string GetPerformanceData() {
 			try {
@@ -62,14 +80,44 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				"Working Set - Private",
 				GetNameToUseForMemory(Process.GetCurrentProcess()));
 
-				float cpuPercent = CpuCounter.NextValue(); 
+				float cpuPercentTotal = -1.0f;
+				float cpuPercent0 = -1.0f;
+				float cpuPercent1 = -1.0f;
+				float cpuPercent2 = -1.0f;
+				float cpuPercent3 = -1.0f;
+				float cpuPercent4 = -1.0f;
+				float cpuPercent5 = -1.0f;
+				float cpuPercent6 = -1.0f;
+				float cpuPercent7 = -1.0f;
+				float cpuPercent8 = -1.0f;
+				try {
+					cpuPercentTotal = CpuCounterTotal.NextValue();
+					cpuPercent0 = CpuCounter0.NextValue();
+					cpuPercent1 = CpuCounter1.NextValue();
+					cpuPercent2 = CpuCounter2.NextValue();
+					cpuPercent3 = CpuCounter3.NextValue();
+					cpuPercent4 = CpuCounter4.NextValue();
+					cpuPercent5 = CpuCounter5.NextValue();
+					cpuPercent6 = CpuCounter6.NextValue();
+					cpuPercent7 = CpuCounter7.NextValue();
+					cpuPercent8 = CpuCounter8.NextValue();
+				} catch { }
 				float usemem = WorkingSetPrivateMemoryCounter.NextValue();
 				long tmem = PerformanceInfo1.GetTotalMemory();
 				long ava = PerformanceInfo1.GetAvaiableTotalMemory();
 				if (tmem == 0) {
 					return " MEM Usage: UnFetchable";
 				} else {
-					reading += "<BR> CPU Percentage: " + cpuPercent + " % <BR> \r\n";
+					reading += "<BR> CPU_total Percentage: " + cpuPercentTotal + " % <BR> \r\n";
+					reading += "CPU_0 Percentage: " + cpuPercent0 + " % <BR> \r\n";
+					reading += "CPU_1 Percentage: " + cpuPercent1 + " % <BR> \r\n";
+					reading += "CPU_2 Percentage: " + cpuPercent2 + " % <BR> \r\n";
+					reading += "CPU_3 Percentage: " + cpuPercent3 + " % <BR> \r\n";
+					reading += "CPU_4 Percentage: " + cpuPercent4 + " % <BR> \r\n";
+					reading += "CPU_5 Percentage: " + cpuPercent5 + " % <BR> \r\n";
+					reading += "CPU_6 Percentage: " + cpuPercent6 + " % <BR> \r\n";
+					reading += "CPU_7 Percentage: " + cpuPercent7 + " % <BR> \r\n";
+					reading += "CPU_8 Percentage: " + cpuPercent8 + " % <BR> \r\n";
 					reading += " MEM Avaiable: " + ava / 1048576 + "(MB) <BR> \r\n";
 					reading += "MEM Size: " + tmem / 1048576 + "(MB) <BR> ";
 					reading += "Process MEM Usage: " + (usemem / tmem).ToString("P") + " <BR>";
