@@ -5,17 +5,119 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-
+using System.Net.Mail;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
-
+using System.Diagnostics;
 using DataRoostAPI.Common.Models.AsReported;
+using System.Runtime.InteropServices;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
+	public static class PerformanceInfo1 {
+		[DllImport("psapi.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		public static extern bool GetPerformanceInfo([Out] out PerformanceInformation PerformanceInformation, [In] int Size);
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct PerformanceInformation {
+			public int Size;
+			public IntPtr CommitTotal;
+			public IntPtr CommitLimit;
+			public IntPtr CommitPeak;
+			public IntPtr PhysicalTotal;
+			public IntPtr PhysicalAvailable;
+			public IntPtr SystemCache;
+			public IntPtr KernelTotal;
+			public IntPtr KernelPaged;
+			public IntPtr KernelNonPaged;
+			public IntPtr PageSize;
+			public int HandlesCount;
+			public int ProcessCount;
+			public int ThreadCount;
+		}
+		public static Int64 GetTotalMemory() {
+			PerformanceInformation pi = new PerformanceInformation();
+			if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi))) {
+				return Convert.ToInt64((pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64()));
+			} else {
+				return -1;
+			}
+		}
+		public static Int64 GetAvaiableTotalMemory() {
+			PerformanceInformation pi = new PerformanceInformation();
+
+			if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi))) {
+				return Convert.ToInt64((pi.PhysicalAvailable.ToInt64() * pi.PageSize.ToInt64()));
+			} else {
+				return -1;
+			}
+		}
+		static PerformanceCounter CpuCounter = new PerformanceCounter("Processor",
+"% Processor Time", "_Total");
+		static string ProcessName = null;
+		public static string GetPerformanceData() {
+			try {
+				string reading = "";
+				PerformanceCounter WorkingSetPrivateMemoryCounter = new PerformanceCounter("Process",
+				"Working Set - Private",
+				GetNameToUseForMemory(Process.GetCurrentProcess()));
+
+				float cpuPercent = CpuCounter.NextValue(); 
+				float usemem = WorkingSetPrivateMemoryCounter.NextValue();
+				long tmem = PerformanceInfo1.GetTotalMemory();
+				long ava = PerformanceInfo1.GetAvaiableTotalMemory();
+				if (tmem == 0) {
+					return " MEM Usage: UnFetchable";
+				} else {
+					reading += "<BR> CPU Percentage: " + cpuPercent + " % <BR> \r\n";
+					reading += " MEM Avaiable: " + ava / 1048576 + "(MB) <BR> \r\n";
+					reading += "MEM Size: " + tmem / 1048576 + "(MB) <BR> ";
+					reading += "Process MEM Usage: " + (usemem / tmem).ToString("P") + " <BR>";
+					reading += "System MEM Usage: " + (1 - ava * 1.0 / tmem).ToString("P") + "<BR> \r\n <BR> \r\n";
+					return reading;
+				}
+			} catch (Exception ex) {
+
+				return " MEM Usage: Get Execption";
+			}
+		}
+
+		public static string GetNameToUseForMemory(Process proc) {
+			if (!string.IsNullOrEmpty(ProcessName))
+				return ProcessName;
+			var nameToUseForMemory = String.Empty;
+			var category = new PerformanceCounterCategory("Process");
+			var instanceNames = category.GetInstanceNames().Where(x => x.Contains(proc.ProcessName));
+			foreach (var instanceName in instanceNames) {
+				using (var performanceCounter = new PerformanceCounter("Process", "ID Process", instanceName, true)) {
+					if (performanceCounter.RawValue != proc.Id)
+						continue;
+					nameToUseForMemory = instanceName;
+					break;
+				}
+			}
+			ProcessName = nameToUseForMemory;
+			return nameToUseForMemory;
+		}
+
+		public static void SendEmail(string subject, string emailBody) {
+			try {
+				SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
+				MailMessage message = new MailMessage();
+				message.From = mailFrom;
+				message.To.Add(new MailAddress("ljiang@factset.com", "Lun Jiang"));
+				message.Subject = subject;
+				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+				message.Body = emailBody;
+				message.IsBodyHtml = true;
+				mySMTP.Send(message);
+			} catch { }
+		}
+	}
 
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
 	public class AsReportedController : ApiController {
-
 		[Route("documents/{documentId}")]
 		[HttpGet]
 		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
@@ -70,12 +172,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpGet]
 		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+			//PerformanceInfo1.SendEmail("DataRoost Performance Enter", PerformanceInfo1.GetPerformanceData());
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			if (TemplateName == null)
 				return null;
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			//PerformanceInfo1.SendEmail("DataRoost Performance Created Helper", PerformanceInfo1.GetPerformanceData());
 			return helper.GetTemplate(iconum, TemplateName, DocumentId);
 		}
 
