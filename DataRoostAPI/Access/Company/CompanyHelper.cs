@@ -64,7 +64,36 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				}
 			}
 
-			company.ShareClasses = GetCompanyShareClasses(iconum);
+		    const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
+                                FROM ppiiconummap p
+	                                LEFT JOIN Countries c ON c.iso_country = p.IsoCountry
+                                WHERE Iconum = @iconum";
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(domicileCountryQuery, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@iconum", iconum);
+
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        if (sdr.Read())
+                        {
+                            company.DomicileCountryId = sdr.GetStringSafe(2);
+                            company.DomicileCountry = new CountryDTO
+                            {
+                                LongName = sdr.GetStringSafe(0),
+                                ShortName = sdr.GetStringSafe(1),
+                                Id = sdr.GetStringSafe(2),
+                                Iso3 = sdr.GetStringSafe(2)
+                            };
+                        }
+                    }
+                }
+            }
+
+            company.ShareClasses = GetCompanyShareClasses(iconum);
 			company.Iconum = iconum;
 			company.EntitiyPermId = PermId.Iconum2PermId(iconum);
 			company.Id = company.EntitiyPermId;
