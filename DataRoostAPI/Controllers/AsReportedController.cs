@@ -63,30 +63,42 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		static PerformanceCounter CpuCounter7;
 		static PerformanceCounter CpuCounter8;
 		static bool isLoadSuccessful = false;
+		static string cpuLoading = "";
 		static PerformanceInfo1() {
 		}
 		public static void Load() {
 			try {
+				cpuLoading = "Load(): empty ";
 				CpuCounterTotal = new PerformanceCounter("Processor",
 	"% Processor Time", "_Total");
+				cpuLoading += "CpuCounterTotal";
 				CpuCounter0 = new PerformanceCounter("Processor",
 		"% Processor Time", "0");
+				cpuLoading += "CpuCounter0";
 				CpuCounter1 = new PerformanceCounter("Processor",
 		"% Processor Time", "1");
+				cpuLoading += "CpuCounter1";
 				CpuCounter2 = new PerformanceCounter("Processor",
 		"% Processor Time", "2");
+				cpuLoading += "CpuCounter2";
 				CpuCounter3 = new PerformanceCounter("Processor",
 		"% Processor Time", "3");
+				cpuLoading += "CpuCounter3";
 				CpuCounter4 = new PerformanceCounter("Processor",
 		"% Processor Time", "4");
+				cpuLoading += "CpuCounter4";
 				CpuCounter5 = new PerformanceCounter("Processor",
 		"% Processor Time", "5");
+				cpuLoading += "CpuCounter5";
 				CpuCounter6 = new PerformanceCounter("Processor",
 		"% Processor Time", "6");
+				cpuLoading += "CpuCounter6";
 				CpuCounter7 = new PerformanceCounter("Processor",
 		"% Processor Time", "7");
+				cpuLoading += "CpuCounter7";
 				CpuCounter8 = new PerformanceCounter("Processor",
 		"% Processor Time", "8");
+				cpuLoading += "CpuCounter8";
 				isLoadSuccessful = true;
 			} catch {
 				isLoadSuccessful = false;
@@ -202,7 +214,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				message.To.Add(new MailAddress("ljiang@factset.com", "Lun Jiang"));
 				message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
-				message.Body = emailBody;
+				message.Body = cpuLoading + emailBody;
 				message.IsBodyHtml = true;
 				mySMTP.Send(message);
 			} catch { }
