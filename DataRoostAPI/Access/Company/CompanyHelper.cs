@@ -67,7 +67,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		    const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
                                 FROM ppiiconummap p
 	                                LEFT JOIN Countries c ON c.iso_country = p.IsoCountry
-                                WHERE Iconum = @iconum";
+                                WHERE Iconum = @iconum
+                                ORDER BY isadr";
 
             using (SqlConnection conn = new SqlConnection(_sfConnectionString))
             {
