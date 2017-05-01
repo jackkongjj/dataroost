@@ -13,7 +13,7 @@ using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	public static class PerformanceInfo1 {
+	public class PerformanceInfo1 {
 		[DllImport("psapi.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		public static extern bool GetPerformanceInfo([Out] out PerformanceInformation PerformanceInformation, [In] int Size);
@@ -35,7 +35,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public int ProcessCount;
 			public int ThreadCount;
 		}
-		public static Int64 GetTotalMemory() {
+		public Int64 GetTotalMemory() {
 			PerformanceInformation pi = new PerformanceInformation();
 			if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi))) {
 				return Convert.ToInt64((pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64()));
@@ -43,7 +43,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return -1;
 			}
 		}
-		public static Int64 GetAvaiableTotalMemory() {
+		public Int64 GetAvaiableTotalMemory() {
 			PerformanceInformation pi = new PerformanceInformation();
 
 			if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi))) {
@@ -52,33 +52,78 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return -1;
 			}
 		}
-		static PerformanceCounter CpuCounterTotal = new PerformanceCounter("Processor",
-"% Processor Time", "_Total");
-		static PerformanceCounter CpuCounter0 = new PerformanceCounter("Processor",
-"% Processor Time", "0");
-		static PerformanceCounter CpuCounter1 = new PerformanceCounter("Processor",
-"% Processor Time", "1");
-		static PerformanceCounter CpuCounter2 = new PerformanceCounter("Processor",
-"% Processor Time", "2");
-		static PerformanceCounter CpuCounter3 = new PerformanceCounter("Processor",
-"% Processor Time", "3");
-		static PerformanceCounter CpuCounter4 = new PerformanceCounter("Processor",
-"% Processor Time", "4");
-		static PerformanceCounter CpuCounter5 = new PerformanceCounter("Processor",
-"% Processor Time", "5");
-		static PerformanceCounter CpuCounter6 = new PerformanceCounter("Processor",
-"% Processor Time", "6");
-		static PerformanceCounter CpuCounter7 = new PerformanceCounter("Processor",
-"% Processor Time", "7");
-		static PerformanceCounter CpuCounter8 = new PerformanceCounter("Processor",
-"% Processor Time", "8");
-		static string ProcessName = null;
-		public static string GetPerformanceData() {
+		static PerformanceCounter CpuCounterTotal;
+		static PerformanceCounter CpuCounter0;
+		static PerformanceCounter CpuCounter1;
+		static PerformanceCounter CpuCounter2;
+		static PerformanceCounter CpuCounter3;
+		static PerformanceCounter CpuCounter4;
+		static PerformanceCounter CpuCounter5;
+		static PerformanceCounter CpuCounter6;
+		static PerformanceCounter CpuCounter7;
+		static PerformanceCounter CpuCounter8;
+		static bool isLoadSuccessful = false;
+		static PerformanceInfo1() {
+		}
+		public static void Load() {
 			try {
+				CpuCounterTotal = new PerformanceCounter("Processor",
+	"% Processor Time", "_Total");
+				CpuCounter0 = new PerformanceCounter("Processor",
+		"% Processor Time", "0");
+				CpuCounter1 = new PerformanceCounter("Processor",
+		"% Processor Time", "1");
+				CpuCounter2 = new PerformanceCounter("Processor",
+		"% Processor Time", "2");
+				CpuCounter3 = new PerformanceCounter("Processor",
+		"% Processor Time", "3");
+				CpuCounter4 = new PerformanceCounter("Processor",
+		"% Processor Time", "4");
+				CpuCounter5 = new PerformanceCounter("Processor",
+		"% Processor Time", "5");
+				CpuCounter6 = new PerformanceCounter("Processor",
+		"% Processor Time", "6");
+				CpuCounter7 = new PerformanceCounter("Processor",
+		"% Processor Time", "7");
+				CpuCounter8 = new PerformanceCounter("Processor",
+		"% Processor Time", "8");
+				isLoadSuccessful = true;
+			} catch {
+				isLoadSuccessful = false;
+			}
+		}
+//		static PerformanceCounter CpuCounterTotal = new PerformanceCounter("Processor",
+//"% Processor Time", "_Total");
+//		static PerformanceCounter CpuCounter0 = new PerformanceCounter("Processor",
+//"% Processor Time", "0");
+//		static PerformanceCounter CpuCounter1 = new PerformanceCounter("Processor",
+//"% Processor Time", "1");
+//		static PerformanceCounter CpuCounter2 = new PerformanceCounter("Processor",
+//"% Processor Time", "2");
+//		static PerformanceCounter CpuCounter3 = new PerformanceCounter("Processor",
+//"% Processor Time", "3");
+//		static PerformanceCounter CpuCounter4 = new PerformanceCounter("Processor",
+//"% Processor Time", "4");
+//		static PerformanceCounter CpuCounter5 = new PerformanceCounter("Processor",
+//"% Processor Time", "5");
+//		static PerformanceCounter CpuCounter6 = new PerformanceCounter("Processor",
+//"% Processor Time", "6");
+//		static PerformanceCounter CpuCounter7 = new PerformanceCounter("Processor",
+//"% Processor Time", "7");
+//		static PerformanceCounter CpuCounter8 = new PerformanceCounter("Processor",
+//"% Processor Time", "8");
+		string ProcessName = null;
+		public string GetPerformanceData() {
+			try {
+				if (!isLoadSuccessful)
+					return "PerformanceInformation load unsuccessful";
+
 				string reading = "";
 				PerformanceCounter WorkingSetPrivateMemoryCounter = new PerformanceCounter("Process",
 				"Working Set - Private",
 				GetNameToUseForMemory(Process.GetCurrentProcess()));
+
+
 
 				float cpuPercentTotal = -1.0f;
 				float cpuPercent0 = -1.0f;
@@ -103,8 +148,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					cpuPercent8 = CpuCounter8.NextValue();
 				} catch { }
 				float usemem = WorkingSetPrivateMemoryCounter.NextValue();
-				long tmem = PerformanceInfo1.GetTotalMemory();
-				long ava = PerformanceInfo1.GetAvaiableTotalMemory();
+				long tmem = GetTotalMemory();
+				long ava = GetAvaiableTotalMemory();
 				if (tmem == 0) {
 					return " MEM Usage: UnFetchable";
 				} else {
@@ -126,11 +171,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				}
 			} catch (Exception ex) {
 
-				return " MEM Usage: Get Execption";
+				return string.Format("PerformanceData - Message: {0} Stack: {1} InnerMessage: {2}", ex.Message, ex.StackTrace, ex.InnerException);
 			}
 		}
 
-		public static string GetNameToUseForMemory(Process proc) {
+		public string GetNameToUseForMemory(Process proc) {
 			if (!string.IsNullOrEmpty(ProcessName))
 				return ProcessName;
 			var nameToUseForMemory = String.Empty;
@@ -155,7 +200,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				MailMessage message = new MailMessage();
 				message.From = mailFrom;
 				message.To.Add(new MailAddress("ljiang@factset.com", "Lun Jiang"));
-				message.Subject = subject;
+				message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
 				message.Body = emailBody;
 				message.IsBodyHtml = true;

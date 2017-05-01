@@ -141,7 +141,10 @@ AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSet
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc";
 
 			string pdata = "";
-			pdata += "Enter method: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+
+			CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1 pInfo1 = new Controllers.PerformanceInfo1();
+			CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.Load();
+			pdata += "Enter method: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
@@ -155,7 +158,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
 
-			pdata += "Before connection: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+			pdata += "Before connection: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -189,7 +192,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-				pdata += "after connection 1: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+				pdata += "after connection 1: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
@@ -228,7 +231,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									IsIncomePositive = reader.GetBoolean(20),
 									XBRLTag = reader.GetStringSafe(21),
 									UpdateStampUTC = reader.GetNullable<DateTime>(22),
-									DocumentID = reader.GetGuid(23),
+									DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+									//	DocumentID = reader.GetGuid(23),
 									Label = reader.GetStringSafe(24),
 									ScalingFactorValue = reader.GetDouble(25),
 									ARDErrorTypeId = reader.GetNullable<int>(26),
@@ -250,7 +254,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 							}
 							i++;
 							if (i % 20 == 9) {
-								pdata += "after connection 1.2: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+								pdata += "after connection 1.2: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 							}
 							CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
 
@@ -263,7 +267,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-				pdata += "after connection 2: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+				pdata += "after connection 2: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 
 				temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
@@ -300,7 +304,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 							};
 
 							TimeSlices.Add(slice);
-							pdata += "after connection 3.1 timeslice: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+							pdata += "after connection 3.1 timeslice: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 							Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
 							if (!TimeSliceMap.ContainsKey(tup)) {
 								TimeSliceMap.Add(tup, new List<int>());
@@ -315,7 +319,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-				pdata += "after connection 4: " + sw.Elapsed.TotalSeconds.ToString() + CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.GetPerformanceData();
+				pdata += "after connection 4: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 				CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.SendEmail("DataRoost Performance GetTemplate", pdata);
 			}
 
