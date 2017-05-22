@@ -723,7 +723,8 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 						Label = eb.OffsetLabelWithHierarchy,
 						PeriodLength = (ts == null) ? "-1" : ts.PeriodLength.ToString(),
 						PeriodType = (ts == null) ? "" : ts.PeriodType,
-						Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate
+						Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate,
+						ItemCode = eb.ItemCode
 					});
 				}
 
