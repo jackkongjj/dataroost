@@ -61,5 +61,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("rowOrder")]
 		public int? RowOrder { get; set; }
+
+		[JsonProperty("itemCode")]
+		public string ItemCode { get; set; }
 	}
 }

@@ -35,6 +35,12 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("country")]
 		public CountryDTO Country { get; set; }
 
+        [JsonProperty("domicileCountryId")]
+        public string DomicileCountryId { get; set; }
+
+        [JsonProperty("domicileCountry")]
+        public CountryDTO DomicileCountry { get; set; }
+
 		[JsonProperty("primaryShareClassId")]
 		public string PrimaryShareClassId { get; set; }
 
@@ -46,6 +52,9 @@ namespace DataRoostAPI.Common.Models {
 
 		[JsonProperty("companyPriority")]
 		public int? Priority { get; set; }
+
+        [JsonProperty("isNationCode")]
+        public bool IsNationCode { get; set; }
 
 		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }

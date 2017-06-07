@@ -1,0 +1,72 @@
+/* app css stylesheet */
+
+.menu {
+  list-style: none;
+  border-bottom: 0.1em solid black;
+  margin-bottom: 2em;
+  padding: 0 0 0.5em;
+}
+
+.menu:before {
+  content: "[";
+}
+
+.menu:after {
+  content: "]";
+}
+
+.menu > li {
+  display: inline;
+}
+
+.menu > li + li:before {
+  content: "|";
+  padding-right: 0.3em;
+}
+
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+  white-space:nowrap;
+}
+
+td.valueCell{
+  text-align: right;
+}
+
+td.headerCell{
+  text-align: center;
+}
+
+.lpvfail{
+  background-color:coral;
+}
+
+.virtualCell{
+  color: blue;
+}
+
+.clicked{
+  border: 3px solid red;
+}
+
+.mtmwFail{
+  font-weight:bold;
+  color:red;
+  font-family:"Arial Black";
+}
+
+.mtmwPass{
+  font-weight:bold;
+  color:green;
+  font-family:"Arial Black";
+}
+
+#rectangle{
+  width:5px;
+  height:15px;
+  background:orange;
+  float: left;
+  top: 2;
+  left: 2;
+}
