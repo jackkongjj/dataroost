@@ -635,7 +635,7 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 
 		private List<Cell> GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated
 												from dbo.TableCell c with (NOLOCK)
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
@@ -674,7 +674,8 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 								XbrlTag = reader.GetStringSafe(11),
 								Label = reader.GetStringSafe(12),
 								TableName = reader.GetStringSafe(13),
-								RowOrder = reader.GetNullable<int>(14)
+								RowOrder = reader.GetNullable<int>(14), 
+								SCARUpdated = reader.GetBoolean(15)
 							});
 
 						}
