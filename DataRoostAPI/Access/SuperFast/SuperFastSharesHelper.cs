@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -150,14 +148,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		}
 
 		public Dictionary<string, List<ShareClassDataItem>> GetCurrentShareDataItems(int iconum) {
-			string queryNonDC = @"SELECT s.ID, s.STDItemID, s.STDExpressionID, s.Value, i.STDCode, i.ItemName, s.Date, s.SecurityID
+
+			string queryNonDC = @"SELECT s.ID, s.STDItemID, s.STDExpressionID, s.Value, i.STDCode, i.ItemName, s.Date, s.SecurityID, i.StdItemTypeId
                                 FROM vw_STDCompanyDetail s
                                     JOIN STDItem i ON i.ID = s.STDItemID
                                 WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
 
 
-			string queryDC = @"SELECT s.ID, s.STDItemID, null, case when  (s.MathML is not null and s.MathML != '<null/>') then s.Value  ELSE null end  ,
-                                i.STDCode, i.ItemName, case s.mathml when '<null/>' then s.Value when null then s.Value else null end , s.SecurityID
+			string queryDC = @"SELECT s.ID, s.STDItemID, null STDExpressionID, case when  (s.MathML is not null and s.MathML != '<null/>') then s.Value  ELSE null end  Value,
+                                i.STDCode, i.ItemName, case s.mathml when '<null/>' then s.Value when null then s.Value else null end , s.SecurityID, i.StdItemTypeId
                                 FROM dbo.STDCompanyDetailElastic s
                                     JOIN STDItem i ON i.ID = s.STDItemID
                                 WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
@@ -182,29 +181,45 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 							List<ShareClassDataItem> items = perShareData[cusip];
 							string itemName = reader.GetStringSafe(5);
 							string itemCode = reader.GetStringSafe(4);
-							decimal? value = reader.GetNullable<decimal>(3);
-							DateTime? reportDate = reader.GetNullable<DateTime>(6);
+						    string itemTypeId = reader.GetString(8);
+                            ShareClassDataItem item = null;
 
-							ShareClassDataItem item = null;
-							if (reportDate == null) {
-								item = new ShareClassNumericItem
-								{
-									ItemId = itemCode,
-									Name = itemName,
-									Value = (decimal)value,
-								};
-							}
+                            if (itemTypeId == "E") {
+                                // It's a decimal value
+                                decimal tmpValue;
+                                var value = decimal.TryParse(reader.GetStringSafe(3), out tmpValue) ? tmpValue : (decimal?)null;
+                                if (value.HasValue) {
+                                    item = new ShareClassNumericItem
+                                    {
+                                        ItemId = itemCode,
+                                        Name = itemName,
+                                        Value = value.Value
+                                    };
+                                }
+                            }
+						    else if (itemTypeId == "T") {
+                                // It's a date value
+                                DateTime? reportDate;
+                                DateTime tmpValue;
+                                if (isIconumDC) {
+                                    reportDate = DateTime.TryParse(reader.GetStringSafe(3), out tmpValue) ? tmpValue : (DateTime?)null;
+                                } else {
+                                    reportDate = DateTime.TryParse(reader.GetStringSafe(6), out tmpValue) ? tmpValue : (DateTime?)null;
+                                }
 
-							if (value == null) {
-								item = new ShareClassDateItem
-								{
-									ItemId = itemCode,
-									Name = itemName,
-									Value = (DateTime)reportDate,
-								};
-							}
-							
-							items.Add(item);
+                                if (reportDate.HasValue) {
+                                    item = new ShareClassDateItem
+                                    {
+                                        ItemId = itemCode,
+                                        Name = itemName,
+                                        Value = reportDate.Value,
+                                    };
+                                }
+                            }
+
+						    if (item != null) {
+                                items.Add(item);
+                            }
 						}
 					}
 				}
