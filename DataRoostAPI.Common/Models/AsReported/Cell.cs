@@ -64,5 +64,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("itemCode")]
 		public string ItemCode { get; set; }
+
+		[JsonProperty("scarUpdated")]
+		public bool SCARUpdated { get; set; }
 	}
 }
