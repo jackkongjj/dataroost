@@ -382,7 +382,7 @@ ORDER BY ChangeDate DESC";
 			Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = superfastShares.GetCurrentShareDataItems(iconum);
 			foreach (ShareClassDTO shareClass in shareClasses) {
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-				if (superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
+				if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
 					securityItemList = superfastSecurityItems[shareClass.Cusip];
 				}
 				else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
