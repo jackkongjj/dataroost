@@ -18,7 +18,8 @@
 
     <ItemGroup Condition=" '$(PackageSources)' == '' ">
 		<PackageSource Include="https://www.nuget.org/api/v2/" />
-		<PackageSource Include="http://ccs-dev.prod.factset.com/nuget/" /> 
+		<PackageSource Include="http://ccs-dev.prod.factset.com/nuget/" />
+    <PackageSource Include="http://artifactory.factset.com/artifactory/api/nuget/nuget" />
     </ItemGroup>
 
     <PropertyGroup Condition=" '$(OS)' == 'Windows_NT'">
