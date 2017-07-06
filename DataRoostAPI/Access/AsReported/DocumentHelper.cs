@@ -14,6 +14,7 @@ using System.Configuration;
 using DataRoostAPI.Common.Models.SuperFast;
 using System.Web.Mvc;
 using System.Globalization;
+using ExpressionStore.Components;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
@@ -754,15 +755,18 @@ and d.DocumentDate  between
 		}
 
 		private List<Cell> GetTableCells(string documentId, int Iconum) {
-			string ExpressionStore = ConfigurationManager.AppSettings["ExpressionStore"];
-			string ExpressionStoreId = ConfigurationManager.AppSettings["ExpressionStoreId"];
-			string ExpressionStorePassword = ConfigurationManager.AppSettings["ExpressionStorePassword"];
-			var server = new Uri(ExpressionStore);
-			var settings = new ConnectionSettings(server);
-			var settingAuthentication = settings.BasicAuthentication(ExpressionStoreId, ExpressionStorePassword);
-			var elastic = new ElasticClient(settings);
+			string connString = ConfigurationManager.AppSettings["ElasticEndpointA"];
+            var terms = connString.Split(';');
+            string uri = "http://" + terms[0].Substring(terms[0].IndexOf("NodeUri=") + 8);
+            string Username = terms[1].Substring(terms[0].IndexOf("Username=") + 10);
+            string Password = terms[2].Substring(terms[0].IndexOf("Password=") + 10);
 
-			List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId, Iconum);
+            var server = new Uri(uri);
+            var settings = new ConnectionSettings(server);
+            var settingAuthentication = settings.BasicAuthentication(Username, Password);
+            var elastic =  new ElasticClient(settings);
+
+            List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId, Iconum);
 
 			List<Cell> cells = new List<Cell>();
 			ISearchResponse<ElasticObjectTree> request = elastic.Search<ElasticObjectTree>(s => s
