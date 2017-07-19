@@ -14,6 +14,7 @@ using System.Configuration;
 using DataRoostAPI.Common.Models.SuperFast;
 using System.Web.Mvc;
 using System.Globalization;
+using ExpressionStore.Components;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
@@ -554,7 +555,75 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 			return documents.ToArray();
 		}
 
-		public string DownloadFile(int iconum, string documentId) {
+        public AsReportedDocument[] GetHistory(int iconum, string documentId, double years) {
+
+            string query = @"declare @DocDate datetime
+select  @DocDate = d.documentdate  from document d
+where d.damdocumentid = @DamDocumentId
+
+SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
+FROM DocumentSeries s
+JOIN Document d ON d.DocumentSeriesID = s.Id
+WHERE s.CompanyID = @iconum
+AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1) 
+and d.DocumentDate  between
+";
+            if(years > 0) {
+                query += " @DocDate and  dateadd(Year, @Years, @DocDate)";
+            }else {
+                query += " dateadd(Year, @Years, @DocDate) and @DocDate";
+            }
+           
+            List<AsReportedDocument> documents = new List<AsReportedDocument>();
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+                using (SqlCommand cmd = new SqlCommand(query, conn)) {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@iconum", iconum);
+                    cmd.Parameters.AddWithValue("@DamDocumentId", documentId);
+                    cmd.Parameters.AddWithValue("@Years", years);
+                    using (SqlDataReader reader = cmd.ExecuteReader()) {
+                        while (reader.Read()) {
+                            AsReportedDocument document = new AsReportedDocument {
+                                ReportDate = reader.GetDateTime(0),
+                                PublicationDate = reader.GetDateTime(1),
+                                ReportType = reader.GetStringSafe(2),
+                                FormType = reader.GetStringSafe(3),
+                                Id = reader.GetGuid(4).ToString(),
+                                SuperFastDocumentId = reader.GetGuid(5).ToString(),
+                                HasXbrl = reader.GetBoolean(6),
+                            };
+                            if (dcHelper.IsIconumDC(iconum)) {
+                                document.Cells = GetTableCells(GetDamDocumentID(document.SuperFastDocumentId).ToString(), iconum);
+                                var tableCells = GetTableCells(document.SuperFastDocumentId);
+                                foreach (var cell in tableCells) {
+                                    Cell existingCell = document.Cells.FirstOrDefault(o => o.Offset == cell.Offset);
+                                    if (existingCell != null) {
+                                        existingCell.RowOrder = cell.RowOrder;
+                                        existingCell.TableName = cell.TableName;
+                                        existingCell.CftId = cell.CftId;
+                                        existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
+                                        existingCell.Id = cell.Id;
+                                    }
+                                    else {
+                                        if (cell.TableName == "IS" || cell.TableName == "BS" || cell.TableName == "CF"){
+                                            document.Cells.Add(cell);
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                document.Cells = GetTableCells(document.SuperFastDocumentId);
+                            }
+                            document.Cells = document.Cells.Where(o => o.CompanyFinancialTermDescription != null).ToList();
+                            documents.Add(document);
+                        }
+                    }
+                }
+            }
+            return documents.ToArray();
+        }
+
+        public string DownloadFile(int iconum, string documentId) {
 			AsReportedDocument document = GetDCDocument(iconum, documentId);
 			//export Data as CSV
 			StringBuilder sb = new StringBuilder();
@@ -686,15 +755,18 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 		}
 
 		private List<Cell> GetTableCells(string documentId, int Iconum) {
-			string ExpressionStore = ConfigurationManager.AppSettings["ExpressionStore"];
-			string ExpressionStoreId = ConfigurationManager.AppSettings["ExpressionStoreId"];
-			string ExpressionStorePassword = ConfigurationManager.AppSettings["ExpressionStorePassword"];
-			var server = new Uri(ExpressionStore);
-			var settings = new ConnectionSettings(server);
-			var settingAuthentication = settings.BasicAuthentication(ExpressionStoreId, ExpressionStorePassword);
-			var elastic = new ElasticClient(settings);
+			string connString = ConfigurationManager.AppSettings["ElasticEndpointA"];
+            var terms = connString.Split(';');
+            string uri = "http://" + terms[0].Substring(terms[0].IndexOf("NodeUri=") + 8);
+            string Username = terms[1].Substring(terms[0].IndexOf("Username=") + 10);
+            string Password = terms[2].Substring(terms[0].IndexOf("Password=") + 10);
 
-			List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId, Iconum);
+            var server = new Uri(uri);
+            var settings = new ConnectionSettings(server);
+            var settingAuthentication = settings.BasicAuthentication(Username, Password);
+            var elastic =  new ElasticClient(settings);
+
+            List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId, Iconum);
 
 			List<Cell> cells = new List<Cell>();
 			ISearchResponse<ElasticObjectTree> request = elastic.Search<ElasticObjectTree>(s => s
