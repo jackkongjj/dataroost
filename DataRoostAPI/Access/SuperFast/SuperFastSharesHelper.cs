@@ -16,7 +16,152 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			_connectionString = connectionString;
 		}
 
-		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate, DateTime? since) {
+
+	    public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetAllFpeShareDataForStdCode(
+	        List<int> iconums, string stdCode, DateTime? reportDate, DateTime? since) {
+
+	        const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
+
+	        const string nonDcQuery =
+	            @"SELECT t1.Cusip, t1.Value, t1.Date, t1.ItemName, t1.STDCode, t1.iconum 
+	                FROM (
+		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, p.iconum iconum,
+			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc) as rank 
+			                FROM STDTimeSeriesDetailSecurity stds (nolock)
+				                join PpiIconumMap p (nolock) 
+					                on p.cusip = stds.SecurityID
+				                join STDItem std (nolock)
+					                on stds.STDItemId = std.ID
+					                and std.SecurityFlag = 1
+				                join STDTemplateItem t (nolock)
+					                on t.STDItemID = std.ID
+					                and t.STDTemplateMasterCode = 'PSIT'
+				                join TimeSeries ts (nolock)
+					                on stds.TimeSeriesID = ts.Id
+					                and ts.AutoCalcFlag = 0
+					                and ts.EncoreFlag = 0
+				                join Document d (nolock)
+					                on ts.DocumentID = d.ID
+				                join DocumentSeries ds (nolock)
+					                on d.DocumentSeriesId = ds.Id 
+				                join #CompanyIds i (nolock)
+					                on i.iconum = ds.CompanyID
+				                left join MigrateToTimeSlice mi (nolock)
+					                on mi.Iconum = i.iconum
+					                and mi.MigrationStatusID != 1					
+			                WHERE std.STDCode =  @stdCode AND ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
+	                ) t1
+                ";
+
+            const string dcQuery =
+                @"SELECT 
+                        t2.Cusip, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank 
+	                FROM (
+		                SELECT 
+                            stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
+			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc, ts.AutoCalcFlag ASC) as rank 
+			            FROM STDTimeSliceDetailSecurity stds (nolock)
+				            join PpiIconumMap p (nolock)
+					            on p.cusip = stds.SecurityID and p.Iconum > 0
+				            join STDItem std (nolock)
+					            on stds.STDItemId = std.ID
+					            and std.SecurityFlag = 1
+				            join STDTemplateItem t (nolock)
+					            on t.STDItemID = std.ID
+					            and t.STDTemplateMasterCode = 'PSIT'
+				            join dbo.TimeSlice ts (nolock)
+					            on stds.TimeSliceID = ts.Id
+					            and ts.EncoreFlag = 0
+				            join Document d (nolock)
+					            on ts.DocumentID = d.ID
+				            join DocumentSeries ds (nolock)
+					            on d.DocumentSeriesId = ds.Id 
+				            join #CompanyIds i (nolock)
+					            on i.iconum = ds.CompanyID
+				            join MigrateToTimeSlice mi (nolock)
+					            on mi.Iconum = i.iconum
+					            and mi.MigrationStatusID = 1
+			            WHERE std.STDCode =  @stdCode AND ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
+	                ) t2
+                    ORDER BY t2.rank
+                ";
+
+	        var searchDate = DateTime.Now;
+	        if (reportDate != null) {
+	            searchDate = (DateTime) reportDate;
+	        }
+
+            // Populate DataTable with all Iconums
+            var companyShareData = new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+	        var table = new DataTable();
+	        table.Columns.Add("iconum", typeof(int));
+	        foreach (int iconum in iconums) {
+	            table.Rows.Add(iconum);
+	            companyShareData.Add(iconum, new Dictionary<string, List<ShareClassDataItem>>());
+	        }
+
+	        // Create Global Temp Table
+	        using (var connection = new SqlConnection(_connectionString)) {
+	            connection.Open();
+
+	            // Create Temp table for Iconum upload
+	            using (var cmd = new SqlCommand(createTableQuery, connection)) {
+	                cmd.ExecuteNonQuery();
+	            }
+
+	            // Bulk Upload all Iconums to Temp table
+	            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+	                bulkCopy.BatchSize = table.Rows.Count;
+	                bulkCopy.DestinationTableName = "#CompanyIds";
+	                bulkCopy.WriteToServer(table);
+	            }
+
+	            // Fetch FPE data
+	            using (SqlCommand cmd = new SqlCommand(dcQuery, connection)) {
+	                cmd.CommandTimeout = 120;
+	                cmd.Parameters.Add(new SqlParameter("@stdCode", SqlDbType.Char, 5) {Value = stdCode});
+	                cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) {Value = searchDate});
+	                cmd.Parameters.Add(new SqlParameter("@since", SqlDbType.DateTime2)
+	                {
+	                    Value = (since == null ? DBNull.Value : (object) since)
+	                });
+
+	                using (SqlDataReader reader = cmd.ExecuteReader()) {
+	                    while (reader.Read()) {
+	                        string cusip = reader.GetStringSafe(0);
+	                        int iconum = reader.GetInt32(5);
+
+	                        if (!companyShareData.ContainsKey(iconum) || string.IsNullOrEmpty(cusip)) {
+	                            // This is possible if PpiIconumMap has same Cusip associated with two different Iconums and we 
+	                            // received request for only one of them. Hence, ignore that extra iconum returned from above query
+	                            continue;
+	                        }
+	                        Dictionary<string, List<ShareClassDataItem>> perShareData = companyShareData[iconum];
+                            if (!perShareData.ContainsKey(cusip)) {
+                                perShareData.Add(cusip, new List<ShareClassDataItem>());
+                            }
+
+                            decimal tmpValue;
+                            var nullableValue = decimal.TryParse(reader.GetStringSafe(1), out tmpValue) ? tmpValue : (decimal?)null;
+	                        if (nullableValue.HasValue) {
+                                ShareClassDataItem item = new ShareClassNumericItem
+                                {
+                                    Name = reader.GetStringSafe(3),
+                                    ItemId = reader.GetStringSafe(4),
+                                    Value = nullableValue.Value,
+                                    ReportDate = reader.GetDateTime(2)
+                                };
+                                perShareData[cusip].Add(item);
+                            }
+	                    }
+	                }
+	            }
+	        }
+	        return companyShareData;
+	    }
+
+
+	    public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums, DateTime? reportDate, DateTime? since) {
 
             const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
@@ -134,7 +279,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 								Name = reader.GetStringSafe(3),
 								ItemId = reader.GetStringSafe(4),
 								Value = reader.GetDecimal(1),
-								ReportDate = reader.GetDateTime(2),
+								ReportDate = reader.GetDateTime(2)
 							};
 							if (!perShareData.ContainsKey(cusip)) {
 								perShareData.Add(cusip, new List<ShareClassDataItem>());
@@ -212,7 +357,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
                                     {
                                         ItemId = itemCode,
                                         Name = itemName,
-                                        Value = reportDate.Value,
+                                        Value = reportDate.Value
                                     };
                                 }
                             }

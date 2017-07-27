@@ -110,7 +110,50 @@ namespace DataRoostAPI.Common.Access {
 			}
 		}
 
-		public ShareClassDataDTO[] GetCurrentShareData(string companyId) {
+        public ShareClassDataDTO[] GetAllFiscalPeriodEndSharesData(string companyId, string stdCode, DateTime? reportDate = null, DateTime? since = null) {
+            string requestUrl = string.Format("{0}/shares/allFiscalPeriodEnd", GetRootUrl(companyId));
+            if (reportDate != null || since != null) {
+                requestUrl += "?";
+                List<string> queryStrings = new List<string>();
+                queryStrings.Add("stdCode=" + stdCode);
+                if (reportDate != null) {
+                    queryStrings.Add("reportDate=" + reportDate);
+                }
+                if (since != null) {
+                    queryStrings.Add("since=" + since);
+                }
+                requestUrl += string.Join("&", queryStrings);
+            }
+            return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
+        }
+
+        public Dictionary<int, ShareClassDataDTO[]> GetAllFiscalPeriodEndSharesData(List<string> companyIds, string stdCode, DateTime? reportDate = null, DateTime? since = null) {
+            string requestUrl = string.Format("{0}/api/v1/companies/shares/allFiscalPeriodEnd", _dataRoostConnectionString);
+            if (reportDate != null || since != null) {
+                requestUrl += "?";
+                List<string> queryStrings = new List<string>();
+                queryStrings.Add("stdCode=" + stdCode);
+                if (reportDate != null) {
+                    queryStrings.Add("reportDate=" + reportDate);
+                }
+                if (since != null) {
+                    queryStrings.Add("since=" + since);
+                }
+                requestUrl += string.Join("&", queryStrings);
+            }
+
+            string postParams = JsonConvert.SerializeObject(companyIds);
+            using (LongRunningWebClient client = new LongRunningWebClient()) {
+                client.Credentials = CredentialCache.DefaultNetworkCredentials;
+                client.Encoding = Encoding.UTF8;
+                client.Timeout = 1000000;
+                client.Headers.Add("Content-Type", "application/json");
+                string postResponse = client.UploadString(requestUrl, "POST", postParams);
+                return JsonConvert.DeserializeObject<Dictionary<int, ShareClassDataDTO[]>>(postResponse);
+            }
+        }
+
+        public ShareClassDataDTO[] GetCurrentShareData(string companyId) {
 			string requestUrl = string.Format("{0}/shares/currentShares", GetRootUrl(companyId));
 			return ExecuteGetQuery<ShareClassDataDTO[]>(requestUrl);
 		}
