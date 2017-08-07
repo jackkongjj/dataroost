@@ -59,7 +59,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	                FROM (
 		                SELECT 
                             stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc, ts.AutoCalcFlag ASC) as rank 
+			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM STDTimeSliceDetailSecurity stds (nolock)
 				            join PpiIconumMap p (nolock)
 					            on p.cusip = stds.SecurityID and p.Iconum > 0
