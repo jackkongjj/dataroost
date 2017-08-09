@@ -31,7 +31,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL )";
 
-			const string query = @"SELECT i.iconum, fds.PPI FROM FdsTriPpiMap fds JOIN #CompanyIds i ON i.iconum = fds.iconum WHERE fds.Cusip IS NOT NULL";
+			const string query = @"SELECT i.iconum, p.PPI FROM PpiIconumMap p JOIN #CompanyIds i ON i.iconum = p.iconum WHERE p.Cusip IS NOT NULL";
 
 			using (SqlConnection connection = new SqlConnection(_connectionString)) {
 				connection.Open();

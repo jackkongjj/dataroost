@@ -412,22 +412,22 @@ ORDER BY ChangeDate DESC";
             DateTime voyagerStartTime = DateTime.Now;
             if (voyagerIconums.Count > 0) {
                 VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-//                Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
-//                    voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate, since);
-//                foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
-//                    int iconum = keyValuePair.Key;
-//                    Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
-//                    if (companyShareClassData.ContainsKey(iconum)) {
-//                        List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-//                        foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-//                            List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-//                            if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
-//                                securityItemList = voyagerSecurityItems[shareClass.PPI];
-//                            }
-//                            shareClass.ShareClassData = securityItemList;
-//                        }
-//                    }
-//                }
+                Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
+                    voyagerShares.GetAllFpeShareDataForStdCode(voyagerIconums, stdCode, reportDate, since);
+                foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
+                    int iconum = keyValuePair.Key;
+                    Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
+                    if (companyShareClassData.ContainsKey(iconum)) {
+                        List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+                        foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+                            List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+                            if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+                                securityItemList = voyagerSecurityItems[shareClass.PPI];
+                            }
+                            shareClass.ShareClassData = securityItemList;
+                        }
+                    }
+                }
             }
             TimeSpan voyagerDuration = DateTime.Now.Subtract(voyagerStartTime);
 

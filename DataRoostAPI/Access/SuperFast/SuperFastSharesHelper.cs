@@ -22,7 +22,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 	        const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-	        const string nonDcQuery =
+	        /*const string nonDcQuery =
 	            @"SELECT t1.Cusip, t1.Value, t1.Date, t1.ItemName, t1.STDCode, t1.iconum 
 	                FROM (
 		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, p.iconum iconum,
@@ -50,8 +50,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 					                on mi.Iconum = i.iconum
 					                and mi.MigrationStatusID != 1					
 			                WHERE std.STDCode =  @stdCode AND ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
-	                ) t1
-                ";
+	                ) t1";*/
 
             const string dcQuery =
                 @"SELECT 
