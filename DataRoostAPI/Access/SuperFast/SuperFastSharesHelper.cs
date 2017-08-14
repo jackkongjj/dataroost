@@ -164,8 +164,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
             const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-			const string query = @"
-                SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
+	        /*const string nonDcQuery =
+	            @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
 	                FROM (
 		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, p.iconum iconum,
 			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc, ts.AutoCalcFlag ASC) as rank 
@@ -192,9 +192,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			                WHERE ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
                                 and (mi.Iconum is NULL or mi.MigrationStatusID != 1)
 	                ) temp
-	                WHERE temp.rank = 1
-                UNION
-                SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
+	                WHERE temp.rank = 1";*/
+
+            const string query = 
+                @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
 	                FROM (
 		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
 			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc, ts.AutoCalcFlag ASC) as rank 
@@ -221,9 +222,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 					                and mi.MigrationStatusID = 1
 			                WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
 	                ) temp
-	                WHERE temp.rank = 1
-                ";
-
+	                WHERE temp.rank = 1";
 		
 			DateTime searchDate = DateTime.Now;
 			if (reportDate != null) {
@@ -273,17 +272,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 						        continue;
 						    }
 							Dictionary<string, List<ShareClassDataItem>> perShareData = companyShareData[iconum];
-							ShareClassDataItem item = new ShareClassNumericItem
-							{
-								Name = reader.GetStringSafe(3),
-								ItemId = reader.GetStringSafe(4),
-								Value = reader.GetDecimal(1),
-								ReportDate = reader.GetDateTime(2)
-							};
-							if (!perShareData.ContainsKey(cusip)) {
-								perShareData.Add(cusip, new List<ShareClassDataItem>());
-							}
-							perShareData[cusip].Add(item);
+
+                            decimal tmpValue;
+                            var nullableValue = decimal.TryParse(reader.GetStringSafe(1), out tmpValue) ? tmpValue : (decimal?)null;
+						    if (nullableValue.HasValue) {
+                                ShareClassDataItem item = new ShareClassNumericItem
+                                {
+                                    Name = reader.GetStringSafe(3),
+                                    ItemId = reader.GetStringSafe(4),
+                                    Value = nullableValue.Value,
+                                    ReportDate = reader.GetDateTime(2)
+                                };
+                                if (!perShareData.ContainsKey(cusip)) {
+                                    perShareData.Add(cusip, new List<ShareClassDataItem>());
+                                }
+                                perShareData[cusip].Add(item);
+                            }
+						    
 						}
 					}
 				}
