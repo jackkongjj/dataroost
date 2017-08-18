@@ -754,18 +754,36 @@ and d.DocumentDate  between
 			return cells;
 		}
 
+        private Dictionary<string,string> GetSDBItems(){
+            Dictionary<string, string> items = new Dictionary<string, string>();
+            string query = "select distinct SDBCode , Description from SDBItem";
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+                using (SqlCommand cmd = new SqlCommand(query, conn)) {
+                    conn.Open();
+                    cmd.CommandTimeout = 1000;
+                    using (SqlDataReader reader = cmd.ExecuteReader()) {
+                        while (reader.Read()) {
+                            items.Add(reader.GetStringSafe(0), reader.GetStringSafe(1));
+                        }
+                    }
+                }
+            }
+            return items;
+        }
+
 		private List<Cell> GetTableCells(string documentId, int Iconum) {
 			string connString = ConfigurationManager.AppSettings["ElasticEndpointA"];
             var terms = connString.Split(';');
             string uri = "http://" + terms[0].Substring(terms[0].IndexOf("NodeUri=") + 8);
             string Username = terms[1].Substring(terms[0].IndexOf("Username=") + 10);
             string Password = terms[2].Substring(terms[0].IndexOf("Password=") + 10);
-
+            
             var server = new Uri(uri);
             var settings = new ConnectionSettings(server);
             var settingAuthentication = settings.BasicAuthentication(Username, Password);
             var elastic =  new ElasticClient(settings);
 
+            Dictionary<string, string> items = GetSDBItems();
             List<SFTimeseriesDTO> timeSlices = GetTimeSliceForDocument(documentId, Iconum);
 
 			List<Cell> cells = new List<Cell>();
@@ -783,21 +801,21 @@ and d.DocumentDate  between
 					&& o.IsAutoCalc == (eboTS.Key.AutoClacFlag == 0 ? false : true) && o.IsRecap == eboTS.Key.EncoreFlag);
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
-					cells.Add(new Cell
-					{
-						CompanyFinancialTermDescription = eb.CompanyFinancialTerm,
-						CftId = eb.CompanyFinancialTermId,
-						Currency = eb.CurrencyCode,
-						Value = eb.Value,
-						NumericValue = string.IsNullOrEmpty(eb.Value) ? 0 : decimal.Parse(eb.Value, NumberStyles.Any),
-						Offset = eb.Offset,
-						ScalingFactor = eb.ScalingFactor,
-						XbrlTag = eb.XbrlTag,
-						Label = eb.OffsetLabelWithHierarchy,
-						PeriodLength = (ts == null) ? "-1" : ts.PeriodLength.ToString(),
-						PeriodType = (ts == null) ? "" : ts.PeriodType,
-						Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate,
-						ItemCode = eb.ItemCode
+                    cells.Add(new Cell
+                    {
+                        CompanyFinancialTermDescription = eb.CompanyFinancialTerm,
+                        CftId = eb.CompanyFinancialTermId,
+                        Currency = eb.CurrencyCode,
+                        Value = eb.Value,
+                        NumericValue = string.IsNullOrEmpty(eb.Value) ? 0 : decimal.Parse(eb.Value, NumberStyles.Any),
+                        Offset = eb.Offset,
+                        ScalingFactor = eb.ScalingFactor,
+                        XbrlTag = eb.XbrlTag,
+                        Label = eb.OffsetLabelWithHierarchy,
+                        PeriodLength = (ts == null) ? "-1" : ts.PeriodLength.ToString(),
+                        PeriodType = (ts == null) ? "" : ts.PeriodType,
+                        Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate,
+                        ItemDescription = eb.ItemCode == null ? null : items[eb.ItemCode]
 					});
 				}
 

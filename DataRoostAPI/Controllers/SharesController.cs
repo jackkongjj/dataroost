@@ -62,7 +62,50 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetCompanyShareClassData(iconums, reportDate, since);
 		}
 
-		[Route("{CompanyId}/shares/currentShares/")]
+        [Route("{CompanyId}/shares/allFiscalPeriodEnd/")]
+        [HttpGet]
+        public List<ShareClassDataDTO> GetAllFiscalPeriodEndSharesData(string companyId, string stdCode, DateTime? reportDate = null, DateTime? since = null) {
+            if (string.IsNullOrEmpty(companyId)) {
+                return null;
+            }
+
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+            string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+            string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+            string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+            int iconum = PermId.PermId2Iconum(companyId);
+            List<int> iconumList = new List<int> { iconum };
+
+            CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+            Dictionary<int, List<ShareClassDataDTO>> iconumDictionary = helper.GetAllShareClassData(iconumList, stdCode, reportDate, since);
+            if (!iconumDictionary.ContainsKey(iconum)) {
+                throw new MissingIconumException(iconum);
+            }
+
+            return iconumDictionary[iconum];
+        }
+
+        [Route("shares/allFiscalPeriodEnd/")]
+        [HttpPost]
+        public Dictionary<int, List<ShareClassDataDTO>> GetAllFiscalPeriodEndSharesData(List<string> companyIds, string stdCode, DateTime? reportDate = null, DateTime? since = null) {
+            if (companyIds == null || companyIds.Count < 1) {
+                return new Dictionary<int, List<ShareClassDataDTO>>();
+            }
+
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+            string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+            string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+            string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+
+            List<int> iconums = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
+            iconums = iconums.Distinct().ToList();
+
+            CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+            return helper.GetAllShareClassData(iconums, stdCode, reportDate, since);
+        }
+
+        [Route("{CompanyId}/shares/currentShares/")]
 		[HttpGet]
 		public ShareClassDataDTO[] GetCurrentShareData(string CompanyId) {
 			if (string.IsNullOrEmpty(CompanyId)) {

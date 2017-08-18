@@ -24,7 +24,168 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 			_ppiHelper = new PpiHelper(sfConnectionString);
 		}
 
-		public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums,
+	    public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetAllFpeShareDataForStdCode(
+	        List<int> iconums, string stdCode, DateTime? reportSearchDate, DateTime? since) {
+
+	        const string insertSql = "INSERT INTO TMP_PPIS (PPI) VALUES (:ppis)";
+
+	        const string queryWithStartDate =
+	            @"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
+                    FROM
+                        (SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
+                              RANK() OVER (PARTITION BY d.PPI ORDER BY d.report_date DESC, t.display_order ASC) RANK
+                          FROM CSO_PSIT_DETAILS d
+                            JOIN TMP_PPIS tmp ON tmp.PPI = d.PPI
+                            JOIN time_series t ON t.time_series_code = d.time_series_code AND INSTR(t.time_series_desc, 'CUM') = 0
+                          WHERE d.STD_ITEM_CODE = :std_item_code AND d.report_date BETWEEN :since_date AND :report_date
+                         ) d
+                      JOIN item_std i ON d.std_item_code = i.item_code";
+
+	        const string queryIfStartDateIsNull =
+	            @"SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, i.item_name, d.doc_publication_date, d.dcn
+                    FROM
+                        (SELECT d.ppi, d.report_date, d.data_year, d.time_series_code, d.std_item_code, d.value_num, d.value_text, d.value_date, d.done_date_time, d.doc_publication_date, d.dcn,
+                              RANK() OVER (PARTITION BY d.PPI ORDER BY d.report_date DESC, t.display_order ASC) RANK
+                          FROM CSO_PSIT_DETAILS d
+                            JOIN TMP_PPIS tmp ON tmp.PPI = d.PPI
+                            JOIN time_series t ON t.time_series_code = d.time_series_code AND INSTR(t.time_series_desc, 'CUM') = 0
+                          WHERE d.STD_ITEM_CODE = :std_item_code AND d.report_date <= :report_date
+                         ) d
+                      JOIN item_std i ON d.std_item_code = i.item_code";
+
+	        var query = queryIfStartDateIsNull;
+	        if (since != null) {
+	            query = queryWithStartDate;
+	        }
+
+	        DateTime searchDate = DateTime.Now;
+	        if (reportSearchDate != null) {
+	            searchDate = (DateTime) reportSearchDate;
+	        }
+
+	        Dictionary<string, List<ShareClassDataItem>> dataByPpi = new Dictionary<string, List<ShareClassDataItem>>();
+	        Dictionary<string, int> ppiDictionary = _ppiHelper.GetIconumPpiDictionary(iconums);
+
+	        if (ppiDictionary == null || ppiDictionary.Count < 1) {
+	            return new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+	        }
+
+	        using (OracleConnection connection = new OracleConnection(_connectionString)) {
+	            connection.Open();
+
+	            string[] ppiArray = ppiDictionary.Keys.ToArray();
+	            using (OracleCommand insertCmd = new OracleCommand(insertSql, connection)) {
+	                insertCmd.BindByName = true;
+	                insertCmd.ArrayBindCount = ppiArray.Length;
+	                insertCmd.Parameters.Add(":ppis", OracleDbType.Varchar2, ppiArray, ParameterDirection.Input);
+
+	                insertCmd.ExecuteNonQuery();
+	            }
+
+	            using (OracleCommand command = new OracleCommand(query, connection)) {
+	                command.BindByName = true;
+	                command.Parameters.Add(new OracleParameter
+	                {
+	                    OracleDbType = OracleDbType.Char,
+	                    Direction = ParameterDirection.Input,
+	                    ParameterName = ":std_item_code",
+	                    Value = stdCode,
+	                    Size = 5
+	                });
+	                command.Parameters.Add(new OracleParameter
+	                {
+	                    OracleDbType = OracleDbType.Date,
+	                    Direction = ParameterDirection.Input,
+	                    ParameterName = ":report_date",
+	                    Value = searchDate
+	                });
+	                if (since != null) {
+	                    command.Parameters.Add(new OracleParameter
+	                    {
+	                        OracleDbType = OracleDbType.Date,
+	                        Direction = ParameterDirection.Input,
+	                        ParameterName = ":since_date",
+	                        Value = (DateTime) since
+	                    });
+	                }
+
+	                using (OracleDataReader sdr = command.ExecuteReader(CommandBehavior.SequentialAccess)) {
+	                    while (sdr.Read()) {
+	                        string ppi = sdr.GetString(0);
+	                        DateTime reportDate = sdr.GetDateTime(1);
+	                        int dataYear = sdr.GetInt32(2);
+	                        string timeSeriesCode = sdr.GetString(3);
+	                        string itemCode = sdr.GetStringSafe(4);
+	                        decimal? numericValue = sdr.GetNullable<decimal>(5);
+	                        string textValue = sdr.GetStringSafe(6);
+	                        string dateValue = sdr.GetStringSafe(7);
+	                        DateTime updatedDate = sdr.GetDateTime(8);
+	                        string itemName = sdr.GetString(9).Trim();
+
+	                        ShareClassDataItem item = null;
+	                        if (dateValue != null) {
+	                            item = new ShareClassDateItem
+	                            {
+	                                ItemId = itemCode,
+	                                Name = itemName,
+	                                ReportDate = reportDate,
+	                                TimeSeriesCode = timeSeriesCode,
+	                                UpdatedDate = updatedDate,
+	                                Value = DateTime.ParseExact(dateValue, "ddMMyyyy", null)
+	                            };
+	                        }
+	                        else if (numericValue != null) {
+	                            item = new ShareClassNumericItem
+	                            {
+	                                ItemId = itemCode,
+	                                Name = itemName,
+	                                ReportDate = reportDate,
+	                                TimeSeriesCode = timeSeriesCode,
+	                                UpdatedDate = updatedDate,
+	                                Value = (decimal) numericValue
+	                            };
+	                        }
+	                        else if (textValue != null) {
+	                            item = new ShareClassTextItem
+	                            {
+	                                ItemId = itemCode,
+	                                Name = itemName,
+	                                ReportDate = reportDate,
+	                                TimeSeriesCode = timeSeriesCode,
+	                                UpdatedDate = updatedDate,
+	                                Value = textValue
+	                            };
+	                        }
+
+	                        if (!dataByPpi.ContainsKey(ppi)) {
+	                            dataByPpi.Add(ppi, new List<ShareClassDataItem>());
+	                        }
+
+	                        dataByPpi[ppi].Add(item);
+	                    }
+	                }
+	            }
+
+	            connection.Close();
+	        }
+
+	        Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> companyShareData =
+	            new Dictionary<int, Dictionary<string, List<ShareClassDataItem>>>();
+	        foreach (KeyValuePair<string, List<ShareClassDataItem>> ppiData in dataByPpi) {
+	            if (ppiDictionary.ContainsKey(ppiData.Key)) {
+	                int iconum = ppiDictionary[ppiData.Key];
+	                if (!companyShareData.ContainsKey(iconum)) {
+	                    companyShareData.Add(iconum, new Dictionary<string, List<ShareClassDataItem>>());
+	                }
+	                companyShareData[iconum].Add(ppiData.Key, ppiData.Value);
+	            }
+	        }
+
+	        return companyShareData;
+	    }
+
+
+	    public Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> GetLatestCompanyFPEShareData(List<int> iconums,
 		                                                                                                  DateTime?
 			                                                                                                  reportSearchDate,
 		                                                                                                  DateTime? since) {
