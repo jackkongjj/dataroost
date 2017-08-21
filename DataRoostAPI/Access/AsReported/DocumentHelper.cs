@@ -796,9 +796,9 @@ and d.DocumentDate  between
 				);
 
 			List<ElasticObjectTree> ebObjects = new List<ElasticObjectTree>(request.Documents);
-			foreach (var eboTS in ebObjects.GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID, o.AutoClacFlag, o.EncoreFlag })) {
+			foreach (var eboTS in ebObjects.Where(o => o.AutoClacFlag == 0).GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID,  o.EncoreFlag })) {
 				SFTimeseriesDTO ts = timeSlices.FirstOrDefault(o => o.InterimType == eboTS.Key.InterimTypeID && o.ReportType == eboTS.Key.ReportTypeID && o.AccountType == eboTS.Key.AccountTypeID
-					&& o.IsAutoCalc == (eboTS.Key.AutoClacFlag == 0 ? false : true) && o.IsRecap == eboTS.Key.EncoreFlag);
+				  && o.IsRecap == eboTS.Key.EncoreFlag);
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
                     cells.Add(new Cell
