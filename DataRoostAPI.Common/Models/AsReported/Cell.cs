@@ -67,5 +67,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("scarUpdated")]
 		public bool SCARUpdated { get; set; }
+		[JsonProperty("nativeLabel")]
+		public string NativeLabel { get; set; }
 	}
 }

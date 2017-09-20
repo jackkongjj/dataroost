@@ -537,6 +537,7 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 										existingCell.CftId = cell.CftId;
 										existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
 										existingCell.Id = cell.Id;
+										existingCell.NativeLabel = cell.NativeLabel;
 									} else {
                                         if(cell.TableName == "IS" || cell.TableName == "BS" || cell.TableName == "CF") { 
                                             document.Cells.Add(cell);
@@ -603,6 +604,7 @@ and d.DocumentDate  between
                                         existingCell.CftId = cell.CftId;
                                         existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
                                         existingCell.Id = cell.Id;
+										                    existingCell.NativeLabel = cell.NativeLabel;
                                     }
                                     else {
                                         if (cell.TableName == "IS" || cell.TableName == "BS" || cell.TableName == "CF"){
@@ -704,8 +706,11 @@ and d.DocumentDate  between
 
 		private List<Cell> GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated, 
+												nlsl.Label
 												from dbo.TableCell c with (NOLOCK)
+												left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
+												left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
 												left JOIN dbo.TableDimension td  with (NOLOCK) on td.ID = dtc.TableDimensionID
@@ -744,7 +749,8 @@ and d.DocumentDate  between
 								Label = reader.GetStringSafe(12),
 								TableName = reader.GetStringSafe(13),
 								RowOrder = reader.GetNullable<int>(14), 
-								SCARUpdated = reader.GetBoolean(15)
+								SCARUpdated = reader.GetBoolean(15), 
+								NativeLabel = reader.GetStringSafe(16)
 							});
 
 						}
