@@ -229,12 +229,16 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 		}
 
 		private List<Cell> GetTableCells(AsReportedTable table) {
-			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode, dt.Description, cft.Description, c.XBRLTag
-													FROM TableDimension d 
-														JOIN DimensionType dt ON dt.ID = d.DimensionTypeID
-														JOIN DimensionToCell dtc ON dtc.TableDimensionID = d.ID
-														JOIN TableCell c ON c.ID = dtc.TableCellID
-														JOIN CompanyFinancialTerm cft ON cft.ID = c.CompanyFinancialTermID
+			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, 
+                              c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode,
+                              dt.Description, cft.Description, c.XBRLTag , 	nlsl.Label
+													FROM TableDimension d with (nolock)
+														JOIN DimensionType dt with (nolock) ON dt.ID = d.DimensionTypeID
+														JOIN DimensionToCell dtc with (nolock) ON dtc.TableDimensionID = d.ID
+														JOIN TableCell c with (nolock) ON c.ID = dtc.TableCellID
+	                          left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
+											    	left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
+														JOIN CompanyFinancialTerm cft with (nolock) ON cft.ID = c.CompanyFinancialTermID
 													WHERE d.DocumentTableID = @tableId";
 
 			Dictionary<int, Cell> cells = new Dictionary<int, Cell>();
@@ -278,6 +282,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 									ScalingFactor = scalingFactor,
 									CompanyFinancialTermDescription = companyFinancialTermDescription,
 									XbrlTag = xbrlTag,
+									NativeLabel = reader.GetStringSafe(14)
 								};
 								cells.Add(cellId, cell);
 							}
