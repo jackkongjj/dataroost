@@ -204,7 +204,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                         s.Price,
                                         s.Shares_Out,
                                         s.Ticker,
-                                        s.Sedol,
+                                        p.Sedol,
                                         s.ISIN,
                                         s.To_Cusip,
                                         s.Issue_Type,
