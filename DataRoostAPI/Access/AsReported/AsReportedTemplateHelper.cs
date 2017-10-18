@@ -633,6 +633,12 @@ UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 E
 																WHERE ID = @cellid; 
 ";
             const string SQL_SelectSibilingCells = @"
+DECLARE @TargetSH int;
+
+SELECT top 1 @TargetSH = sh.id
+  FROM  StaticHierarchy sh WITH (NOLOCK)
+  JOIN [TableCell] tc WITH (NOLOCK) on sh.CompanyFinancialTermId = tc.CompanyFinancialTermId
+  where tc.id = @cellid
 
 SELECT *
 FROM vw_SCARDocumentTimeSliceTableCell tc
@@ -735,13 +741,11 @@ FROM StaticHierarchy
 WHERE ID = @TargetSH
 
 
-SELECT distinct tc.TableCellID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+SELECT distinct 'x', tc.TableCellID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
 				tc.XBRLTag, 
-				--tc.UpdateStampUTC
-				null
-				, tc.DocumentId, tc.Label, sf.Value,
+				tc.DocumentId, tc.Label, sf.Value,
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.TableCellId = aetc.TableCellId),
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
 				lpv.LPVFail, 
@@ -776,7 +780,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     conn.Open();
                     cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
                     cmd.Parameters.AddWithValue("@cellid", CellId);
-                    cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
                     cmd.Parameters.AddWithValue("@Iconum", iconum);
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
@@ -853,7 +856,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                         while (reader.Read())
                         {
                             SCARAPITableCell cell;
-                            if (reader.GetNullable<int>(0).HasValue)
+                            if (reader.GetNullable<int>(1).HasValue)
                             {
                                 cell = new SCARAPITableCell
                                 {
