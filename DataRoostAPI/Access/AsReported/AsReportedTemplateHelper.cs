@@ -632,7 +632,8 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END
 																WHERE ID = @cellid; 
 ";
-            const string SQL_SelectSibilingCells = @"
+
+            const string SQL_ValidateCells= @"
 DECLARE @TargetSH int;
 
 SELECT top 1 @TargetSH = sh.id
@@ -640,79 +641,19 @@ SELECT top 1 @TargetSH = sh.id
   JOIN [TableCell] tc WITH (NOLOCK) on sh.CompanyFinancialTermId = tc.CompanyFinancialTermId
   where tc.id = @cellid
 
-SELECT *
-FROM vw_SCARDocumentTimeSliceTableCell tc
-JOIN DocumentTimeSlice dts ON tc.DocumentTimeSliceID = dts.ID
-LEFT JOIN DocumentTimeSlice dtsSib ON dts.TimeSlicePeriodEndDate = dtsSib.TimeSlicePeriodEndDate 
-                                                                     AND dts.PeriodType = dtsSib.PeriodType 
-                                                                     AND dts.DocumentSeriesId = dtsSib.DocumentSeriesId
-                                                                     AND dts.ID <> dtsSib.ID
-LEFT JOIN Document d on dtsSib.DocumentID = d.ID
-LEFT JOIN vw_SCARDocumentTimeSliceTableCell tcSib ON tcSib.DocumentTimeSliceID = dtsSib.ID AND tc.CompanyFinancialTermID = tcSib.CompanyFinancialTermID
-WHERE tc.TableCellID = @cellid
-AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-AND not tcSib.TableCellID is null;
-
-DECLARE @StaticHierarchyList StaticHierarchyList
-
-INSERT INTO @StaticHierarchyList (StaticHierarchyID)
-VALUES (@TargetSH)
-
-";
-            const string SQL_SelectCurrenCell = @"
- 
-";
-
-            const string SQL_ValidateCells= @"
-
-DECLARE @ParentCells CellList
-
-INSERT INTO @ParentCells
-SELECT shp.ID, dts.DocumentTimeSliceID
-FROM @StaticHierarchyList shl
-JOIN StaticHierarchy sh ON shl.StaticHierarchyID = sh.ID
-JOIN StaticHierarchy sht ON sht.ID = @TargetSH
-JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
-JOIN TableCell tc ON sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
-JOIN DocumentTimeSliceTableCell dts on tc.ID = dts.TableCellID
-WHERE sh.ParentID <> sht.ParentID
-
-INSERT INTO @ParentCells
-SELECT DISTINCT sht.ID, dts.DocumentTimeSliceID
-FROM @StaticHierarchyList shl
-JOIN StaticHierarchy sh ON shl.StaticHierarchyID = sh.ID
-JOIN StaticHierarchy sht ON sht.ID = @TargetSH
-JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
-JOIN TableCell tc ON sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
-JOIN DocumentTimeSliceTableCell dts on tc.ID = dts.TableCellID
-
-
-DECLARE @ParentCellMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
-
-INSERT INTO @ParentCellMTMW
-exec SCARGetTableCellMTMW @ParentCells
-
-
---TODO: AddParentCells
-SELECT mtmw.StaticHierarchyID, mtmw.DocumentTimeSliceID, TableCellID, tc.ValueNumeric, tc.IsIncomePositive, sf.Value, mtmw.RootStaticHierarchyID, mtmw.RootDocumentTimeSliceID
-FROM @ParentCellMTMW mtmw
-JOIN TableCell tc ON mtmw.TableCellID = tc.ID
-JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID;
-
-
 DECLARE @SHCells CellList
 
 INSERT @SHCells
 SELECT sh.ID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
-WHERE sh.ID = @TargetSH
+WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, CompanyFinancialTermID int, ParentID int, DocumentTimeSliceID int, TableCellID int, IsRoot bit, RootStaticHierarchyID int, RootDocumentTimeSliceID int)
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMW @SHCells
+EXEC SCARGetTableCellMTMW_Parent @SHCells
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
@@ -721,6 +662,10 @@ SELECT mtmw.StaticHierarchyID, mtmw.DocumentTimeSliceID, TableCellID, tc.ValueNu
 FROM @SHCellsMTMW mtmw
 JOIN TableCell tc ON mtmw.TableCellID = tc.ID
 JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID;
+
+INSERT @SHCellsLPV 
+SELECT mtmw.StaticHierarchyID, mtmw.DocumentTimeSliceID, 0 from @SHCellsMTMW mtmw;
+
 
 WITH cte_level(SHRootID, SHID, level)
 AS
@@ -735,11 +680,6 @@ AS
 SELECT MAX(level)
 FROM cte_level
 GROUP BY SHRootID
-
-SELECT * 
-FROM StaticHierarchy 
-WHERE ID = @TargetSH
-
 
 SELECT distinct 'x', tc.TableCellID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
@@ -756,8 +696,7 @@ JOIN Document d on dts.DocumentID = d.ID
 LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsLPV lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
 LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
-WHERE sh.ID = @TargetSH
-AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
 
  
@@ -769,8 +708,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
  
             string SQL_FlipSignCommand = 
                 SQL_UpdateFlipIncomeFlag 
-                + SQL_SelectSibilingCells 
-                + SQL_SelectCurrenCell
                 + SQL_ValidateCells
                 ;
             using (SqlConnection conn = new SqlConnection(_sfConnectionString))
@@ -784,22 +721,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        result.StaticHierarchyAdjustedOrders = reader.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
-                        reader.NextResult();
 
-                        result.ParentCellChangeComponents = reader.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
-                        {
-                            StaticHierarchyID = r.GetInt32(0),
-                            DocumentTimeSliceID = r.GetInt32(1),
-                            TableCellID = r.GetInt32(2),
-                            ValueNumeric = r.GetDecimal(3),
-                            IsIncomePositive = r.GetBoolean(4),
-                            ScalingFactorValue = r.GetDouble(5),
-                            RootStaticHierarchyID = r.GetInt32(6),
-                            RootDocumentTimeSliceID = r.GetInt32(7)
-                        }).ToList();
-
-                        reader.NextResult();
                         List<CellMTMWComponent> comps = reader.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
                         {
                             StaticHierarchyID = r.GetInt32(0),
@@ -823,35 +745,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                         reader.Read();
                         int level = reader.GetInt32(0);
                         reader.NextResult();
-                        reader.Read();
-                        StaticHierarchy document = null ;
-                        try
-                        {
-                            document = new StaticHierarchy
-                            {
-                                Id = reader.GetInt32(0),
-                                CompanyFinancialTermId = reader.GetInt32(1),
-                                AdjustedOrder = reader.GetInt32(2),
-                                TableTypeId = reader.GetInt32(3),
-                                Description = reader.GetStringSafe(4),
-                                HierarchyTypeId = reader.GetStringSafe(5)[0],
-                                SeparatorFlag = reader.GetBoolean(6),
-                                StaticHierarchyMetaId = reader.GetInt32(7),
-                                UnitTypeId = reader.GetInt32(8),
-                                IsIncomePositive = reader.GetBoolean(9),
-                                ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                Cells = new List<SCARAPITableCell>(),
-                                Level = level
-                            };
-                        }
-                        catch { }
-
-                        result.StaticHierarchy = document;
-                        reader.NextResult();
-
                         int shix = 0;
-
                         int adjustedOrder = 0;
                         while (reader.Read())
                         {
@@ -879,10 +773,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                                     Currency = reader.GetStringSafe(17),
                                     CurrencyCode = reader.GetStringSafe(18),
                                     Cusip = reader.GetStringSafe(19)
-                                    //ScarUpdated = reader.GetBoolean(20),
-                                    //IsIncomePositive = reader.GetBoolean(21),
-                                    //XBRLTag = reader.GetStringSafe(22),
-                                    //UpdateStampUTC = reader.GetNullable<DateTime>(23),
                                     //DocumentID = reader.IsDBNull(24) ? Guid.Empty : reader.GetGuid(24),
                                     //Label = reader.GetStringSafe(25),
                                     //ScalingFactorValue = reader.GetDouble(26),
@@ -895,11 +785,14 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                                 //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
                                 cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
                                 cell.Label = reader.GetStringSafe(24);
-                                result.ChangedCellIds.Add(cell.ID.ToString());
+                                //result.ChangedCellIds.Add(cell.ID.ToString());
                                 //cell.ScalingFactorValue = reader.GetDouble(25);
-                                //cell.ARDErrorTypeId = reader.GetNullable<int>(1);
-                                //cell.MTMWErrorTypeId = reader.GetNullable<int>(1);
+																cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+																cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+																cell.LikePeriodValidationFlag = reader.GetBoolean(28);
                                 adjustedOrder++;// = reader.GetInt32(1);
+																result.ChangedCells.Add(cell);
+
                             }
                             else
                             {
@@ -910,17 +803,17 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                     }
                 }
             }
-            SCARAPITableCell currCell = GetCell(CellId);
-            result.CellToDTS.Add(currCell, 0);
-            if (currCell != null)
-            {
-                result.ChangedCells.Add(currCell);
-            }
-            //return new ScarResult();
-            if (!result.ChangedCellIds.Contains(CellId))
-            {
-                result.ChangedCellIds.Add(CellId);
-            }
+						//SCARAPITableCell currCell = GetCell(CellId);
+						//result.CellToDTS.Add(currCell, 0);
+						//if (currCell != null)
+						//{
+						//		result.ChangedCells.Add(currCell);
+						//}
+						////return new ScarResult();
+						//if (!result.ChangedCellIds.Contains(CellId))
+						//{
+						//		result.ChangedCellIds.Add(CellId);
+						//}
             return result;
 		}
 
