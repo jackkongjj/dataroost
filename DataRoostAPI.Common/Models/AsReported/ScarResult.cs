@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.AsReported {
-
 	public class ScarResult {
 		[JsonProperty("staticHierarchyAdjustedOrders")]
 		public List<StaticHierarchyAdjustedOrder> StaticHierarchyAdjustedOrders { get; set; }
@@ -21,15 +20,15 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("staticHierarchy")]
 		public StaticHierarchy StaticHierarchy { get; set; }
 
-        [JsonProperty("changedCells")]
-        public List<SCARAPITableCell> ChangedCells { get; set; }
+		[JsonProperty("changedCells")]
+		public List<SCARAPITableCell> ChangedCells { get; set; }
 
-        [JsonProperty("changedCellIds")]
-        public List<string> ChangedCellIds { get; set; }
+		[JsonProperty("TimeSlices")]
+		public List<TimeSlice> TimeSlices { get; set; }
 
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]
-        public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
+		public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
 	}
 }

@@ -626,6 +626,86 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+		public ScarResult GetTimeSliceByTemplate(string TemplateName, Guid DocumentId) {
+
+			string SQL_query = @"
+DECLARE @DocumentSeriesId int;
+select top 1 @DocumentSeriesId = d.DocumentSeriesID
+	FROM Document d WITH (NOLOCK)
+	where d.DAMDocumentId = @DocumentID;
+
+;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell)
+AS
+(
+	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id)
+		FROM DocumentSeries ds WITH (NOLOCK)
+		JOIN DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+		JOIN Document d WITH (NOLOCK) on dts.DocumentId = d.ID
+		JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on dts.ID = dtstc.DocumentTimeSliceID
+		JOIN TableCell tc WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+		JOIN DimensionToCell dtc WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
+		JOIN StaticHierarchy sh WITH (NOLOCK) on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+		JOIN TableType tt WITH (NOLOCK) on tt.ID = sh.TableTypeID  
+	WHERE 1=1
+	and tt.description = @TypeTable
+	and ds.id = @DocumentSeriesId
+	group by d.damdocumentid, dts.id 
+)
+SELECT *
+	FROM cte_timeslice ts WITH (NOLOCK)
+	JOIN DocumentTimeSlice dts WITH(NOLOCK) on ts.TimeSliceId = dts.Id
+";
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				StaticHierarchy sh;
+				ScarResult response = new ScarResult();
+				response.TimeSlices = new List<TimeSlice>();
+
+				using (SqlCommand cmd = new SqlCommand(SQL_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+					cmd.Parameters.AddWithValue("@TypeTable", TemplateName);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						var ordinals = new
+						{
+							DamDocumentId = reader.GetOrdinal("DamDocumentID"),
+							TimeSliceId = reader.GetOrdinal("TimeSliceId"),
+							DocumentDate = reader.GetOrdinal("TimeSlicePeriodEndDate"),
+							DocumentSeriesId = reader.GetOrdinal("DocumentSeriesId"),
+							ReportType = reader.GetOrdinal("ReportType"),
+							ReportStatus = reader.GetOrdinal("ReportType"),
+							//TableType = reader.GetOrdinal(""),
+							PeriodLength = reader.GetOrdinal("Duration"),
+							PeriodType = reader.GetOrdinal("PeriodType"),
+							Currency = reader.GetOrdinal("AccountingStandard"),
+							PeriodEndDate = reader.GetOrdinal("TimeSlicePeriodEndDate"),
+							InterimType = reader.GetOrdinal("PeriodType"),
+							AutocalcStatus = reader.GetOrdinal("IsAutoCalc"),
+							NumberOfCells = reader.GetOrdinal("NumberofCell"),
+						};
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								DamDocumentId = reader.GetGuid(ordinals.DamDocumentId),
+								Id = reader.GetInt32(ordinals.TimeSliceId),
+								DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesId),
+								TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.DocumentDate),
+								ReportingPeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate),
+								FiscalDistance = reader.GetInt32(ordinals.PeriodLength),
+								Duration = reader.GetInt32(ordinals.PeriodLength),
+								PeriodType = reader.GetStringSafe(ordinals.PeriodType),
+								ReportType = reader.GetStringSafe(ordinals.ReportType),
+								IsAutoCalc = reader.GetBoolean(ordinals.AutocalcStatus),
+								NumberOfCells = reader.GetInt32(ordinals.NumberOfCells)
+							};
+							response.TimeSlices.Add(slice);
+						}
+					}
+				}
+				return response;
+			}
+		}
+
 
         public ScarResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID)
         {
@@ -708,7 +788,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 ";
             ScarResult result = new ScarResult();
             result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
-            result.ChangedCellIds = new List<string>();
             result.ChangedCells = new List<SCARAPITableCell>();
  
             string SQL_FlipSignCommand = 
@@ -764,7 +843,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                                 //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
                                 cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
                                 cell.Label = reader.GetStringSafe(24);
-                                //result.ChangedCellIds.Add(cell.ID.ToString());
                                 //cell.ScalingFactorValue = reader.GetDouble(25);
 																cell.ARDErrorTypeId = reader.GetNullable<int>(26);
 																cell.MTMWErrorTypeId = reader.GetNullable<int>(27);

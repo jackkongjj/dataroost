@@ -104,26 +104,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				isLoadSuccessful = false;
 			}
 		}
-//		static PerformanceCounter CpuCounterTotal = new PerformanceCounter("Processor",
-//"% Processor Time", "_Total");
-//		static PerformanceCounter CpuCounter0 = new PerformanceCounter("Processor",
-//"% Processor Time", "0");
-//		static PerformanceCounter CpuCounter1 = new PerformanceCounter("Processor",
-//"% Processor Time", "1");
-//		static PerformanceCounter CpuCounter2 = new PerformanceCounter("Processor",
-//"% Processor Time", "2");
-//		static PerformanceCounter CpuCounter3 = new PerformanceCounter("Processor",
-//"% Processor Time", "3");
-//		static PerformanceCounter CpuCounter4 = new PerformanceCounter("Processor",
-//"% Processor Time", "4");
-//		static PerformanceCounter CpuCounter5 = new PerformanceCounter("Processor",
-//"% Processor Time", "5");
-//		static PerformanceCounter CpuCounter6 = new PerformanceCounter("Processor",
-//"% Processor Time", "6");
-//		static PerformanceCounter CpuCounter7 = new PerformanceCounter("Processor",
-//"% Processor Time", "7");
-//		static PerformanceCounter CpuCounter8 = new PerformanceCounter("Processor",
-//"% Processor Time", "8");
+		//		static PerformanceCounter CpuCounterTotal = new PerformanceCounter("Processor",
+		//"% Processor Time", "_Total");
+		//		static PerformanceCounter CpuCounter0 = new PerformanceCounter("Processor",
+		//"% Processor Time", "0");
+		//		static PerformanceCounter CpuCounter1 = new PerformanceCounter("Processor",
+		//"% Processor Time", "1");
+		//		static PerformanceCounter CpuCounter2 = new PerformanceCounter("Processor",
+		//"% Processor Time", "2");
+		//		static PerformanceCounter CpuCounter3 = new PerformanceCounter("Processor",
+		//"% Processor Time", "3");
+		//		static PerformanceCounter CpuCounter4 = new PerformanceCounter("Processor",
+		//"% Processor Time", "4");
+		//		static PerformanceCounter CpuCounter5 = new PerformanceCounter("Processor",
+		//"% Processor Time", "5");
+		//		static PerformanceCounter CpuCounter6 = new PerformanceCounter("Processor",
+		//"% Processor Time", "6");
+		//		static PerformanceCounter CpuCounter7 = new PerformanceCounter("Processor",
+		//"% Processor Time", "7");
+		//		static PerformanceCounter CpuCounter8 = new PerformanceCounter("Processor",
+		//"% Processor Time", "8");
 		string ProcessName = null;
 		public string GetPerformanceData() {
 			try {
@@ -330,64 +330,52 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTimeSlice(id);
 		}
 
-        [Route("cells/{id}/flipsign/{DocumentId}/")]
-        [HttpGet]
-        public ScarResult FlipSign(string id, Guid DocumentId)
-        {
-            string CompanyId = "36468";
-            int iconum = PermId.PermId2Iconum(CompanyId);
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.FlipSign(id, DocumentId, iconum, 0);
-        }
-
-        [Route("cells/{id}/flipsign/{DocumentId}/")]
-        [HttpPost]
-        public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input)
-        {
-            string CompanyId = "36468";
-            int iconum = PermId.PermId2Iconum(CompanyId);
-            if (input == null || input.TargetStaticHierarchyID == 0)
-                return null;
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
-        }
-
-        [Route("cells/{id}/addMTMW/{DocumentId}/")]
-        [HttpGet]
-        public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId)
-        {
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.AddMakeTheMathWorkNote(id, DocumentId);
-        }
-
-        [Route("cells/{id}/addLikePeriod/{DocumentId}/")]
-        [HttpGet]
-        public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId)
-        {
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.AddLikePeriodValidationNote(id, DocumentId);
-        }
-
-
-
-		public class StitchInput {
-			public int TargetStaticHierarchyID { get; set; }
-			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		[Route("cells/{id}/flipsign/{DocumentId}/")]
+		[HttpGet]
+		public ScarResult FlipSign(string id, Guid DocumentId) {
+			string CompanyId = "36468";
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipSign(id, DocumentId, iconum, 0);
 		}
 
-		public class UnStitchInput {
-			public int TargetStaticHierarchyID { get; set; }
+		[Route("cells/{id}/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input) {
+			string CompanyId = "36468";
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || input.TargetStaticHierarchyID == 0)
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
 		}
 
-        public class ScarInput
-        {
-            public int TargetStaticHierarchyID { get; set; }
-            public List<int> StitchingStaticHierarchyIDs { get; set; }
-        }
+		[Route("cells/{id}/addMTMW/{DocumentId}/")]
+		[HttpGet]
+		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddMakeTheMathWorkNote(id, DocumentId);
+		}
+
+		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
+		[HttpGet]
+		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddLikePeriodValidationNote(id, DocumentId);
+		}
+
+		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
+		[HttpGet]
+		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTimeSliceByTemplate(TemplateName, DocumentId);
+		}
+
 
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]
@@ -415,5 +403,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
 		}
+		
+		public class StitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
+		public class UnStitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+		}
+
+		public class ScarInput {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
 	}
 }

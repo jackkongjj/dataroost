@@ -10,6 +10,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("Id")]
 		public int Id { get; set; }
 
+		[JsonProperty("DamDocumentId")]
+		public Guid DamDocumentId { get; set; }
+
 		[JsonProperty("DocumentId")]
 		public Guid DocumentId { get; set; }
 
@@ -55,6 +58,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("ReportType")]
 		public string ReportType { get; set; }
 
+		[JsonProperty("InterimType")]
+		public string InterimType { get; set; }
+
 		[JsonProperty("IsAmended")]
 		public bool IsAmended { get; set; }
 
@@ -67,6 +73,11 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("ManualOrgSet")]
 		public bool ManualOrgSet { get; set; }
 
+		[JsonProperty("NumberOfCells")]
+		public int NumberOfCells { get; set; }
+
+		[JsonProperty("Currency")]
+		public string Currency { get; set; }
 	}
 
 }
