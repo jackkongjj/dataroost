@@ -843,7 +843,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
                                 //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
                                 cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
                                 cell.Label = reader.GetStringSafe(24);
-                                //cell.ScalingFactorValue = reader.GetDouble(25);
+                                cell.ScalingFactorValue = reader.GetDouble(25);
 																cell.ARDErrorTypeId = reader.GetNullable<int>(26);
 																cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
 																cell.LikePeriodValidationFlag = reader.GetBoolean(28);
