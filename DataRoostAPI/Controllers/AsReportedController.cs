@@ -376,6 +376,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTimeSliceByTemplate(TemplateName, DocumentId);
 		}
 
+		[Route("templates/{TemplateName}/timeslice/review")]
+		[HttpGet]
+		public ScarResult GetTimeSliceReview(string CompanyId, string TemplateName) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetReviewTimeSlice(TemplateName, iconum);
+		}
 
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]

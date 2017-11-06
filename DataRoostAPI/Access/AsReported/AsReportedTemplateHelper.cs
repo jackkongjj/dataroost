@@ -626,6 +626,75 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+		public ScarResult GetReviewTimeSlice(string TemplateName, int iconum) {
+
+			string SQL_ReviewButton = @"
+select tc.CellDate as PeriodEndDate, 
+case when dts.PeriodType = 'XX' THEN 'AR' ELSE dts.PeriodType END as TimeSeries, 
+case when IsRecap = 1 AND ManualOrgSet = 0 THEN 'RECAP' ELSE 'ORG' END as AccountType, 
+d.FormTypeID as FormType, 
+case when dts.ReportType = 'P' THEN 'P' ELSE CASE WHEN dts.periodtype = 'XX' THEN 'A' ELSE 'I' END END as ReportType, 
+tc.CellDate as PubDate,
+dts.CompanyFiscalYear as DataYear,
+dbo.GetEndLabel(sh.Description) as DataLabel,
+mtm.Description as Comment
+from DocumentSeries ds
+join CompanyFinancialTerm cft on ds.id = cft.documentseriesid
+join statichierarchy sh on sh.companyfinancialtermid = cft.id
+join TableType tt on sh.tabletypeid = tt.id
+join TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermId
+join DocumentTimeSliceTableCell dtstc on tc.id = dtstc.tablecellid
+join documenttimeslice dts on dts.id = dtstc.documenttimesliceid and dts.DocumentSeriesId = ds.ID
+join Document d on dts.documentid = d.id
+join MTMWErrorTypeTableCell mtmtc on tc.id = mtmtc.tablecellid
+join MTMWErrorType mtm on mtmtc.MTMWErrorTypeId = mtm.ID
+where companyid = @Iconum
+and tt.description = @TableType
+
+";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				ScarResult response = new ScarResult();
+				response.TimeSlices = new List<TimeSlice>();
+
+				using (SqlCommand cmd = new SqlCommand(SQL_ReviewButton, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
+					cmd.Parameters.AddWithValue("@TableType", TemplateName);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						var ordinals = new
+						{
+							PeriodEndDate = reader.GetOrdinal("PeriodEndDate"),
+							TimeSeries = reader.GetOrdinal("TimeSeries"),
+							AccountType = reader.GetOrdinal("AccountType"),
+							FormType = reader.GetOrdinal("FormType"),
+							ReportType = reader.GetOrdinal("ReportType"),
+							PubDate = reader.GetOrdinal("PubDate"),
+							DataYear = reader.GetOrdinal("DataYear"),
+							DataLabel = reader.GetOrdinal("DataLabel"),
+							Comment = reader.GetOrdinal("Comment")
+						};
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								DamDocumentId = new Guid("00000000-0000-0000-0000-000000000000"),
+								TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate),
+								InterimType = reader.GetStringSafe(ordinals.TimeSeries),
+								AccountingStandard = reader.GetStringSafe(ordinals.AccountType),
+								PeriodType = reader.GetStringSafe(ordinals.FormType),
+								ReportType = reader.GetStringSafe(ordinals.ReportType),
+								PublicationDate = reader.GetDateTime(ordinals.PubDate),
+								CompanyFiscalYear = reader.GetDecimal(ordinals.DataYear),
+								ConsolidatedFlag = reader.GetStringSafe(ordinals.DataLabel),
+								AcquisitionFlag = reader.GetStringSafe(ordinals.Comment)
+							};
+							response.TimeSlices.Add(slice);
+						}
+					}
+				}
+				return response;
+			}
+		}
+
 		public ScarResult GetTimeSliceByTemplate(string TemplateName, Guid DocumentId) {
 
 			string SQL_query = @"
