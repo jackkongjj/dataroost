@@ -330,6 +330,31 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTimeSlice(id);
 		}
 
+
+		[Route("timeSlice/{id}")]
+		[HttpPut]
+		public TimeSlice PutTimeSlice(string CompanyId, int id, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSliceReportType(id, input.StringData);
+		}
+
+		[Route("timeSlice/{id}")]
+		[HttpPost]
+		public TimeSlice PostTimeSlice(string CompanyId, int id, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.CloneUpdateTimeSlice(id, input.StringData);
+		}
+
+
+
 		[Route("cells/{id}/flipsign/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult FlipSign(string id, Guid DocumentId) {
@@ -426,5 +451,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
 		}
 
+		public class StringInput {
+			public string StringData { get; set; }
+		}
 	}
 }

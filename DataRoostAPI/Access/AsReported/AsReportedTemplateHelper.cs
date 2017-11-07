@@ -626,6 +626,160 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+		public TimeSlice UpdateTimeSliceReportType(int id, string ReportType) {
+
+			string query = @"
+UPDATE DocumentTimeSlice SET ReportType = @ReportType where ID = @id;
+
+SELECT * FROM DocumentTimeSlice WHERE ID = @id;
+";
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@ReportType", ReportType);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						TimeSlice slice = new TimeSlice
+						{
+							Id = reader.GetInt32(0),
+							DocumentId = reader.GetGuid(1),
+							DocumentSeriesId = reader.GetInt32(2),
+							TimeSlicePeriodEndDate = reader.GetDateTime(3),
+							ReportingPeriodEndDate = reader.GetDateTime(4),
+							FiscalDistance = reader.GetInt32(5),
+							Duration = reader.GetInt32(6),
+							PeriodType = reader.GetStringSafe(7),
+							AcquisitionFlag = reader.GetStringSafe(8),
+							AccountingStandard = reader.GetStringSafe(9),
+							ConsolidatedFlag = reader.GetStringSafe(10),
+							IsProForma = reader.GetBoolean(11),
+							IsRecap = reader.GetBoolean(12),
+							CompanyFiscalYear = reader.GetDecimal(13),
+							ReportType = reader.GetStringSafe(14),
+							IsAmended = reader.GetBoolean(15),
+							IsRestated = reader.GetBoolean(16),
+							IsAutoCalc = reader.GetBoolean(17),
+							ManualOrgSet = reader.GetBoolean(18)
+						};
+						return slice;
+					}
+				}
+			}
+		}
+
+		public TimeSlice CloneUpdateTimeSlice(int id, string InterimType) {
+
+			string query = @"
+DECLARE @newId int;
+
+INSERT DocumentTimeSlice
+( [DocumentId]
+      ,[DocumentSeriesId]
+      ,[TimeSlicePeriodEndDate]
+      ,[ReportingPeriodEndDate]
+      ,[FiscalDistance]
+      ,[Duration]
+      ,[PeriodType]
+      ,[AcquisitionFlag]
+      ,[AccountingStandard]
+      ,[ConsolidatedFlag]
+      ,[IsProForma]
+      ,[IsRecap]
+      ,[CompanyFiscalYear]
+      ,[ReportType]
+      ,[IsAmended]
+      ,[IsRestated]
+      ,[IsAutoCalc]
+      ,[ManualOrgSet])
+
+SELECT TOP 1 [DocumentId]
+      ,[DocumentSeriesId]
+      ,[TimeSlicePeriodEndDate]
+      ,[ReportingPeriodEndDate]
+      ,[FiscalDistance]
+      ,[Duration]
+      ,@PeriodType
+      ,[AcquisitionFlag]
+      ,[AccountingStandard]
+      ,[ConsolidatedFlag]
+      ,[IsProForma]
+      ,[IsRecap]
+      ,[CompanyFiscalYear]
+      ,[ReportType]
+      ,[IsAmended]
+      ,[IsRestated]
+      ,[IsAutoCalc]
+      ,[ManualOrgSet]
+  FROM [DocumentTimeSlice] where id = @id;
+
+
+  
+
+select @newId =  cast(scope_identity() as int);
+
+SELECT [Id]
+	  ,[DocumentId]
+      ,[DocumentSeriesId]
+      ,[TimeSlicePeriodEndDate]
+      ,[ReportingPeriodEndDate]
+      ,[FiscalDistance]
+      ,[Duration]
+      ,[PeriodType]
+      ,[AcquisitionFlag]
+      ,[AccountingStandard]
+      ,[ConsolidatedFlag]
+      ,[IsProForma]
+      ,[IsRecap]
+      ,[CompanyFiscalYear]
+      ,[ReportType]
+      ,[IsAmended]
+      ,[IsRestated]
+      ,[IsAutoCalc]
+      ,[ManualOrgSet]
+  FROM [DocumentTimeSlice] where id = @newId;
+";
+
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@PeriodType", InterimType);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						TimeSlice slice = new TimeSlice
+						{
+							Id = reader.GetInt32(0),
+							DocumentId = reader.GetGuid(1),
+							DocumentSeriesId = reader.GetInt32(2),
+							TimeSlicePeriodEndDate = reader.GetDateTime(3),
+							ReportingPeriodEndDate = reader.GetDateTime(4),
+							FiscalDistance = reader.GetInt32(5),
+							Duration = reader.GetInt32(6),
+							PeriodType = reader.GetStringSafe(7),
+							AcquisitionFlag = reader.GetStringSafe(8),
+							AccountingStandard = reader.GetStringSafe(9),
+							ConsolidatedFlag = reader.GetStringSafe(10),
+							IsProForma = reader.GetBoolean(11),
+							IsRecap = reader.GetBoolean(12),
+							CompanyFiscalYear = reader.GetDecimal(13),
+							ReportType = reader.GetStringSafe(14),
+							IsAmended = reader.GetBoolean(15),
+							IsRestated = reader.GetBoolean(16),
+							IsAutoCalc = reader.GetBoolean(17),
+							ManualOrgSet = reader.GetBoolean(18)
+						};
+						return slice;
+					}
+				}
+			}
+		}
+
+
 		public ScarResult GetReviewTimeSlice(string TemplateName, int iconum) {
 
 			string SQL_ReviewButton = @"
