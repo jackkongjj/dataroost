@@ -673,6 +673,7 @@ SELECT * FROM DocumentTimeSlice WHERE ID = @id;
 		public TimeSlice CloneUpdateTimeSlice(int id, string InterimType) {
 
 			string query = @"
+begin tran
 DECLARE @newId int;
 
 INSERT DocumentTimeSlice
@@ -720,6 +721,10 @@ SELECT TOP 1 [DocumentId]
 
 select @newId =  cast(scope_identity() as int);
 
+UPDATE [DocumentTimeSliceTableCell] SET  DocumentTimeSliceId = @newId
+  WHERE DocumentTimeSliceId = @id;
+
+
 SELECT [Id]
 	  ,[DocumentId]
       ,[DocumentSeriesId]
@@ -740,6 +745,7 @@ SELECT [Id]
       ,[IsAutoCalc]
       ,[ManualOrgSet]
   FROM [DocumentTimeSlice] where id = @newId;
+rollback tran
 ";
 
 
