@@ -17,9 +17,6 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("parentMTMWChanges")]
 		public Dictionary<int, Dictionary<int, bool>> ParentMTMWChanges { get; set; }
 
-		[JsonProperty("staticHierarchy")]
-		public StaticHierarchy StaticHierarchy { get; set; }
-
 		[JsonProperty("staticHierarchies")]
 		public List<StaticHierarchy> StaticHierarchies { get; set; }
 

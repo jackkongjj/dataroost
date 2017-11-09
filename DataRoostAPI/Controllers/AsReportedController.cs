@@ -317,6 +317,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetStaticHierarchy(id);
 		}
 
+		[Route("staticHierarchy/{id}")]
+		[HttpPut]
+		public ScarResult EditHierarchyLabel(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyLabel(id, input.StringData);
+		}
+
 		//TODO: Add IsSummary
 		[Route("timeSlice/{id}")]
 		[HttpGet]
