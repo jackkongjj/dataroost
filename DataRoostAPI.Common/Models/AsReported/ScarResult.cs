@@ -20,6 +20,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("staticHierarchy")]
 		public StaticHierarchy StaticHierarchy { get; set; }
 
+		[JsonProperty("staticHierarchies")]
+		public List<StaticHierarchy> StaticHierarchies { get; set; }
+
 		[JsonProperty("changedCells")]
 		public List<SCARAPITableCell> ChangedCells { get; set; }
 

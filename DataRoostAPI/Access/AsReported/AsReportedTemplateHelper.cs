@@ -586,6 +586,126 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+
+		public ScarResult UpdateStaticHierarchyLabel(int id, string newLabel) {
+
+			string query = @"
+DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
+DECLARE @OrigHierarchyLabel varchar(1024) 
+DECLARE @NewHierarchyLabel varchar(1024)  
+
+if CHARINDEX(']',@OrigDescription) > 0
+BEGIN
+ SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabel(Description) + '[' + dbo.GetEndLabel(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
+ SET @NewHierarchyLabel = dbo.GetHierarchyLabel(@OrigDescription) + '[' + @NewEndLabel + ']'
+	 UPDATE StaticHierarchy
+	SET Description = (dbo.GetHierarchyLabel(@OrigDescription) + @NewEndLabel)
+	WHERE ID = @TargetSHID
+
+END
+ELSE
+BEGIN -- deal with first level 
+ SET @OrigHierarchyLabel = @OrigDescription
+ SET @NewHierarchyLabel = @NewEndLabel
+	UPDATE StaticHierarchy
+	SET Description =  @NewEndLabel
+	WHERE ID = @TargetSHID
+END
+
+
+;WITH CTE_Children(ID) AS(
+	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	UNION ALL
+	SELECT sh.Id 
+	FROM StaticHierarchy sh
+	JOIN CTE_Children cte on sh.ParentID = cte.ID
+) UPDATE sh
+   SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel)
+FROM CTE_Children cte
+JOIN StaticHierarchy sh on cte.ID = SH.Id   
+
+
+;WITH CTE_Children ([Id]
+      ,[CompanyFinancialTermId]
+      ,[AdjustedOrder]
+      ,[TableTypeId]
+      ,[Description]
+      ,[HierarchyTypeId]
+      ,[SeperatorFlag]
+      ,[StaticHierarchyMetaId]
+      ,[UnitTypeId]
+      ,[IsIncomePositive]
+      ,[ChildrenExpandDown]
+      ,[ParentID]) AS(
+	SELECT [Id]
+      ,[CompanyFinancialTermId]
+      ,[AdjustedOrder]
+      ,[TableTypeId]
+      ,[Description]
+      ,[HierarchyTypeId]
+      ,[SeperatorFlag]
+      ,[StaticHierarchyMetaId]
+      ,[UnitTypeId]
+      ,[IsIncomePositive]
+      ,[ChildrenExpandDown]
+      ,[ParentID] FROM StaticHierarchy WHERE ID = @TargetSHID
+	UNION ALL
+ 
+	SELECT sh.[Id]
+      ,sh.[CompanyFinancialTermId]
+      ,sh.[AdjustedOrder]
+      ,sh.[TableTypeId]
+      ,sh.[Description]
+      ,sh.[HierarchyTypeId]
+      ,sh.[SeperatorFlag]
+      ,sh.[StaticHierarchyMetaId]
+      ,sh.[UnitTypeId]
+      ,sh.[IsIncomePositive]
+      ,sh.[ChildrenExpandDown]
+      ,sh.[ParentID] 
+	FROM StaticHierarchy sh
+	JOIN CTE_Children cte on sh.ParentID = cte.ID
+)
+ 
+SELECT *
+  FROM CTE_Children
+
+";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				StaticHierarchy sh;
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						sh = new StaticHierarchy
+						{
+							Id = reader.GetInt32(0),
+							CompanyFinancialTermId = reader.GetInt32(1),
+							AdjustedOrder = reader.GetInt32(2),
+							TableTypeId = reader.GetInt32(3),
+							Description = reader.GetStringSafe(4),
+							HierarchyTypeId = reader.GetStringSafe(5)[0],
+							SeparatorFlag = reader.GetBoolean(6),
+							StaticHierarchyMetaId = reader.GetInt32(7),
+							UnitTypeId = reader.GetInt32(8),
+							IsIncomePositive = reader.GetBoolean(9),
+							ChildrenExpandDown = reader.GetBoolean(10),
+							Cells = new List<SCARAPITableCell>()
+						};
+						response.StaticHierarchies.Add(sh);
+					}
+				}
+			}
+			return response;
+		}
+
 		public TimeSlice GetTimeSlice(int id) {
 
 			string query = @"SELECT * FROM DocumentTimeSlice WHERE ID = @id";
