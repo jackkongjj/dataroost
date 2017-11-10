@@ -586,6 +586,52 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+		public ScarResult UpdateStaticHierarchySeperator(int id, bool isGroup) {
+
+			string query = @"
+UPDATE StaticHierarchy SET SeperatorFlag = @newValue 
+WHERE id = @TargetSHID;
+
+select * 
+FROM StaticHierarchy
+where id = @TargetSHID;
+";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					cmd.Parameters.AddWithValue("@newValue", isGroup ? 1 : 0);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							StaticHierarchy sh = new StaticHierarchy
+							{
+								Id = reader.GetInt32(0),
+								CompanyFinancialTermId = reader.GetInt32(1),
+								AdjustedOrder = reader.GetInt32(2),
+								TableTypeId = reader.GetInt32(3),
+								Description = reader.GetStringSafe(4),
+								HierarchyTypeId = reader.GetStringSafe(5)[0],
+								SeparatorFlag = reader.GetBoolean(6),
+								StaticHierarchyMetaId = reader.GetInt32(7),
+								UnitTypeId = reader.GetInt32(8),
+								IsIncomePositive = reader.GetBoolean(9),
+								ChildrenExpandDown = reader.GetBoolean(10),
+								Cells = new List<SCARAPITableCell>()
+							};
+							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 
 		public ScarResult UpdateStaticHierarchyLabel(int id, string newLabel) {
 
@@ -713,8 +759,6 @@ ROLLBACK TRAN
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
 
 			string query = @"
-BEGIN TRAN
-
 DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy where id = @TargetSHID)
 
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID , @Location
@@ -763,8 +807,6 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID ,
  
 SELECT *
   FROM CTE_Children
-
-ROLLBACK TRAN
 ";
 
 			ScarResult response = new ScarResult();
@@ -890,7 +932,6 @@ SELECT * FROM DocumentTimeSlice WHERE ID = @id;
 		public TimeSlice CloneUpdateTimeSlice(int id, string InterimType) {
 
 			string query = @"
-begin tran
 DECLARE @newId int;
 
 INSERT DocumentTimeSlice
@@ -962,7 +1003,6 @@ SELECT [Id]
       ,[IsAutoCalc]
       ,[ManualOrgSet]
   FROM [DocumentTimeSlice] where id = @newId;
-rollback tran
 ";
 
 

@@ -337,6 +337,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.DragDropStaticHierarchyLabel(id, targetId, location.ToUpper());
 		}
 
+		[Route("staticHierarchy/{id}/group")]
+		[HttpPut]
+		public ScarResult GroupStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchySeperator(id, true);
+		}
+		[Route("staticHierarchy/{id}/ungroup")]
+		[HttpPut]
+		public ScarResult UngroupStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchySeperator(id, false);
+		}
+
 
 
 		//TODO: Add IsSummary
