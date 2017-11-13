@@ -229,12 +229,16 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 		}
 
 		private List<Cell> GetTableCells(AsReportedTable table) {
-			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode, dt.Description, cft.Description, c.XBRLTag
-													FROM TableDimension d 
-														JOIN DimensionType dt ON dt.ID = d.DimensionTypeID
-														JOIN DimensionToCell dtc ON dtc.TableDimensionID = d.ID
-														JOIN TableCell c ON c.ID = dtc.TableCellID
-														JOIN CompanyFinancialTerm cft ON cft.ID = c.CompanyFinancialTermID
+			string query = @"SELECT d.ID, c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, 
+                              c.PeriodLength, c.PeriodTypeID, c.Offset, c.ScalingFactorID, c.CurrencyCode,
+                              dt.Description, cft.Description, c.XBRLTag , 	nlsl.Label
+													FROM TableDimension d with (nolock)
+														JOIN DimensionType dt with (nolock) ON dt.ID = d.DimensionTypeID
+														JOIN DimensionToCell dtc with (nolock) ON dtc.TableDimensionID = d.ID
+														JOIN TableCell c with (nolock) ON c.ID = dtc.TableCellID
+	                          left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
+											    	left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
+														JOIN CompanyFinancialTerm cft with (nolock) ON cft.ID = c.CompanyFinancialTermID
 													WHERE d.DocumentTableID = @tableId";
 
 			Dictionary<int, Cell> cells = new Dictionary<int, Cell>();
@@ -278,6 +282,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 									ScalingFactor = scalingFactor,
 									CompanyFinancialTermDescription = companyFinancialTermDescription,
 									XbrlTag = xbrlTag,
+									NativeLabel = reader.GetStringSafe(14)
 								};
 								cells.Add(cellId, cell);
 							}
@@ -537,6 +542,7 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 										existingCell.CftId = cell.CftId;
 										existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
 										existingCell.Id = cell.Id;
+										existingCell.NativeLabel = cell.NativeLabel;
 									} else {
                                         if(cell.TableName == "IS" || cell.TableName == "BS" || cell.TableName == "CF") { 
                                             document.Cells.Add(cell);
@@ -603,6 +609,7 @@ and d.DocumentDate  between
                                         existingCell.CftId = cell.CftId;
                                         existingCell.CompanyFinancialTermDescription = cell.CompanyFinancialTermDescription;
                                         existingCell.Id = cell.Id;
+										                    existingCell.NativeLabel = cell.NativeLabel;
                                     }
                                     else {
                                         if (cell.TableName == "IS" || cell.TableName == "BS" || cell.TableName == "CF"){
@@ -704,8 +711,11 @@ and d.DocumentDate  between
 
 		private List<Cell> GetTableCells(string documentId) {
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
-												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated
+												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated, 
+												nlsl.Label
 												from dbo.TableCell c with (NOLOCK)
+												left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
+												left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
 												left JOIN dbo.TableDimension td  with (NOLOCK) on td.ID = dtc.TableDimensionID
@@ -744,7 +754,8 @@ and d.DocumentDate  between
 								Label = reader.GetStringSafe(12),
 								TableName = reader.GetStringSafe(13),
 								RowOrder = reader.GetNullable<int>(14), 
-								SCARUpdated = reader.GetBoolean(15)
+								SCARUpdated = reader.GetBoolean(15), 
+								NativeLabel = reader.GetStringSafe(16)
 							});
 
 						}
@@ -796,9 +807,9 @@ and d.DocumentDate  between
 				);
 
 			List<ElasticObjectTree> ebObjects = new List<ElasticObjectTree>(request.Documents);
-			foreach (var eboTS in ebObjects.GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID, o.AutoClacFlag, o.EncoreFlag })) {
+			foreach (var eboTS in ebObjects.Where(o => o.AutoClacFlag == 0).GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID,  o.EncoreFlag })) {
 				SFTimeseriesDTO ts = timeSlices.FirstOrDefault(o => o.InterimType == eboTS.Key.InterimTypeID && o.ReportType == eboTS.Key.ReportTypeID && o.AccountType == eboTS.Key.AccountTypeID
-					&& o.IsAutoCalc == (eboTS.Key.AutoClacFlag == 0 ? false : true) && o.IsRecap == eboTS.Key.EncoreFlag);
+				  && o.IsRecap == eboTS.Key.EncoreFlag);
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
                     cells.Add(new Cell
