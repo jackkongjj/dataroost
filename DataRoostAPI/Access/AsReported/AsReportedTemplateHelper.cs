@@ -1120,10 +1120,10 @@ select top 1 @DocumentSeriesId = d.DocumentSeriesID
 	FROM Document d WITH (NOLOCK)
 	where d.DAMDocumentId = @DocumentID;
 
-;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell)
+;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode)
 AS
 (
-	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id)
+	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id), count(distinct tc.CurrencyCode), max(tc.CurrencyCode)
 		FROM DocumentSeries ds WITH (NOLOCK)
 		JOIN DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
 		JOIN Document d WITH (NOLOCK) on dts.DocumentId = d.ID
@@ -1171,6 +1171,8 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 							InterimType = reader.GetOrdinal("PeriodType"),
 							AutocalcStatus = reader.GetOrdinal("IsAutoCalc"),
 							NumberOfCells = reader.GetOrdinal("NumberofCell"),
+							CurrencyCode = reader.GetOrdinal("CurrencyCode"),
+							CurrencyCount = reader.GetOrdinal("CurrencyCount"),
 						};
 						while (reader.Read()) {
 							TimeSlice slice = new TimeSlice
@@ -1187,7 +1189,8 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 								PeriodType = reader.GetStringSafe(ordinals.PeriodType),
 								ReportType = reader.GetStringSafe(ordinals.ReportType),
 								IsAutoCalc = reader.GetBoolean(ordinals.AutocalcStatus),
-								NumberOfCells = reader.GetInt32(ordinals.NumberOfCells)
+								NumberOfCells = reader.GetInt32(ordinals.NumberOfCells),
+								Currency = reader.GetInt32(ordinals.CurrencyCount) == 1 ? reader.GetStringSafe(ordinals.CurrencyCode) : null
 							};
 							response.TimeSlices.Add(slice);
 						}
