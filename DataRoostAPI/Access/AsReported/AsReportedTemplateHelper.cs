@@ -1137,9 +1137,10 @@ AS
 	and ds.id = @DocumentSeriesId
 	group by d.damdocumentid, dts.id 
 )
-SELECT *
+SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 	FROM cte_timeslice ts WITH (NOLOCK)
 	JOIN DocumentTimeSlice dts WITH(NOLOCK) on ts.TimeSliceId = dts.Id
+  JOIN Document d WITH(NOLOCK) on dts.DocumentId = d.id
 ";
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -1154,11 +1155,13 @@ SELECT *
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						var ordinals = new
 						{
+							DocumentId = reader.GetOrdinal("DocumentId"),
 							DamDocumentId = reader.GetOrdinal("DamDocumentID"),
 							TimeSliceId = reader.GetOrdinal("TimeSliceId"),
-							DocumentDate = reader.GetOrdinal("TimeSlicePeriodEndDate"),
+							DocumentDate = reader.GetOrdinal("DocumentDate"),
+							PublicationDate = reader.GetOrdinal("PublicationDateTime"),
 							DocumentSeriesId = reader.GetOrdinal("DocumentSeriesId"),
-							ReportType = reader.GetOrdinal("ReportType"),
+							ReportType = reader.GetOrdinal("ReportTypeId"),
 							ReportStatus = reader.GetOrdinal("ReportType"),
 							//TableType = reader.GetOrdinal(""),
 							PeriodLength = reader.GetOrdinal("Duration"),
@@ -1172,11 +1175,13 @@ SELECT *
 						while (reader.Read()) {
 							TimeSlice slice = new TimeSlice
 							{
+								DocumentId = reader.GetGuid(ordinals.DocumentId),
 								DamDocumentId = reader.GetGuid(ordinals.DamDocumentId),
 								Id = reader.GetInt32(ordinals.TimeSliceId),
 								DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesId),
-								TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.DocumentDate),
-								ReportingPeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate),
+								PublicationDate = reader.GetDateTime(ordinals.PublicationDate),
+								TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate),
+								ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate),
 								FiscalDistance = reader.GetInt32(ordinals.PeriodLength),
 								Duration = reader.GetInt32(ordinals.PeriodLength),
 								PeriodType = reader.GetStringSafe(ordinals.PeriodType),
