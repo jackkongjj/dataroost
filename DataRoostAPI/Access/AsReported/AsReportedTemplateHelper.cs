@@ -1120,10 +1120,10 @@ select top 1 @DocumentSeriesId = d.DocumentSeriesID
 	FROM Document d WITH (NOLOCK)
 	where d.DAMDocumentId = @DocumentID;
 
-;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode)
+;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode, ArComponent)
 AS
 (
-	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id), count(distinct tc.CurrencyCode), max(tc.CurrencyCode)
+	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id), count(distinct tc.CurrencyCode), max(tc.CurrencyCode), count(artsdc.DocumentTimeSliceID)
 		FROM DocumentSeries ds WITH (NOLOCK)
 		JOIN DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
 		JOIN Document d WITH (NOLOCK) on dts.DocumentId = d.ID
@@ -1132,6 +1132,7 @@ AS
 		JOIN DimensionToCell dtc WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
 		JOIN StaticHierarchy sh WITH (NOLOCK) on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
 		JOIN TableType tt WITH (NOLOCK) on tt.ID = sh.TableTypeID  
+		LEFT JOIN ARTimeSliceDerivationComponents artsdc WITH(NOLOCK) ON artsdc.DocumentTimeSliceID = dts.id
 	WHERE 1=1
 	and tt.description = @TypeTable
 	and ds.id = @DocumentSeriesId
@@ -1164,6 +1165,8 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 							ReportType = reader.GetOrdinal("ReportTypeId"),
 							ReportStatus = reader.GetOrdinal("ReportType"),
 							//TableType = reader.GetOrdinal(""),
+							CompanyFiscalYear = reader.GetOrdinal("CompanyFiscalYear"),
+							FiscalDistance = reader.GetOrdinal("FiscalDistance"),
 							PeriodLength = reader.GetOrdinal("Duration"),
 							PeriodType = reader.GetOrdinal("PeriodType"),
 							Currency = reader.GetOrdinal("AccountingStandard"),
@@ -1173,6 +1176,7 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 							NumberOfCells = reader.GetOrdinal("NumberofCell"),
 							CurrencyCode = reader.GetOrdinal("CurrencyCode"),
 							CurrencyCount = reader.GetOrdinal("CurrencyCount"),
+							ArComponent = reader.GetOrdinal("ArComponent")
 						};
 						while (reader.Read()) {
 							TimeSlice slice = new TimeSlice
@@ -1184,13 +1188,15 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 								PublicationDate = reader.GetDateTime(ordinals.PublicationDate),
 								TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate),
 								ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate),
-								FiscalDistance = reader.GetInt32(ordinals.PeriodLength),
+								FiscalDistance = reader.GetInt32(ordinals.FiscalDistance),
+								CompanyFiscalYear = reader.GetDecimal(ordinals.CompanyFiscalYear),
 								Duration = reader.GetInt32(ordinals.PeriodLength),
-								PeriodType = reader.GetStringSafe(ordinals.PeriodType),
+								InterimType = reader.GetStringSafe(ordinals.PeriodType),
 								ReportType = reader.GetStringSafe(ordinals.ReportType),
 								IsAutoCalc = reader.GetBoolean(ordinals.AutocalcStatus),
 								NumberOfCells = reader.GetInt32(ordinals.NumberOfCells),
-								Currency = reader.GetInt32(ordinals.CurrencyCount) == 1 ? reader.GetStringSafe(ordinals.CurrencyCode) : null
+								Currency = reader.GetInt32(ordinals.CurrencyCount) == 1 ? reader.GetStringSafe(ordinals.CurrencyCode) : null,
+								AccountingStandard = reader.GetInt32(ordinals.ArComponent).ToString(),
 							};
 							response.TimeSlices.Add(slice);
 						}
