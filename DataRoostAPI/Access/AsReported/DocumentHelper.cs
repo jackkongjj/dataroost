@@ -236,9 +236,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 														JOIN DimensionType dt with (nolock) ON dt.ID = d.DimensionTypeID
 														JOIN DimensionToCell dtc with (nolock) ON dtc.TableDimensionID = d.ID
 														JOIN TableCell c with (nolock) ON c.ID = dtc.TableCellID
-	                          left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
-											    	left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
 														JOIN CompanyFinancialTerm cft with (nolock) ON cft.ID = c.CompanyFinancialTermID
+	                          left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
+											    	left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId														
 													WHERE d.DocumentTableID = @tableId";
 
 			Dictionary<int, Cell> cells = new Dictionary<int, Cell>();
@@ -713,14 +713,14 @@ and d.DocumentDate  between
 			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
 												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated, 
 												nlsl.Label
-												from dbo.TableCell c with (NOLOCK)
-												left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
-												left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
+												from dbo.TableCell c with (NOLOCK)												
 												join dbo.CompanyFinancialTerm cft  with (NOLOCK) on cft.ID = c.CompanyFinancialTermID
 												left join dbo.DimensionToCell dtc  with (NOLOCK) on dtc.TableCellID = c.ID
 												left JOIN dbo.TableDimension td  with (NOLOCK) on td.ID = dtc.TableDimensionID
 												left join dbo.DocumentTable dt  with (NOLOCK) on dt.ID = td.DocumentTableID
 												left join dbo.TableType tt  with (NOLOCK) on tt.ID = dt.TableTypeID
+												left join [tint].[TableCellsToNativeLabel] tcnl with (nolock) on tcnl.TableCellId = c.id
+												left join [tint].[NativeLabelSourcelinks] nlsl with (nolock) on nlsl.Id = tcnl.RowLabelId
 												WHERE c.DocumentId = @documentId and (td.DimensionTypeID is null or TD.DimensionTypeID in (1,3))  and (tt.id is null or tt.description != 'ReferencedCells') ";
 
 			List<Cell> cells = new List<Cell>();
