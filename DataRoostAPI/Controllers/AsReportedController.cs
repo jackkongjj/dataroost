@@ -396,7 +396,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("timeSlice/{id}")]
 		[HttpPut]
-		public TimeSlice PutTimeSlice(string CompanyId, int id, StringInput input) {
+		public ScarResult	 PutTimeSlice(string CompanyId, int id, StringInput input) {
 			if (input == null || string.IsNullOrEmpty(input.StringData))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
