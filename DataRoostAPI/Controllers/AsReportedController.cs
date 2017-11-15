@@ -362,11 +362,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("staticHierarchy/{id}/header")]
 		[HttpDelete]
-		public ScarResult DeleteHeaderStatichHierarchy(string CompanyId, int id) {
+		public ScarResult DeleteHeaderStatichHierarchyWithId(string CompanyId, ScarStringListInput input) {
+			return DeleteHeaderStatichHierarchy(CompanyId, input);
+		}
+
+		[Route("staticHierarchy/header")]
+		[HttpDelete]
+		public ScarResult DeleteHeaderStatichHierarchy(string CompanyId, ScarStringListInput input) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.UpdateStaticHierarchyAddHeader(id);
+			if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
+				return null;
+
+			return helper.UpdateStaticHierarchyDeleteHeader(input.StringData, input.StaticHierarchyIDs);
 		}
+
 
 
 
@@ -501,6 +511,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
 		}
+
+		public class ScarStringListInput {
+			public string StringData { get; set; }
+			public List<int> StaticHierarchyIDs { get; set; }
+		}
+
 
 		public class StringInput {
 			public string StringData { get; set; }
