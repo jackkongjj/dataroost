@@ -812,7 +812,9 @@ and d.DocumentDate  between
 				  && o.IsRecap == eboTS.Key.EncoreFlag);
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
-                    cells.Add(new Cell
+					string ItemDescription = null;
+					items.TryGetValue(eb.ItemCode, out ItemDescription);
+					cells.Add(new Cell
                     {
                         CompanyFinancialTermDescription = eb.CompanyFinancialTerm,
                         CftId = eb.CompanyFinancialTermId,
@@ -826,7 +828,7 @@ and d.DocumentDate  between
                         PeriodLength = (ts == null) ? "-1" : ts.PeriodLength.ToString(),
                         PeriodType = (ts == null) ? "" : ts.PeriodType,
                         Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate,
-                        ItemDescription = eb.ItemCode == null ? null : items[eb.ItemCode]
+                        ItemDescription = ItemDescription
 					});
 				}
 
