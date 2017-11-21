@@ -425,6 +425,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("cells/{id}/flipsign/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult FlipSign(string id, Guid DocumentId) {
+			// there shouldn't be a getter for this. My Mistake. 
 			string CompanyId = "36468";
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -442,6 +443,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
+		}
+
+		[Route("cells/{id}/children/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipChildren(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			//if (input == null || input.TargetStaticHierarchyID == 0)
+			//	return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipChildren(id, DocumentId, iconum, 0);
 		}
 
 		[Route("cells/{id}/addMTMW/{DocumentId}/")]
