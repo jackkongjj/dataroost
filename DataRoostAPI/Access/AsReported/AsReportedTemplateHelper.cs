@@ -899,6 +899,46 @@ ROLLBACK TRAN
 			return response;
 		}
 
+		public ScarResult UpdateStaticHierarchyAddParent(int id) {
+
+			string query = @"SCAR_InsertStaticHierarchy_AddParent";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.NextResult(); // skip select statement from CreateCFT
+						while (reader.Read()) {
+							StaticHierarchy sh = new StaticHierarchy
+							{
+								Id = reader.GetInt32(0),
+								CompanyFinancialTermId = reader.GetInt32(1),
+								AdjustedOrder = reader.GetInt32(2),
+								TableTypeId = reader.GetInt32(3),
+								Description = reader.GetStringSafe(4),
+								HierarchyTypeId = reader.GetStringSafe(5)[0],
+								SeparatorFlag = reader.GetBoolean(6),
+								StaticHierarchyMetaId = reader.GetInt32(7),
+								UnitTypeId = reader.GetInt32(8),
+								IsIncomePositive = reader.GetBoolean(9),
+								ChildrenExpandDown = reader.GetBoolean(10),
+								Cells = new List<SCARAPITableCell>()
+							};
+							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
 
 			string query = @"

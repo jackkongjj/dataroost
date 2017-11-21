@@ -377,7 +377,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.UpdateStaticHierarchyDeleteHeader(input.StringData, input.StaticHierarchyIDs);
 		}
 
-
+		[Route("staticHierarchy/{id}/parent")]
+		[HttpPost]
+		public ScarResult AddParentStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyAddParent(id);
+		}
 
 
 		//TODO: Add IsSummary
