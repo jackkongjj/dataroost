@@ -642,24 +642,12 @@ DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarch
 DECLARE @OrigHierarchyLabel varchar(1024) 
 DECLARE @NewHierarchyLabel varchar(1024)  
 
-if CHARINDEX(']',@OrigDescription) > 0
-BEGIN
 
- SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabel(Description) + '[' + dbo.GetEndLabel(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
- SET @NewHierarchyLabel = (SELECT dbo.GetHierarchyLabel(Description) + '[ ][' + dbo.GetEndLabel(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
+ SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe(Description) + '[' + dbo.GetEndLabelSafe(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
+ SET @NewHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe	(Description) + '[ ][' + dbo.GetEndLabelSafe(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
 	 UPDATE StaticHierarchy
-	SET Description = (dbo.GetHierarchyLabel(@OrigDescription) + '[ ]' + dbo.GetEndLabel(Description))
+	SET Description = (dbo.GetHierarchyLabelSafe(@OrigDescription) + '[ ]' + dbo.GetEndLabelSafe(Description))
 	WHERE ID = @TargetSHID
-
-END
-ELSE
-BEGIN -- deal with first level 
- SET @OrigHierarchyLabel = (SELECT '[' + dbo.GetHierarchyLabel(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
- SET @NewHierarchyLabel = (SELECT '[ ][' + dbo.GetHierarchyLabel(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
-	 UPDATE StaticHierarchy
-	SET Description = ('[ ]' + dbo.GetHierarchyLabel(Description))
-	WHERE ID = @TargetSHID
-END
 
 ;WITH CTE_Children(ID) AS(
 	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
@@ -807,23 +795,11 @@ DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarch
 DECLARE @OrigHierarchyLabel varchar(1024) 
 DECLARE @NewHierarchyLabel varchar(1024)  
 
-if CHARINDEX(']',@OrigDescription) > 0
-BEGIN
- SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabel(Description) + '[' + dbo.GetEndLabel(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
- SET @NewHierarchyLabel = dbo.GetHierarchyLabel(@OrigDescription) + '[' + @NewEndLabel + ']'
+ SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe(Description) + '[' + dbo.GetEndLabelSafe(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
+ SET @NewHierarchyLabel = dbo.GetHierarchyLabelSafe(@OrigDescription) + '[' + @NewEndLabel + ']'
 	 UPDATE StaticHierarchy
-	SET Description = (dbo.GetHierarchyLabel(@OrigDescription) + @NewEndLabel)
+	SET Description = (dbo.GetHierarchyLabelSafe(@OrigDescription) + @NewEndLabel)
 	WHERE ID = @TargetSHID
-
-END
-ELSE
-BEGIN -- deal with first level 
- SET @OrigHierarchyLabel = @OrigDescription
- SET @NewHierarchyLabel = @NewEndLabel
-	UPDATE StaticHierarchy
-	SET Description =  @NewEndLabel
-	WHERE ID = @TargetSHID
-END
 
 
 ;WITH CTE_Children(ID) AS(
