@@ -142,11 +142,6 @@ AND tt.Description = @templateName
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc";
 
-			string pdata = "";
-
-			CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1 pInfo1 = new Controllers.PerformanceInfo1();
-			CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.Load();
-			pdata += "Enter method: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
@@ -160,7 +155,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
 
-			pdata += "Before connection: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -194,7 +188,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-				pdata += "after connection 1: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
@@ -255,9 +248,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 								BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
 							}
 							i++;
-							if (i % 20 == 9) {
-								pdata += "after connection 1.2: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
-							}
 							CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
 
 							if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
@@ -269,7 +259,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-				pdata += "after connection 2: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 
 				temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
@@ -306,7 +295,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 							};
 
 							TimeSlices.Add(slice);
-							pdata += "after connection 3.1 timeslice: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
 							Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
 							if (!TimeSliceMap.ContainsKey(tup)) {
 								TimeSliceMap.Add(tup, new List<int>());
@@ -321,8 +309,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-				pdata += "after connection 4: " + sw.Elapsed.TotalSeconds.ToString() + pInfo1.GetPerformanceData();
-				CCS.Fundamentals.DataRoostAPI.Controllers.PerformanceInfo1.SendEmail("DataRoost Performance GetTemplate", pdata);
 			}
 
 
