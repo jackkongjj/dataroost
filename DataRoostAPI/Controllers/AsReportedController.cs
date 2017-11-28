@@ -190,7 +190,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 
-		[Route("timeSlice/{id}")]
+		[Route("timeSlice/{id}/reporttype")]
 		[HttpPut]
 		public ScarResult	 PutTimeSlice(string CompanyId, int id, StringInput input) {
 			if (input == null || string.IsNullOrEmpty(input.StringData))
@@ -200,9 +200,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.UpdateTimeSliceReportType(id, input.StringData);
 		}
 
-		[Route("timeSlice/{id}")]
+		[Route("timeSlice/{id}/interimtype")]
 		[HttpPost]
-		public TimeSlice PostTimeSlice(string CompanyId, int id, StringInput input) {
+		public ScarResult PostTimeSlice(string CompanyId, int id, StringInput input) {
 			if (input == null || string.IsNullOrEmpty(input.StringData))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();

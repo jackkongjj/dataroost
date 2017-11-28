@@ -1104,116 +1104,155 @@ SELECT * FROM DocumentTimeSlice WHERE DocumentId = @docid;
 			return response;
 		}
 
-		public TimeSlice CloneUpdateTimeSlice(int id, string InterimType) {
+		public ScarResult CloneUpdateTimeSlice(int id, string InterimType) {
 
 			string query = @"
+BEGIN TRAN
 DECLARE @newId int;
+DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM DocumentTimeSlice where id = @id)
+DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate FROM DocumentTimeSlice where id = @id)
+DECLARE @oldPeriodType varchar(10) = (SELECT PeriodType FROM DocumentTimeSlice where id = @id)
+DECLARE @dts int = (SELECT top 1 ID FROM DocumentTimeSlice dts where dts.PeriodType = @newPeriodType AND dts.DocumentId = @DocId and dts.TimeSlicePeriodEndDate = @TimeSlicePeriodEndDate);
 
-INSERT DocumentTimeSlice
-( [DocumentId]
-      ,[DocumentSeriesId]
-      ,[TimeSlicePeriodEndDate]
-      ,[ReportingPeriodEndDate]
-      ,[FiscalDistance]
-      ,[Duration]
-      ,[PeriodType]
-      ,[AcquisitionFlag]
-      ,[AccountingStandard]
-      ,[ConsolidatedFlag]
-      ,[IsProForma]
-      ,[IsRecap]
-      ,[CompanyFiscalYear]
-      ,[ReportType]
-      ,[IsAmended]
-      ,[IsRestated]
-      ,[IsAutoCalc]
-      ,[ManualOrgSet])
+if @newPeriodType <> @oldPeriodType
+BEGIN
+	IF (@newPeriodType <> '--')
+	BEGIN
+		IF (@dts IS NULL)
+		BEGIN
+			IF (EXISTS ( SELECT TOP 1 id FROM [InterimType] WHERE ID = @newPeriodType and Duration is not null))  
+			BEGIN
+				INSERT DocumentTimeSlice
+						( [DocumentId]
+							  ,[DocumentSeriesId]
+							  ,[TimeSlicePeriodEndDate]
+							  ,[ReportingPeriodEndDate]
+							  ,[FiscalDistance]
+							  ,[Duration]
+							  ,[PeriodType]
+							  ,[AcquisitionFlag]
+							  ,[AccountingStandard]
+							  ,[ConsolidatedFlag]
+							  ,[IsProForma]
+							  ,[IsRecap]
+							  ,[CompanyFiscalYear]
+							  ,[ReportType]
+							  ,[IsAmended]
+							  ,[IsRestated]
+							  ,[IsAutoCalc]
+							  ,[ManualOrgSet])
 
-SELECT TOP 1 [DocumentId]
-      ,[DocumentSeriesId]
-      ,[TimeSlicePeriodEndDate]
-      ,[ReportingPeriodEndDate]
-      ,[FiscalDistance]
-      ,[Duration]
-      ,@PeriodType
-      ,[AcquisitionFlag]
-      ,[AccountingStandard]
-      ,[ConsolidatedFlag]
-      ,[IsProForma]
-      ,[IsRecap]
-      ,[CompanyFiscalYear]
-      ,[ReportType]
-      ,[IsAmended]
-      ,[IsRestated]
-      ,[IsAutoCalc]
-      ,[ManualOrgSet]
-  FROM [DocumentTimeSlice] where id = @id;
+						SELECT TOP 1 [DocumentId]
+							  ,[DocumentSeriesId]
+							  ,[TimeSlicePeriodEndDate]
+							  ,[ReportingPeriodEndDate]
+							  ,[FiscalDistance]
+							  ,[Duration]
+							  ,@newPeriodType
+							  ,[AcquisitionFlag]
+							  ,[AccountingStandard]
+							  ,[ConsolidatedFlag]
+							  ,[IsProForma]
+							  ,[IsRecap]
+							  ,[CompanyFiscalYear]
+							  ,[ReportType]
+							  ,[IsAmended]
+							  ,[IsRestated]
+							  ,[IsAutoCalc]
+							  ,[ManualOrgSet]
+						  FROM [DocumentTimeSlice] where id = @id;
 
+						select @newId =  cast(scope_identity() as int);
 
-  
+						UPDATE [DocumentTimeSliceTableCell] SET  DocumentTimeSliceId = @newId
+						  WHERE DocumentTimeSliceId = @id;
+			END
+			ELSE
+			BEGIN
+				DELETE FROM [DocumentTimeSliceTableCell]  WHERE DocumentTimeSliceId = @id; 
+				SET @newId = @Id
+			END
 
-select @newId =  cast(scope_identity() as int);
-
-UPDATE [DocumentTimeSliceTableCell] SET  DocumentTimeSliceId = @newId
-  WHERE DocumentTimeSliceId = @id;
-
+		END
+		ELSE -- if exists
+		BEGIN
+			UPDATE [DocumentTimeSliceTableCell] SET  DocumentTimeSliceId = @dts
+				WHERE DocumentTimeSliceId = @id;
+			UPDATE [DocumentTimeSlice] SET  PeriodType = @newPeriodType
+			WHERE Id = @id;
+			SET @newId = @Id
+		END
+	END
+	ELSE -- if new periodtype is --
+	BEGIN
+		DELETE FROM [DocumentTimeSliceTableCell]  WHERE DocumentTimeSliceId = @id; 
+		DELETE FROM [DocumentTimeSlice] where id = @Id
+		SET @newId = @Id
+	END
+	
+END
 
 SELECT [Id]
-	  ,[DocumentId]
-      ,[DocumentSeriesId]
-      ,[TimeSlicePeriodEndDate]
-      ,[ReportingPeriodEndDate]
-      ,[FiscalDistance]
-      ,[Duration]
-      ,[PeriodType]
-      ,[AcquisitionFlag]
-      ,[AccountingStandard]
-      ,[ConsolidatedFlag]
-      ,[IsProForma]
-      ,[IsRecap]
-      ,[CompanyFiscalYear]
-      ,[ReportType]
-      ,[IsAmended]
-      ,[IsRestated]
-      ,[IsAutoCalc]
-      ,[ManualOrgSet]
-  FROM [DocumentTimeSlice] where id = @newId;
+	,[DocumentId]
+	,[DocumentSeriesId]
+	,[TimeSlicePeriodEndDate]
+	,[ReportingPeriodEndDate]
+	,[FiscalDistance]
+	,[Duration]
+	,[PeriodType]
+	,[AcquisitionFlag]
+	,[AccountingStandard]
+	,[ConsolidatedFlag]
+	,[IsProForma]
+	,[IsRecap]
+	,[CompanyFiscalYear]
+	,[ReportType]
+	,[IsAmended]
+	,[IsRestated]
+	,[IsAutoCalc]
+	,[ManualOrgSet]
+FROM [DocumentTimeSlice] where id = @newId or id = @dts or id = @id;
+
+rollback tran
 ";
 
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-
+				ScarResult response = new ScarResult();
+				response.TimeSlices = new List<TimeSlice>();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@id", id);
-					cmd.Parameters.AddWithValue("@PeriodType", InterimType);
+					cmd.Parameters.AddWithValue("@newPeriodType", InterimType);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						reader.Read();
-						TimeSlice slice = new TimeSlice
-						{
-							Id = reader.GetInt32(0),
-							DocumentId = reader.GetGuid(1),
-							DocumentSeriesId = reader.GetInt32(2),
-							TimeSlicePeriodEndDate = reader.GetDateTime(3),
-							ReportingPeriodEndDate = reader.GetDateTime(4),
-							FiscalDistance = reader.GetInt32(5),
-							Duration = reader.GetInt32(6),
-							PeriodType = reader.GetStringSafe(7),
-							AcquisitionFlag = reader.GetStringSafe(8),
-							AccountingStandard = reader.GetStringSafe(9),
-							ConsolidatedFlag = reader.GetStringSafe(10),
-							IsProForma = reader.GetBoolean(11),
-							IsRecap = reader.GetBoolean(12),
-							CompanyFiscalYear = reader.GetDecimal(13),
-							ReportType = reader.GetStringSafe(14),
-							IsAmended = reader.GetBoolean(15),
-							IsRestated = reader.GetBoolean(16),
-							IsAutoCalc = reader.GetBoolean(17),
-							ManualOrgSet = reader.GetBoolean(18)
-						};
-						return slice;
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								Id = reader.GetInt32(0),
+								DocumentId = reader.GetGuid(1),
+								DocumentSeriesId = reader.GetInt32(2),
+								TimeSlicePeriodEndDate = reader.GetDateTime(3),
+								ReportingPeriodEndDate = reader.GetDateTime(4),
+								FiscalDistance = reader.GetInt32(5),
+								Duration = reader.GetInt32(6),
+								PeriodType = reader.GetStringSafe(7),
+								AcquisitionFlag = reader.GetStringSafe(8),
+								AccountingStandard = reader.GetStringSafe(9),
+								ConsolidatedFlag = reader.GetStringSafe(10),
+								IsProForma = reader.GetBoolean(11),
+								IsRecap = reader.GetBoolean(12),
+								CompanyFiscalYear = reader.GetDecimal(13),
+								ReportType = reader.GetStringSafe(14),
+								IsAmended = reader.GetBoolean(15),
+								IsRestated = reader.GetBoolean(16),
+								IsAutoCalc = reader.GetBoolean(17),
+								ManualOrgSet = reader.GetBoolean(18)
+							};
+							response.TimeSlices.Add(slice);
+						}
 					}
 				}
+				return response;
 			}
 		}
 
@@ -1337,8 +1376,8 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 							DocumentDate = reader.GetOrdinal("DocumentDate"),
 							PublicationDate = reader.GetOrdinal("PublicationDateTime"),
 							DocumentSeriesId = reader.GetOrdinal("DocumentSeriesId"),
-							ReportType = reader.GetOrdinal("ReportTypeId"),
-							ReportStatus = reader.GetOrdinal("ReportType"),
+							ReportType = reader.GetOrdinal("ReportType"),
+							ReportStatus = reader.GetOrdinal("ReportTypeId"),
 							//TableType = reader.GetOrdinal(""),
 							CompanyFiscalYear = reader.GetOrdinal("CompanyFiscalYear"),
 							FiscalDistance = reader.GetOrdinal("FiscalDistance"),
