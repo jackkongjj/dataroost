@@ -257,6 +257,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.FlipHistorical(id, DocumentId, iconum, 0);
 		}
 
+		[Route("cells/{id}/children/historical/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipChildrenHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			//if (input == null || input.TargetStaticHierarchyID == 0)
+			//	return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipChildrenHistorical(id, DocumentId, iconum, 0);
+		}
+
 		[Route("cells/{id}/addMTMW/{DocumentId}/")]
 		[HttpGet]
 		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId) {

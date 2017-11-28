@@ -1587,6 +1587,9 @@ SELECT top 1 @TargetSHID = sh.id
   JOIN [TableCell] tc WITH (NOLOCK) on sh.CompanyFinancialTermId = tc.CompanyFinancialTermId
   where tc.id = @cellid
 
+DECLARE @DocumentSeriesId INT
+SELECT TOP 1 @DocumentSeriesId = DocumentSeriesID
+FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
  
 
 DECLARE @OldStaticHierarchyList StaticHierarchyList
@@ -1681,7 +1684,7 @@ SELECT distinct 'x', tc.TableCellID, tc.Offset, tc.CellPeriodType, tc.PeriodType
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
 FROM StaticHierarchy sh
-JOIN vw_SCARDocumentTimeSlices dts ON dts.CompanyID = @Iconum
+JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
 JOIN Document d on dts.DocumentID = d.ID
 LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
@@ -1927,6 +1930,184 @@ ROLLBACK TRAN
 					return result;
 				}
 
+				public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+					const string query = @"
+BEGIN TRAN
+
+DECLARE @TargetSHID int;
+SELECT top 1 @TargetSHID = sh.id
+  FROM  StaticHierarchy sh WITH (NOLOCK)
+  JOIN [TableCell] tc WITH (NOLOCK) on sh.CompanyFinancialTermId = tc.CompanyFinancialTermId
+  where tc.id = @cellid
+
+DECLARE @DocumentSeriesId INT
+SELECT TOP 1 @DocumentSeriesId = DocumentSeriesID
+FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
+
+DECLARE @OldStaticHierarchyList StaticHierarchyList
+
+;WITH CTE_Children(ID) AS(
+	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	UNION ALL
+	SELECT sh.Id 
+	FROM StaticHierarchy sh
+	JOIN CTE_Children cte on sh.ParentID = cte.ID
+) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
+   SELECT ID 
+FROM CTE_Children cte
+where cte.id <> @TargetSHID
+ 
+
+
+DECLARE @OldSHCells CellList
+INSERT @OldSHCells
+SELECT tc.TableCellID, tc.DocumentTimeSliceID
+FROM StaticHierarchy sh
+JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
+JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
+ 
+UPDATE tc 
+set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
+FROM 
+TableCell tc 
+JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID is the cellID
+ 
+
+ 
+
+
+
+DECLARE @SHCells CellList
+
+INSERT @SHCells
+SELECT sh.ID, tc.DocumentTimeSliceId
+FROM StaticHierarchy sh
+JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
+JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+
+
+DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
+DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+
+DECLARE @SHParentCells CellList
+INSERT INTO @SHParentCells
+EXEC SCARGetTableCellMTMW_GetFirstMTMWParent @SHCells
+
+INSERT INTO @SHCellsMTMW
+EXEC SCARGetTableCellMTMWCalc @SHParentCells
+
+INSERT INTO @SHCellsLPV
+EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
+
+INSERT @SHCellsError 
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+from @SHCellsLPV lpv
+FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
+
+
+
+;WITH cte_level(SHRootID, SHID, level)
+AS
+(
+	SELECT @TargetSHID, @TargetSHID, 0
+	UNION ALL
+	SELECT cte.SHRootID, shp.ID, cte.level+1
+	FROM cte_level cte
+	JOIN StaticHierarchy sh ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+)
+SELECT MAX(level)
+FROM cte_level
+GROUP BY SHRootID
+
+SELECT distinct 'x', tc.TableCellID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+				tc.XBRLTag, 
+				tc.DocumentId, tc.Label, sf.Value,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.TableCellId = aetc.TableCellId),
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
+				lpv.LPVFail, lpv.MTMWFail,
+				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+FROM StaticHierarchy sh
+JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
+JOIN Document d on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
+LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
+WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
+ 
+ROLLBACK TRAN
+";
+					ScarResult result = new ScarResult();
+					result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+					result.ChangedCells = new List<SCARAPITableCell>();
+
+
+					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+						using (SqlCommand cmd = new SqlCommand(query, conn)) {
+							conn.Open();
+							cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+							cmd.Parameters.AddWithValue("@cellid", CellId);
+							cmd.Parameters.AddWithValue("@Iconum", iconum);
+
+							using (SqlDataReader reader = cmd.ExecuteReader()) {
+								reader.Read();
+								int level = reader.GetInt32(0);
+								reader.NextResult();
+								int shix = 0;
+								int adjustedOrder = 0;
+								while (reader.Read()) {
+									SCARAPITableCell cell;
+									if (reader.GetNullable<int>(1).HasValue) {
+										cell = new SCARAPITableCell
+										{
+											ID = reader.GetInt32(1),
+											Offset = reader.GetStringSafe(2),
+											CellPeriodType = reader.GetStringSafe(3),
+											PeriodTypeID = reader.GetStringSafe(4),
+											CellPeriodCount = reader.GetStringSafe(5),
+											PeriodLength = reader.GetNullable<int>(6),
+											CellDay = reader.GetStringSafe(7),
+											CellMonth = reader.GetStringSafe(8),
+											CellYear = reader.GetStringSafe(9),
+											CellDate = reader.GetNullable<DateTime>(10),
+											Value = reader.GetStringSafe(11),
+											CompanyFinancialTermID = reader.GetNullable<int>(12),
+											ValueNumeric = reader.GetNullable<decimal>(13),
+											NormalizedNegativeIndicator = reader.GetBoolean(14),
+											ScalingFactorID = reader.GetStringSafe(15),
+											AsReportedScalingFactor = reader.GetStringSafe(16),
+											Currency = reader.GetStringSafe(17),
+											CurrencyCode = reader.GetStringSafe(18),
+											Cusip = reader.GetStringSafe(19)
+										};
+										cell.ScarUpdated = reader.GetBoolean(20);
+										cell.IsIncomePositive = reader.GetBoolean(21);
+										cell.XBRLTag = reader.GetStringSafe(22);
+										//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+										cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+										cell.Label = reader.GetStringSafe(24);
+										cell.ScalingFactorValue = reader.GetDouble(25);
+										cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+										cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+										cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+										cell.MTMWValidationFlag = reader.GetBoolean(29);
+										adjustedOrder = reader.GetInt32(31);
+										result.ChangedCells.Add(cell);
+
+									} else {
+										continue;
+									}
+									result.CellToDTS.Add(cell, adjustedOrder);
+								}
+							}
+						}
+					}
+					return result;
+				}
 
         public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
 			string query = @"SCARStitchRows";
