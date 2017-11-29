@@ -967,6 +967,95 @@ SELECT * FROM StaticHierarchy WHERE ID = @TargetSHID;
 			return response;
 		}
 
+		public ScarResult UpdateStaticHierarchyMove(int id, string direction) {
+			string BeginTran = @"BEGIN TRAN
+";
+			string RollbackTran = @"ROLLBACK TRAN
+";
+			string SQL_MoveDown = @"
+ 
+DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] where TableTypeId = @tableTypeId order by AdjustedOrder desc)
+DECLARE @TargetSHID INT;
+
+	select TOP 1 @TargetSHID= sh.id
+		FROM  StaticHierarchy sh WITH (NOLOCK) 
+		where   SH.TableTypeId=  @tableTypeId  
+		and  sh.AdjustedOrder > @adjustedOrder and sh.description not like '%' + dbo.GetEndLabelSafe(@Description) + '%'
+		ORDER BY sh.AdjustedOrder  
+
+  SET @TargetSHID = ISNULL(@TargetSHID, @maxTargetId)
+  EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID, 'BOTTOM'
+
+";
+			string SQL_MoveUp = @"
+ 
+DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] where TableTypeId = @tableTypeId order by AdjustedOrder)
+DECLARE @TargetSHID INT;
+
+	select TOP 1 @TargetSHID= sh.id
+		FROM  StaticHierarchy sh WITH (NOLOCK) 
+		where   SH.TableTypeId=  @tableTypeId  
+		and  sh.AdjustedOrder < @adjustedOrder and sh.description not like '%' + dbo.GetEndLabelSafe(@Description) + '%'
+		ORDER BY sh.AdjustedOrder desc  
+
+  SET @TargetSHID = ISNULL(@TargetSHID, @maxTargetId)
+  EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID, 'TOP'
+
+";
+
+			string query = @"
+DECLARE @tableTypeId2 INT = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
+SELECT *
+  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] where tabletypeid = @tableTypeId2
+  order by AdjustedOrder
+
+			";
+			switch (direction.ToUpper()) {
+				case "UP": query = SQL_MoveUp + query; break;
+				case "DOWN": query = SQL_MoveDown + query; break;	
+			}
+			query = BeginTran + query + RollbackTran;
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DraggedSHID", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							StaticHierarchy sh = new StaticHierarchy
+							{
+								Id = reader.GetInt32(0),
+								CompanyFinancialTermId = reader.GetInt32(1),
+								AdjustedOrder = reader.GetInt32(2),
+								TableTypeId = reader.GetInt32(3),
+								Description = reader.GetStringSafe(4),
+								HierarchyTypeId = reader.GetStringSafe(5)[0],
+								SeparatorFlag = reader.GetBoolean(6),
+								StaticHierarchyMetaId = reader.GetInt32(7),
+								UnitTypeId = reader.GetInt32(8),
+								IsIncomePositive = reader.GetBoolean(9),
+								ChildrenExpandDown = reader.GetBoolean(10),
+								Cells = new List<SCARAPITableCell>()
+							};
+							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
 
 			string query = @"
