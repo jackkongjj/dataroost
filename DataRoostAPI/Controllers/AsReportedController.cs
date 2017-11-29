@@ -117,6 +117,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.UpdateStaticHierarchyLabel(id, input.StringData);
 		}
 
+		[Route("staticHierarchy/{id}/childrenexpanddown")]
+		[HttpPut]
+		public ScarResult SwitchChildrenOrientation(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchySwitchChildrenOrientation(id);
+		}
+
 		[Route("staticHierarchy/{id}/dragdrop/{targetId}/{location}")]
 		[HttpPut]
 		public ScarResult EditHierarchyLabel(string CompanyId, int id, int targetId, string location) {
