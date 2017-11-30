@@ -1008,6 +1008,41 @@ DECLARE @TargetSHID INT;
   EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID, 'TOP'
 
 ";
+			string SQL_MoveLeft = @"
+ 
+DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] where TableTypeId = @tableTypeId order by AdjustedOrder)
+DECLARE @TargetSHID INT;
+
+DECLARE @DraggedParentId int = (SELECT TOP 1 ParentID from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @DraggedParentParentId int = (SELECT TOP 1 ParentID from [StaticHierarchy] where id = @DraggedParentId)
+
+
+SELECT *
+  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] where tabletypeid = @tableTypeId
+  order by AdjustedOrder
+
+
+IF (@DraggedParentId IS NOT NULL)
+BEGIN
+	EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @DraggedParentId, 'BOTTOM'
+END
+ELSE
+BEGIN
+
+	DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
+		SELECT ID FROM [StaticHierarchy] WHERE id <> @DraggedSHID and parentid = @DraggedParentId
+	OPEN cur
+	FETCH NEXT FROM cur INTO @TargetSHID
+	WHILE @@FETCH_STATUS = 0 
+	BEGIN
+		EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @DraggedParentId, 'MIDDLE'
+	END
+END
+
+";
 
 			string query = @"
 DECLARE @tableTypeId2 INT = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
@@ -1018,7 +1053,8 @@ SELECT *
 			";
 			switch (direction.ToUpper()) {
 				case "UP": query = SQL_MoveUp + query; break;
-				case "DOWN": query = SQL_MoveDown + query; break;	
+				case "DOWN": query = SQL_MoveDown + query; break;
+				case "LEFT": query = SQL_MoveLeft + query; break;
 			}
 			query = BeginTran + query + RollbackTran;
 
