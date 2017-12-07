@@ -327,6 +327,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.UpdateTimeSliceIsSummary(id, TemplateName);
 		}
 
+		[Route("templates/{TemplateName}/timeslice/{id}/periodnote")]
+		[HttpPut]
+		public ScarResult PutTimeSlicePeriodNote(string CompanyId, string TemplateName, int id, StringInput input) {
+			string periodNote = null;
+			if (input != null && !string.IsNullOrEmpty(input.StringData))
+				periodNote = input.StringData;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSlicePeriodNote(id, periodNote);
+		}
+
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]
 		public StitchResult PostStitch(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput) {

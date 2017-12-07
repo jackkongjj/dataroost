@@ -1282,6 +1282,80 @@ ROLLBACK TRAN
 			return response;
 		}
 
+		public ScarResult UpdateTimeSlicePeriodNote(int id, string PeriodNoteId) {
+
+			string query = @"
+
+BEGIN TRAN
+
+IF @PeriodNoteId is null
+BEGIN
+	DELETE FROM DocumentTimeSlicePeriodNotes WHERE DocumentTimeSliceID = @id  
+END
+ELSE
+BEGIN
+	MERGE INTO DocumentTimeSlicePeriodNotes d
+	USING (VALUES (@id)) AS s(id) ON  d.DocumentTimeSliceID = s.id
+	WHEN NOT MATCHED THEN
+			INSERT ([DocumentTimeSliceID] ,[PeriodNoteID])
+				VALUES (@Id, @PeriodNoteId)
+	WHEN MATCHED THEN
+		UPDATE SET [PeriodNoteID] = @PeriodNoteId ;
+
+   SELECT * FROM DocumentTimeSlice WHERE ID = @id
+END
+
+
+ROLLBACK TRAN
+
+";
+			ScarResult response = new ScarResult();
+			response.TimeSlices = new List<TimeSlice>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					int periodNoteId = -1;
+					bool isSuccess = false;
+					if (!string.IsNullOrEmpty(PeriodNoteId)) {
+						isSuccess = Int32.TryParse(PeriodNoteId, out periodNoteId);
+					}
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.Add(new SqlParameter("@PeriodNoteId", SqlDbType.Int)
+					{
+						Value = (!isSuccess ? DBNull.Value : (object)periodNoteId)
+					});
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								Id = reader.GetInt32(0),
+								DocumentId = reader.GetGuid(1),
+								DocumentSeriesId = reader.GetInt32(2),
+								TimeSlicePeriodEndDate = reader.GetDateTime(3),
+								ReportingPeriodEndDate = reader.GetDateTime(4),
+								FiscalDistance = reader.GetInt32(5),
+								Duration = reader.GetInt32(6),
+								PeriodType = reader.GetStringSafe(7),
+								AcquisitionFlag = reader.GetStringSafe(8),
+								AccountingStandard = reader.GetStringSafe(9),
+								ConsolidatedFlag = reader.GetStringSafe(10),
+								IsProForma = reader.GetBoolean(11),
+								IsRecap = reader.GetBoolean(12),
+								CompanyFiscalYear = reader.GetDecimal(13),
+								ReportType = reader.GetStringSafe(14),
+								IsAmended = reader.GetBoolean(15),
+								IsRestated = reader.GetBoolean(16),
+								IsAutoCalc = reader.GetBoolean(17),
+								ManualOrgSet = reader.GetBoolean(18)
+							};
+							response.TimeSlices.Add(slice);
+						}
+					}
+				}
+			}
+			return response;
+		}
 		public ScarResult UpdateTimeSliceReportType(int id, string ReportType) {
 
 			string query = @"
