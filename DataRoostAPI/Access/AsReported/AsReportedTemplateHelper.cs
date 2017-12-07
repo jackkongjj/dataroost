@@ -1221,6 +1221,67 @@ SELECT *
 			}
 		}
 
+		public ScarResult UpdateTimeSliceIsSummary(int id, string TableType) {
+
+			string query = @"
+
+BEGIN TRAN
+
+IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType)
+BEGIN
+	DELETE FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType
+END
+ELSE
+BEGIN
+	INSERT DocumentTimeSliceTableTypeIsSummary ([DocumentTimeSliceID],[TableType])
+	VALUES (@Id, @TableType)
+	SELECT * FROM DocumentTimeSlice WHERE ID = @id
+END
+
+
+ROLLBACK TRAN
+
+";
+			ScarResult response = new ScarResult();
+			response.TimeSlices = new List<TimeSlice>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@TableType", TableType);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								Id = reader.GetInt32(0),
+								DocumentId = reader.GetGuid(1),
+								DocumentSeriesId = reader.GetInt32(2),
+								TimeSlicePeriodEndDate = reader.GetDateTime(3),
+								ReportingPeriodEndDate = reader.GetDateTime(4),
+								FiscalDistance = reader.GetInt32(5),
+								Duration = reader.GetInt32(6),
+								PeriodType = reader.GetStringSafe(7),
+								AcquisitionFlag = reader.GetStringSafe(8),
+								AccountingStandard = reader.GetStringSafe(9),
+								ConsolidatedFlag = reader.GetStringSafe(10),
+								IsProForma = reader.GetBoolean(11),
+								IsRecap = reader.GetBoolean(12),
+								CompanyFiscalYear = reader.GetDecimal(13),
+								ReportType = reader.GetStringSafe(14),
+								IsAmended = reader.GetBoolean(15),
+								IsRestated = reader.GetBoolean(16),
+								IsAutoCalc = reader.GetBoolean(17),
+								ManualOrgSet = reader.GetBoolean(18)
+							};
+							response.TimeSlices.Add(slice);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult UpdateTimeSliceReportType(int id, string ReportType) {
 
 			string query = @"
@@ -1527,7 +1588,7 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 
  
 
-select d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count
+select d.id as DocumentId, d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count, count(distinct tc.CurrencyCode) as CurrencyCount, max(tc.CurrencyCode) as CurrencyCode 
  INTO #alltimeslices
 from DocumentTable dt (nolock)
 join TableType tt (nolock) on dt.TableTypeId = tt.id
@@ -1541,17 +1602,17 @@ where
   tt.Description = @TypeTable and
   d.documentseriesid =  @DocumentSeriesId
   and (d.ArdExportFlag = 1 or d.IsDocSetUpCompleted = 1 or d.ExportFlag = 1)
- group by d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate
+ group by d.id, d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate
 
 
 select 
 	ISNULL(n.DamDocumentID, a.DAMDocumentId) as DamDocumentID
 	,ISNULL(n.TimeSliceId, -1) as TimeSliceId
 	,ISNULL(n.NumberofCell, a.count) as NumberofCell
-	,n.CurrencyCode
-	,ISNULL(n.CurrencyCount, 1) as CurrencyCount
+	,ISNULL(n.CurrencyCode, a.CurrencyCode) as CurrencyCode
+	,ISNULL(n.CurrencyCount, a.CurrencyCount) as CurrencyCount
 	,ISNULL(n.ArComponent, 0) as ArComponent
-	,ISNULL(n.DocumentId, a.DAMDocumentId) as DocumentId
+	,ISNULL(n.DocumentId, a.DocumentId) as DocumentId
 	,ISNULL(n.DocumentSeriesId, @DocumentSeriesId) as DocumentSeriesId
 	,ISNULL(n.TimeSlicePeriodEndDate, a.CellDate) as TimeSlicePeriodEndDate
 	,ISNULL(n.ReportingPeriodEndDate, a.CellDate) as ReportingPeriodEndDate
@@ -1563,7 +1624,7 @@ select
 	,ISNULL(n.CompanyFiscalYear, 2017) as CompanyFiscalYear
 	,ISNULL(n.DocumentDate, d.DocumentDate) as DocumentDate
 	,ISNULL(n.PublicationDateTime, d.PublicationDateTime) as PublicationDateTime
-	,ISNULL(n.ReportType, 'P') as ReportType
+	,ISNULL(n.ReportType, d.ReportTypeID) as ReportType
 	,ISNULL(n.ReportTypeID, d.ReportTypeID) as ReportTypeID
 	,ISNULL(n.IsAutoCalc, 0) as IsAutoCalc
 

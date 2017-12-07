@@ -319,6 +319,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetReviewTimeSlice(TemplateName, iconum);
 		}
+		[Route("templates/{TemplateName}/timeslice/{id}/issummary")]
+		[HttpPut]
+		public ScarResult PutTimeSliceIsSummary(string CompanyId, string TemplateName, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSliceIsSummary(id, TemplateName);
+		}
 
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]
