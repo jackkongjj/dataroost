@@ -407,4 +407,71 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public string StringData { get; set; }
 		}
 	}
+
+	[RoutePrefix("api/v1/zerominute")]
+	public class ZeroMinuteUpdateController : ApiController {
+		private bool IsZeroMinuteUpdate() {
+			bool isZeroMinuteUpdate = false;
+			string zerominutekey = ConfigurationManager.AppSettings["IsZeroMinuteUpdate"];
+			if (!string.IsNullOrEmpty(zerominutekey)) {
+				isZeroMinuteUpdate = Convert.ToBoolean(zerominutekey);
+			}
+			return isZeroMinuteUpdate;
+		}
+
+		[Route("documents/{documentId}")]
+		[HttpPut]
+		public ScarResult ExecuteZeroMinuteUpdate(string documentId) {
+			ScarResult result = null;
+			if (IsZeroMinuteUpdate()) {
+				if (DoARDValidation(documentId) == null) {
+					return null;
+				} else {
+					DoRedStarSlotting(documentId);
+					DoSetIncomeOrientation(documentId);
+					DoInterimTypeAndCurrency(documentId);
+					DoMTMWValidation(documentId);
+					DoLPVValidation(documentId);
+					DoExport(documentId);
+				}
+
+			}
+			return result;
+		}
+		[Route("documents/{documentId}/ard")]
+		[HttpPut]
+		public ScarResult DoARDValidation(string documentId) {
+			return new ScarResult();
+		}
+		[Route("documents/{documentId}/redstarslotting")]
+		[HttpPut]
+		public ScarResult DoRedStarSlotting(string documentId) {
+			return new ScarResult();
+		}
+		[Route("documents/{documentId}/setincome")]
+		[HttpPut]
+		public ScarResult DoSetIncomeOrientation(string documentId) {
+			return new ScarResult();
+		}
+		[Route("documents/{documentId}/interimtype")]
+		[HttpPut]
+		public ScarResult DoInterimTypeAndCurrency(string documentId) {
+			return new ScarResult();
+		}
+		[Route("documents/{documentId}/mtmw")]
+		[HttpPut]
+		public ScarResult DoMTMWValidation(string documentId) {
+			return new ScarResult();
+		}
+		[Route("documents/{documentId}/lpv")]
+		[HttpPut]
+		public ScarResult DoLPVValidation(string documentId) {
+			return new ScarResult();
+		}
+		[Route("documents/{documentId}/export")]
+		[HttpPut]
+		public ScarResult DoExport(string documentId) {
+			return new ScarResult();
+		}
+	}
 }
