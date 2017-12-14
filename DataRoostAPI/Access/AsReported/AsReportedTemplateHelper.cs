@@ -2968,5 +2968,91 @@ ROLLBACK TRAN
             return null;
         }
         #endregion
+
+				#region Zero-Minute Update
+				public bool UpdateRedStarSlotting(Guid SFDocumentId) {
+					bool isSuccess = false;
+					try {
+						using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
+							using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
+								cmd.CommandType = CommandType.StoredProcedure;
+
+								cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
+								sqlConn.Open();
+								cmd.ExecuteNonQuery();
+								isSuccess = true;
+							}
+						}
+					} catch (Exception ex) {
+						isSuccess = false;
+					}
+					return isSuccess;
+				}
+
+				public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId) {
+					string query = @"
+
+ DECLARE @BigThree Table (Description varchar(64))
+ INSERT  @BigThree (Description)
+ VALUES 
+ ('IS'), ('BS'), ('CF')
+
+ SELECT 'Missing Table' as Error, *
+ FROM DocumentTable dt
+ JOIN TableType tt ON dt.TableTypeID = tt.id
+ RIGHT JOIN @BigThree bt on bt.Description = tt.description
+ where dt.DocumentID = @DocumentId and tt.description is null
+
+
+ SELECT  'Missing InterimType' as Error, * 
+ FROM DocumentTimeSlice dts
+ JOIN DocumentTimeSliceTableCell dtstc on dtstc.DocumentTimeSliceId = dts.Id
+ JOIN TableCell tc ON dtstc.TableCellID = tc.id
+  where dts.DocumentID = @DocumentId and dts.PeriodType is null
+
+ SELECT  'Missing InterimType' as Error, * 
+  FROM DocumentTable dt
+ JOIN TableType tt ON dt.TableTypeID = tt.id
+ JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
+ JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
+ JOIN TableCell tc ON dtc.TableCellID = tc.id
+ JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.Id
+ JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+  where dt.DocumentID = @DocumentId and dts.PeriodType is null
+
+
+ SELECT  'Missing Currency' as Error, * 
+ FROM DocumentTable dt
+ JOIN TableType tt ON dt.TableTypeID = tt.id
+ JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
+ JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
+ JOIN TableCell tc ON dtc.TableCellID = tc.id
+ where dt.DocumentID = @DocumentId and tc.currencycode is null
+";
+					string errorMessage = "";
+					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+						conn.Open();
+						using (SqlCommand cmd = new SqlCommand(query, conn)) {
+							cmd.Parameters.AddWithValue("@DocumentID", SFDocumentId);
+
+
+							using (SqlDataReader sdr = cmd.ExecuteReader()) {
+								sdr.Read();
+								errorMessage += sdr.GetStringSafe(0);
+								sdr.NextResult();
+								sdr.Read();
+								errorMessage += sdr.GetStringSafe(0);
+								sdr.NextResult();
+								sdr.Read();
+								errorMessage += sdr.GetStringSafe(0);
+								sdr.NextResult();
+								sdr.Read();
+								errorMessage += sdr.GetStringSafe(0);
+							}
+						}
+					}
+					return errorMessage;
+				}
+				#endregion
 	}
 }

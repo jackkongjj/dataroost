@@ -421,56 +421,61 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("documents/{documentId}")]
 		[HttpPut]
-		public ScarResult ExecuteZeroMinuteUpdate(string documentId) {
+		public ScarResult ExecuteZeroMinuteUpdate(Guid documentId) {
 			ScarResult result = null;
 			if (IsZeroMinuteUpdate()) {
-				if (DoARDValidation(documentId) == null) {
-					return null;
-				} else {
-					DoRedStarSlotting(documentId);
-					DoSetIncomeOrientation(documentId);
-					DoInterimTypeAndCurrency(documentId);
-					DoMTMWValidation(documentId);
-					DoLPVValidation(documentId);
-					DoExport(documentId);
-				}
-
+				DoInterimTypeAndCurrency(documentId);
+				DoRedStarSlotting(documentId);
+				DoSetIncomeOrientation(documentId);
+				DoMTMWValidation(documentId);
+				DoLPVValidation(documentId);
+				DoARDValidation(documentId);
+				DoExport(documentId);
 			}
 			return result;
 		}
 		[Route("documents/{documentId}/ard")]
 		[HttpPut]
-		public ScarResult DoARDValidation(string documentId) {
+		public ScarResult DoARDValidation(Guid documentId) {
 			return new ScarResult();
 		}
 		[Route("documents/{documentId}/redstarslotting")]
 		[HttpPut]
-		public ScarResult DoRedStarSlotting(string documentId) {
+		public ScarResult DoRedStarSlotting(Guid documentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			if (!helper.UpdateRedStarSlotting(documentId)) {
+				return null;
+			}
 			return new ScarResult();
 		}
 		[Route("documents/{documentId}/setincome")]
 		[HttpPut]
-		public ScarResult DoSetIncomeOrientation(string documentId) {
+		public ScarResult DoSetIncomeOrientation(Guid documentId) {
 			return new ScarResult();
 		}
-		[Route("documents/{documentId}/interimtype")]
+		[Route("documents/{documentId}/validatetables")]
 		[HttpPut]
-		public ScarResult DoInterimTypeAndCurrency(string documentId) {
+		public ScarResult DoInterimTypeAndCurrency(Guid documentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			helper.CheckParsedTableInterimTypeAndCurrency(documentId);
 			return new ScarResult();
 		}
+
 		[Route("documents/{documentId}/mtmw")]
 		[HttpPut]
-		public ScarResult DoMTMWValidation(string documentId) {
+		public ScarResult DoMTMWValidation(Guid documentId) {
 			return new ScarResult();
 		}
 		[Route("documents/{documentId}/lpv")]
 		[HttpPut]
-		public ScarResult DoLPVValidation(string documentId) {
+		public ScarResult DoLPVValidation(Guid documentId) {
 			return new ScarResult();
 		}
 		[Route("documents/{documentId}/export")]
 		[HttpPut]
-		public ScarResult DoExport(string documentId) {
+		public ScarResult DoExport(Guid documentId) {
 			return new ScarResult();
 		}
 	}
