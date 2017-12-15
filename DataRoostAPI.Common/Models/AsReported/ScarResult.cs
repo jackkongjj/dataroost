@@ -26,6 +26,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("TimeSlices")]
 		public List<TimeSlice> TimeSlices { get; set; }
 
+		[JsonProperty("errorMessage")]
+		public string ErrorMessage { get; set; }
+
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]

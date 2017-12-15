@@ -416,6 +416,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (!string.IsNullOrEmpty(zerominutekey)) {
 				isZeroMinuteUpdate = Convert.ToBoolean(zerominutekey);
 			}
+			return true;
 			return isZeroMinuteUpdate;
 		}
 
@@ -423,8 +424,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult ExecuteZeroMinuteUpdate(Guid documentId) {
 			ScarResult result = null;
+			result = new ScarResult();
 			if (IsZeroMinuteUpdate()) {
-				DoInterimTypeAndCurrency(documentId);
+				result.ErrorMessage += DoInterimTypeAndCurrency(documentId).ErrorMessage;
 				DoRedStarSlotting(documentId);
 				DoSetIncomeOrientation(documentId);
 				DoMTMWValidation(documentId);
@@ -459,8 +461,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult DoInterimTypeAndCurrency(Guid documentId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			helper.CheckParsedTableInterimTypeAndCurrency(documentId);
-			return new ScarResult();
+			var result = new ScarResult();
+			result.ErrorMessage += helper.CheckParsedTableInterimTypeAndCurrency(documentId);
+			return result;
 		}
 
 		[Route("documents/{documentId}/mtmw")]

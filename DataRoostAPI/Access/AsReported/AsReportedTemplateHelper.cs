@@ -2997,20 +2997,20 @@ ROLLBACK TRAN
  VALUES 
  ('IS'), ('BS'), ('CF')
 
- SELECT 'Missing Table' as Error, *
+ SELECT 'Missing Table. ' as Error, *
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  RIGHT JOIN @BigThree bt on bt.Description = tt.description
- where dt.DocumentID = @DocumentId and tt.description is null
+ where dt.DocumentID = @DocumentId and tt.description is not null
 
 
- SELECT  'Missing InterimType' as Error, * 
+ SELECT  'Missing InterimType. ' as Error, * 
  FROM DocumentTimeSlice dts
  JOIN DocumentTimeSliceTableCell dtstc on dtstc.DocumentTimeSliceId = dts.Id
  JOIN TableCell tc ON dtstc.TableCellID = tc.id
   where dts.DocumentID = @DocumentId and dts.PeriodType is null
 
- SELECT  'Missing InterimType' as Error, * 
+ SELECT  'Missing InterimType. ' as Error, * 
   FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
@@ -3021,7 +3021,7 @@ ROLLBACK TRAN
   where dt.DocumentID = @DocumentId and dts.PeriodType is null
 
 
- SELECT  'Missing Currency' as Error, * 
+ SELECT  'Missing Currency. ' as Error, * 
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
@@ -3037,17 +3037,21 @@ ROLLBACK TRAN
 
 
 							using (SqlDataReader sdr = cmd.ExecuteReader()) {
-								sdr.Read();
-								errorMessage += sdr.GetStringSafe(0);
+								if (sdr.Read()) {
+									errorMessage += sdr.GetStringSafe(0);
+								}
 								sdr.NextResult();
-								sdr.Read();
-								errorMessage += sdr.GetStringSafe(0);
+								if (sdr.Read()) {
+									errorMessage += sdr.GetStringSafe(0);
+								}
 								sdr.NextResult();
-								sdr.Read();
-								errorMessage += sdr.GetStringSafe(0);
+								if (sdr.Read()) {
+									errorMessage += sdr.GetStringSafe(0);
+								}
 								sdr.NextResult();
-								sdr.Read();
-								errorMessage += sdr.GetStringSafe(0);
+								if (sdr.Read()) {
+									errorMessage += sdr.GetStringSafe(0);
+								}
 							}
 						}
 					}
