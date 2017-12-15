@@ -469,12 +469,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("documents/{documentId}/mtmw")]
 		[HttpPut]
 		public ScarResult DoMTMWValidation(Guid documentId) {
-			return new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			var result = helper.GetMtmwTableCells(0, documentId);
+			return result;
 		}
 		[Route("documents/{documentId}/lpv")]
 		[HttpPut]
 		public ScarResult DoLPVValidation(Guid documentId) {
-			return new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			var result = helper.GetLpvTableCells(0, documentId);
+			return result;
 		}
 		[Route("documents/{documentId}/export")]
 		[HttpPut]

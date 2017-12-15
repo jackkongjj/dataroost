@@ -3057,6 +3057,276 @@ ROLLBACK TRAN
 					}
 					return errorMessage;
 				}
+
+				public ScarResult GetMtmwTableCells(int iconum, Guid DocumentId) {
+					var sw = System.Diagnostics.Stopwatch.StartNew();
+ 
+
+					string CellsQuery =
+						@"
+ DECLARE @iconum INT 
+
+ DECLARE  @IconumList TABLE(CompanyId INT)
+ INSERT @IconumList(CompanyId )
+ SELECT ds.CompanyID 
+ FROM Document d
+ JOIN DocumentSeries ds on d.DocumentSeriesID = ds.id
+ WHERE d.id = @DocumentId
+ IF (@GuessedIconum not in (SELECT CompanyId from @IconumList))
+ BEGIN
+	SELECT TOP 1 @Iconum = Companyid 
+	FROM @IconumList
+ END
+ ELSE
+ BEGIN
+	SET @Iconum = @GuessedIconum
+ END
+ 
+  SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+tc.XBRLTag, 
+--tc.UpdateStampUTC
+null
+, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as ArdError,
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as MtmwError, 
+				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+FROM DocumentSeries ds
+JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt on sh.TableTypeID = tt.ID
+JOIN(
+	SELECT distinct dts.ID
+	FROM DocumentSeries ds
+	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt on tt.ID = sh.TableTypeID
+	WHERE ds.CompanyID = @iconum
+	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+) as ts on 1=1
+JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+JOIN(
+	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
+	FROM DocumentSeries ds
+	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt on sh.TableTypeID = tt.ID
+	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
+	JOIN MTMWErrorTypeTableCell aetc ON tc.Id = aetc.TableCellId
+	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	WHERE ds.CompanyID = @iconum
+) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
+JOIN Document d on dts.documentid = d.ID
+WHERE ds.CompanyID = @iconum
+ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+
+";//I hate this query, it is so bad
+
+
+
+					ScarResult result = new ScarResult();
+
+					result.ChangedCells = new List<SCARAPITableCell>();
+ 
+					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+						conn.Open();
+						using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
+							cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
+							cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+
+							using (SqlDataReader reader = cmd.ExecuteReader()) {
+
+								int shix = 0;
+								int i = 0;
+								int adjustedOrder = 0;
+								while (reader.Read()) {
+									SCARAPITableCell cell;
+									if (reader.GetNullable<int>(0).HasValue) {
+										cell = new SCARAPITableCell
+										{
+											ID = reader.GetInt32(0),
+											Offset = reader.GetStringSafe(1),
+											CellPeriodType = reader.GetStringSafe(2),
+											PeriodTypeID = reader.GetStringSafe(3),
+											CellPeriodCount = reader.GetStringSafe(4),
+											PeriodLength = reader.GetNullable<int>(5),
+											CellDay = reader.GetStringSafe(6),
+											CellMonth = reader.GetStringSafe(7),
+											CellYear = reader.GetStringSafe(8),
+											CellDate = reader.GetNullable<DateTime>(9),
+											Value = reader.GetStringSafe(10),
+											CompanyFinancialTermID = reader.GetNullable<int>(11),
+											ValueNumeric = reader.GetNullable<decimal>(12),
+											NormalizedNegativeIndicator = reader.GetBoolean(13),
+											ScalingFactorID = reader.GetStringSafe(14),
+											AsReportedScalingFactor = reader.GetStringSafe(15),
+											Currency = reader.GetStringSafe(16),
+											CurrencyCode = reader.GetStringSafe(17),
+											Cusip = reader.GetStringSafe(18),
+											ScarUpdated = reader.GetBoolean(19),
+											IsIncomePositive = reader.GetBoolean(20),
+											XBRLTag = reader.GetStringSafe(21),
+											UpdateStampUTC = reader.GetNullable<DateTime>(22),
+											DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+											//	DocumentID = reader.GetGuid(23),
+											Label = reader.GetStringSafe(24),
+											ScalingFactorValue = reader.GetDouble(25),
+											ARDErrorTypeId = reader.GetNullable<int>(26),
+											MTMWErrorTypeId = reader.GetNullable<int>(27)
+										};
+
+										result.ChangedCells.Add(cell);
+									} else {
+ 
+									}
+								}
+							}
+						}
+ 
+					}
+ 					return result;
+				}
+
+						public ScarResult GetLpvTableCells(int iconum, Guid DocumentId) {
+					var sw = System.Diagnostics.Stopwatch.StartNew();
+ 
+
+					string CellsQuery =
+						@"
+ DECLARE @iconum INT 
+
+ DECLARE  @IconumList TABLE(CompanyId INT)
+ INSERT @IconumList(CompanyId )
+ SELECT ds.CompanyID 
+ FROM Document d
+ JOIN DocumentSeries ds on d.DocumentSeriesID = ds.id
+ WHERE d.id = @DocumentId
+ IF (@GuessedIconum not in (SELECT CompanyId from @IconumList))
+ BEGIN
+	SELECT TOP 1 @Iconum = Companyid 
+	FROM @IconumList
+ END
+ ELSE
+ BEGIN
+	SET @Iconum = @GuessedIconum
+ END
+ 
+  SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+tc.XBRLTag, 
+--tc.UpdateStampUTC
+null
+, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as ArdError,
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as MtmwError, 
+				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+FROM DocumentSeries ds
+JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt on sh.TableTypeID = tt.ID
+JOIN(
+	SELECT distinct dts.ID
+	FROM DocumentSeries ds
+	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt on tt.ID = sh.TableTypeID
+	WHERE ds.CompanyID = @iconum
+	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+) as ts on 1=1
+JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+JOIN(
+	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
+	FROM DocumentSeries ds
+	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt on sh.TableTypeID = tt.ID
+	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
+	JOIN ARDErrorTypeTableCell aetc ON tc.Id = aetc.TableCellId
+	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	WHERE ds.CompanyID = @iconum
+) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
+JOIN Document d on dts.documentid = d.ID
+WHERE ds.CompanyID = @iconum
+ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+
+";//I hate this query, it is so bad
+
+
+
+					ScarResult result = new ScarResult();
+
+					result.ChangedCells = new List<SCARAPITableCell>();
+ 
+					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+						conn.Open();
+						using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
+							cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
+							cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+
+							using (SqlDataReader reader = cmd.ExecuteReader()) {
+
+								int shix = 0;
+								int i = 0;
+								int adjustedOrder = 0;
+								while (reader.Read()) {
+									SCARAPITableCell cell;
+									if (reader.GetNullable<int>(0).HasValue) {
+										cell = new SCARAPITableCell
+										{
+											ID = reader.GetInt32(0),
+											Offset = reader.GetStringSafe(1),
+											CellPeriodType = reader.GetStringSafe(2),
+											PeriodTypeID = reader.GetStringSafe(3),
+											CellPeriodCount = reader.GetStringSafe(4),
+											PeriodLength = reader.GetNullable<int>(5),
+											CellDay = reader.GetStringSafe(6),
+											CellMonth = reader.GetStringSafe(7),
+											CellYear = reader.GetStringSafe(8),
+											CellDate = reader.GetNullable<DateTime>(9),
+											Value = reader.GetStringSafe(10),
+											CompanyFinancialTermID = reader.GetNullable<int>(11),
+											ValueNumeric = reader.GetNullable<decimal>(12),
+											NormalizedNegativeIndicator = reader.GetBoolean(13),
+											ScalingFactorID = reader.GetStringSafe(14),
+											AsReportedScalingFactor = reader.GetStringSafe(15),
+											Currency = reader.GetStringSafe(16),
+											CurrencyCode = reader.GetStringSafe(17),
+											Cusip = reader.GetStringSafe(18),
+											ScarUpdated = reader.GetBoolean(19),
+											IsIncomePositive = reader.GetBoolean(20),
+											XBRLTag = reader.GetStringSafe(21),
+											UpdateStampUTC = reader.GetNullable<DateTime>(22),
+											DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+											//	DocumentID = reader.GetGuid(23),
+											Label = reader.GetStringSafe(24),
+											ScalingFactorValue = reader.GetDouble(25),
+											ARDErrorTypeId = reader.GetNullable<int>(26),
+											MTMWErrorTypeId = reader.GetNullable<int>(27)
+										};
+
+										result.ChangedCells.Add(cell);
+									} else {
+ 
+									}
+								}
+							}
+						}
+ 
+					}
+ 					return result;
+				}
 				#endregion
 	}
 }
