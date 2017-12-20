@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Web;
 using DataRoostAPI.Common.Models.AsReported;
 using FactSet.Data.SqlClient;
@@ -15,9 +18,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		public AsReportedTemplateHelper(string sfConnectionString) {
 			this._sfConnectionString = sfConnectionString;
 		}
-		#region SQL 
+		#region SQL
 		private string SQL_GetCellQuery =
-                                @"
+																@"
 SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
@@ -65,7 +68,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			string query =
-                @"
+								@"
 SELECT DISTINCT sh.*, shm.Code
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
@@ -149,8 +152,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			AsReportedTemplate temp = new AsReportedTemplate();
 
 			temp.StaticHierarchies = new List<StaticHierarchy>();
-            Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
-            Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+			Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+			Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 			Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
@@ -176,8 +179,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
 								ParentID = reader.GetNullable<int>(11),
-                                StaticHierarchyMetaType = reader.GetStringSafe(12),
-                                Cells = new List<SCARAPITableCell>()
+								StaticHierarchyMetaType = reader.GetStringSafe(12),
+								Cells = new List<SCARAPITableCell>()
 							};
 							StaticHierarchies.Add(document);
 							SHLookup.Add(document.Id, document);
@@ -201,42 +204,42 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						while (reader.Read()) {
 							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(0).HasValue) {
-                                cell = new SCARAPITableCell
-								{
-									ID = reader.GetInt32(0),
-									Offset = reader.GetStringSafe(1),
-									CellPeriodType = reader.GetStringSafe(2),
-									PeriodTypeID = reader.GetStringSafe(3),
-									CellPeriodCount = reader.GetStringSafe(4),
-									PeriodLength = reader.GetNullable<int>(5),
-									CellDay = reader.GetStringSafe(6),
-									CellMonth = reader.GetStringSafe(7),
-									CellYear = reader.GetStringSafe(8),
-									CellDate = reader.GetNullable<DateTime>(9),
-									Value = reader.GetStringSafe(10),
-									CompanyFinancialTermID = reader.GetNullable<int>(11),
-									ValueNumeric = reader.GetNullable<decimal>(12),
-									NormalizedNegativeIndicator = reader.GetBoolean(13),
-									ScalingFactorID = reader.GetStringSafe(14),
-									AsReportedScalingFactor = reader.GetStringSafe(15),
-									Currency = reader.GetStringSafe(16),
-									CurrencyCode = reader.GetStringSafe(17),
-									Cusip = reader.GetStringSafe(18),
-									ScarUpdated = reader.GetBoolean(19),
-									IsIncomePositive = reader.GetBoolean(20),
-									XBRLTag = reader.GetStringSafe(21),
-									UpdateStampUTC = reader.GetNullable<DateTime>(22),
-									DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
-									//	DocumentID = reader.GetGuid(23),
-									Label = reader.GetStringSafe(24),
-									ScalingFactorValue = reader.GetDouble(25),
-									ARDErrorTypeId = reader.GetNullable<int>(26),
-									MTMWErrorTypeId = reader.GetNullable<int>(27)
-								};
+								cell = new SCARAPITableCell
+{
+	ID = reader.GetInt32(0),
+	Offset = reader.GetStringSafe(1),
+	CellPeriodType = reader.GetStringSafe(2),
+	PeriodTypeID = reader.GetStringSafe(3),
+	CellPeriodCount = reader.GetStringSafe(4),
+	PeriodLength = reader.GetNullable<int>(5),
+	CellDay = reader.GetStringSafe(6),
+	CellMonth = reader.GetStringSafe(7),
+	CellYear = reader.GetStringSafe(8),
+	CellDate = reader.GetNullable<DateTime>(9),
+	Value = reader.GetStringSafe(10),
+	CompanyFinancialTermID = reader.GetNullable<int>(11),
+	ValueNumeric = reader.GetNullable<decimal>(12),
+	NormalizedNegativeIndicator = reader.GetBoolean(13),
+	ScalingFactorID = reader.GetStringSafe(14),
+	AsReportedScalingFactor = reader.GetStringSafe(15),
+	Currency = reader.GetStringSafe(16),
+	CurrencyCode = reader.GetStringSafe(17),
+	Cusip = reader.GetStringSafe(18),
+	ScarUpdated = reader.GetBoolean(19),
+	IsIncomePositive = reader.GetBoolean(20),
+	XBRLTag = reader.GetStringSafe(21),
+	UpdateStampUTC = reader.GetNullable<DateTime>(22),
+	DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+	//	DocumentID = reader.GetGuid(23),
+	Label = reader.GetStringSafe(24),
+	ScalingFactorValue = reader.GetDouble(25),
+	ARDErrorTypeId = reader.GetNullable<int>(26),
+	MTMWErrorTypeId = reader.GetNullable<int>(27)
+};
 
 								adjustedOrder = reader.GetInt32(28);
 							} else {
-                                cell = new SCARAPITableCell();
+								cell = new SCARAPITableCell();
 								adjustedOrder = reader.GetInt32(28);
 							}
 
@@ -322,49 +325,47 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 				}
 
 				for (int i = 0; i < sh.Cells.Count; i++) {
-                    try
-                    {
-                        TimeSlice ts = temp.TimeSlices[i];
+					try {
+						TimeSlice ts = temp.TimeSlices[i];
 
-                        SCARAPITableCell tc = sh.Cells[i];
-                        List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
-                        foreach (int j in matches)
-                        {
-                            if (sh.Cells[j] == tc)
-                                continue;
+						SCARAPITableCell tc = sh.Cells[i];
+						List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
+						foreach (int j in matches) {
+							if (sh.Cells[j] == tc)
+								continue;
 
-                            bool whatever = false;
+							bool whatever = false;
 
-                            decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup, ref whatever);
-                            decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
-                            bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
+							decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup, ref whatever);
+							decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
+							bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
 
-                            if (matchValue != cellValue &&//TODO: remove double checks
-                                !((ts.PublicationDate > temp.TimeSlices[j].PublicationDate && cellValue == 0) || (temp.TimeSlices[j].PublicationDate > ts.PublicationDate && matchValue == 0)) &&
-                                !anyValidationPasses &&
-                                tc.ValueNumeric.HasValue
-                                )
-                            {
-                                tc.LikePeriodValidationFlag = true;
-                            }
-                        }
+							if (matchValue != cellValue &&//TODO: remove double checks
+									!((ts.PublicationDate > temp.TimeSlices[j].PublicationDate && cellValue == 0) || (temp.TimeSlices[j].PublicationDate > ts.PublicationDate && matchValue == 0)) &&
+									!anyValidationPasses &&
+									tc.ValueNumeric.HasValue &&
+									!GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
+									!GetChildren(sh.Cells[j], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
+								sh.StaticHierarchyMetaId != 5
+									) {
+								tc.LikePeriodValidationFlag = true;
+							}
+						}
 
-                        bool hasChildren = false;
-                        bool whatever2 = false;
+						bool hasChildren = false;
+						bool whatever2 = false;
 
-                        tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 && 
-                            (CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) && 
-                                !tc.MTMWErrorTypeId.HasValue && hasChildren;
-                    }
-                    catch { break; }
+						tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 &&
+								(CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) &&
+										!tc.MTMWErrorTypeId.HasValue && hasChildren;
+					} catch { break; }
 				}
 			}
 
 			return temp;
 		}
 
-        private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren)
-        {
+		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren) {
 			if (cell.ValueNumeric.HasValue) {
 				hasChildren = true;
 				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
@@ -391,28 +392,39 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			return 0;
 		}
 
-        private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren)
-        {
+		private IEnumerable<SCARAPITableCell> GetChildren(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
+
+			StaticHierarchy sh = CellLookup[cell].Item1;
+			int timesliceIndex = CellLookup[cell].Item2;
+
+			foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
+				if (child.Cells[timesliceIndex].VirtualValueNumeric.HasValue)
+					foreach (SCARAPITableCell c in GetChildren(child.Cells[timesliceIndex], CellLookup, SHChildLookup))
+						yield return c;
+				else {
+					yield return child.Cells[timesliceIndex];
+				}
+			}
+		}
+
+		private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, ref bool hasChildren) {
 			if (CellLookup.ContainsKey(cell)) {
 				decimal sum = 0;
 				StaticHierarchy sh = CellLookup[cell].Item1;
 				int timesliceIndex = CellLookup[cell].Item2;
 
-                if (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6)
-                {
+				if (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6) {
 
-                    foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6))
-                    {
-                        sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
-                    }
-                    if (SHChildLookup[sh.Id].Count > 0)
-                    {
-                        if (!cell.ValueNumeric.HasValue)
-                            cell.VirtualValueNumeric = sum;
+					foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6)) {
+						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
+					}
+					if (SHChildLookup[sh.Id].Count > 0) {
+						if (!cell.ValueNumeric.HasValue)
+							cell.VirtualValueNumeric = sum;
 
-                        return sum;
-                    }
-                }
+						return sum;
+					}
+				}
 			}
 			return 0;
 		}
@@ -520,7 +532,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							UnitTypeId = reader.GetInt32(8),
 							IsIncomePositive = reader.GetBoolean(9),
 							ChildrenExpandDown = reader.GetBoolean(10),
-                            Cells = new List<SCARAPITableCell>()
+							Cells = new List<SCARAPITableCell>()
 						};
 					}
 				}
@@ -531,36 +543,36 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
 						while (reader.Read()) {
-                            SCARAPITableCell cell = new SCARAPITableCell
-							{
-								ID = reader.GetInt32(0),
-								Offset = reader.GetStringSafe(1),
-								CellPeriodType = reader.GetStringSafe(2),
-								PeriodTypeID = reader.GetStringSafe(3),
-								CellPeriodCount = reader.GetStringSafe(4),
-								PeriodLength = reader.GetNullable<int>(5),
-								CellDay = reader.GetStringSafe(6),
-								CellMonth = reader.GetStringSafe(7),
-								CellYear = reader.GetStringSafe(8),
-								CellDate = reader.GetNullable<DateTime>(9),
-								Value = reader.GetStringSafe(10),
-								CompanyFinancialTermID = reader.GetNullable<int>(11),
-								ValueNumeric = reader.GetNullable<decimal>(12),
-								NormalizedNegativeIndicator = reader.GetBoolean(13),
-								ScalingFactorID = reader.GetStringSafe(14),
-								AsReportedScalingFactor = reader.GetStringSafe(15),
-								Currency = reader.GetStringSafe(16),
-								CurrencyCode = reader.GetStringSafe(17),
-								Cusip = reader.GetStringSafe(18),
-								ScarUpdated = reader.GetBoolean(19),
-								IsIncomePositive = reader.GetBoolean(20),
-								XBRLTag = reader.GetStringSafe(21),
-								UpdateStampUTC = reader.GetNullable<DateTime>(22),
-								DocumentID = reader.GetGuid(23),
-								Label = reader.GetStringSafe(24),
-								ARDErrorTypeId = reader.GetNullable<int>(25),
-								MTMWErrorTypeId = reader.GetNullable<int>(26)
-							};
+							SCARAPITableCell cell = new SCARAPITableCell
+{
+	ID = reader.GetInt32(0),
+	Offset = reader.GetStringSafe(1),
+	CellPeriodType = reader.GetStringSafe(2),
+	PeriodTypeID = reader.GetStringSafe(3),
+	CellPeriodCount = reader.GetStringSafe(4),
+	PeriodLength = reader.GetNullable<int>(5),
+	CellDay = reader.GetStringSafe(6),
+	CellMonth = reader.GetStringSafe(7),
+	CellYear = reader.GetStringSafe(8),
+	CellDate = reader.GetNullable<DateTime>(9),
+	Value = reader.GetStringSafe(10),
+	CompanyFinancialTermID = reader.GetNullable<int>(11),
+	ValueNumeric = reader.GetNullable<decimal>(12),
+	NormalizedNegativeIndicator = reader.GetBoolean(13),
+	ScalingFactorID = reader.GetStringSafe(14),
+	AsReportedScalingFactor = reader.GetStringSafe(15),
+	Currency = reader.GetStringSafe(16),
+	CurrencyCode = reader.GetStringSafe(17),
+	Cusip = reader.GetStringSafe(18),
+	ScarUpdated = reader.GetBoolean(19),
+	IsIncomePositive = reader.GetBoolean(20),
+	XBRLTag = reader.GetStringSafe(21),
+	UpdateStampUTC = reader.GetNullable<DateTime>(22),
+	DocumentID = reader.GetGuid(23),
+	Label = reader.GetStringSafe(24),
+	ARDErrorTypeId = reader.GetNullable<int>(25),
+	MTMWErrorTypeId = reader.GetNullable<int>(26)
+};
 
 							sh.Cells.Add(cell);
 
@@ -945,7 +957,7 @@ ROLLBACK TRAN
 			response.StaticHierarchies = new List<StaticHierarchy>();
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				
+
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -1835,7 +1847,7 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePerio
 							ArComponent = reader.GetOrdinal("ArComponent")
 						};
 						while (reader.Read()) {
-							TimeSlice slice = new TimeSlice ();
+							TimeSlice slice = new TimeSlice();
 							slice.DocumentId = reader.GetGuid(ordinals.DocumentId);
 							slice.DamDocumentId = reader.GetGuid(ordinals.DamDocumentId);
 							slice.Id = reader.GetInt32(ordinals.TimeSliceId);
@@ -1861,15 +1873,14 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePerio
 		}
 
 
-        public ScarResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID)
-        {
-            const string SQL_UpdateFlipIncomeFlag = @"
+		public ScarResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			const string SQL_UpdateFlipIncomeFlag = @"
 
 UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END
 																WHERE ID = @cellid; 
 ";
 
-            const string SQL_ValidateCells= @"
+			const string SQL_ValidateCells = @"
 DECLARE @TargetSH int;
 
 SELECT top 1 @TargetSH = sh.id
@@ -1940,86 +1951,79 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
  
 ";
-            ScarResult result = new ScarResult();
-            result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
-            result.ChangedCells = new List<SCARAPITableCell>();
- 
-            string SQL_FlipSignCommand = 
-                SQL_UpdateFlipIncomeFlag 
-                + SQL_ValidateCells
-                ;
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(SQL_FlipSignCommand, conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
-                    cmd.Parameters.AddWithValue("@cellid", CellId);
-                    cmd.Parameters.AddWithValue("@Iconum", iconum);
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
 
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-												reader.Read();
-                        int level = reader.GetInt32(0);
-                        reader.NextResult();
-                        int shix = 0;
-                        int adjustedOrder = 0;
-                        while (reader.Read())
-                        {
-                            SCARAPITableCell cell;
-                            if (reader.GetNullable<int>(1).HasValue)
-                            {
-                                cell = new SCARAPITableCell
-                                {
-                                    ID = reader.GetInt32(1),
-                                    Offset = reader.GetStringSafe(2),
-                                    CellPeriodType = reader.GetStringSafe(3),
-                                    PeriodTypeID = reader.GetStringSafe(4),
-                                    CellPeriodCount = reader.GetStringSafe(5),
-                                    PeriodLength = reader.GetNullable<int>(6),
-                                    CellDay = reader.GetStringSafe(7),
-                                    CellMonth = reader.GetStringSafe(8),
-                                    CellYear = reader.GetStringSafe(9),
-                                    CellDate = reader.GetNullable<DateTime>(10),
-                                    Value = reader.GetStringSafe(11),
-                                    CompanyFinancialTermID = reader.GetNullable<int>(12),
-                                    ValueNumeric = reader.GetNullable<decimal>(13),
-                                    NormalizedNegativeIndicator = reader.GetBoolean(14),
-                                    ScalingFactorID = reader.GetStringSafe(15),
-                                    AsReportedScalingFactor = reader.GetStringSafe(16),
-                                    Currency = reader.GetStringSafe(17),
-                                    CurrencyCode = reader.GetStringSafe(18),
-                                    Cusip = reader.GetStringSafe(19)
-                                };
-                                cell.ScarUpdated = reader.GetBoolean(20);
-                                cell.IsIncomePositive = reader.GetBoolean(21);
-                                cell.XBRLTag = reader.GetStringSafe(22);
-                                //cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
-                                cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
-                                cell.Label = reader.GetStringSafe(24);
-                                cell.ScalingFactorValue = reader.GetDouble(25);
-																cell.ARDErrorTypeId = reader.GetNullable<int>(26);
-																cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
-																cell.LikePeriodValidationFlag = reader.GetBoolean(28);
-																cell.MTMWValidationFlag = reader.GetBoolean(29);
-                                adjustedOrder = reader.GetInt32(31);
-																result.ChangedCells.Add(cell);
+			string SQL_FlipSignCommand =
+					SQL_UpdateFlipIncomeFlag
+					+ SQL_ValidateCells
+					;
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(SQL_FlipSignCommand, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+					cmd.Parameters.AddWithValue("@cellid", CellId);
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                            result.CellToDTS.Add(cell, adjustedOrder);
-                        }
-                    }
-                }
-            }
-            return result;
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						int level = reader.GetInt32(0);
+						reader.NextResult();
+						int shix = 0;
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								cell.ScalingFactorValue = reader.GetDouble(25);
+								cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+								cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+								cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+								cell.MTMWValidationFlag = reader.GetBoolean(29);
+								adjustedOrder = reader.GetInt32(31);
+								result.ChangedCells.Add(cell);
+
+							} else {
+								continue;
+							}
+							result.CellToDTS.Add(cell, adjustedOrder);
+						}
+					}
+				}
+			}
+			return result;
 		}
 
-				public ScarResult FlipChildren(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
-					const string query = @"
+		public ScarResult FlipChildren(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			const string query = @"
 DECLARE @TargetSHID int;
 
 SELECT top 1 @TargetSHID = sh.id
@@ -2133,76 +2137,76 @@ WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocS
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
 ";
-					ScarResult result = new ScarResult();
-					result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
-					result.ChangedCells = new List<SCARAPITableCell>();
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
 
- 
-					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-						using (SqlCommand cmd = new SqlCommand(query, conn)) {
-							conn.Open();
-							cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
-							cmd.Parameters.AddWithValue("@cellid", CellId);
-							cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-							using (SqlDataReader reader = cmd.ExecuteReader()) {
-								reader.Read();
-								int level = reader.GetInt32(0);
-								reader.NextResult();
-								int shix = 0;
-								int adjustedOrder = 0;
-								while (reader.Read()) {
-									SCARAPITableCell cell;
-									if (reader.GetNullable<int>(1).HasValue) {
-										cell = new SCARAPITableCell
-										{
-											ID = reader.GetInt32(1),
-											Offset = reader.GetStringSafe(2),
-											CellPeriodType = reader.GetStringSafe(3),
-											PeriodTypeID = reader.GetStringSafe(4),
-											CellPeriodCount = reader.GetStringSafe(5),
-											PeriodLength = reader.GetNullable<int>(6),
-											CellDay = reader.GetStringSafe(7),
-											CellMonth = reader.GetStringSafe(8),
-											CellYear = reader.GetStringSafe(9),
-											CellDate = reader.GetNullable<DateTime>(10),
-											Value = reader.GetStringSafe(11),
-											CompanyFinancialTermID = reader.GetNullable<int>(12),
-											ValueNumeric = reader.GetNullable<decimal>(13),
-											NormalizedNegativeIndicator = reader.GetBoolean(14),
-											ScalingFactorID = reader.GetStringSafe(15),
-											AsReportedScalingFactor = reader.GetStringSafe(16),
-											Currency = reader.GetStringSafe(17),
-											CurrencyCode = reader.GetStringSafe(18),
-											Cusip = reader.GetStringSafe(19)
-										};
-										cell.ScarUpdated = reader.GetBoolean(20);
-										cell.IsIncomePositive = reader.GetBoolean(21);
-										cell.XBRLTag = reader.GetStringSafe(22);
-										//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
-										cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
-										cell.Label = reader.GetStringSafe(24);
-										cell.ScalingFactorValue = reader.GetDouble(25);
-										cell.ARDErrorTypeId = reader.GetNullable<int>(26);
-										cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
-										cell.LikePeriodValidationFlag = reader.GetBoolean(28);
-										cell.MTMWValidationFlag = reader.GetBoolean(29);
-										adjustedOrder = reader.GetInt32(31);
-										result.ChangedCells.Add(cell);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+					cmd.Parameters.AddWithValue("@cellid", CellId);
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-									} else {
-										continue;
-									}
-									result.CellToDTS.Add(cell, adjustedOrder);
-								}
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						int level = reader.GetInt32(0);
+						reader.NextResult();
+						int shix = 0;
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								cell.ScalingFactorValue = reader.GetDouble(25);
+								cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+								cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+								cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+								cell.MTMWValidationFlag = reader.GetBoolean(29);
+								adjustedOrder = reader.GetInt32(31);
+								result.ChangedCells.Add(cell);
+
+							} else {
+								continue;
 							}
+							result.CellToDTS.Add(cell, adjustedOrder);
 						}
 					}
-					return result;
 				}
+			}
+			return result;
+		}
 
-				public ScarResult FlipHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
-					const string query = @"
+		public ScarResult FlipHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			const string query = @"
 BEGIN TRAN
 
 DECLARE @TargetSHID int;
@@ -2302,76 +2306,76 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
  
 ROLLBACK TRAN
 ";
-					ScarResult result = new ScarResult();
-					result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
-					result.ChangedCells = new List<SCARAPITableCell>();
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
 
 
-					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-						using (SqlCommand cmd = new SqlCommand(query, conn)) {
-							conn.Open();
-							cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
-							cmd.Parameters.AddWithValue("@cellid", CellId);
-							cmd.Parameters.AddWithValue("@Iconum", iconum);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+					cmd.Parameters.AddWithValue("@cellid", CellId);
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-							using (SqlDataReader reader = cmd.ExecuteReader()) {
-								reader.Read();
-								int level = reader.GetInt32(0);
-								reader.NextResult();
-								int shix = 0;
-								int adjustedOrder = 0;
-								while (reader.Read()) {
-									SCARAPITableCell cell;
-									if (reader.GetNullable<int>(1).HasValue) {
-										cell = new SCARAPITableCell
-										{
-											ID = reader.GetInt32(1),
-											Offset = reader.GetStringSafe(2),
-											CellPeriodType = reader.GetStringSafe(3),
-											PeriodTypeID = reader.GetStringSafe(4),
-											CellPeriodCount = reader.GetStringSafe(5),
-											PeriodLength = reader.GetNullable<int>(6),
-											CellDay = reader.GetStringSafe(7),
-											CellMonth = reader.GetStringSafe(8),
-											CellYear = reader.GetStringSafe(9),
-											CellDate = reader.GetNullable<DateTime>(10),
-											Value = reader.GetStringSafe(11),
-											CompanyFinancialTermID = reader.GetNullable<int>(12),
-											ValueNumeric = reader.GetNullable<decimal>(13),
-											NormalizedNegativeIndicator = reader.GetBoolean(14),
-											ScalingFactorID = reader.GetStringSafe(15),
-											AsReportedScalingFactor = reader.GetStringSafe(16),
-											Currency = reader.GetStringSafe(17),
-											CurrencyCode = reader.GetStringSafe(18),
-											Cusip = reader.GetStringSafe(19)
-										};
-										cell.ScarUpdated = reader.GetBoolean(20);
-										cell.IsIncomePositive = reader.GetBoolean(21);
-										cell.XBRLTag = reader.GetStringSafe(22);
-										//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
-										cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
-										cell.Label = reader.GetStringSafe(24);
-										cell.ScalingFactorValue = reader.GetDouble(25);
-										cell.ARDErrorTypeId = reader.GetNullable<int>(26);
-										cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
-										cell.LikePeriodValidationFlag = reader.GetBoolean(28);
-										cell.MTMWValidationFlag = reader.GetBoolean(29);
-										adjustedOrder = reader.GetInt32(31);
-										result.ChangedCells.Add(cell);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						int level = reader.GetInt32(0);
+						reader.NextResult();
+						int shix = 0;
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								cell.ScalingFactorValue = reader.GetDouble(25);
+								cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+								cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+								cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+								cell.MTMWValidationFlag = reader.GetBoolean(29);
+								adjustedOrder = reader.GetInt32(31);
+								result.ChangedCells.Add(cell);
 
-									} else {
-										continue;
-									}
-									result.CellToDTS.Add(cell, adjustedOrder);
-								}
+							} else {
+								continue;
 							}
+							result.CellToDTS.Add(cell, adjustedOrder);
 						}
 					}
-					return result;
 				}
+			}
+			return result;
+		}
 
-				public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
-					const string query = @"
+		public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			const string query = @"
 BEGIN TRAN
 
 DECLARE @TargetSHID int;
@@ -2481,75 +2485,75 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
  
 ROLLBACK TRAN
 ";
-					ScarResult result = new ScarResult();
-					result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
-					result.ChangedCells = new List<SCARAPITableCell>();
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
 
 
-					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-						using (SqlCommand cmd = new SqlCommand(query, conn)) {
-							conn.Open();
-							cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
-							cmd.Parameters.AddWithValue("@cellid", CellId);
-							cmd.Parameters.AddWithValue("@Iconum", iconum);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+					cmd.Parameters.AddWithValue("@cellid", CellId);
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-							using (SqlDataReader reader = cmd.ExecuteReader()) {
-								reader.Read();
-								int level = reader.GetInt32(0);
-								reader.NextResult();
-								int shix = 0;
-								int adjustedOrder = 0;
-								while (reader.Read()) {
-									SCARAPITableCell cell;
-									if (reader.GetNullable<int>(1).HasValue) {
-										cell = new SCARAPITableCell
-										{
-											ID = reader.GetInt32(1),
-											Offset = reader.GetStringSafe(2),
-											CellPeriodType = reader.GetStringSafe(3),
-											PeriodTypeID = reader.GetStringSafe(4),
-											CellPeriodCount = reader.GetStringSafe(5),
-											PeriodLength = reader.GetNullable<int>(6),
-											CellDay = reader.GetStringSafe(7),
-											CellMonth = reader.GetStringSafe(8),
-											CellYear = reader.GetStringSafe(9),
-											CellDate = reader.GetNullable<DateTime>(10),
-											Value = reader.GetStringSafe(11),
-											CompanyFinancialTermID = reader.GetNullable<int>(12),
-											ValueNumeric = reader.GetNullable<decimal>(13),
-											NormalizedNegativeIndicator = reader.GetBoolean(14),
-											ScalingFactorID = reader.GetStringSafe(15),
-											AsReportedScalingFactor = reader.GetStringSafe(16),
-											Currency = reader.GetStringSafe(17),
-											CurrencyCode = reader.GetStringSafe(18),
-											Cusip = reader.GetStringSafe(19)
-										};
-										cell.ScarUpdated = reader.GetBoolean(20);
-										cell.IsIncomePositive = reader.GetBoolean(21);
-										cell.XBRLTag = reader.GetStringSafe(22);
-										//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
-										cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
-										cell.Label = reader.GetStringSafe(24);
-										cell.ScalingFactorValue = reader.GetDouble(25);
-										cell.ARDErrorTypeId = reader.GetNullable<int>(26);
-										cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
-										cell.LikePeriodValidationFlag = reader.GetBoolean(28);
-										cell.MTMWValidationFlag = reader.GetBoolean(29);
-										adjustedOrder = reader.GetInt32(31);
-										result.ChangedCells.Add(cell);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						int level = reader.GetInt32(0);
+						reader.NextResult();
+						int shix = 0;
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								cell.ScalingFactorValue = reader.GetDouble(25);
+								cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+								cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+								cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+								cell.MTMWValidationFlag = reader.GetBoolean(29);
+								adjustedOrder = reader.GetInt32(31);
+								result.ChangedCells.Add(cell);
 
-									} else {
-										continue;
-									}
-									result.CellToDTS.Add(cell, adjustedOrder);
-								}
+							} else {
+								continue;
 							}
+							result.CellToDTS.Add(cell, adjustedOrder);
 						}
 					}
-					return result;
 				}
+			}
+			return result;
+		}
 
-        public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
+		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
 			string query = @"SCARStitchRows";
 
 			DataTable dt = new DataTable();
@@ -2560,7 +2564,7 @@ ROLLBACK TRAN
 
 			StitchResult res = new StitchResult()
 			{
-                CellToDTS = new Dictionary<SCARAPITableCell, int>(),
+				CellToDTS = new Dictionary<SCARAPITableCell, int>(),
 				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
 				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
 			};
@@ -2628,48 +2632,48 @@ ROLLBACK TRAN
 							IsIncomePositive = sdr.GetBoolean(9),
 							ChildrenExpandDown = sdr.GetBoolean(10),
 							ParentID = sdr.GetNullable<int>(11),
-                            Cells = new List<SCARAPITableCell>(),
+							Cells = new List<SCARAPITableCell>(),
 							Level = level
 						};
 						res.StaticHierarchy = document;
 						sdr.NextResult();
 						while (sdr.Read()) {
-                            SCARAPITableCell cell;
+							SCARAPITableCell cell;
 							if (sdr.GetNullable<int>(0).HasValue) {
-                                cell = new SCARAPITableCell
-								{
-									ID = sdr.GetInt32(0),
-									Offset = sdr.GetStringSafe(1),
-									CellPeriodType = sdr.GetStringSafe(2),
-									PeriodTypeID = sdr.GetStringSafe(3),
-									CellPeriodCount = sdr.GetStringSafe(4),
-									PeriodLength = sdr.GetNullable<int>(5),
-									CellDay = sdr.GetStringSafe(6),
-									CellMonth = sdr.GetStringSafe(7),
-									CellYear = sdr.GetStringSafe(8),
-									CellDate = sdr.GetNullable<DateTime>(9),
-									Value = sdr.GetStringSafe(10),
-									CompanyFinancialTermID = sdr.GetNullable<int>(11),
-									ValueNumeric = sdr.GetNullable<decimal>(12),
-									NormalizedNegativeIndicator = sdr.GetBoolean(13),
-									ScalingFactorID = sdr.GetStringSafe(14),
-									AsReportedScalingFactor = sdr.GetStringSafe(15),
-									Currency = sdr.GetStringSafe(16),
-									CurrencyCode = sdr.GetStringSafe(17),
-									Cusip = sdr.GetStringSafe(18),
-									ScarUpdated = sdr.GetBoolean(19),
-									IsIncomePositive = sdr.GetBoolean(20),
-									XBRLTag = sdr.GetStringSafe(21),
-									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
-									DocumentID = sdr.GetGuid(23),
-									Label = sdr.GetStringSafe(24),
-									ScalingFactorValue = sdr.GetDouble(25),
-									ARDErrorTypeId = sdr.GetNullable<int>(26),
-									MTMWErrorTypeId = sdr.GetNullable<int>(27),
-									LikePeriodValidationFlag = sdr.GetBoolean(28)
-								};
+								cell = new SCARAPITableCell
+{
+	ID = sdr.GetInt32(0),
+	Offset = sdr.GetStringSafe(1),
+	CellPeriodType = sdr.GetStringSafe(2),
+	PeriodTypeID = sdr.GetStringSafe(3),
+	CellPeriodCount = sdr.GetStringSafe(4),
+	PeriodLength = sdr.GetNullable<int>(5),
+	CellDay = sdr.GetStringSafe(6),
+	CellMonth = sdr.GetStringSafe(7),
+	CellYear = sdr.GetStringSafe(8),
+	CellDate = sdr.GetNullable<DateTime>(9),
+	Value = sdr.GetStringSafe(10),
+	CompanyFinancialTermID = sdr.GetNullable<int>(11),
+	ValueNumeric = sdr.GetNullable<decimal>(12),
+	NormalizedNegativeIndicator = sdr.GetBoolean(13),
+	ScalingFactorID = sdr.GetStringSafe(14),
+	AsReportedScalingFactor = sdr.GetStringSafe(15),
+	Currency = sdr.GetStringSafe(16),
+	CurrencyCode = sdr.GetStringSafe(17),
+	Cusip = sdr.GetStringSafe(18),
+	ScarUpdated = sdr.GetBoolean(19),
+	IsIncomePositive = sdr.GetBoolean(20),
+	XBRLTag = sdr.GetStringSafe(21),
+	UpdateStampUTC = sdr.GetNullable<DateTime>(22),
+	DocumentID = sdr.GetGuid(23),
+	Label = sdr.GetStringSafe(24),
+	ScalingFactorValue = sdr.GetDouble(25),
+	ARDErrorTypeId = sdr.GetNullable<int>(26),
+	MTMWErrorTypeId = sdr.GetNullable<int>(27),
+	LikePeriodValidationFlag = sdr.GetBoolean(28)
+};
 							} else {
-                                cell = new SCARAPITableCell();
+								cell = new SCARAPITableCell();
 							}
 							document.Cells.Add(cell);
 
@@ -2679,8 +2683,7 @@ ROLLBACK TRAN
 				}
 			}
 
-            foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells)
-            {
+			foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells) {
 				decimal value = cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
 				decimal sum = 0;
 				bool any = false;
@@ -2724,7 +2727,7 @@ ROLLBACK TRAN
 				StaticHierarchies = new List<StaticHierarchy>()
 			};
 
-            Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
+			Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
 			List<CellMTMWComponent> CellChangeComponents;
 			Dictionary<int, int> SHLevels;
 
@@ -2743,7 +2746,7 @@ ROLLBACK TRAN
 						sdr.NextResult();
 
 						SHLevels = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToDictionary(k => k.Item1, v => v.Item2);
-						
+
 						sdr.NextResult();
 
 						while (sdr.Read()) {
@@ -2761,7 +2764,7 @@ ROLLBACK TRAN
 								IsIncomePositive = sdr.GetBoolean(9),
 								ChildrenExpandDown = sdr.GetBoolean(10),
 								ParentID = sdr.GetNullable<int>(11),
-                                Cells = new List<SCARAPITableCell>()
+								Cells = new List<SCARAPITableCell>()
 							};
 							res.StaticHierarchies.Add(document);
 						}
@@ -2772,44 +2775,44 @@ ROLLBACK TRAN
 						int adjustedOrder = 0;
 
 						while (sdr.Read()) {
-                            SCARAPITableCell cell;
+							SCARAPITableCell cell;
 							if (sdr.GetNullable<int>(0).HasValue) {
-                                cell = new SCARAPITableCell
-								{
-									ID = sdr.GetInt32(0),
-									Offset = sdr.GetStringSafe(1),
-									CellPeriodType = sdr.GetStringSafe(2),
-									PeriodTypeID = sdr.GetStringSafe(3),
-									CellPeriodCount = sdr.GetStringSafe(4),
-									PeriodLength = sdr.GetNullable<int>(5),
-									CellDay = sdr.GetStringSafe(6),
-									CellMonth = sdr.GetStringSafe(7),
-									CellYear = sdr.GetStringSafe(8),
-									CellDate = sdr.GetNullable<DateTime>(9),
-									Value = sdr.GetStringSafe(10),
-									CompanyFinancialTermID = sdr.GetNullable<int>(11),
-									ValueNumeric = sdr.GetNullable<decimal>(12),
-									NormalizedNegativeIndicator = sdr.GetBoolean(13),
-									ScalingFactorID = sdr.GetStringSafe(14),
-									AsReportedScalingFactor = sdr.GetStringSafe(15),
-									Currency = sdr.GetStringSafe(16),
-									CurrencyCode = sdr.GetStringSafe(17),
-									Cusip = sdr.GetStringSafe(18),
-									ScarUpdated = sdr.GetBoolean(19),
-									IsIncomePositive = sdr.GetBoolean(20),
-									XBRLTag = sdr.GetStringSafe(21),
-									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
-									DocumentID = sdr.GetGuid(23),
-									Label = sdr.GetStringSafe(24),
-									ScalingFactorValue = sdr.GetDouble(25),
-									ARDErrorTypeId = sdr.GetNullable<int>(26),
-									MTMWErrorTypeId = sdr.GetNullable<int>(27),
-									LikePeriodValidationFlag = sdr.GetBoolean(28)
-								};
+								cell = new SCARAPITableCell
+{
+	ID = sdr.GetInt32(0),
+	Offset = sdr.GetStringSafe(1),
+	CellPeriodType = sdr.GetStringSafe(2),
+	PeriodTypeID = sdr.GetStringSafe(3),
+	CellPeriodCount = sdr.GetStringSafe(4),
+	PeriodLength = sdr.GetNullable<int>(5),
+	CellDay = sdr.GetStringSafe(6),
+	CellMonth = sdr.GetStringSafe(7),
+	CellYear = sdr.GetStringSafe(8),
+	CellDate = sdr.GetNullable<DateTime>(9),
+	Value = sdr.GetStringSafe(10),
+	CompanyFinancialTermID = sdr.GetNullable<int>(11),
+	ValueNumeric = sdr.GetNullable<decimal>(12),
+	NormalizedNegativeIndicator = sdr.GetBoolean(13),
+	ScalingFactorID = sdr.GetStringSafe(14),
+	AsReportedScalingFactor = sdr.GetStringSafe(15),
+	Currency = sdr.GetStringSafe(16),
+	CurrencyCode = sdr.GetStringSafe(17),
+	Cusip = sdr.GetStringSafe(18),
+	ScarUpdated = sdr.GetBoolean(19),
+	IsIncomePositive = sdr.GetBoolean(20),
+	XBRLTag = sdr.GetStringSafe(21),
+	UpdateStampUTC = sdr.GetNullable<DateTime>(22),
+	DocumentID = sdr.GetGuid(23),
+	Label = sdr.GetStringSafe(24),
+	ScalingFactorValue = sdr.GetDouble(25),
+	ARDErrorTypeId = sdr.GetNullable<int>(26),
+	MTMWErrorTypeId = sdr.GetNullable<int>(27),
+	LikePeriodValidationFlag = sdr.GetBoolean(28)
+};
 
 								adjustedOrder = sdr.GetInt32(29);
 							} else {
-                                cell = new SCARAPITableCell();
+								cell = new SCARAPITableCell();
 								adjustedOrder = sdr.GetInt32(29);
 							}
 
@@ -2844,21 +2847,21 @@ ROLLBACK TRAN
 				}
 			}
 
-			
+
 			Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
 
 			foreach (CellMTMWComponent comp in CellChangeComponents) {
-				Tuple<int,int> tup = new Tuple<int,int>(comp.RootStaticHierarchyID, comp.RootDocumentTimeSliceID);
-				if(!CellValueMap.ContainsKey(tup))
+				Tuple<int, int> tup = new Tuple<int, int>(comp.RootStaticHierarchyID, comp.RootDocumentTimeSliceID);
+				if (!CellValueMap.ContainsKey(tup))
 					CellValueMap.Add(tup, 0);
 
 				CellValueMap[tup] += comp.ValueNumeric * ((decimal)comp.ScalingFactorValue) * (comp.IsIncomePositive ? 1 : -1);
 			}
 
-			foreach(Tuple<int, int> key in CellMap.Keys){
-                SCARAPITableCell cell = CellMap[key];
-				if(CellValueMap.ContainsKey(key))
-				cell.MTMWValidationFlag = (cell.ValueNumeric * (decimal)cell.ScalingFactorValue * (cell.IsIncomePositive ? 1 : -1)) != CellValueMap[key];
+			foreach (Tuple<int, int> key in CellMap.Keys) {
+				SCARAPITableCell cell = CellMap[key];
+				if (CellValueMap.ContainsKey(key))
+					cell.MTMWValidationFlag = (cell.ValueNumeric * (decimal)cell.ScalingFactorValue * (cell.IsIncomePositive ? 1 : -1)) != CellValueMap[key];
 			}
 
 			foreach (StaticHierarchy sh in res.StaticHierarchies) {
@@ -2868,129 +2871,118 @@ ROLLBACK TRAN
 			return res;
 		}
 
-        #region Deprecated Methods
-        public SCARAPITableCell GetCell(string CellId)
-        {
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@cellId", CellId);
+		#region Deprecated Methods
+		public SCARAPITableCell GetCell(string CellId) {
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@cellId", CellId);
 
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
-                        int shix = 0;
+						int shix = 0;
 
-                        int adjustedOrder = 0;
-                        while (reader.Read())
-                        {
-                            SCARAPITableCell cell;
-                            if (reader.GetNullable<int>(0).HasValue)
-                            {
-                                cell = new SCARAPITableCell
-                                {
-                                    ID = reader.GetInt32(0),
-                                    Offset = reader.GetStringSafe(1),
-                                    CellPeriodType = reader.GetStringSafe(2),
-                                    PeriodTypeID = reader.GetStringSafe(3),
-                                    CellPeriodCount = reader.GetStringSafe(4),
-                                    PeriodLength = reader.GetNullable<int>(5),
-                                    CellDay = reader.GetStringSafe(6),
-                                    CellMonth = reader.GetStringSafe(7),
-                                    CellYear = reader.GetStringSafe(8),
-                                    CellDate = reader.GetNullable<DateTime>(9),
-                                    Value = reader.GetStringSafe(10),
-                                    CompanyFinancialTermID = reader.GetNullable<int>(11),
-                                    ValueNumeric = reader.GetNullable<decimal>(12),
-                                    NormalizedNegativeIndicator = reader.GetBoolean(13),
-                                    ScalingFactorID = reader.GetStringSafe(14),
-                                    AsReportedScalingFactor = reader.GetStringSafe(15),
-                                    Currency = reader.GetStringSafe(16),
-                                    CurrencyCode = reader.GetStringSafe(17),
-                                    Cusip = reader.GetStringSafe(18),
-                                    ScarUpdated = reader.GetBoolean(19),
-                                    IsIncomePositive = reader.GetBoolean(20),
-                                    XBRLTag = reader.GetStringSafe(21),
-                                    UpdateStampUTC = reader.GetNullable<DateTime>(22),
-                                    DocumentID = reader.GetGuid(23),
-                                    Label = reader.GetStringSafe(24),
-                                    ScalingFactorValue = reader.GetDouble(25),
-                                    ARDErrorTypeId = reader.GetNullable<int>(26),
-                                    MTMWErrorTypeId = reader.GetNullable<int>(27)
-                                };
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(0).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(0),
+									Offset = reader.GetStringSafe(1),
+									CellPeriodType = reader.GetStringSafe(2),
+									PeriodTypeID = reader.GetStringSafe(3),
+									CellPeriodCount = reader.GetStringSafe(4),
+									PeriodLength = reader.GetNullable<int>(5),
+									CellDay = reader.GetStringSafe(6),
+									CellMonth = reader.GetStringSafe(7),
+									CellYear = reader.GetStringSafe(8),
+									CellDate = reader.GetNullable<DateTime>(9),
+									Value = reader.GetStringSafe(10),
+									CompanyFinancialTermID = reader.GetNullable<int>(11),
+									ValueNumeric = reader.GetNullable<decimal>(12),
+									NormalizedNegativeIndicator = reader.GetBoolean(13),
+									ScalingFactorID = reader.GetStringSafe(14),
+									AsReportedScalingFactor = reader.GetStringSafe(15),
+									Currency = reader.GetStringSafe(16),
+									CurrencyCode = reader.GetStringSafe(17),
+									Cusip = reader.GetStringSafe(18),
+									ScarUpdated = reader.GetBoolean(19),
+									IsIncomePositive = reader.GetBoolean(20),
+									XBRLTag = reader.GetStringSafe(21),
+									UpdateStampUTC = reader.GetNullable<DateTime>(22),
+									DocumentID = reader.GetGuid(23),
+									Label = reader.GetStringSafe(24),
+									ScalingFactorValue = reader.GetDouble(25),
+									ARDErrorTypeId = reader.GetNullable<int>(26),
+									MTMWErrorTypeId = reader.GetNullable<int>(27)
+								};
 
-                                adjustedOrder = reader.GetInt32(28);
-                            }
-                            else
-                            {
-                                cell = new SCARAPITableCell();
-                                adjustedOrder = reader.GetInt32(28);
-                            }
-                            return cell;
-                        }
-                    }
-                }
-            }
-            return new SCARAPITableCell();
-        }
-
-        public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId)
-        {
-            TableCellResult result = new TableCellResult();
-            result.cells = new List<SCARAPITableCell>();
-
-            SCARAPITableCell currCell = GetCell(CellId);
-            currCell.MTMWErrorTypeId = 0;
-            result.cells.Add(currCell);
-            SCARAPITableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
-            result.cells.AddRange(sibilings);
-            return result;
-        }
-
-        public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId)
-        {
-            TableCellResult result = new TableCellResult();
-            result.cells = new List<SCARAPITableCell>();
-
-            SCARAPITableCell currCell = GetCell(CellId);
-            currCell.LikePeriodValidationFlag = true;
-            currCell.MTMWValidationFlag = true;
-            result.cells.Add(currCell);
-            SCARAPITableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
-            result.cells.AddRange(sibilings);
-            return result;
-        }
-
-        private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId)
-        {
-            return null;
-        }
-        #endregion
-
-				#region Zero-Minute Update
-				public bool UpdateRedStarSlotting(Guid SFDocumentId) {
-					bool isSuccess = false;
-					try {
-						using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
-							using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
-								cmd.CommandType = CommandType.StoredProcedure;
-
-								cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
-								sqlConn.Open();
-								cmd.ExecuteNonQuery();
-								isSuccess = true;
+								adjustedOrder = reader.GetInt32(28);
+							} else {
+								cell = new SCARAPITableCell();
+								adjustedOrder = reader.GetInt32(28);
 							}
+							return cell;
 						}
-					} catch (Exception ex) {
-						isSuccess = false;
 					}
-					return isSuccess;
 				}
+			}
+			return new SCARAPITableCell();
+		}
 
-				public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId) {
-					string query = @"
+		public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId) {
+			TableCellResult result = new TableCellResult();
+			result.cells = new List<SCARAPITableCell>();
+
+			SCARAPITableCell currCell = GetCell(CellId);
+			currCell.MTMWErrorTypeId = 0;
+			result.cells.Add(currCell);
+			SCARAPITableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+			result.cells.AddRange(sibilings);
+			return result;
+		}
+
+		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId) {
+			TableCellResult result = new TableCellResult();
+			result.cells = new List<SCARAPITableCell>();
+
+			SCARAPITableCell currCell = GetCell(CellId);
+			currCell.LikePeriodValidationFlag = true;
+			currCell.MTMWValidationFlag = true;
+			result.cells.Add(currCell);
+			SCARAPITableCell[] sibilings = getSibilingsCells(CellId, DocumentId);
+			result.cells.AddRange(sibilings);
+			return result;
+		}
+
+		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
+			return null;
+		}
+		#endregion
+
+		#region Zero-Minute Update
+		public bool UpdateRedStarSlotting(Guid SFDocumentId) {
+			bool isSuccess = false;
+			try {
+				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
+						cmd.CommandType = CommandType.StoredProcedure;
+
+						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
+						sqlConn.Open();
+						cmd.ExecuteNonQuery();
+						isSuccess = true;
+					}
+				}
+			} catch (Exception ex) {
+				isSuccess = false;
+			}
+			return isSuccess;
+		}
+
+		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId) {
+			string query = @"
 
  DECLARE @BigThree Table (Description varchar(64))
  INSERT  @BigThree (Description)
@@ -3029,41 +3021,50 @@ ROLLBACK TRAN
  JOIN TableCell tc ON dtc.TableCellID = tc.id
  where dt.DocumentID = @DocumentId and tc.currencycode is null
 ";
-					string errorMessage = "";
-					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-						conn.Open();
-						using (SqlCommand cmd = new SqlCommand(query, conn)) {
-							cmd.Parameters.AddWithValue("@DocumentID", SFDocumentId);
+			string errorMessage = "";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
 
-
-							using (SqlDataReader sdr = cmd.ExecuteReader()) {
-								if (sdr.Read()) {
-									errorMessage += sdr.GetStringSafe(0);
-								}
-								sdr.NextResult();
-								if (sdr.Read()) {
-									errorMessage += sdr.GetStringSafe(0);
-								}
-								sdr.NextResult();
-								if (sdr.Read()) {
-									errorMessage += sdr.GetStringSafe(0);
-								}
-								sdr.NextResult();
-								if (sdr.Read()) {
-									errorMessage += sdr.GetStringSafe(0);
-								}
-							}
-						}
-					}
-					return errorMessage;
+				using (SqlCommand cmd = new SqlCommand("prcInsert_CreateDocumentTimeSlices", conn)) {
+					cmd.CommandType = CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@DocID", SFDocumentId);
+					cmd.ExecuteNonQuery();
 				}
 
-				public ScarResult GetMtmwTableCells(int iconum, Guid DocumentId) {
-					var sw = System.Diagnostics.Stopwatch.StartNew();
- 
 
-					string CellsQuery =
-						@"
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.Parameters.AddWithValue("@DocumentID", SFDocumentId);
+
+
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							errorMessage += sdr.GetStringSafe(0);
+						}
+						sdr.NextResult();
+						if (sdr.Read()) {
+							errorMessage += sdr.GetStringSafe(0);
+						}
+						sdr.NextResult();
+						if (sdr.Read()) {
+							errorMessage += sdr.GetStringSafe(0);
+						}
+						sdr.NextResult();
+						if (sdr.Read()) {
+							errorMessage += sdr.GetStringSafe(0);
+						}
+					}
+				}
+			}
+			return errorMessage;
+		}
+
+		public bool GetMtmwTableCells(int iconum, Guid DocumentId) {
+			var sw = System.Diagnostics.Stopwatch.StartNew();
+
+
+			string CellsQuery =
+				@"
+
  DECLARE @iconum INT 
 
  DECLARE  @IconumList TABLE(CompanyId INT)
@@ -3081,124 +3082,56 @@ ROLLBACK TRAN
  BEGIN
 	SET @Iconum = @GuessedIconum
  END
- 
-  SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
-				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
-				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
-tc.XBRLTag, 
---tc.UpdateStampUTC
-null
-, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
-				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as ArdError,
-				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as MtmwError, 
-				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
-FROM DocumentSeries ds
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt on sh.TableTypeID = tt.ID
-JOIN(
-	SELECT distinct dts.ID
-	FROM DocumentSeries ds
-	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt on tt.ID = sh.TableTypeID
-	WHERE ds.CompanyID = @iconum
-	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID
-JOIN(
-	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN MTMWErrorTypeTableCell aetc ON tc.Id = aetc.TableCellId
-	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
-	WHERE ds.CompanyID = @iconum
-) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d on dts.documentid = d.ID
-WHERE ds.CompanyID = @iconum
-ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+
+DECLARE @SHCells CellList
+
+INSERT @SHCells
+SELECT sh.ID, dts.Id
+FROM vw_SCARDocumentTimeSlices dts
+JOIN StaticHierarchy sh ON sh.TableTypeId = dts.TableTypeID
+WHERE CompanyID = @iconum
+
+
+
+DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
+
+
+
+INSERT INTO @SHCellsMTMW
+EXEC SCARGetTableCellMTMWCalc @SHCells
+
+select StaticHierarchyID, DocumentTimeSliceID from @SHCellsMTMW
+WHERE ChildrenSum is not null
+AND ChildrenSum <> CellValue
 
 ";//I hate this query, it is so bad
 
 
 
-					ScarResult result = new ScarResult();
+			ScarResult result = new ScarResult();
 
-					result.ChangedCells = new List<SCARAPITableCell>();
- 
-					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-						conn.Open();
-						using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
-							cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
-							cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+			result.ChangedCells = new List<SCARAPITableCell>();
 
-							using (SqlDataReader reader = cmd.ExecuteReader()) {
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
+					cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 
-								int shix = 0;
-								int i = 0;
-								int adjustedOrder = 0;
-								while (reader.Read()) {
-									SCARAPITableCell cell;
-									if (reader.GetNullable<int>(0).HasValue) {
-										cell = new SCARAPITableCell
-										{
-											ID = reader.GetInt32(0),
-											Offset = reader.GetStringSafe(1),
-											CellPeriodType = reader.GetStringSafe(2),
-											PeriodTypeID = reader.GetStringSafe(3),
-											CellPeriodCount = reader.GetStringSafe(4),
-											PeriodLength = reader.GetNullable<int>(5),
-											CellDay = reader.GetStringSafe(6),
-											CellMonth = reader.GetStringSafe(7),
-											CellYear = reader.GetStringSafe(8),
-											CellDate = reader.GetNullable<DateTime>(9),
-											Value = reader.GetStringSafe(10),
-											CompanyFinancialTermID = reader.GetNullable<int>(11),
-											ValueNumeric = reader.GetNullable<decimal>(12),
-											NormalizedNegativeIndicator = reader.GetBoolean(13),
-											ScalingFactorID = reader.GetStringSafe(14),
-											AsReportedScalingFactor = reader.GetStringSafe(15),
-											Currency = reader.GetStringSafe(16),
-											CurrencyCode = reader.GetStringSafe(17),
-											Cusip = reader.GetStringSafe(18),
-											ScarUpdated = reader.GetBoolean(19),
-											IsIncomePositive = reader.GetBoolean(20),
-											XBRLTag = reader.GetStringSafe(21),
-											UpdateStampUTC = reader.GetNullable<DateTime>(22),
-											DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
-											//	DocumentID = reader.GetGuid(23),
-											Label = reader.GetStringSafe(24),
-											ScalingFactorValue = reader.GetDouble(25),
-											ARDErrorTypeId = reader.GetNullable<int>(26),
-											MTMWErrorTypeId = reader.GetNullable<int>(27)
-										};
-
-										result.ChangedCells.Add(cell);
-									} else {
- 
-									}
-								}
-							}
-						}
- 
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						return !reader.HasRows;
 					}
- 					return result;
 				}
+			}
+			return false;
+		}
 
-						public ScarResult GetLpvTableCells(int iconum, Guid DocumentId) {
-					var sw = System.Diagnostics.Stopwatch.StartNew();
- 
+		public ScarResult GetLpvTableCells(int iconum, Guid DocumentId) {
+			var sw = System.Diagnostics.Stopwatch.StartNew();
 
-					string CellsQuery =
-						@"
+
+			string CellsQuery =
+				@"
  DECLARE @iconum INT 
 
  DECLARE  @IconumList TABLE(CompanyId INT)
@@ -3265,68 +3198,113 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 
 
-					ScarResult result = new ScarResult();
+			ScarResult result = new ScarResult();
 
-					result.ChangedCells = new List<SCARAPITableCell>();
- 
-					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-						conn.Open();
-						using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
-							cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
-							cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+			result.ChangedCells = new List<SCARAPITableCell>();
 
-							using (SqlDataReader reader = cmd.ExecuteReader()) {
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
+					cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 
-								int shix = 0;
-								int i = 0;
-								int adjustedOrder = 0;
-								while (reader.Read()) {
-									SCARAPITableCell cell;
-									if (reader.GetNullable<int>(0).HasValue) {
-										cell = new SCARAPITableCell
-										{
-											ID = reader.GetInt32(0),
-											Offset = reader.GetStringSafe(1),
-											CellPeriodType = reader.GetStringSafe(2),
-											PeriodTypeID = reader.GetStringSafe(3),
-											CellPeriodCount = reader.GetStringSafe(4),
-											PeriodLength = reader.GetNullable<int>(5),
-											CellDay = reader.GetStringSafe(6),
-											CellMonth = reader.GetStringSafe(7),
-											CellYear = reader.GetStringSafe(8),
-											CellDate = reader.GetNullable<DateTime>(9),
-											Value = reader.GetStringSafe(10),
-											CompanyFinancialTermID = reader.GetNullable<int>(11),
-											ValueNumeric = reader.GetNullable<decimal>(12),
-											NormalizedNegativeIndicator = reader.GetBoolean(13),
-											ScalingFactorID = reader.GetStringSafe(14),
-											AsReportedScalingFactor = reader.GetStringSafe(15),
-											Currency = reader.GetStringSafe(16),
-											CurrencyCode = reader.GetStringSafe(17),
-											Cusip = reader.GetStringSafe(18),
-											ScarUpdated = reader.GetBoolean(19),
-											IsIncomePositive = reader.GetBoolean(20),
-											XBRLTag = reader.GetStringSafe(21),
-											UpdateStampUTC = reader.GetNullable<DateTime>(22),
-											DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
-											//	DocumentID = reader.GetGuid(23),
-											Label = reader.GetStringSafe(24),
-											ScalingFactorValue = reader.GetDouble(25),
-											ARDErrorTypeId = reader.GetNullable<int>(26),
-											MTMWErrorTypeId = reader.GetNullable<int>(27)
-										};
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
-										result.ChangedCells.Add(cell);
-									} else {
- 
-									}
-								}
+						int shix = 0;
+						int i = 0;
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(0).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(0),
+									Offset = reader.GetStringSafe(1),
+									CellPeriodType = reader.GetStringSafe(2),
+									PeriodTypeID = reader.GetStringSafe(3),
+									CellPeriodCount = reader.GetStringSafe(4),
+									PeriodLength = reader.GetNullable<int>(5),
+									CellDay = reader.GetStringSafe(6),
+									CellMonth = reader.GetStringSafe(7),
+									CellYear = reader.GetStringSafe(8),
+									CellDate = reader.GetNullable<DateTime>(9),
+									Value = reader.GetStringSafe(10),
+									CompanyFinancialTermID = reader.GetNullable<int>(11),
+									ValueNumeric = reader.GetNullable<decimal>(12),
+									NormalizedNegativeIndicator = reader.GetBoolean(13),
+									ScalingFactorID = reader.GetStringSafe(14),
+									AsReportedScalingFactor = reader.GetStringSafe(15),
+									Currency = reader.GetStringSafe(16),
+									CurrencyCode = reader.GetStringSafe(17),
+									Cusip = reader.GetStringSafe(18),
+									ScarUpdated = reader.GetBoolean(19),
+									IsIncomePositive = reader.GetBoolean(20),
+									XBRLTag = reader.GetStringSafe(21),
+									UpdateStampUTC = reader.GetNullable<DateTime>(22),
+									DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+									//	DocumentID = reader.GetGuid(23),
+									Label = reader.GetStringSafe(24),
+									ScalingFactorValue = reader.GetDouble(25),
+									ARDErrorTypeId = reader.GetNullable<int>(26),
+									MTMWErrorTypeId = reader.GetNullable<int>(27)
+								};
+
+								result.ChangedCells.Add(cell);
+							} else {
+
 							}
 						}
- 
 					}
- 					return result;
 				}
-				#endregion
+
+			}
+			return result;
+		}
+		#endregion
+
+		internal IEnumerable<string> GetAllTemplates(string ConnectionString, int Iconum) {
+
+			using (SqlConnection conn = new SqlConnection(ConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(@"SELECT tt.Description FROM DocumentSeries ds JOIN TableType tt ON tt.DocumentSeriesID = ds.ID WHERE ds.CompanyID = @Iconum", conn)) {
+					cmd.Parameters.AddWithValue(@"@Iconum", Iconum);
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						return sdr.Cast<IDataRecord>().Select(r => r.GetStringSafe(0)).ToList();
+					}
+				}
+			}
+		}
+
+		public void SetIncomeOrientation(Guid DocumentID) {
+			var url = ConfigurationManager.AppSettings["SetIncomeOrientationURL"];
+
+			List<Tuple<int, int>> Tables;
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand("select ID, TableTypeID from [dbo].[vw_SCARDocumentTimeSlices] WHERE DocumentID = @DocumentID", conn)) {
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						 Tables = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToList();
+					}
+				}
+			}
+
+			foreach (Tuple<int, int> table in Tables) {
+				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+				request.ContentType = "application/json";
+				request.Method = "GET";
+				var response = (HttpWebResponse)request.GetResponse();
+				//We can get the response if we care but for now we can just let it run
+				//if (response.StatusCode == HttpStatusCode.OK) {
+				//	using (var streamReader = new StreamReader(response.GetResponseStream())) {
+				//		var outputresult = streamReader.ReadToEnd();
+				//		//result = JsonConvert.DeserializeObject<CompleteTestResult>(outputresult);
+
+				//	}
+				//}
+			}
+
+
+		}
 	}
 }

@@ -408,7 +408,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 	}
 
-	[RoutePrefix("api/v1/zerominute")]
+	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/zerominute")]
 	public class ZeroMinuteUpdateController : ApiController {
 		private bool IsZeroMinuteUpdate() {
 			bool isZeroMinuteUpdate = false;
@@ -422,24 +422,36 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("documents/{documentId}")]
 		[HttpPut]
-		public ScarResult ExecuteZeroMinuteUpdate(Guid documentId) {
+		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid documentId/*Make sure this is the SFDocumentID*/) {
+			bool Success = true;
+
+			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
+			//FFDocumentHistory.GetSuperFastDocumentID(DAMDocumentId, Iconum).Value
+
 			ScarResult result = null;
 			result = new ScarResult();
 			if (IsZeroMinuteUpdate()) {
 				result.ErrorMessage += DoInterimTypeAndCurrency(documentId).ErrorMessage;
 				DoRedStarSlotting(documentId);
 				DoSetIncomeOrientation(documentId);
-				DoMTMWValidation(documentId);
-				DoLPVValidation(documentId);
+
+				if (!DoMTMWAndLPVValidation(CompanyId, documentId))
+					Success = false;
+
 				DoARDValidation(documentId);
-				DoExport(documentId);
+
+				//Do some logging as to why we failed
+
+				return Success;//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute and failure if we don't so we probably just have to return true;
+
 			}
-			return result;
+			return false;
 		}
+
 		[Route("documents/{documentId}/ard")]
 		[HttpPut]
-		public ScarResult DoARDValidation(Guid documentId) {
-			return new ScarResult();
+		public bool DoARDValidation(Guid documentId) {
+			return false;
 		}
 		[Route("documents/{documentId}/redstarslotting")]
 		[HttpPut]
@@ -453,8 +465,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 		[Route("documents/{documentId}/setincome")]
 		[HttpPut]
-		public ScarResult DoSetIncomeOrientation(Guid documentId) {
-			return new ScarResult();
+		public void DoSetIncomeOrientation(Guid documentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			helper.SetIncomeOrientation(documentId);
 		}
 		[Route("documents/{documentId}/validatetables")]
 		[HttpPut]
@@ -466,9 +480,34 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return result;
 		}
 
+
+
+		[Route("documents/{documentId}/mtmwandlpv")]
+		[HttpGet]
+		public bool DoMTMWAndLPVValidation(string CompanyId, Guid documentId) {
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
+
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			foreach(string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+				templates.Add(helper.GetTemplate(iconum, TemplateName, documentId));
+
+			IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+
+			
+			if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
+				return false;
+			}
+			return true;
+	}
+
 		[Route("documents/{documentId}/mtmw")]
-		[HttpPut]
-		public ScarResult DoMTMWValidation(Guid documentId) {
+		[HttpGet]
+		public bool DoMTMWValidation(Guid documentId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = helper.GetMtmwTableCells(0, documentId);
