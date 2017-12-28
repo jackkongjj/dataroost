@@ -3306,5 +3306,54 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 
 		}
+
+		public class CompleteTestResult {
+			public IndividualTestResult[] Results { get; set; }
+		}
+		public class IndividualTestResult {
+			public Guid documentid { get; set; }
+			public string Criticality { get; set; }
+
+			public string test { get; set; }
+
+			public bool isissue { get; set; }
+			public List<ErrorDetail> testoutput { get; set; }
+			public string testlevel { get; set; }
+		}
+
+		public class ErrorDetail {
+			public string errortext { get; set; }
+			public int tablecellid { get; set; }
+			public int documenttimesliceid { get; set; }
+			public DateTime timestamp { get; set; }
+		}
+
+		public bool ARDValidation(Guid DocumentID) {
+			string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_AsReported/92C6C824-0F9A-4A5C-BC62-000095729E1B";
+			url = @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_AsReported/" + DocumentID.ToString(); ;
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+			request.ContentType = "application/json";
+			request.Method = "GET";
+			var response = (HttpWebResponse)request.GetResponse();
+
+			CompleteTestResult result = null;
+			if (response.StatusCode == HttpStatusCode.OK) {
+				using (var streamReader = new StreamReader(response.GetResponseStream())) {
+					var outputresult = streamReader.ReadToEnd();
+					result = Newtonsoft.Json.JsonConvert.DeserializeObject<CompleteTestResult>(outputresult);
+
+				}
+			}
+
+			if (result != null) {
+				foreach (var test in result.Results) {
+					if (test.isissue)
+						return false;
+				}
+				return true; // return true if no Individual Test is an issue.
+			}
+			return true;
+		}
+	
 	}
 }

@@ -437,8 +437,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 				if (!DoMTMWAndLPVValidation(CompanyId, documentId))
 					Success = false;
-
-				DoARDValidation(documentId);
+				if (Success) {
+					DoARDValidation(documentId);
+				}
 
 				//Do some logging as to why we failed
 
@@ -449,9 +450,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("documents/{documentId}/ard")]
-		[HttpPut]
+		[HttpGet]
 		public bool DoARDValidation(Guid documentId) {
-			return false;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.ARDValidation(documentId);
 		}
 		[Route("documents/{documentId}/redstarslotting")]
 		[HttpPut]
@@ -526,5 +529,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult DoExport(Guid documentId) {
 			return new ScarResult();
 		}
+
+
 	}
 }
