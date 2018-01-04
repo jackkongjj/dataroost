@@ -420,10 +420,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return isZeroMinuteUpdate;
 		}
 
-		[Route("documents/{documentId}")]
+		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			return documentHelper.GetDocument(iconum, documentId);
+		}
+
+		[Route("documents/{damdocumentId}")]
 		[HttpPut]
-		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid documentId/*Make sure this is the SFDocumentID*/) {
+		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId) {
 			bool Success = true;
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
 
 			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
 			//FFDocumentHistory.GetSuperFastDocumentID(DAMDocumentId, Iconum).Value
@@ -431,14 +442,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			ScarResult result = null;
 			result = new ScarResult();
 			if (IsZeroMinuteUpdate()) {
-				result.ErrorMessage += DoInterimTypeAndCurrency(documentId).ErrorMessage;
-				DoRedStarSlotting(documentId);
-				DoSetIncomeOrientation(documentId);
+				result.ErrorMessage += DoInterimTypeAndCurrency(CompanyId, damdocumentId).ErrorMessage;
+				DoRedStarSlotting(CompanyId, damdocumentId);
+				DoSetIncomeOrientation(CompanyId, damdocumentId);
 
-				if (!DoMTMWAndLPVValidation(CompanyId, documentId))
+				if (!DoMTMWAndLPVValidation(CompanyId, damdocumentId))
 					Success = false;
 				if (Success) {
-					DoARDValidation(documentId);
+					DoARDValidation(CompanyId, damdocumentId);
 				}
 
 				//Do some logging as to why we failed
@@ -449,46 +460,57 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return false;
 		}
 
-		[Route("documents/{documentId}/ard")]
+		[Route("documents/{damdocumentId}/ard")]
 		[HttpGet]
-		public bool DoARDValidation(Guid documentId) {
+		public bool DoARDValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.ARDValidation(documentId);
+			return helper.ARDValidation(SfDocumentId);
 		}
-		[Route("documents/{documentId}/redstarslotting")]
+		[Route("documents/{damdocumentId}/redstarslotting")]
 		[HttpPut]
-		public ScarResult DoRedStarSlotting(Guid documentId) {
+		public ScarResult DoRedStarSlotting(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			if (!helper.UpdateRedStarSlotting(documentId)) {
+			if (!helper.UpdateRedStarSlotting(SfDocumentId)) {
 				return null;
 			}
 			return new ScarResult();
 		}
-		[Route("documents/{documentId}/setincome")]
+		[Route("documents/{damdocumentId}/setincome")]
 		[HttpPut]
-		public void DoSetIncomeOrientation(Guid documentId) {
+		public void DoSetIncomeOrientation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			helper.SetIncomeOrientation(documentId);
+			helper.SetIncomeOrientation(SfDocumentId);
 		}
-		[Route("documents/{documentId}/validatetables")]
+		[Route("documents/{damdocumentId}/validatetables")]
 		[HttpPut]
-		public ScarResult DoInterimTypeAndCurrency(Guid documentId) {
+		public ScarResult DoInterimTypeAndCurrency(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = new ScarResult();
-			result.ErrorMessage += helper.CheckParsedTableInterimTypeAndCurrency(documentId);
+			result.ErrorMessage += helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId);
 			return result;
 		}
 
 
 
-		[Route("documents/{documentId}/mtmwandlpv")]
+		[Route("documents/{damdocumentId}/mtmwandlpv")]
 		[HttpGet]
-		public bool DoMTMWAndLPVValidation(string CompanyId, Guid documentId) {
-
+		public bool DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -496,7 +518,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			foreach(string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
-				templates.Add(helper.GetTemplate(iconum, TemplateName, documentId));
+				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
 			IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
 			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
@@ -508,25 +530,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return true;
 	}
 
-		[Route("documents/{documentId}/mtmw")]
+		[Route("documents/{damdocumentId}/mtmw")]
 		[HttpGet]
-		public bool DoMTMWValidation(Guid documentId) {
+		public bool DoMTMWValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			var result = helper.GetMtmwTableCells(0, documentId);
+			var result = helper.GetMtmwTableCells(0, SfDocumentId);
 			return result;
 		}
-		[Route("documents/{documentId}/lpv")]
+		[Route("documents/{damdocumentId}/lpv")]
 		[HttpPut]
-		public ScarResult DoLPVValidation(Guid documentId) {
+		public ScarResult DoLPVValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			var result = helper.GetLpvTableCells(0, documentId);
+			var result = helper.GetLpvTableCells(0, SfDocumentId);
 			return result;
 		}
-		[Route("documents/{documentId}/export")]
+		[Route("documents/{damdocumentId}/export")]
 		[HttpPut]
-		public ScarResult DoExport(Guid documentId) {
+		public ScarResult DoExport(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.Id); 
+
 			return new ScarResult();
 		}
 
