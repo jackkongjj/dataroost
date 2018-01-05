@@ -434,7 +434,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId) {
 			bool Success = true;
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
 			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
 			//FFDocumentHistory.GetSuperFastDocumentID(DAMDocumentId, Iconum).Value
@@ -464,7 +464,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public bool DoARDValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
@@ -474,7 +474,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult DoRedStarSlotting(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
@@ -487,7 +487,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public void DoSetIncomeOrientation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			helper.SetIncomeOrientation(SfDocumentId);
@@ -496,7 +496,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult DoInterimTypeAndCurrency(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = new ScarResult();
@@ -510,7 +510,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public bool DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); // SFDocumentID
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -534,7 +534,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public bool DoMTMWValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); 
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = helper.GetMtmwTableCells(0, SfDocumentId);
@@ -544,7 +544,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult DoLPVValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); 
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = helper.GetLpvTableCells(0, SfDocumentId);
@@ -554,7 +554,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult DoExport(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.Id); 
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); 
 
 			return new ScarResult();
 		}
