@@ -2993,7 +2993,7 @@ ROLLBACK TRAN
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  RIGHT JOIN @BigThree bt on bt.Description = tt.description
- where dt.DocumentID = @DocumentId and tt.description is not null
+ where dt.DocumentID = @DocumentId and tt.description is null
 
 
  SELECT  'Missing InterimType. ' as Error, * 
