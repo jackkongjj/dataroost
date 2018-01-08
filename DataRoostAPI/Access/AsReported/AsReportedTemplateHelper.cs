@@ -3283,6 +3283,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand("select ID, TableTypeID from [dbo].[vw_SCARDocumentTimeSlices] WHERE DocumentID = @DocumentID", conn)) {
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						 Tables = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToList();
 					}
@@ -3290,7 +3291,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			}
 
 			foreach (Tuple<int, int> table in Tables) {
-				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url + table.Item1 + "/" + table.Item2);
 				request.ContentType = "application/json";
 				request.Method = "GET";
 				var response = (HttpWebResponse)request.GetResponse();
