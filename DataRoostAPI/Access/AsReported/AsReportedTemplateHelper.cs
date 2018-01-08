@@ -3307,6 +3307,59 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		}
 
+		public void LogError(Guid SfDocumentId, string iconum, bool IsSuccess, string Message) {
+			string query =
+	@"
+DECLARE @log_id int
+DECLARE @loginname varchar(500)
+DECLARE @hostname varchar(500)
+select 
+       @loginname = convert(sysname, rtrim(sp.loginame))  
+        , @hostname =CASE sp.hostname
+                 When Null  Then '  .'
+                 When ' ' Then '  .'
+                 Else    rtrim(sp.hostname)
+              END  
+ 
+        from master.dbo.sysprocesses sp (nolock) 
+		where spid = @@SPID
+
+ 
+INSERT [dbo].[LogAutoStitchingAgent] (
+	  [SPID]
+      ,[Login]
+      ,[Hostname]
+      ,[StartTimeUTC]
+      ,[EndTimeUTC]
+			,[DocumentId]
+			,[Iconum]
+			,[IsSuccess]
+      ,[Comment]) values
+	  (@@spid  
+	  , @loginname
+	  ,  @hostname
+	  , getutcdate() 
+	  , null
+		, @DocumentId
+		, @iconum
+		, @IsSuccess
+	  , @Message)
+ set @log_id = scope_identity();
+";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.Parameters.AddWithValue("@DocumentID", SfDocumentId);
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@IsSuccess", IsSuccess);
+					cmd.Parameters.AddWithValue("@Message", Message);
+
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						//return !reader.HasRows;
+					}
+				}
+			}
+		}
 		public class CompleteTestResult {
 			public IndividualTestResult[] Results { get; set; }
 		}

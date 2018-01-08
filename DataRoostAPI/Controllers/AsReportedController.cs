@@ -426,7 +426,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-			return documentHelper.GetDocument(iconum, documentId);
+			var document =  documentHelper.GetDocument(iconum, documentId);
+			return document;
 		}
 
 		[Route("documents/{damdocumentId}")]
@@ -468,6 +469,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			helper.LogError(SfDocumentId, CompanyId, true, "Test, this is a test");
 			return helper.ARDValidation(SfDocumentId);
 		}
 		[Route("documents/{damdocumentId}/redstarslotting")]
