@@ -447,7 +447,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				DoRedStarSlotting(CompanyId, damdocumentId);
 				DoSetIncomeOrientation(CompanyId, damdocumentId);
 
-				if (!DoMTMWAndLPVValidation(CompanyId, damdocumentId))
+				MTMWLPVReturn mtmwRet = DoMTMWAndLPVValidation(CompanyId, damdocumentId);
+
+				if (!mtmwRet.success)
 					Success = false;
 				if (Success) {
 					DoARDValidation(CompanyId, damdocumentId);
@@ -509,8 +511,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 
 		[Route("documents/{damdocumentId}/mtmwandlpv")]
-		[HttpGet]
-		public bool DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
+		[HttpPut]
+		public MTMWLPVReturn DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			int iconum = PermId.PermId2Iconum(CompanyId);
@@ -519,18 +521,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
 
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			foreach(string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
-			IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
 			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
 
-			
-			if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
-				return false;
+			//if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
+			if(cells.Count() > 0){
+				return new MTMWLPVReturn(){success = false, cells = cells.ToList()};
 			}
-			return true;
-	}
+
+			return new MTMWLPVReturn() { success = true };
+		}
+
+		public class MTMWLPVReturn {
+			public bool success { get; set; }
+			public List<SCARAPITableCell> cells { get; set; }
+		}
+
 
 		[Route("documents/{damdocumentId}/mtmw")]
 		[HttpGet]
