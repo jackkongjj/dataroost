@@ -474,8 +474,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 						MTMWLPVReturn mtmwRet = DoMTMWAndLPVValidation(CompanyId, damdocumentId);
 
-						if (!mtmwRet.success)
+						if (!mtmwRet.success) {
+							string Ids = mtmwRet.cells.Select(x => x.ID.ToString()).Aggregate((a, b) => a + "," + b);
+							returnValue = new Tuple<bool, string>(false, "mtmwlpvfailed: " + Ids);
 							break;
+						}
 						returnValue = DoARDValidation(CompanyId, damdocumentId).ReturnValue;
 						if (!returnValue.Item1) {
 							break;
