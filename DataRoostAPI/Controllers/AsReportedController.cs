@@ -420,6 +420,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return isZeroMinuteUpdate;
 		}
 
+		public Guid GetSfDocumentId(string CompanyId, string documentId) {
+			var document = GetDocument(CompanyId, documentId);
+			Guid sfDocumentId = new Guid("00000000-0000-0000-0000-000000000000");
+			if (document == null || document.SuperFastDocumentId == null) {
+				// probably due to incorrect CompanyId. 
+				// Just inquiry the DocumentTable
+			} else {
+				sfDocumentId = new Guid(document.SuperFastDocumentId);
+			}
+			return sfDocumentId;
+		}
 		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
@@ -433,31 +444,52 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("documents/{damdocumentId}")]
 		[HttpPut]
 		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId) {
-			bool Success = true;
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
 			//FFDocumentHistory.GetSuperFastDocumentID(DAMDocumentId, Iconum).Value
 
+			// InterimType
+			// RedStar
+			// Set IncomeOrientation
+			// MTMW & LPV
+			// ARd validation
 			ScarResult result = null;
 			result = new ScarResult();
+			Tuple<bool, string> returnValue = null;
+			bool runOnce = true;
 			if (IsZeroMinuteUpdate()) {
-				result.ErrorMessage += DoInterimTypeAndCurrency(CompanyId, damdocumentId).ErrorMessage;
-				DoRedStarSlotting(CompanyId, damdocumentId);
-				DoSetIncomeOrientation(CompanyId, damdocumentId);
+				try {
+					while (runOnce) {
+						returnValue = DoInterimTypeAndCurrency(CompanyId, damdocumentId).ReturnValue;
+						if (!returnValue.Item1) {
+							break;
+						}
 
-				MTMWLPVReturn mtmwRet = DoMTMWAndLPVValidation(CompanyId, damdocumentId);
+						DoRedStarSlotting(CompanyId, damdocumentId);
+						DoSetIncomeOrientation(CompanyId, damdocumentId);
 
-				if (!mtmwRet.success)
-					Success = false;
-				if (Success) {
-					DoARDValidation(CompanyId, damdocumentId);
+						MTMWLPVReturn mtmwRet = DoMTMWAndLPVValidation(CompanyId, damdocumentId);
+
+						if (!mtmwRet.success)
+							break;
+						returnValue = DoARDValidation(CompanyId, damdocumentId).ReturnValue;
+						if (!returnValue.Item1) {
+							break;
+						}
+					}
+				} catch (Exception ex) {
+					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
 				}
 
-				//Do some logging as to why we failed
-
-				return Success;//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute and failure if we don't so we probably just have to return true;
+				helper.LogError(SfDocumentId, CompanyId, returnValue.Item1, returnValue.Item2);
+				
+				return returnValue.Item1;
+				//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute
+				//and failure if we don't so we probably just have to return true;
 
 			}
 			return false;
@@ -465,14 +497,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("documents/{damdocumentId}/ard")]
 		[HttpGet]
-		public bool DoARDValidation(string CompanyId, Guid damdocumentId) {
+		public ScarResult DoARDValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			helper.LogError(SfDocumentId, CompanyId, true, "Test, this is a test");
-			return helper.ARDValidation(SfDocumentId);
+			helper.ARDValidation(SfDocumentId);
+			return new ScarResult();
 		}
 		[Route("documents/{damdocumentId}/redstarslotting")]
 		[HttpPut]
