@@ -480,6 +480,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						if (!returnValue.Item1) {
 							break;
 						}
+						runOnce = false;
 					}
 				} catch (Exception ex) {
 					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
@@ -515,10 +516,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			if (!helper.UpdateRedStarSlotting(SfDocumentId)) {
-				return null;
-			}
-			return new ScarResult();
+			ScarResult result = new ScarResult();
+			
+			bool isSuccess = helper.UpdateRedStarSlotting(SfDocumentId);
+			result.ReturnValue = new Tuple<bool, string>(isSuccess, "");
+			return result;
 		}
 		[Route("documents/{damdocumentId}/setincome")]
 		[HttpPut]
@@ -537,7 +539,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = new ScarResult();
-			result.ErrorMessage += helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId);
+			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId);
+			result.ReturnValue = new Tuple<bool, string>(string.IsNullOrEmpty(errorMessage), errorMessage);
 			return result;
 		}
 
