@@ -500,8 +500,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("documents/{damdocumentId}/ard")]
-		[HttpGet]
-		public ScarResult DoARDValidation(string CompanyId, Guid damdocumentId) {
+		[HttpPut]
+		public bool DoARDValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 

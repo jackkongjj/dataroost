@@ -329,27 +329,21 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						TimeSlice ts = temp.TimeSlices[i];
 
 						SCARAPITableCell tc = sh.Cells[i];
-						List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)];
-						foreach (int j in matches) {
-							if (sh.Cells[j] == tc)
-								continue;
+						List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
-							bool whatever = false;
+						bool whatever = false;
+						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
 
-							decimal matchValue = CalculateCellValue(sh.Cells[j], BlankCells, SHChildLookup, ref whatever);
-							decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
-							bool anyValidationPasses = matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue);
-
-							if (matchValue != cellValue &&//TODO: remove double checks
-									!((ts.PublicationDate > temp.TimeSlices[j].PublicationDate && cellValue == 0) || (temp.TimeSlices[j].PublicationDate > ts.PublicationDate && matchValue == 0)) &&
-									!anyValidationPasses &&
-									tc.ValueNumeric.HasValue &&
-									!GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
-									!GetChildren(sh.Cells[j], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
-								sh.StaticHierarchyMetaId != 5
-									) {
-								tc.LikePeriodValidationFlag = true;
-							}
+						if (!tc.ARDErrorTypeId.HasValue &&
+						matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, ref whatever) != cellValue) &&//TODO: remove double checks
+						!matches.Any(m2 => ((ts.PublicationDate > temp.TimeSlices[m2].PublicationDate && cellValue == 0) || (temp.TimeSlices[m2].PublicationDate > ts.PublicationDate && CalculateCellValue(sh.Cells[m2], BlankCells, SHChildLookup, ref whatever) == 0))) &&
+						!matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue) &&
+						tc.ValueNumeric.HasValue &&
+						!GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
+						!matches.Any(m3 => GetChildren(sh.Cells[m3], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue)) &&
+						sh.StaticHierarchyMetaId != 5
+						) {
+							tc.LikePeriodValidationFlag = true;
 						}
 
 						bool hasChildren = false;
@@ -379,7 +373,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					int timesliceIndex = BlankCells[cell].Item2;
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
-						sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, ref hasChildren);
+						if (child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6)
+							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, ref hasChildren);
 					}
 					if (SHChildLookup[sh.Id].Count > 0) {
 						if (!cell.ValueNumeric.HasValue)
