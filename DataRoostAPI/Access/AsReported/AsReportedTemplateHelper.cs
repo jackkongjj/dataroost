@@ -2976,7 +2976,7 @@ ROLLBACK TRAN
 			return isSuccess;
 		}
 
-		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId) {
+		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum) {
 			string query = @"
 
  DECLARE @BigThree Table (Description varchar(64))
@@ -3023,6 +3023,12 @@ ROLLBACK TRAN
 				using (SqlCommand cmd = new SqlCommand("prcInsert_CreateDocumentTimeSlices", conn)) {
 					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@DocID", SFDocumentId);
+					cmd.ExecuteNonQuery();
+				}
+
+				using (SqlCommand cmd = new SqlCommand("SCARSetParentIDs", conn)) {
+					cmd.CommandType = CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@Iconum", Iconum);
 					cmd.ExecuteNonQuery();
 				}
 

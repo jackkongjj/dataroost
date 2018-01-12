@@ -540,9 +540,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			int iconum = PermId.PermId2Iconum(CompanyId);
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = new ScarResult();
-			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId);
+			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId, iconum);
 			result.ReturnValue = new Tuple<bool, string>(string.IsNullOrEmpty(errorMessage), errorMessage);
 			return result;
 		}
