@@ -334,9 +334,13 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						bool whatever = false;
 						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever);
 
-						if (!tc.ARDErrorTypeId.HasValue &&
-						matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, ref whatever) != cellValue) &&//TODO: remove double checks
-						!matches.Any(m2 => ((ts.PublicationDate > temp.TimeSlices[m2].PublicationDate && cellValue == 0) || (temp.TimeSlices[m2].PublicationDate > ts.PublicationDate && CalculateCellValue(sh.Cells[m2], BlankCells, SHChildLookup, ref whatever) == 0))) &&
+						if (!tc.ARDErrorTypeId.HasValue &&//TODO: remove double checks
+						matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, ref whatever) != cellValue &&
+								!(
+									(sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue) && (!tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue) ||
+									(!sh.Cells[m].ValueNumeric.HasValue && !sh.Cells[m].VirtualValueNumeric.HasValue) && (tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue)
+								)
+							) &&
 						!matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue) &&
 						tc.ValueNumeric.HasValue &&
 						!GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
@@ -351,7 +355,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 						tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 &&
 								(CalculateCellValue(tc, BlankCells, SHChildLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, ref hasChildren)) &&
-										!tc.MTMWErrorTypeId.HasValue && hasChildren;
+										!tc.MTMWErrorTypeId.HasValue && hasChildren && sh.UnitTypeId != 2;
 					} catch { break; }
 				}
 			}
@@ -373,10 +377,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					int timesliceIndex = BlankCells[cell].Item2;
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
-						if (child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6)
+						if (child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6 && child.UnitTypeId != 2)
 							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, ref hasChildren);
 					}
-					if (SHChildLookup[sh.Id].Count > 0) {
+					if (SHChildLookup[sh.Id].Where(c=> c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6 && c.UnitTypeId != 2).Count() > 0) {
 						if (!cell.ValueNumeric.HasValue)
 							cell.VirtualValueNumeric = sum;
 
@@ -413,7 +417,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6)) {
 						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, ref hasChildren);
 					}
-					if (SHChildLookup[sh.Id].Count > 0) {
+					if (SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6).Count() > 0) {
 						if (!cell.ValueNumeric.HasValue)
 							cell.VirtualValueNumeric = sum;
 
