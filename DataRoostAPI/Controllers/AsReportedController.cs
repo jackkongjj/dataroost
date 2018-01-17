@@ -440,10 +440,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			var document = documentHelper.GetDocument(iconum, documentId);
 			return document;
 		}
+	
+		public class StringInput {
+			public string StringData { get; set; }
+		}
 
 		[Route("documents/{damdocumentId}")]
 		[HttpPut]
-		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId) {
+		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId, StringInput input) {
+			string startReason = "-";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				startReason = input.StringData;
+			}
 			DateTime startTime = DateTime.UtcNow;
 
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
@@ -492,7 +500,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
 				}
 				try {
-					helper.LogError(damdocumentId, startTime, CompanyId, returnValue.Item1, returnValue.Item2);
+					helper.LogError(damdocumentId, startReason, startTime, CompanyId, returnValue.Item1, returnValue.Item2);
 				} catch { }
 				return returnValue.Item1;
 				//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute
@@ -550,6 +558,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return result;
 		}
 
+		public MTMWLPVReturn DoMTMWAndLPVValidation2(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
+
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+
+			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+
+			//if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
+			if (cells.Count() > 0) {
+				return new MTMWLPVReturn() { success = false, cells = cells.ToList() };
+			}
+
+			return new MTMWLPVReturn() { success = true };
+		}
 
 
 		[Route("documents/{damdocumentId}/mtmwandlpv")]
@@ -565,13 +595,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			System.Text.StringBuilder errorMessageBuilder = new System.Text.StringBuilder();
 			bool isSuccess = true;
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			//foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+			//	templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+			//IEnumerable<SCARAPITableCell> cellsTest = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			//int testCellCount = cellsTest.Count();
+			//int testMtmwCount = cellsTest.Where(c => c.MTMWValidationFlag).Count();
+			//int testlpvCount = cellsTest.Where(c => c.LikePeriodValidationFlag).Count();
 			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum)) {
 				templates = new List<AsReportedTemplate>();
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+				IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+				int totalcellcount = cells.Count();
 				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag)));
 				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
-
+				int mtmwcount = mtmwcells.Count();
 				if (mtmwcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
 					foreach (var cell in mtmwcells) {
@@ -580,10 +617,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					isSuccess = false;
 				}
 
-
+				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag)));
+				int lpvcount = lpvcells.Count();
 				if (lpvcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": LPV: ");
-					foreach (var cell in mtmwcells) {
+					foreach (var cell in lpvcells) {
 						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", cell.CellDate.HasValue ? cell.CellDate.Value.ToString("yyyy-MM-dd") : "--", cell.PeriodTypeID));
 					}
 					isSuccess = false;

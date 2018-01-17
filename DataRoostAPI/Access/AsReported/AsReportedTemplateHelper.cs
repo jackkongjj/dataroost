@@ -3356,7 +3356,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		}
 
-		public void LogError(Guid damDocumentId, DateTime startTimeUtc, string iconum, bool IsSuccess, string Message) {
+		public void LogError(Guid damDocumentId, string startReason, DateTime startTimeUtc, string iconum, bool IsSuccess, string Message) {
 			string query =
 	@"
 DECLARE @log_id int
@@ -3399,7 +3399,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 					cmd.Parameters.AddWithValue("@DocumentID", damDocumentId);
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@startTime", startTimeUtc);
-					cmd.Parameters.AddWithValue("@startReason", "StartReason");
+					cmd.Parameters.AddWithValue("@startReason", startReason);
 					cmd.Parameters.AddWithValue("@IsSuccess", IsSuccess);
 					cmd.Parameters.AddWithValue("@Message", Message);
 
