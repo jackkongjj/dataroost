@@ -81,16 +81,18 @@ ORDER BY sh.AdjustedOrder asc";
 
 			string CellsQuery =
 				@"
+SELECT *
+FROM (
 SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
 tc.XBRLTag, 
 --tc.UpdateStampUTC
-null
+null as nul
 , tc.DocumentId, tc.Label, tc.ScalingFactorValue,
-				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
-				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
-				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as arderr,
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
+				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm
 FROM DocumentSeries ds
 JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -109,7 +111,22 @@ JOIN(
 	AND tt.Description = @templateName
 	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+--JOIN (SELECT DISTINCT dts.*, d.PublicationDateTime
+--		FROM DocumentSeries ds
+--			JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
+--			JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+--			JOIN TableType tt on sh.TableTypeID = tt.ID
+--			JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
+--			JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
+--			JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
+--			JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+--			JOIN Document d on dts.DocumentId = d.ID
+--		WHERE ds.CompanyID = @iconum
+--		AND tt.Description = @templateName
+--		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
+--	)dts
+join DocumentTimeSlice dts
+	on dts.ID = ts.ID
 LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
@@ -125,7 +142,9 @@ LEFT JOIN(
 JOIN Document d on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+--ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+) a WHERE rwnm = 1
+ORDER BY AdjustedOrder asc, TimeSlicePeriodEndDate desc, Duration desc, ReportingPeriodEndDate desc, PublicationDateTime desc
 
 ";//I hate this query, it is so bad
 
