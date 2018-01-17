@@ -488,9 +488,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				} catch (Exception ex) {
 					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
 				}
-
-				helper.LogError(SfDocumentId, CompanyId, returnValue.Item1, returnValue.Item2);
-				
+				try {
+					helper.LogError(SfDocumentId, CompanyId, returnValue.Item1, returnValue.Item2);
+				} catch { }
 				return returnValue.Item1;
 				//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute
 				//and failure if we don't so we probably just have to return true;
