@@ -229,7 +229,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("timeSlice/{id}/reporttype")]
 		[HttpPut]
-		public ScarResult	 PutTimeSlice(string CompanyId, int id, StringInput input) {
+		public ScarResult PutTimeSlice(string CompanyId, int id, StringInput input) {
 			if (input == null || string.IsNullOrEmpty(input.StringData))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -382,7 +382,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
 		}
-		
+
 		public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
@@ -437,16 +437,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
-			var document =  documentHelper.GetDocument(iconum, documentId);
+			var document = documentHelper.GetDocument(iconum, documentId);
 			return document;
 		}
 
 		[Route("documents/{damdocumentId}")]
 		[HttpPut]
 		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId) {
+			DateTime startTime = DateTime.UtcNow;
+
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
-
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
@@ -472,11 +473,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						DoRedStarSlotting(CompanyId, damdocumentId);
 						DoSetIncomeOrientation(CompanyId, damdocumentId);
 
-						MTMWLPVReturn mtmwRet = DoMTMWAndLPVValidation(CompanyId, damdocumentId);
+						returnValue = DoMTMWAndLPVValidation(CompanyId, damdocumentId).ReturnValue;
 
-						if (!mtmwRet.success) {
-							string Ids = mtmwRet.cells.Select(x => x.ID.ToString()).Aggregate((a, b) => a + "," + b);
-							returnValue = new Tuple<bool, string>(false, "mtmwlpvfailed: " + Ids);
+						if (!returnValue.Item1) {
+							//System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+							//string Ids = mtmwRet.cells.Select(x => x.ID.ToString()).Aggregate((a, b) => a + "," + b);
+							//returnValue = new Tuple<bool, string>(false, "mtmwlpvfailed: " + Ids);
 							break;
 						}
 						returnValue = DoARDValidation(CompanyId, damdocumentId).ReturnValue;
@@ -489,7 +492,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
 				}
 				try {
-					helper.LogError(SfDocumentId, CompanyId, returnValue.Item1, returnValue.Item2);
+					helper.LogError(damdocumentId, startTime, CompanyId, returnValue.Item1, returnValue.Item2);
 				} catch { }
 				return returnValue.Item1;
 				//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute
@@ -507,7 +510,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			helper.LogError(SfDocumentId, CompanyId, true, "Test, this is a test");
 			helper.ARDValidation(SfDocumentId);
 			return new ScarResult();
 		}
@@ -520,7 +522,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			ScarResult result = new ScarResult();
-			
+
 			bool isSuccess = helper.UpdateRedStarSlotting(SfDocumentId);
 			result.ReturnValue = new Tuple<bool, string>(isSuccess, "");
 			return result;
@@ -552,27 +554,45 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("documents/{damdocumentId}/mtmwandlpv")]
 		[HttpPut]
-		public MTMWLPVReturn DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
+		public ScarResult DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
-
+			var result = new ScarResult();
+			System.Text.StringBuilder errorMessageBuilder = new System.Text.StringBuilder();
+			bool isSuccess = true;
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum)) {
+				templates = new List<AsReportedTemplate>();
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag)));
+				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
 
-			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+				if (mtmwcells.Count() > 0) {
+					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
+					foreach (var cell in mtmwcells) {
+						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", cell.CellDate.HasValue ? cell.CellDate.Value.ToString("yyyy-MM-dd") : "--", cell.PeriodTypeID));
+					}
+					isSuccess = false;
+				}
 
-			//if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
-			if(cells.Count() > 0){
-				return new MTMWLPVReturn(){success = false, cells = cells.ToList()};
+
+				if (lpvcells.Count() > 0) {
+					errorMessageBuilder.Append(TemplateName + ": LPV: ");
+					foreach (var cell in mtmwcells) {
+						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", cell.CellDate.HasValue ? cell.CellDate.Value.ToString("yyyy-MM-dd") : "--", cell.PeriodTypeID));
+					}
+					isSuccess = false;
+				}
+
 			}
 
-			return new MTMWLPVReturn() { success = true };
+			result.ReturnValue = new Tuple<bool, string>(isSuccess, errorMessageBuilder.ToString());
+			return result;
 		}
 
 		public class MTMWLPVReturn {
@@ -585,7 +605,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public bool DoMTMWValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); 
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = helper.GetMtmwTableCells(0, SfDocumentId);
@@ -595,7 +615,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult DoLPVValidation(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); 
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = helper.GetLpvTableCells(0, SfDocumentId);
@@ -605,7 +625,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult DoExport(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
-			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); 
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
 
 			return new ScarResult();
 		}

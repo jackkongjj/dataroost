@@ -3356,7 +3356,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		}
 
-		public void LogError(Guid SfDocumentId, string iconum, bool IsSuccess, string Message) {
+		public void LogError(Guid damDocumentId, DateTime startTimeUtc, string iconum, bool IsSuccess, string Message) {
 			string query =
 	@"
 DECLARE @log_id int
@@ -3375,22 +3375,20 @@ select
 
  
 INSERT [dbo].[LogAutoStitchingAgent] (
-	  [SPID]
-      ,[Login]
-      ,[Hostname]
+       [Hostname]
       ,[StartTimeUTC]
       ,[EndTimeUTC]
-			,[DocumentId]
-			,[Iconum]
-			,[IsSuccess]
+      ,[DocumentId]
+      ,[Iconum]
+      ,[StartReason]
+      ,[IsSuccess]
       ,[Comment]) values
-	  (@@spid  
-	  , @loginname
-	  ,  @hostname
+	  ( @hostname
+	  , @startTime
 	  , getutcdate() 
-	  , null
 		, @DocumentId
 		, @iconum
+		, @startReason
 		, @IsSuccess
 	  , @Message)
  set @log_id = scope_identity();
@@ -3398,8 +3396,10 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					cmd.Parameters.AddWithValue("@DocumentID", SfDocumentId);
+					cmd.Parameters.AddWithValue("@DocumentID", damDocumentId);
 					cmd.Parameters.AddWithValue("@iconum", iconum);
+					cmd.Parameters.AddWithValue("@startTime", startTimeUtc);
+					cmd.Parameters.AddWithValue("@startReason", "StartReason");
 					cmd.Parameters.AddWithValue("@IsSuccess", IsSuccess);
 					cmd.Parameters.AddWithValue("@Message", Message);
 
@@ -3409,6 +3409,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				}
 			}
 		}
+
 		public class CompleteTestResult {
 			public IndividualTestResult[] Results { get; set; }
 		}
