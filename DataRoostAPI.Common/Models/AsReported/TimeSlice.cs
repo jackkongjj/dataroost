@@ -78,6 +78,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("Currency")]
 		public string Currency { get; set; }
+
+		[JsonIgnore]
+		public List<SCARAPITableCell> Cells { get; set; }
 	}
 
 }

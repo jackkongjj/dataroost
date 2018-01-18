@@ -612,7 +612,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (mtmwcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
 					foreach (var cell in mtmwcells) {
-						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", cell.CellDate.HasValue ? cell.CellDate.Value.ToString("yyyy-MM-dd") : "--", cell.PeriodTypeID));
+						var timeslice = templates.First().TimeSlices.FirstOrDefault( x => x.Cells.Contains(cell));
+						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
 					}
 					isSuccess = false;
 				}
@@ -622,7 +623,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (lpvcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": LPV: ");
 					foreach (var cell in lpvcells) {
-						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", cell.CellDate.HasValue ? cell.CellDate.Value.ToString("yyyy-MM-dd") : "--", cell.PeriodTypeID));
+						var timeslice = templates.First().TimeSlices.FirstOrDefault(x => x.Cells.Contains(cell));
+						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
 					}
 					isSuccess = false;
 				}
