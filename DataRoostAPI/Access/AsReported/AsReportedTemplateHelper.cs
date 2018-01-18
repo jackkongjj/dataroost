@@ -377,6 +377,10 @@ WHERE  CompanyID = @Iconum";
 						TimeSlice ts = temp.TimeSlices[i];
 
 						SCARAPITableCell tc = sh.Cells[i];
+						if (ts.Cells == null) {
+							ts.Cells = new List<SCARAPITableCell>();
+						}
+						ts.Cells.Add(tc);
 						List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
 						bool whatever = false;
