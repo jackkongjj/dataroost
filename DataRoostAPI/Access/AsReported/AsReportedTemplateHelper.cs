@@ -81,9 +81,9 @@ ORDER BY sh.AdjustedOrder asc";
 
 			string CellsQuery =
 				@"
-SELECT *
-FROM (
-SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+--SELECT *
+--FROM (
+SELECT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
 tc.XBRLTag, 
@@ -92,7 +92,8 @@ null as nul
 , tc.DocumentId, tc.Label, tc.ScalingFactorValue,
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as arderr,
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
-				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm
+				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+				
 FROM DocumentSeries ds
 JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -142,9 +143,9 @@ LEFT JOIN(
 JOIN Document d on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
---ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
-) a WHERE rwnm = 1
-ORDER BY AdjustedOrder asc, TimeSlicePeriodEndDate desc, Duration desc, ReportingPeriodEndDate desc, PublicationDateTime desc
+ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+--) a WHERE rwnm = 1
+--ORDER BY AdjustedOrder asc, TimeSlicePeriodEndDate desc, Duration desc, ReportingPeriodEndDate desc, PublicationDateTime desc
 
 ";//I hate this query, it is so bad
 
@@ -234,63 +235,65 @@ WHERE  CompanyID = @Iconum";
 						int i = 0;
 						int adjustedOrder = 0;
 						while (reader.Read()) {
-							SCARAPITableCell cell;
-							if (reader.GetNullable<int>(0).HasValue) {
-								cell = new SCARAPITableCell
-{
-	ID = reader.GetInt32(0),
-	Offset = reader.GetStringSafe(1),
-	CellPeriodType = reader.GetStringSafe(2),
-	PeriodTypeID = reader.GetStringSafe(3),
-	CellPeriodCount = reader.GetStringSafe(4),
-	PeriodLength = reader.GetNullable<int>(5),
-	CellDay = reader.GetStringSafe(6),
-	CellMonth = reader.GetStringSafe(7),
-	CellYear = reader.GetStringSafe(8),
-	CellDate = reader.GetNullable<DateTime>(9),
-	Value = reader.GetStringSafe(10),
-	CompanyFinancialTermID = reader.GetNullable<int>(11),
-	ValueNumeric = reader.GetNullable<decimal>(12),
-	NormalizedNegativeIndicator = reader.GetBoolean(13),
-	ScalingFactorID = reader.GetStringSafe(14),
-	AsReportedScalingFactor = reader.GetStringSafe(15),
-	Currency = reader.GetStringSafe(16),
-	CurrencyCode = reader.GetStringSafe(17),
-	Cusip = reader.GetStringSafe(18),
-	ScarUpdated = reader.GetBoolean(19),
-	IsIncomePositive = reader.GetBoolean(20),
-	XBRLTag = reader.GetStringSafe(21),
-	UpdateStampUTC = reader.GetNullable<DateTime>(22),
-	DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
-	//	DocumentID = reader.GetGuid(23),
-	Label = reader.GetStringSafe(24),
-	ScalingFactorValue = reader.GetDouble(25),
-	ARDErrorTypeId = reader.GetNullable<int>(26),
-	MTMWErrorTypeId = reader.GetNullable<int>(27)
-};
+							if (reader.GetInt64(29) == 1) {
+								SCARAPITableCell cell;
+								if (reader.GetNullable<int>(0).HasValue) {
+									cell = new SCARAPITableCell
+	{
+		ID = reader.GetInt32(0),
+		Offset = reader.GetStringSafe(1),
+		CellPeriodType = reader.GetStringSafe(2),
+		PeriodTypeID = reader.GetStringSafe(3),
+		CellPeriodCount = reader.GetStringSafe(4),
+		PeriodLength = reader.GetNullable<int>(5),
+		CellDay = reader.GetStringSafe(6),
+		CellMonth = reader.GetStringSafe(7),
+		CellYear = reader.GetStringSafe(8),
+		CellDate = reader.GetNullable<DateTime>(9),
+		Value = reader.GetStringSafe(10),
+		CompanyFinancialTermID = reader.GetNullable<int>(11),
+		ValueNumeric = reader.GetNullable<decimal>(12),
+		NormalizedNegativeIndicator = reader.GetBoolean(13),
+		ScalingFactorID = reader.GetStringSafe(14),
+		AsReportedScalingFactor = reader.GetStringSafe(15),
+		Currency = reader.GetStringSafe(16),
+		CurrencyCode = reader.GetStringSafe(17),
+		Cusip = reader.GetStringSafe(18),
+		ScarUpdated = reader.GetBoolean(19),
+		IsIncomePositive = reader.GetBoolean(20),
+		XBRLTag = reader.GetStringSafe(21),
+		UpdateStampUTC = reader.GetNullable<DateTime>(22),
+		DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+		//	DocumentID = reader.GetGuid(23),
+		Label = reader.GetStringSafe(24),
+		ScalingFactorValue = reader.GetDouble(25),
+		ARDErrorTypeId = reader.GetNullable<int>(26),
+		MTMWErrorTypeId = reader.GetNullable<int>(27)
+	};
 
-								adjustedOrder = reader.GetInt32(28);
-							} else {
-								cell = new SCARAPITableCell();
-								adjustedOrder = reader.GetInt32(28);
+									adjustedOrder = reader.GetInt32(28);
+								} else {
+									cell = new SCARAPITableCell();
+									adjustedOrder = reader.GetInt32(28);
+								}
+
+								while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+									shix++;
+								}
+
+								if (cell.ID == 0) {
+									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+								}
+								i++;
+								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+
+								if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
+									StaticHierarchies[shix].Cells.Add(cell);
+								} else {
+									throw new Exception();
+								}
+
 							}
-
-							while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
-								shix++;
-							}
-
-							if (cell.ID == 0) {
-								BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
-							}
-							i++;
-							CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
-
-							if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
-								StaticHierarchies[shix].Cells.Add(cell);
-							} else {
-								throw new Exception();
-							}
-
 						}
 					}
 				}
@@ -392,17 +395,17 @@ WHERE  CompanyID = @Iconum";
 						List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
 
 						if (!tc.ARDErrorTypeId.HasValue &&//TODO: remove double checks
-						(matches.Any(m => (CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue))) ||
+						(matches.Any(m => (
+													(CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue))) ||
 													((!sh.Cells[m].ValueNumeric.HasValue && !sh.Cells[m].VirtualValueNumeric.HasValue) 
 														&& (tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue) 
-														&& (sortedLessThanPubDate.Count > 0 && sortedLessThanPubDate.First() == m)
-													)
+														&& (sortedLessThanPubDate.Count > 0 && sortedLessThanPubDate.First() == m))
+														) && !(GetChildren(sh.Cells[m], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && sh.Cells[m].VirtualValueNumeric.HasValue)
 												)
 							) &&
 						!matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue) &&
 						(tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue) &&
-						!GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) &&
-						!matches.Any(m3 => GetChildren(sh.Cells[m3], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue)) &&
+						(!(GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && tc.VirtualValueNumeric.HasValue)) &&
 						sh.StaticHierarchyMetaId != 5
 						) {
 							tc.LikePeriodValidationFlag = true;

@@ -33,7 +33,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]
 		public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
-		[JsonIgnore]
+		[JsonProperty("returnValue")]
 		public Tuple<bool, string> ReturnValue { get; set; }
 	}
 }
