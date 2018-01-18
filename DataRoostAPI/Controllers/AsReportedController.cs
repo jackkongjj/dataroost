@@ -518,8 +518,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			helper.ARDValidation(SfDocumentId);
-			return new ScarResult();
+			ScarResult result = new ScarResult();
+			result.ReturnValue = helper.ARDValidation(SfDocumentId);
+			return result;
 		}
 		[Route("documents/{damdocumentId}/redstarslotting")]
 		[HttpPut]

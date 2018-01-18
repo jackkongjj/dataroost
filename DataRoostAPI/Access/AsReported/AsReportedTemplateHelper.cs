@@ -337,7 +337,9 @@ WHERE  CompanyID = @Iconum";
 							TimeSliceMap[tup].Add(TimeSlices.Count - 1);
 
 							foreach (StaticHierarchy sh in temp.StaticHierarchies) {
-								CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+								try {
+									CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+								} catch { }
 							}
 
 						}
@@ -3454,7 +3456,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			public DateTime timestamp { get; set; }
 		}
 
-		public bool ARDValidation(Guid DocumentID) {
+		public Tuple<bool, string> ARDValidation(Guid DocumentID) {
 			string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_AsReported/92C6C824-0F9A-4A5C-BC62-000095729E1B";
 			url = @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_AsReported/" + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
@@ -3470,15 +3472,28 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 
 				}
 			}
-
+			bool hasNoError = true;
+			Tuple<bool, string> returnValue = new Tuple<bool, string>(true, "");
+			System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder("ArdValidation: ");
 			if (result != null) {
 				foreach (var test in result.Results) {
-					if (test.isissue)
-						return false;
+					if (test.isissue) {
+						hasNoError = false;
+						foreach (var error in test.testoutput) {
+							if (!string.IsNullOrWhiteSpace(error.errortext)) {
+								errorBuilder.Append(string.Format("{0}:{1};", test.test, error.errortext));
+							}
+						}
+					}
 				}
-				return true; // return true if no Individual Test is an issue.
+			} else {
+				return new Tuple<bool, string>(false, "ArdValidation did not run successfully");
 			}
-			return true;
+			if (hasNoError) {
+				errorBuilder = new System.Text.StringBuilder();
+			}
+			returnValue = new Tuple<bool, string>(hasNoError, errorBuilder.ToString());
+			return returnValue;
 		}
 	
 	}
