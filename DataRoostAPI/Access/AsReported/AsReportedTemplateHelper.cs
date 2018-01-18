@@ -226,6 +226,7 @@ WHERE  CompanyID = @Iconum";
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+					cmd.CommandTimeout = 60;
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
