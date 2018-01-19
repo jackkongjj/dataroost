@@ -227,7 +227,7 @@ WHERE  CompanyID = @Iconum";
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
-					cmd.CommandTimeout = 60;
+					cmd.CommandTimeout = 300;
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
@@ -394,19 +394,7 @@ WHERE  CompanyID = @Iconum";
 
 						List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
 
-						if (!tc.ARDErrorTypeId.HasValue &&//TODO: remove double checks
-						(matches.Any(m => (
-													(CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue))) ||
-													((!sh.Cells[m].ValueNumeric.HasValue && !sh.Cells[m].VirtualValueNumeric.HasValue) 
-														&& (tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue) 
-														&& (sortedLessThanPubDate.Count > 0 && sortedLessThanPubDate.First() == m))
-														) && !(GetChildren(sh.Cells[m], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && sh.Cells[m].VirtualValueNumeric.HasValue)
-												)
-							) &&
-						!matches.Any(t => sh.Cells[t].ARDErrorTypeId.HasValue) &&
-						(tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue) &&
-						(!(GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && tc.VirtualValueNumeric.HasValue)) &&
-						sh.StaticHierarchyMetaId != 5
+						if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate)
 						) {
 							tc.LikePeriodValidationFlag = true;
 							tc.StaticHierarchyID = sh.Id;
@@ -419,13 +407,44 @@ WHERE  CompanyID = @Iconum";
 						tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 &&
 								(CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasChildren)) &&
 										!tc.MTMWErrorTypeId.HasValue && hasChildren && sh.UnitTypeId != 2
-										&& !IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription);
+										&& !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription));
 					} catch { break; }
 				}
 			}
 
 			return temp;
 		}
+
+		private bool LPV(Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, 
+			Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, StaticHierarchy sh, SCARAPITableCell tc, 
+			List<int> matches, ref bool whatever, decimal cellValue, List<int> sortedLessThanPubDate) {
+
+			if (tc.ARDErrorTypeId.HasValue)
+				return false;
+
+			if (tc.ID > 0 && !tc.ValueNumeric.HasValue)
+				return true;
+
+			if (!tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue)
+				return false;
+
+			if (matches.Any(m => sh.Cells[m].ARDErrorTypeId.HasValue ||
+				(GetChildren(sh.Cells[m], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && sh.Cells[m].VirtualValueNumeric.HasValue)))
+				return false;
+
+			if (GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && tc.VirtualValueNumeric.HasValue)
+				return false;
+
+			if (matches.Any(m => (tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue)
+																	&& (sortedLessThanPubDate.Count > 0 && sortedLessThanPubDate.First() == m)
+																	&& (!sh.Cells[m].ValueNumeric.HasValue && !sh.Cells[m].VirtualValueNumeric.HasValue)))
+				return true;
+
+			bool whatever2 = false;
+
+			return matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue)));
+		}
+
 
 		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren) {
 			if (cell.ValueNumeric.HasValue) {

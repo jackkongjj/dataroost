@@ -559,6 +559,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return result;
 		}
 
+
+		[Route("documents/{damdocumentId}/mtmwandlpv2")]
+		[HttpPut]
 		public MTMWLPVReturn DoMTMWAndLPVValidation2(string CompanyId, Guid damdocumentId) {
 			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
