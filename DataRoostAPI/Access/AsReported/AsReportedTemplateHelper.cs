@@ -390,11 +390,11 @@ WHERE  CompanyID = @Iconum";
 						List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
 						bool whatever = false;
-						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever);
+						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
 
 						List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
 
-						if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate)
+						if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
 						) {
 							tc.LikePeriodValidationFlag = true;
 							tc.StaticHierarchyID = sh.Id;
@@ -405,7 +405,7 @@ WHERE  CompanyID = @Iconum";
 						bool whatever2 = false;
 
 						tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 &&
-								(CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2) != CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasChildren)) &&
+								(CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, temp.TimeSlices) != CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasChildren, temp.TimeSlices)) &&
 										!tc.MTMWErrorTypeId.HasValue && hasChildren && sh.UnitTypeId != 2
 										&& !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription));
 					} catch { break; }
@@ -417,7 +417,15 @@ WHERE  CompanyID = @Iconum";
 
 		private bool LPV(Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, 
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, StaticHierarchy sh, SCARAPITableCell tc, 
-			List<int> matches, ref bool whatever, decimal cellValue, List<int> sortedLessThanPubDate) {
+			List<int> matches, ref bool whatever, decimal cellValue, List<int> sortedLessThanPubDate, List<TimeSlice> timeSlices) {
+
+
+				bool whatever2 = false;
+
+
+
+				foreach (int i in matches)
+					CalculateCellValue(sh.Cells[i], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices);
 
 			if (tc.ARDErrorTypeId.HasValue)
 				return false;
@@ -440,13 +448,12 @@ WHERE  CompanyID = @Iconum";
 																	&& (!sh.Cells[m].ValueNumeric.HasValue && !sh.Cells[m].VirtualValueNumeric.HasValue)))
 				return true;
 
-			bool whatever2 = false;
-
-			return matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue)));
+			return matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue)));
 		}
 
 
-		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren) {
+		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup, 
+			Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> timeSlices) {
 			if (cell.ValueNumeric.HasValue) {
 				hasChildren = true;
 				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
@@ -458,17 +465,18 @@ WHERE  CompanyID = @Iconum";
 					decimal sum = 0;
 					StaticHierarchy sh = BlankCells[cell].Item1;
 					int timesliceIndex = BlankCells[cell].Item2;
+					TimeSlice ts = timeSlices[timesliceIndex];
 					bool subChildren = false;
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
 						if (child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6 && child.UnitTypeId != 2){
-							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, IsSummaryLookup, ref subChildren);
+							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, IsSummaryLookup, ref subChildren, timeSlices);
 							if (subChildren)
 								hasChildren = true;
 						}
 					}
 					if (SHChildLookup[sh.Id].Where(c=> c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6 && c.UnitTypeId != 2).Count() > 0) {
-						if (!cell.ValueNumeric.HasValue && subChildren)
+						if (!cell.ValueNumeric.HasValue && subChildren && !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription)))
 							cell.VirtualValueNumeric = sum;
 
 						return sum;
@@ -493,18 +501,19 @@ WHERE  CompanyID = @Iconum";
 			}
 		}
 
-		private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren) {
+		private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> TimeSlices) {
 			if (CellLookup.ContainsKey(cell)) {
 				decimal sum = 0;
 				StaticHierarchy sh = CellLookup[cell].Item1;
 				int timesliceIndex = CellLookup[cell].Item2;
+				TimeSlice ts = TimeSlices[timesliceIndex];
 
 				bool subChildren = false;
 
 				if (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6) {
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6)) {
-						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, IsSummaryLookup, ref subChildren);
+						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, IsSummaryLookup, ref subChildren, TimeSlices);
 						if (subChildren)
 							hasChildren = true;
 					}
