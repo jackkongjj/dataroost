@@ -404,7 +404,7 @@ WHERE  CompanyID = @Iconum";
 						bool hasChildren = false;
 						bool whatever2 = false;
 
-						tc.MTMWValidationFlag = SHChildLookup[sh.Id].Count > 0 &&
+						tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
 								(CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, temp.TimeSlices) != CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasChildren, temp.TimeSlices)) &&
 										!tc.MTMWErrorTypeId.HasValue && hasChildren && sh.UnitTypeId != 2
 										&& !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription));
@@ -427,7 +427,7 @@ WHERE  CompanyID = @Iconum";
 				foreach (int i in matches)
 					CalculateCellValue(sh.Cells[i], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices);
 
-			if (tc.ARDErrorTypeId.HasValue)
+				if (tc.ARDErrorTypeId.HasValue || (tc.VirtualValueNumeric.HasValue && GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue)))
 				return false;
 
 			if (tc.ID > 0 && !tc.ValueNumeric.HasValue)
@@ -436,11 +436,8 @@ WHERE  CompanyID = @Iconum";
 			if (!tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue)
 				return false;
 
-			if (matches.Any(m => sh.Cells[m].ARDErrorTypeId.HasValue ||
+			if (matches.Where(m=> CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices) == cellValue).Any(m => sh.Cells[m].ARDErrorTypeId.HasValue ||
 				(GetChildren(sh.Cells[m], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && sh.Cells[m].VirtualValueNumeric.HasValue)))
-				return false;
-
-			if (GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue) && tc.VirtualValueNumeric.HasValue)
 				return false;
 
 			if (matches.Any(m => (tc.ValueNumeric.HasValue || tc.VirtualValueNumeric.HasValue)
@@ -448,7 +445,20 @@ WHERE  CompanyID = @Iconum";
 																	&& (!sh.Cells[m].ValueNumeric.HasValue && !sh.Cells[m].VirtualValueNumeric.HasValue)))
 				return true;
 
-			return matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue)));
+
+			var matchGroups = matches.Where(m=> sh.Cells[m].VirtualValueNumeric.HasValue || sh.Cells[m].ValueNumeric.HasValue).Where(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices) != cellValue).GroupBy(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices));
+
+			bool AllTagged = true;
+			foreach (var g in matchGroups)
+				if (g.All(m => !sh.Cells[m].ARDErrorTypeId.HasValue &&
+				!(sh.Cells[m].VirtualValueNumeric.HasValue && GetChildren(sh.Cells[m], CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue)))) {
+					AllTagged = false;
+					break;
+				}
+
+			return !AllTagged;
+
+			//return matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue)));
 		}
 
 
@@ -3489,7 +3499,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 		}
 
 		public Tuple<bool, string> ARDValidation(Guid DocumentID) {
-			string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_AsReported/92C6C824-0F9A-4A5C-BC62-000095729E1B";
+			string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_ZeroMinute/92C6C824-0F9A-4A5C-BC62-000095729E1B";
 			url = @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_ZeroMinute/" + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.ContentType = "application/json";
