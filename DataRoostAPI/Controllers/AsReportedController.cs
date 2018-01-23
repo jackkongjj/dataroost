@@ -571,11 +571,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
 
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t => t == "IS" || t == "BS" || t == "CF"))
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
 			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => (c.MTMWValidationFlag || 
+					(c.LikePeriodValidationFlag 
+					&& (sh.UnitTypeId == 2 || sh.UnitTypeId == 1) 
+					&& templates.First(te => te.TimeSlices.Any(ts => ts.Cells.Contains(c))).TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)
+				))));
 
 			//if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
 			if (cells.Count() > 0) {
@@ -605,13 +609,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			//int testCellCount = cellsTest.Count();
 			//int testMtmwCount = cellsTest.Where(c => c.MTMWValidationFlag).Count();
 			//int testlpvCount = cellsTest.Where(c => c.LikePeriodValidationFlag).Count();
-			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum)) {
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t=>t == "IS" || t == "BS" || t == "CF")) {
 				templates = new List<AsReportedTemplate>();
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
-				IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-				int totalcellcount = cells.Count();
+				//IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1)
+				//	.SelectMany(sh => sh.Cells.Where(c => (c.LikePeriodValidationFlag || c.MTMWValidationFlag)
+				//	&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
+				//int totalcellcount = cells.Count();
 				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
+				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
+					.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
 				int mtmwcount = mtmwcells.Count();
 				if (mtmwcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
@@ -622,7 +629,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					isSuccess = false;
 				}
 
-				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag)));
+				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1)
+					.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
+					&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
 				int lpvcount = lpvcells.Count();
 				if (lpvcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": LPV: ");

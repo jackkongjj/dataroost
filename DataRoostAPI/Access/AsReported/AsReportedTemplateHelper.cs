@@ -150,7 +150,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 ";//I hate this query, it is so bad
 
 			string TimeSliceQuery =
-				@"SELECT DISTINCT dts.*, d.PublicationDateTime
+				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -329,7 +329,8 @@ WHERE  CompanyID = @Iconum";
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
 								ManualOrgSet = reader.GetBoolean(18),
-								PublicationDate = reader.GetDateTime(19)
+								PublicationDate = reader.GetDateTime(19),
+								DamDocumentId = reader.GetGuid(20)
 							};
 
 							TimeSlices.Add(slice);
