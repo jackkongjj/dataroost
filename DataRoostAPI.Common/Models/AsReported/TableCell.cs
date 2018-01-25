@@ -364,5 +364,11 @@ end
 				}
 			}
 		}
+
+
+		[JsonProperty("staticHierarchyID")]
+		public int StaticHierarchyID { get; set; }
+		[JsonProperty("documentTimeSliceID")]
+		public int DocumentTimeSliceID { get; set; }
 	}
 }
