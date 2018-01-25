@@ -64,5 +64,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		[JsonProperty("level")]
 		public int Level { get; set; }
+
+
+		public string TableTypeDescription { get; set; }
 	}
 }

@@ -13,214 +13,6 @@ using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	public class PerformanceInfo1 {
-		[DllImport("psapi.dll", SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		public static extern bool GetPerformanceInfo([Out] out PerformanceInformation PerformanceInformation, [In] int Size);
-
-		[StructLayout(LayoutKind.Sequential)]
-		public struct PerformanceInformation {
-			public int Size;
-			public IntPtr CommitTotal;
-			public IntPtr CommitLimit;
-			public IntPtr CommitPeak;
-			public IntPtr PhysicalTotal;
-			public IntPtr PhysicalAvailable;
-			public IntPtr SystemCache;
-			public IntPtr KernelTotal;
-			public IntPtr KernelPaged;
-			public IntPtr KernelNonPaged;
-			public IntPtr PageSize;
-			public int HandlesCount;
-			public int ProcessCount;
-			public int ThreadCount;
-		}
-		public Int64 GetTotalMemory() {
-			PerformanceInformation pi = new PerformanceInformation();
-			if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi))) {
-				return Convert.ToInt64((pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64()));
-			} else {
-				return -1;
-			}
-		}
-		public Int64 GetAvaiableTotalMemory() {
-			PerformanceInformation pi = new PerformanceInformation();
-
-			if (GetPerformanceInfo(out pi, Marshal.SizeOf(pi))) {
-				return Convert.ToInt64((pi.PhysicalAvailable.ToInt64() * pi.PageSize.ToInt64()));
-			} else {
-				return -1;
-			}
-		}
-		static PerformanceCounter CpuCounterTotal;
-		static PerformanceCounter CpuCounter0;
-		static PerformanceCounter CpuCounter1;
-		static PerformanceCounter CpuCounter2;
-		static PerformanceCounter CpuCounter3;
-		static PerformanceCounter CpuCounter4;
-		static PerformanceCounter CpuCounter5;
-		static PerformanceCounter CpuCounter6;
-		static PerformanceCounter CpuCounter7;
-		static PerformanceCounter CpuCounter8;
-		static bool isLoadSuccessful = false;
-		static string cpuLoading = "";
-		static PerformanceInfo1() {
-		}
-		public static void Load() {
-			try {
-				cpuLoading = "Load(): empty ";
-				CpuCounterTotal = new PerformanceCounter("Processor",
-	"% Processor Time", "_Total");
-				cpuLoading += "CpuCounterTotal";
-				CpuCounter0 = new PerformanceCounter("Processor",
-		"% Processor Time", "0");
-				cpuLoading += "CpuCounter0";
-				CpuCounter1 = new PerformanceCounter("Processor",
-		"% Processor Time", "1");
-				cpuLoading += "CpuCounter1";
-				CpuCounter2 = new PerformanceCounter("Processor",
-		"% Processor Time", "2");
-				cpuLoading += "CpuCounter2";
-				CpuCounter3 = new PerformanceCounter("Processor",
-		"% Processor Time", "3");
-				cpuLoading += "CpuCounter3";
-				CpuCounter4 = new PerformanceCounter("Processor",
-		"% Processor Time", "4");
-				cpuLoading += "CpuCounter4";
-				CpuCounter5 = new PerformanceCounter("Processor",
-		"% Processor Time", "5");
-				cpuLoading += "CpuCounter5";
-				CpuCounter6 = new PerformanceCounter("Processor",
-		"% Processor Time", "6");
-				cpuLoading += "CpuCounter6";
-				CpuCounter7 = new PerformanceCounter("Processor",
-		"% Processor Time", "7");
-				cpuLoading += "CpuCounter7";
-				CpuCounter8 = new PerformanceCounter("Processor",
-		"% Processor Time", "8");
-				cpuLoading += "CpuCounter8";
-				isLoadSuccessful = true;
-			} catch {
-				isLoadSuccessful = false;
-			}
-		}
-//		static PerformanceCounter CpuCounterTotal = new PerformanceCounter("Processor",
-//"% Processor Time", "_Total");
-//		static PerformanceCounter CpuCounter0 = new PerformanceCounter("Processor",
-//"% Processor Time", "0");
-//		static PerformanceCounter CpuCounter1 = new PerformanceCounter("Processor",
-//"% Processor Time", "1");
-//		static PerformanceCounter CpuCounter2 = new PerformanceCounter("Processor",
-//"% Processor Time", "2");
-//		static PerformanceCounter CpuCounter3 = new PerformanceCounter("Processor",
-//"% Processor Time", "3");
-//		static PerformanceCounter CpuCounter4 = new PerformanceCounter("Processor",
-//"% Processor Time", "4");
-//		static PerformanceCounter CpuCounter5 = new PerformanceCounter("Processor",
-//"% Processor Time", "5");
-//		static PerformanceCounter CpuCounter6 = new PerformanceCounter("Processor",
-//"% Processor Time", "6");
-//		static PerformanceCounter CpuCounter7 = new PerformanceCounter("Processor",
-//"% Processor Time", "7");
-//		static PerformanceCounter CpuCounter8 = new PerformanceCounter("Processor",
-//"% Processor Time", "8");
-		string ProcessName = null;
-		public string GetPerformanceData() {
-			try {
-				if (!isLoadSuccessful)
-					return "PerformanceInformation load unsuccessful";
-
-				string reading = "";
-				PerformanceCounter WorkingSetPrivateMemoryCounter = new PerformanceCounter("Process",
-				"Working Set - Private",
-				GetNameToUseForMemory(Process.GetCurrentProcess()));
-
-
-
-				float cpuPercentTotal = -1.0f;
-				float cpuPercent0 = -1.0f;
-				float cpuPercent1 = -1.0f;
-				float cpuPercent2 = -1.0f;
-				float cpuPercent3 = -1.0f;
-				float cpuPercent4 = -1.0f;
-				float cpuPercent5 = -1.0f;
-				float cpuPercent6 = -1.0f;
-				float cpuPercent7 = -1.0f;
-				float cpuPercent8 = -1.0f;
-				try {
-					cpuPercentTotal = CpuCounterTotal.NextValue();
-					cpuPercent0 = CpuCounter0.NextValue();
-					cpuPercent1 = CpuCounter1.NextValue();
-					cpuPercent2 = CpuCounter2.NextValue();
-					cpuPercent3 = CpuCounter3.NextValue();
-					cpuPercent4 = CpuCounter4.NextValue();
-					cpuPercent5 = CpuCounter5.NextValue();
-					cpuPercent6 = CpuCounter6.NextValue();
-					cpuPercent7 = CpuCounter7.NextValue();
-					cpuPercent8 = CpuCounter8.NextValue();
-				} catch { }
-				float usemem = WorkingSetPrivateMemoryCounter.NextValue();
-				long tmem = GetTotalMemory();
-				long ava = GetAvaiableTotalMemory();
-				if (tmem == 0) {
-					return " MEM Usage: UnFetchable";
-				} else {
-					reading += "<BR> CPU_total Percentage: " + cpuPercentTotal + " % <BR> \r\n";
-					reading += "CPU_0 Percentage: " + cpuPercent0 + " % <BR> \r\n";
-					reading += "CPU_1 Percentage: " + cpuPercent1 + " % <BR> \r\n";
-					reading += "CPU_2 Percentage: " + cpuPercent2 + " % <BR> \r\n";
-					reading += "CPU_3 Percentage: " + cpuPercent3 + " % <BR> \r\n";
-					reading += "CPU_4 Percentage: " + cpuPercent4 + " % <BR> \r\n";
-					reading += "CPU_5 Percentage: " + cpuPercent5 + " % <BR> \r\n";
-					reading += "CPU_6 Percentage: " + cpuPercent6 + " % <BR> \r\n";
-					reading += "CPU_7 Percentage: " + cpuPercent7 + " % <BR> \r\n";
-					reading += "CPU_8 Percentage: " + cpuPercent8 + " % <BR> \r\n";
-					reading += " MEM Avaiable: " + ava / 1048576 + "(MB) <BR> \r\n";
-					reading += "MEM Size: " + tmem / 1048576 + "(MB) <BR> ";
-					reading += "Process MEM Usage: " + (usemem / tmem).ToString("P") + " <BR>";
-					reading += "System MEM Usage: " + (1 - ava * 1.0 / tmem).ToString("P") + "<BR> \r\n <BR> \r\n";
-					return reading;
-				}
-			} catch (Exception ex) {
-
-				return string.Format("PerformanceData - Message: {0} Stack: {1} InnerMessage: {2}", ex.Message, ex.StackTrace, ex.InnerException);
-			}
-		}
-
-		public string GetNameToUseForMemory(Process proc) {
-			if (!string.IsNullOrEmpty(ProcessName))
-				return ProcessName;
-			var nameToUseForMemory = String.Empty;
-			var category = new PerformanceCounterCategory("Process");
-			var instanceNames = category.GetInstanceNames().Where(x => x.Contains(proc.ProcessName));
-			foreach (var instanceName in instanceNames) {
-				using (var performanceCounter = new PerformanceCounter("Process", "ID Process", instanceName, true)) {
-					if (performanceCounter.RawValue != proc.Id)
-						continue;
-					nameToUseForMemory = instanceName;
-					break;
-				}
-			}
-			ProcessName = nameToUseForMemory;
-			return nameToUseForMemory;
-		}
-
-		public static void SendEmail(string subject, string emailBody) {
-			try {
-				SmtpClient mySMTP = new SmtpClient("mail.factset.com");
-				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
-				MailMessage message = new MailMessage();
-				message.From = mailFrom;
-				message.To.Add(new MailAddress("ljiang@factset.com", "Lun Jiang"));
-				message.Subject = subject + " from " + Environment.MachineName;
-				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
-				message.Body = cpuLoading + emailBody;
-				message.IsBodyHtml = true;
-				mySMTP.Send(message);
-			} catch { }
-		}
-	}
-
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
 	public class AsReportedController : ApiController {
 
@@ -281,14 +73,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpGet]
 		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
-			//PerformanceInfo1.SendEmail("DataRoost Performance Enter", PerformanceInfo1.GetPerformanceData());
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			if (TemplateName == null)
 				return null;
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			//PerformanceInfo1.SendEmail("DataRoost Performance Created Helper", PerformanceInfo1.GetPerformanceData());
 			return helper.GetTemplate(iconum, TemplateName, DocumentId);
 		}
 
@@ -317,6 +107,112 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetStaticHierarchy(id);
 		}
 
+		[Route("staticHierarchy/{id}")]
+		[HttpPut]
+		public ScarResult EditHierarchyLabel(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyLabel(id, input.StringData);
+		}
+
+		[Route("staticHierarchy/{id}/move")]
+		[HttpPut]
+		public ScarResult MoveStaticHierarchy(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyMove(id, input.StringData);
+		}
+
+
+		[Route("staticHierarchy/{id}/childrenexpanddown")]
+		[HttpPut]
+		public ScarResult SwitchChildrenOrientation(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchySwitchChildrenOrientation(id);
+		}
+
+		[Route("staticHierarchy/{id}/dragdrop/{targetId}/{location}")]
+		[HttpPut]
+		public ScarResult EditHierarchyLabel(string CompanyId, int id, int targetId, string location) {
+			if (string.IsNullOrEmpty(location))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.DragDropStaticHierarchyLabel(id, targetId, location.ToUpper());
+		}
+
+		[Route("staticHierarchy/{id}/unittype")]
+		[HttpPut]
+		public ScarResult UpdateStatichHierarchyUnitType(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyUnitType(id, input.StringData);
+		}
+		[Route("staticHierarchy/{id}/meta")]
+		[HttpPut]
+		public ScarResult UpdateStatichHierarchyMeta(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyMeta(id, input.StringData);
+		}
+		[Route("staticHierarchy/{id}/group")]
+		[HttpPut]
+		public ScarResult GroupStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchySeperator(id, true);
+		}
+		[Route("staticHierarchy/{id}/ungroup")]
+		[HttpPut]
+		public ScarResult UngroupStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchySeperator(id, false);
+		}
+
+		[Route("staticHierarchy/{id}/header")]
+		[HttpPost]
+		public ScarResult AddHeaderStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyAddHeader(id);
+		}
+
+		[Route("staticHierarchy/{id}/header")]
+		[HttpDelete]
+		public ScarResult DeleteHeaderStatichHierarchyWithId(string CompanyId, ScarStringListInput input) {
+			return DeleteHeaderStatichHierarchy(CompanyId, input);
+		}
+
+		[Route("staticHierarchy/header")]
+		[HttpDelete]
+		public ScarResult DeleteHeaderStatichHierarchy(string CompanyId, ScarStringListInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
+				return null;
+
+			return helper.UpdateStaticHierarchyDeleteHeader(input.StringData, input.StaticHierarchyIDs);
+		}
+
+		[Route("staticHierarchy/{id}/parent")]
+		[HttpPost]
+		public ScarResult AddParentStatichHierarchy(string CompanyId, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyAddParent(id);
+		}
+
+
 		//TODO: Add IsSummary
 		[Route("timeSlice/{id}")]
 		[HttpGet]
@@ -330,64 +226,135 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTimeSlice(id);
 		}
 
-        [Route("cells/{id}/flipsign/{DocumentId}/")]
-        [HttpGet]
-        public ScarResult FlipSign(string id, Guid DocumentId)
-        {
-            string CompanyId = "36468";
-            int iconum = PermId.PermId2Iconum(CompanyId);
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.FlipSign(id, DocumentId, iconum, 0);
-        }
 
-        [Route("cells/{id}/flipsign/{DocumentId}/")]
-        [HttpPost]
-        public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input)
-        {
-            string CompanyId = "36468";
-            int iconum = PermId.PermId2Iconum(CompanyId);
-            if (input == null || input.TargetStaticHierarchyID == 0)
-                return null;
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
-        }
-
-        [Route("cells/{id}/addMTMW/{DocumentId}/")]
-        [HttpGet]
-        public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId)
-        {
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.AddMakeTheMathWorkNote(id, DocumentId);
-        }
-
-        [Route("cells/{id}/addLikePeriod/{DocumentId}/")]
-        [HttpGet]
-        public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId)
-        {
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-            AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-            return helper.AddLikePeriodValidationNote(id, DocumentId);
-        }
-
-
-
-		public class StitchInput {
-			public int TargetStaticHierarchyID { get; set; }
-			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		[Route("timeSlice/{id}/reporttype")]
+		[HttpPut]
+		public ScarResult PutTimeSlice(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSliceReportType(id, input.StringData);
 		}
 
-		public class UnStitchInput {
-			public int TargetStaticHierarchyID { get; set; }
+		[Route("timeSlice/{id}/interimtype")]
+		[HttpPost]
+		public ScarResult PostTimeSlice(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.CloneUpdateTimeSlice(id, input.StringData);
 		}
 
-        public class ScarInput
-        {
-            public int TargetStaticHierarchyID { get; set; }
-            public List<int> StitchingStaticHierarchyIDs { get; set; }
-        }
+
+
+		[Route("cells/{id}/flipsign/{DocumentId}/")]
+		[HttpGet]
+		public ScarResult FlipSign(string id, Guid DocumentId) {
+			// there shouldn't be a getter for this. My Mistake. 
+			string CompanyId = "36468";
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipSign(id, DocumentId, iconum, 0);
+		}
+
+		[Route("cells/{id}/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input) {
+			string CompanyId = "36468";
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || input.TargetStaticHierarchyID == 0)
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
+		}
+
+		[Route("cells/{id}/children/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipChildren(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			//if (input == null || input.TargetStaticHierarchyID == 0)
+			//	return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipChildren(id, DocumentId, iconum, 0);
+		}
+
+		[Route("cells/{id}/historical/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			//if (input == null || input.TargetStaticHierarchyID == 0)
+			//	return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipHistorical(id, DocumentId, iconum, 0);
+		}
+
+		[Route("cells/{id}/children/historical/flipsign/{DocumentId}/")]
+		[HttpPost]
+		public ScarResult FlipChildrenHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			//if (input == null || input.TargetStaticHierarchyID == 0)
+			//	return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipChildrenHistorical(id, DocumentId, iconum, 0);
+		}
+
+		[Route("cells/{id}/addMTMW/{DocumentId}/")]
+		[HttpGet]
+		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddMakeTheMathWorkNote(id, DocumentId);
+		}
+
+		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
+		[HttpGet]
+		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddLikePeriodValidationNote(id, DocumentId);
+		}
+
+		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
+		[HttpGet]
+		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTimeSliceByTemplate(TemplateName, DocumentId);
+		}
+
+		[Route("templates/{TemplateName}/timeslice/review")]
+		[HttpGet]
+		public ScarResult GetTimeSliceReview(string CompanyId, string TemplateName) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetReviewTimeSlice(TemplateName, iconum);
+		}
+		[Route("templates/{TemplateName}/timeslice/{id}/issummary")]
+		[HttpPut]
+		public ScarResult PutTimeSliceIsSummary(string CompanyId, string TemplateName, int id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSliceIsSummary(id, TemplateName);
+		}
+
+		[Route("templates/{TemplateName}/timeslice/{id}/periodnote")]
+		[HttpPut]
+		public ScarResult PutTimeSlicePeriodNote(string CompanyId, string TemplateName, int id, StringInput input) {
+			string periodNote = null;
+			if (input != null && !string.IsNullOrEmpty(input.StringData))
+				periodNote = input.StringData;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSlicePeriodNote(id, periodNote);
+		}
 
 		[Route("templates/{TemplateName}/stitch/{DocumentId}/")]
 		[HttpPost]
@@ -415,5 +382,308 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
 		}
+
+		public class StitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
+		public class UnStitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+		}
+
+		public class ScarInput {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
+
+		public class ScarStringListInput {
+			public string StringData { get; set; }
+			public List<int> StaticHierarchyIDs { get; set; }
+		}
+
+
+		public class StringInput {
+			public string StringData { get; set; }
+		}
+	}
+
+	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/zerominute")]
+	public class ZeroMinuteUpdateController : ApiController {
+		private bool IsZeroMinuteUpdate() {
+			bool isZeroMinuteUpdate = false;
+			string zerominutekey = ConfigurationManager.AppSettings["IsZeroMinuteUpdate"];
+			if (!string.IsNullOrEmpty(zerominutekey)) {
+				isZeroMinuteUpdate = Convert.ToBoolean(zerominutekey);
+			}
+			return true;
+			return isZeroMinuteUpdate;
+		}
+
+		public Guid GetSfDocumentId(string CompanyId, string documentId) {
+			var document = GetDocument(CompanyId, documentId);
+			Guid sfDocumentId = new Guid("00000000-0000-0000-0000-000000000000");
+			if (document == null || document.SuperFastDocumentId == null) {
+				// probably due to incorrect CompanyId. 
+				// Just inquiry the DocumentTable
+			} else {
+				sfDocumentId = new Guid(document.SuperFastDocumentId);
+			}
+			return sfDocumentId;
+		}
+		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
+			var document = documentHelper.GetDocument(iconum, documentId);
+			return document;
+		}
+	
+		public class StringInput {
+			public string StringData { get; set; }
+		}
+
+		[Route("documents/{damdocumentId}")]
+		[HttpPut]
+		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId, StringInput input) {
+			string startReason = "-";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				startReason = input.StringData;
+			}
+			DateTime startTime = DateTime.UtcNow;
+
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
+			//FFDocumentHistory.GetSuperFastDocumentID(DAMDocumentId, Iconum).Value
+
+			// InterimType
+			// RedStar
+			// Set IncomeOrientation
+			// MTMW & LPV
+			// ARd validation
+			ScarResult result = null;
+			result = new ScarResult();
+			Tuple<bool, string> returnValue = null;
+			bool runOnce = true;
+			if (IsZeroMinuteUpdate()) {
+				try {
+					while (runOnce) {
+						returnValue = DoInterimTypeAndCurrency(CompanyId, damdocumentId).ReturnValue;
+						if (!returnValue.Item1) {
+							break;
+						}
+
+						DoRedStarSlotting(CompanyId, damdocumentId);
+						DoSetIncomeOrientation(CompanyId, damdocumentId);
+
+						returnValue = DoMTMWAndLPVValidation(CompanyId, damdocumentId).ReturnValue;
+
+						if (!returnValue.Item1) {
+							//System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+							//string Ids = mtmwRet.cells.Select(x => x.ID.ToString()).Aggregate((a, b) => a + "," + b);
+							//returnValue = new Tuple<bool, string>(false, "mtmwlpvfailed: " + Ids);
+							break;
+						}
+						returnValue = DoARDValidation(CompanyId, damdocumentId).ReturnValue;
+						if (!returnValue.Item1) {
+							break;
+						}
+						runOnce = false;
+					}
+				} catch (Exception ex) {
+					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
+				}
+				try {
+					helper.LogError(damdocumentId, startReason, startTime, CompanyId, returnValue.Item1, returnValue.Item2);
+				} catch { }
+				return returnValue.Item1;
+				//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute
+				//and failure if we don't so we probably just have to return true;
+
+			}
+			return false;
+		}
+
+		[Route("documents/{damdocumentId}/ard")]
+		[HttpPut]
+		public ScarResult DoARDValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			ScarResult result = new ScarResult();
+			result.ReturnValue = helper.ARDValidation(SfDocumentId);
+			return result;
+		}
+		[Route("documents/{damdocumentId}/redstarslotting")]
+		[HttpPut]
+		public ScarResult DoRedStarSlotting(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			ScarResult result = new ScarResult();
+
+			bool isSuccess = helper.UpdateRedStarSlotting(SfDocumentId);
+			result.ReturnValue = new Tuple<bool, string>(isSuccess, "");
+			return result;
+		}
+		[Route("documents/{damdocumentId}/setincome")]
+		[HttpPut]
+		public void DoSetIncomeOrientation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			helper.SetIncomeOrientation(SfDocumentId);
+		}
+		[Route("documents/{damdocumentId}/validatetables")]
+		[HttpPut]
+		public ScarResult DoInterimTypeAndCurrency(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			var result = new ScarResult();
+			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId, iconum);
+			result.ReturnValue = new Tuple<bool, string>(string.IsNullOrEmpty(errorMessage), errorMessage);
+			return result;
+		}
+
+
+		[Route("documents/{damdocumentId}/mtmwandlpv2")]
+		[HttpPut]
+		public MTMWLPVReturn DoMTMWAndLPVValidation2(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
+
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t => t == "IS" || t == "BS" || t == "CF"))
+				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+
+			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => (c.MTMWValidationFlag || 
+					(c.LikePeriodValidationFlag
+					&& (sh.UnitTypeId == 2 || sh.UnitTypeId == 1)
+					&& templates.First(te => te.TimeSlices.Any(ts => ts.Cells.Contains(c))).TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId
+					)
+				))));
+
+			//if (templates.Any(t => t.StaticHierarchies.Any(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)))) {
+			if (cells.Count() > 0) {
+				return new MTMWLPVReturn() { success = false, cells = cells.ToList() };
+			}
+
+			return new MTMWLPVReturn() { success = true };
+		}
+
+
+		[Route("documents/{damdocumentId}/mtmwandlpv")]
+		[HttpPut]
+		public ScarResult DoMTMWAndLPVValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			int iconum = PermId.PermId2Iconum(CompanyId);
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
+			var result = new ScarResult();
+			System.Text.StringBuilder errorMessageBuilder = new System.Text.StringBuilder();
+			bool isSuccess = true;
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			//foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
+			//	templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+			//IEnumerable<SCARAPITableCell> cellsTest = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+			//int testCellCount = cellsTest.Count();
+			//int testMtmwCount = cellsTest.Where(c => c.MTMWValidationFlag).Count();
+			//int testlpvCount = cellsTest.Where(c => c.LikePeriodValidationFlag).Count();
+			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t=>t == "IS" || t == "BS" || t == "CF")) {
+				templates = new List<AsReportedTemplate>();
+				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+				//IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1)
+				//	.SelectMany(sh => sh.Cells.Where(c => (c.LikePeriodValidationFlag || c.MTMWValidationFlag)
+				//	&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
+				//int totalcellcount = cells.Count();
+				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
+				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
+					.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
+				int mtmwcount = mtmwcells.Count();
+				if (mtmwcells.Count() > 0) {
+					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
+					foreach (var cell in mtmwcells) {
+						var timeslice = templates.First().TimeSlices.FirstOrDefault( x => x.Cells.Contains(cell));
+						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
+					}
+					isSuccess = false;
+				}
+
+				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1)
+					.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
+					&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
+				int lpvcount = lpvcells.Count();
+				if (lpvcells.Count() > 0) {
+					errorMessageBuilder.Append(TemplateName + ": LPV: ");
+					foreach (var cell in lpvcells) {
+						var timeslice = templates.First().TimeSlices.FirstOrDefault(x => x.Cells.Contains(cell));
+						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
+					}
+					isSuccess = false;
+				}
+
+			}
+
+			result.ReturnValue = new Tuple<bool, string>(isSuccess, errorMessageBuilder.ToString());
+			return result;
+		}
+
+		public class MTMWLPVReturn {
+			public bool success { get; set; }
+			public List<SCARAPITableCell> cells { get; set; }
+		}
+
+
+		[Route("documents/{damdocumentId}/mtmw")]
+		[HttpGet]
+		public bool DoMTMWValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			var result = helper.GetMtmwTableCells(0, SfDocumentId);
+			return result;
+		}
+		[Route("documents/{damdocumentId}/lpv")]
+		[HttpPut]
+		public ScarResult DoLPVValidation(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			var result = helper.GetLpvTableCells(0, SfDocumentId);
+			return result;
+		}
+		[Route("documents/{damdocumentId}/export")]
+		[HttpPut]
+		public ScarResult DoExport(string CompanyId, Guid damdocumentId) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
+
+			return new ScarResult();
+		}
+
+
 	}
 }
