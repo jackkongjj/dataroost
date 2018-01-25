@@ -3502,7 +3502,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 		}
 
 		public Tuple<bool, string> ARDValidation(Guid DocumentID) {
-			string url = ConfigurationManager.AppSettings["SetIncomeOrientationURL"];
+			string url = ConfigurationManager.AppSettings["ARDValidationURL"];
 			//string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_ZeroMinute/92C6C824-0F9A-4A5C-BC62-000095729E1B";
 			url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
