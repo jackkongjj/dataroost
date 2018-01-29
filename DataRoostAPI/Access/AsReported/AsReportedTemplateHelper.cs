@@ -3096,16 +3096,12 @@ ROLLBACK TRAN
 		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum) {
 			string query = @"
 
- DECLARE @BigThree Table (Description varchar(64))
- INSERT  @BigThree (Description)
- VALUES 
- ('IS'), ('BS'), ('CF')
-
- SELECT 'Missing Table. ' as Error, *
- FROM DocumentTable dt
- JOIN TableType tt ON dt.TableTypeID = tt.id
- RIGHT JOIN @BigThree bt on bt.Description = tt.description
- where dt.DocumentID = @DocumentId and tt.description is null
+select 'Missing Table. ' as Error, * from 
+(select dt.*, tt.Description from documenttable dt
+join tabletype tt on dt.tabletypeid = tt.id
+where dt.DocumentID = @DocumentId) as A
+right join TableMeta tm on tm.Name = A.Description
+where A.Description is null and tm.Name in ('BS','CF','IS') 
 
 
  SELECT  'Missing InterimType. ' as Error, * 
