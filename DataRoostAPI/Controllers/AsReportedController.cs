@@ -470,22 +470,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			// ARd validation
 			ScarResult result = null;
 			result = new ScarResult();
-			Tuple<bool, string> returnValue = null;
+			Tuple<bool, string> returnValue = new Tuple<bool,string>(false, "");
 			bool runOnce = true;
 			string isoCountry = helper.GetDocumentIsoCountry(SfDocumentId);
 			bool isUsDocument = (!string.IsNullOrEmpty(isoCountry) && isoCountry.ToUpper() == "US");
-
+			string ExceptionSource = "Exception at Unknown: ";
 			if (IsZeroMinuteUpdate() && isUsDocument) {
 				try {
 					while (runOnce) {
+						ExceptionSource = "Exception at DoInterimTypeAndCurrency: ";
 						returnValue = DoInterimTypeAndCurrency(CompanyId, damdocumentId).ReturnValue;
+
 						if (!returnValue.Item1) {
 							break;
 						}
-
+						ExceptionSource = "Exception at DoRedStarSlotting: ";
 						DoRedStarSlotting(CompanyId, damdocumentId);
+						ExceptionSource = "Exception at DoSetIncomeOrientation: ";
 						DoSetIncomeOrientation(CompanyId, damdocumentId);
 
+						ExceptionSource = "Exception at DoMTMWAndLPVValidation: ";
 						returnValue = DoMTMWAndLPVValidation(CompanyId, damdocumentId).ReturnValue;
 
 						if (!returnValue.Item1) {
@@ -495,6 +499,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 							//returnValue = new Tuple<bool, string>(false, "mtmwlpvfailed: " + Ids);
 							break;
 						}
+						ExceptionSource = "Exception at DoARDValidation: ";
 						returnValue = DoARDValidation(CompanyId, damdocumentId).ReturnValue;
 						if (!returnValue.Item1) {
 							break;
@@ -502,7 +507,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						runOnce = false;
 					}
 				} catch (Exception ex) {
-					returnValue = new Tuple<bool, string>(false, returnValue.Item2 + ex.Message);
+					returnValue = new Tuple<bool, string>(false, ExceptionSource + returnValue.Item2 + ex.Message + new string(ex.StackTrace.Take(1000).ToArray()));
 				}
 				try {
 					helper.LogError(damdocumentId, startReason, startTime, CompanyId, returnValue.Item1, returnValue.Item2);
