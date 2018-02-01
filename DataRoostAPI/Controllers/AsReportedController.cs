@@ -458,6 +458,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+
+
 			//Need to get SFDocumentID at least for creating timeslices in DoInterimType
 			//FFDocumentHistory.GetSuperFastDocumentID(DAMDocumentId, Iconum).Value
 
@@ -470,7 +472,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			result = new ScarResult();
 			Tuple<bool, string> returnValue = null;
 			bool runOnce = true;
-			if (IsZeroMinuteUpdate()) {
+			string isoCountry = helper.GetDocumentIsoCountry(SfDocumentId);
+			bool isUsDocument = (!string.IsNullOrEmpty(isoCountry) && isoCountry.ToUpper() == "US");
+
+			if (IsZeroMinuteUpdate() && isUsDocument) {
 				try {
 					while (runOnce) {
 						returnValue = DoInterimTypeAndCurrency(CompanyId, damdocumentId).ReturnValue;
