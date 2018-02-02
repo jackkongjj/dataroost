@@ -3093,6 +3093,28 @@ ROLLBACK TRAN
 			return isSuccess;
 		}
 
+		public string GetDocumentIsoCountry(Guid SFDocumentId) {
+			string query = @"
+select TOP 1 isoCountry
+from Document d
+join PPIIconumMap pim on d.PPI = pim.PPI
+WHERE d.ID = @SFDocumentID 
+";
+			string isoCountry = "";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.Parameters.AddWithValue("@SFDocumentID", SFDocumentId);
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							isoCountry = sdr.GetStringSafe(0);
+						}
+					}
+				}
+			}
+			return isoCountry;
+		}
+
 		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum) {
 			string query = @"
 
