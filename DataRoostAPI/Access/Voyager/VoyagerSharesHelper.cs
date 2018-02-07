@@ -9,14 +9,18 @@ using FactSet.Data.SqlClient;
 
 using Oracle.ManagedDataAccess.Client;
 
+using NLog;
+
 namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 
 	public class VoyagerSharesHelper {
 
-		// SQL to create Voyager tmp table
-		// CREATE GLOBAL TEMPORARY TABLE TMP_PPIS ( PPI VARCHAR2(10) NOT NULL ) ON COMMIT PRESERVE ROWS
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-		private readonly string _connectionString;
+        // SQL to create Voyager tmp table
+        // CREATE GLOBAL TEMPORARY TABLE TMP_PPIS ( PPI VARCHAR2(10) NOT NULL ) ON COMMIT PRESERVE ROWS
+
+        private readonly string _connectionString;
 		private readonly PpiHelper _ppiHelper;
 
 		public VoyagerSharesHelper(string voyagerConnectionString, string sfConnectionString) {
@@ -277,39 +281,49 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Voyager {
 							string itemName = sdr.GetString(9).Trim();
 
 							ShareClassDataItem item = null;
-							if (dateValue != null) {
-								item = new ShareClassDateItem
-								       {
-									       ItemId = itemCode,
-									       Name = itemName,
-									       ReportDate = reportDate,
-									       TimeSeriesCode = timeSeriesCode,
-									       UpdatedDate = updatedDate,
-												 Value = DateTime.ParseExact(dateValue, "ddMMyyyy", null)
-								       };
-							}
-							else if (numericValue != null) {
-								item = new ShareClassNumericItem
-								       {
-									       ItemId = itemCode,
-									       Name = itemName,
-									       ReportDate = reportDate,
-									       TimeSeriesCode = timeSeriesCode,
-									       UpdatedDate = updatedDate,
-									       Value = (decimal) numericValue
-								       };
-							}
-							else if (textValue != null) {
-								item = new ShareClassTextItem
-								       {
-									       ItemId = itemCode,
-									       Name = itemName,
-									       ReportDate = reportDate,
-									       TimeSeriesCode = timeSeriesCode,
-									       UpdatedDate = updatedDate,
-									       Value = textValue
-								       };
-							}
+
+						    try {
+                                if (dateValue != null)
+                                {
+                                    item = new ShareClassDateItem
+                                    {
+                                        ItemId = itemCode,
+                                        Name = itemName,
+                                        ReportDate = reportDate,
+                                        TimeSeriesCode = timeSeriesCode,
+                                        UpdatedDate = updatedDate,
+                                        Value = DateTime.ParseExact(dateValue, "ddMMyyyy", null)
+                                    };
+                                }
+                                else if (numericValue != null)
+                                {
+                                    item = new ShareClassNumericItem
+                                    {
+                                        ItemId = itemCode,
+                                        Name = itemName,
+                                        ReportDate = reportDate,
+                                        TimeSeriesCode = timeSeriesCode,
+                                        UpdatedDate = updatedDate,
+                                        Value = (decimal)numericValue
+                                    };
+                                }
+                                else if (textValue != null)
+                                {
+                                    item = new ShareClassTextItem
+                                    {
+                                        ItemId = itemCode,
+                                        Name = itemName,
+                                        ReportDate = reportDate,
+                                        TimeSeriesCode = timeSeriesCode,
+                                        UpdatedDate = updatedDate,
+                                        Value = textValue
+                                    };
+                                }
+                            }
+                            catch (Exception e) {
+                                Logger.Error("PPI {0}. {1}", ppi, e.Message);
+                                continue;
+                            }
 
 							if (!dataByPpi.ContainsKey(ppi)) {
 								dataByPpi.Add(ppi, new List<ShareClassDataItem>());
