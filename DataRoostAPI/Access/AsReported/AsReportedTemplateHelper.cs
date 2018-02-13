@@ -94,20 +94,20 @@ null as nul
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
 				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
 				
-FROM DocumentSeries ds
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt on sh.TableTypeID = tt.ID
+FROM DocumentSeries ds WITH (NOLOCK) 
+JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
-	FROM DocumentSeries ds
-	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt on tt.ID = sh.TableTypeID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc  WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on tt.ID = sh.TableTypeID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
@@ -126,21 +126,21 @@ JOIN(
 --		AND tt.Description = @templateName
 --		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
 --	)dts
-join DocumentTimeSlice dts
+join DocumentTimeSlice dts WITH (NOLOCK) 
 	on dts.ID = ts.ID
 LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf  WITH (NOLOCK) on sf.ID = tc.ScalingFactorID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d on dts.documentid = d.ID
+JOIN Document d  WITH (NOLOCK) on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') asc, dts.Duration desc, d.PublicationDateTime desc, dts.ReportingPeriodEndDate desc
