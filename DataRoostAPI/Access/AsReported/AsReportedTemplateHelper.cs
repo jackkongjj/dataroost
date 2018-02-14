@@ -45,7 +45,7 @@ JOIN(
 	WHERE tc.ID = @cellId
 	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+JOIN DocumentTimeSlice dts on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
@@ -127,7 +127,7 @@ JOIN(
 --		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
 --	)dts
 join DocumentTimeSlice dts WITH (NOLOCK) 
-	on dts.ID = ts.ID
+	on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds WITH (NOLOCK) 
@@ -158,7 +158,7 @@ FROM DocumentSeries ds WITH (NOLOCK)
 	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
 	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
 	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
 	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
@@ -172,7 +172,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 select DocumentTimeSliceID, TableType
 from DocumentSeries ds 
 JOIN Document d on ds.ID = d.DocumentSeriesID
-JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID
+JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
 join DocumentTimeSliceTableTypeIsSummary dtsis on dts.id = dtsis.DocumentTimeSliceID
 WHERE  CompanyID = @Iconum";
 
@@ -563,7 +563,7 @@ FROM DocumentSeries ds
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
