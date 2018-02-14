@@ -302,10 +302,10 @@ WHERE  CompanyID = @Iconum";
 
 				temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
-				using (SqlCommand cmd = new SqlCommand(@"SCAR_GetTemplate_TimeSlice", conn)) {
-					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.Add("@templateName", SqlDbType.VarChar);
+					cmd.Parameters["@templateName"].Value = TemplateName;
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					cmd.CommandTimeout = 300;
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
