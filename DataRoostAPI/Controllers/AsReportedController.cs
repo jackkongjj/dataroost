@@ -485,7 +485,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 							break;
 						}
 						ExceptionSource = "Exception at DoRedStarSlotting: ";
-						DoRedStarSlotting(CompanyId, damdocumentId);
+						returnValue = DoRedStarSlotting(CompanyId, damdocumentId).ReturnValue;
+						if (!returnValue.Item1) {
+							break;
+						}
 						ExceptionSource = "Exception at DoSetIncomeOrientation: ";
 						DoSetIncomeOrientation(CompanyId, damdocumentId);
 
@@ -542,8 +545,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			ScarResult result = new ScarResult();
 
-			bool isSuccess = helper.UpdateRedStarSlotting(SfDocumentId);
-			result.ReturnValue = new Tuple<bool, string>(isSuccess, "");
+			result.ReturnValue = helper.UpdateRedStarSlotting(SfDocumentId);
 			return result;
 		}
 		[Route("documents/{damdocumentId}/setincome")]

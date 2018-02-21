@@ -3075,23 +3075,59 @@ ROLLBACK TRAN
 		#endregion
 
 		#region Zero-Minute Update
-		public bool UpdateRedStarSlotting(Guid SFDocumentId) {
+		public Tuple<bool, string> UpdateRedStarSlotting(Guid SFDocumentId) {
+			string query = @"
+SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
+FROM StaticHierarchy sh (nolock)
+where sh.id in (@SHIds) and sh.ParentId is null
+UNION
+SELECT 'redstar_result' as result, 'Red star item in share and per share sections' as msg
+FROM StaticHierarchy sh (nolock)
+where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[shares\]%'   escape '\')
+";
 			bool isSuccess = false;
+			var sb = new System.Text.StringBuilder();
+			string returnMessage = "";
 			try {
 				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
+					sqlConn.Open();
+						bool isComma = false;
+
 					using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
 						cmd.CommandType = CommandType.StoredProcedure;
 
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
-						sqlConn.Open();
-						cmd.ExecuteNonQuery();
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								var firstfield = sdr.GetStringSafe(0);
+								if (firstfield == "RedStarLabels") {
+									var shId = sdr.GetStringSafe(1);
+									sb.Append((isComma ? "," : "") + shId);
+									isComma = true;
+								} else {
+									sdr.NextResult();
+								}
+							}
+						}
 						isSuccess = true;
+					}
+					if (isComma) { // at least one ID
+						using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
+							cmd.Parameters.AddWithValue("@SHIds", sb.ToString());
+							using (SqlDataReader sdr = cmd.ExecuteReader()) {
+								if (sdr.Read()) {
+									returnMessage += sdr.GetStringSafe(1);
+									isSuccess = false;
+								}
+							}
+						}
 					}
 				}
 			} catch (Exception ex) {
 				isSuccess = false;
+				returnMessage = "Exception occured during RedStar slotting";
 			}
-			return isSuccess;
+			return new Tuple<bool, string>(isSuccess, returnMessage);
 		}
 
 		public string GetDocumentIsoCountry(Guid SFDocumentId) {
