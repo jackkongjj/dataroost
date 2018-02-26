@@ -3083,7 +3083,7 @@ where sh.id in (@SHIds) and sh.ParentId is null
 UNION
 SELECT 'redstar_result' as result, 'Red star item in share and per share sections' as msg
 FROM StaticHierarchy sh (nolock)
-where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[shares\]%'   escape '\')
+where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[weighted average shares\]%'   escape '\')
 ";
 			bool isSuccess = false;
 			var sb = new System.Text.StringBuilder();
