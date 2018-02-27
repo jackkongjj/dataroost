@@ -3566,6 +3566,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.ContentType = "application/json";
+			request.Timeout = 120000;
 			request.Method = "GET";
 			var response = (HttpWebResponse)request.GetResponse();
 
