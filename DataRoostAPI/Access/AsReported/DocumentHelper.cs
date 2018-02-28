@@ -820,7 +820,7 @@ and d.DocumentDate  between
                         CftId = eb.CompanyFinancialTermId,
                         Currency = eb.CurrencyCode,
                         Value = eb.Value,
-                        NumericValue = string.IsNullOrEmpty(eb.Value) ? 0 : decimal.Parse(eb.Value, NumberStyles.Any),
+                        NumericValue = string.IsNullOrEmpty(eb.ValueNumeric) ? 0 : decimal.Parse(eb.ValueNumeric, NumberStyles.Any),
                         Offset = eb.Offset,
                         ScalingFactor = eb.ScalingFactor,
                         XbrlTag = eb.XbrlTag,
