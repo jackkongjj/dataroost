@@ -45,7 +45,7 @@ JOIN(
 	WHERE tc.ID = @cellId
 	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+JOIN DocumentTimeSlice dts on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
@@ -94,20 +94,20 @@ null as nul
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
 				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
 				
-FROM DocumentSeries ds
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt on sh.TableTypeID = tt.ID
+FROM DocumentSeries ds WITH (NOLOCK) 
+JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
-	FROM DocumentSeries ds
-	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt on tt.ID = sh.TableTypeID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc  WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on tt.ID = sh.TableTypeID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
@@ -126,21 +126,21 @@ JOIN(
 --		AND tt.Description = @templateName
 --		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
 --	)dts
-join DocumentTimeSlice dts
-	on dts.ID = ts.ID
+join DocumentTimeSlice dts WITH (NOLOCK) 
+	on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf  WITH (NOLOCK) on sf.ID = tc.ScalingFactorID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d on dts.documentid = d.ID
+JOIN Document d  WITH (NOLOCK) on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') asc, dts.Duration desc, d.PublicationDateTime desc, dts.ReportingPeriodEndDate desc
@@ -151,15 +151,15 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.Pe
 
 			string TimeSliceQuery =
 				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""')
-FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
-	JOIN Document d on dts.DocumentId = d.ID
+FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
+	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
+	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
@@ -172,7 +172,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 select DocumentTimeSliceID, TableType
 from DocumentSeries ds 
 JOIN Document d on ds.ID = d.DocumentSeriesID
-JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID
+JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
 join DocumentTimeSliceTableTypeIsSummary dtsis on dts.id = dtsis.DocumentTimeSliceID
 WHERE  CompanyID = @Iconum";
 
@@ -304,9 +304,10 @@ WHERE  CompanyID = @Iconum";
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
 				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.Add("@templateName", SqlDbType.VarChar);
+					cmd.Parameters["@templateName"].Value = TemplateName;
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
-
+					cmd.CommandTimeout = 300;
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 
 						while (reader.Read()) {
@@ -562,7 +563,7 @@ FROM DocumentSeries ds
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
@@ -3074,23 +3075,59 @@ ROLLBACK TRAN
 		#endregion
 
 		#region Zero-Minute Update
-		public bool UpdateRedStarSlotting(Guid SFDocumentId) {
+		public Tuple<bool, string> UpdateRedStarSlotting(Guid SFDocumentId) {
+			string query = @"
+SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
+FROM StaticHierarchy sh (nolock)
+where sh.id in (@SHIds) and sh.ParentId is null
+UNION
+SELECT 'redstar_result' as result, 'Red star item in share and per share sections' as msg
+FROM StaticHierarchy sh (nolock)
+where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[weighted average shares\]%'   escape '\')
+";
 			bool isSuccess = false;
+			var sb = new System.Text.StringBuilder();
+			string returnMessage = "";
 			try {
 				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
+					sqlConn.Open();
+						bool isComma = false;
+
 					using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
 						cmd.CommandType = CommandType.StoredProcedure;
 
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
-						sqlConn.Open();
-						cmd.ExecuteNonQuery();
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								var firstfield = sdr.GetStringSafe(0);
+								if (firstfield == "RedStarLabels") {
+									var shId = sdr.GetStringSafe(1);
+									sb.Append((isComma ? "," : "") + shId);
+									isComma = true;
+								} else {
+									sdr.NextResult();
+								}
+							}
+						}
 						isSuccess = true;
+					}
+					if (isComma) { // at least one ID
+						using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
+							cmd.Parameters.AddWithValue("@SHIds", sb.ToString());
+							using (SqlDataReader sdr = cmd.ExecuteReader()) {
+								if (sdr.Read()) {
+									returnMessage += sdr.GetStringSafe(1);
+									isSuccess = false;
+								}
+							}
+						}
 					}
 				}
 			} catch (Exception ex) {
 				isSuccess = false;
+				returnMessage = "Exception occured during RedStar slotting";
 			}
-			return isSuccess;
+			return new Tuple<bool, string>(isSuccess, returnMessage);
 		}
 
 		public string GetDocumentIsoCountry(Guid SFDocumentId) {
@@ -3529,6 +3566,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.ContentType = "application/json";
+			request.Timeout = 120000;
 			request.Method = "GET";
 			var response = (HttpWebResponse)request.GetResponse();
 

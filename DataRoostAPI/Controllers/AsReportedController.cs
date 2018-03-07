@@ -485,7 +485,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 							break;
 						}
 						ExceptionSource = "Exception at DoRedStarSlotting: ";
-						DoRedStarSlotting(CompanyId, damdocumentId);
+						returnValue = DoRedStarSlotting(CompanyId, damdocumentId).ReturnValue;
+						if (!returnValue.Item1) {
+							break;
+						}
 						ExceptionSource = "Exception at DoSetIncomeOrientation: ";
 						DoSetIncomeOrientation(CompanyId, damdocumentId);
 
@@ -542,8 +545,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			ScarResult result = new ScarResult();
 
-			bool isSuccess = helper.UpdateRedStarSlotting(SfDocumentId);
-			result.ReturnValue = new Tuple<bool, string>(isSuccess, "");
+			result.ReturnValue = helper.UpdateRedStarSlotting(SfDocumentId);
 			return result;
 		}
 		[Route("documents/{damdocumentId}/setincome")]
@@ -615,45 +617,49 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			System.Text.StringBuilder errorMessageBuilder = new System.Text.StringBuilder();
 			bool isSuccess = true;
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			//foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum))
-			//	templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
-			//IEnumerable<SCARAPITableCell> cellsTest = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-			//int testCellCount = cellsTest.Count();
-			//int testMtmwCount = cellsTest.Where(c => c.MTMWValidationFlag).Count();
-			//int testlpvCount = cellsTest.Where(c => c.LikePeriodValidationFlag).Count();
-			foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t=>t == "IS" || t == "BS" || t == "CF")) {
-				templates = new List<AsReportedTemplate>();
-				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
-				//IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1)
-				//	.SelectMany(sh => sh.Cells.Where(c => (c.LikePeriodValidationFlag || c.MTMWValidationFlag)
-				//	&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
-				//int totalcellcount = cells.Count();
-				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
-					.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
-				int mtmwcount = mtmwcells.Count();
-				if (mtmwcells.Count() > 0) {
-					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
-					foreach (var cell in mtmwcells) {
-						var timeslice = templates.First().TimeSlices.FirstOrDefault( x => x.Cells.Contains(cell));
-						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
-					}
-					isSuccess = false;
-				}
+			try {
+				foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t => t == "IS" || t == "BS" || t == "CF")) {
+					templates = new List<AsReportedTemplate>();
+					templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
-				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
-					.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
-					&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
-				int lpvcount = lpvcells.Count();
-				if (lpvcells.Count() > 0) {
-					errorMessageBuilder.Append(TemplateName + ": LPV: ");
-					foreach (var cell in lpvcells) {
-						var timeslice = templates.First().TimeSlices.FirstOrDefault(x => x.Cells.Contains(cell));
-						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
+					IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
+						.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
+					int mtmwcount = mtmwcells.Count();
+					if (mtmwcells.Count() > 0) {
+						errorMessageBuilder.Append(TemplateName + ": MTMW: ");
+						foreach (var cell in mtmwcells) {
+							var timeslice = templates.First().TimeSlices.FirstOrDefault(x => x.Cells.Contains(cell));
+							errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
+						}
+						isSuccess = false;
 					}
-					isSuccess = false;
-				}
 
+					IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
+						.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
+						&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
+					int lpvcount = lpvcells.Count();
+					if (lpvcells.Count() > 0) {
+						errorMessageBuilder.Append(TemplateName + ": LPV: ");
+						foreach (var cell in lpvcells) {
+							var timeslice = templates.First().TimeSlices.FirstOrDefault(x => x.Cells.Contains(cell));
+							errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
+						}
+						isSuccess = false;
+					}
+
+				}
+			} catch (System.Data.SqlClient.SqlException ex) {
+				if (ex.ErrorCode == 1205) {
+					// victim of deadlock
+					errorMessageBuilder = new System.Text.StringBuilder("Multiple MTMw Errors Encountered");
+					isSuccess = false;
+				} else {
+					isSuccess = false;
+					errorMessageBuilder = new System.Text.StringBuilder("Multiple MTMW Errors Encountered.");
+				}
+			} catch (Exception ex) {
+				isSuccess = false;
+				errorMessageBuilder = new System.Text.StringBuilder("Multiple MTMW Errors Encountered");
 			}
 
 			result.ReturnValue = new Tuple<bool, string>(isSuccess, errorMessageBuilder.ToString());
