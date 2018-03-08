@@ -334,6 +334,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.AddLikePeriodValidationNote(id, DocumentId);
 		}
 
+		[Route("cells/{id}/meta/numericvalue")]
+		[HttpPut]
+		public ScarResult UpdateTableCellMetaNumericValue(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableCellMetaNumericValue(id, newValue);
+		}
+
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
