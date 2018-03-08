@@ -70,9 +70,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		//TODO: Add IsSummary for timeslices and Derivation Meta for cells, add MTMW.
-		[Route("templates/{TemplateName}/{DocumentId}")]
+		[Route("templates/{TemplateName}/{DocumentId}/obselete")]
 		[HttpGet]
-		public AsReportedTemplate GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+		public AsReportedTemplate GetTemplateObselete(string CompanyId, string TemplateName, Guid DocumentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			if (TemplateName == null)
 				return null;
@@ -81,6 +81,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTemplate(iconum, TemplateName, DocumentId);
 		}
+
+		[Route("templates/{TemplateName}/{DocumentId}")]
+		[HttpGet]
+		public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
+		}
+
 
 		[Route("templates/{TemplateName}/skeleton/")]
 		[HttpGet]
