@@ -432,7 +432,44 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			return helper.UpdateTableCellMetaCurrency(id, newValue);
 		}
+		[Route("cells/{id}/row/cusip")]
+		[HttpPut]
+		public ScarResult UpdateTableRowMetaCusip(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
 
+			return helper.UpdateTableRowMetaCusip(id, newValue);
+		}
+		[Route("cells/{id}/row/pit")]
+		[HttpPut]
+		public ScarResult UpdateTableRowMetaPit(string id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+
+			return helper.UpdateTableRowMetaPit(id, "");
+		}
+		[Route("cells/{id}/row/scalingfactor")]
+		[HttpPut]
+		public ScarResult UpdateTableRowMetaScalingFactor(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableRowMetaScalingFactor(id, newValue);
+		}
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
