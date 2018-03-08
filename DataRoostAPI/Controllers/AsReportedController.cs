@@ -334,6 +334,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.AddLikePeriodValidationNote(id, DocumentId);
 		}
 
+		[Route("cells/{id}")]
+		[HttpGet]
+		public ScarResult UpdateTableCellMetaNumericValue(string id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTableCell(id);
+		}
+
 		[Route("cells/{id}/meta/numericvalue")]
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaNumericValue(string id, StringInput input) {

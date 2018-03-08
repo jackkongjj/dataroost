@@ -1630,6 +1630,65 @@ SELECT * FROM DocumentTimeSlice WHERE DocumentId = @docid;
 			return response;
 		}
 
+		public ScarResult GetTableCell(string id) {
+
+			string query = @"
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult UpdateTableCellMetaNumericValue(string id, string NumericValue) {
 
 			string query = @"
@@ -1643,6 +1702,8 @@ SELECT 'x', * FROM TableCell WHERE ID = @id;
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			var sh = new StaticHierarchy();
 			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -3147,11 +3208,11 @@ ROLLBACK TRAN
 			string query = @"
 SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
 FROM StaticHierarchy sh (nolock)
-where sh.id in (@SHIds) and sh.ParentId is null
+where sh.id in ({0}) and sh.ParentId is null
 UNION
 SELECT 'redstar_result' as result, 'Red star item in share and per share sections' as msg
 FROM StaticHierarchy sh (nolock)
-where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[weighted average shares\]%'   escape '\')
+where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[weighted average shares\]%'   escape '\')
 ";
 			bool isSuccess = false;
 			var sb = new System.Text.StringBuilder();
@@ -3167,9 +3228,13 @@ where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escap
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
-								var firstfield = sdr.GetStringSafe(0);
+								var firstfield = "";
+								try {
+									firstfield = sdr.GetStringSafe(0);
+								} catch {
+								}
 								if (firstfield == "RedStarLabels") {
-									var shId = sdr.GetStringSafe(1);
+									var shId = sdr.GetInt32(1).ToString();
 									sb.Append((isComma ? "," : "") + shId);
 									isComma = true;
 								} else {
@@ -3180,8 +3245,8 @@ where sh.id in (@SHIds) and (lower(sh.Description) like '%\[per share\]%'  escap
 						isSuccess = true;
 					}
 					if (isComma) { // at least one ID
-						using (SqlCommand cmd = new SqlCommand(query, sqlConn)) {
-							cmd.Parameters.AddWithValue("@SHIds", sb.ToString());
+						using (SqlCommand cmd = new SqlCommand(string.Format(query, sb.ToString()), sqlConn)) {
+							//cmd.Parameters.AddWithValue("@SHIds", sb.ToString());
 							using (SqlDataReader sdr = cmd.ExecuteReader()) {
 								if (sdr.Read()) {
 									returnMessage += sdr.GetStringSafe(1);
