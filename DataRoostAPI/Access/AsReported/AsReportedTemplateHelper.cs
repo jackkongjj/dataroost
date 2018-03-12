@@ -285,23 +285,38 @@ WHERE  CompanyID = @Iconum";
 									cell = new SCARAPITableCell();
 									adjustedOrder = reader.GetInt32(28);
 								}
+								if (adjustedOrder < 0) {
+									var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
+									if (negSh == null) continue;
+									if (cell.ID == 0) {
+										BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
+									}
 
-								while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
-									shix++;
-								}
+									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
 
-								if (cell.ID == 0) {
-									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
-								}
-								i++;
-								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+									if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId) {
+										negSh.Cells.Add(cell);
+									} else {
+										throw new Exception();
+									}
 
-								if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
-									StaticHierarchies[shix].Cells.Add(cell);
 								} else {
-									throw new Exception();
-								}
+									while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+										shix++;
+									}
 
+									if (cell.ID == 0) {
+										BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+									}
+									i++;
+									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+
+									if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
+										StaticHierarchies[shix].Cells.Add(cell);
+									} else {
+										throw new Exception();
+									}
+								}
 							}
 						}
 					}
