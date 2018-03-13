@@ -99,7 +99,7 @@ null as nul
 , tc.DocumentId, tc.Label, tc.ScalingFactorValue,
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as arderr,
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
-				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime, sh.CompanyFinancialTermID
 				
 FROM DocumentSeries ds WITH (NOLOCK) 
 JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
@@ -248,42 +248,43 @@ WHERE  CompanyID = @Iconum";
 								SCARAPITableCell cell;
 								if (reader.GetNullable<int>(0).HasValue) {
 									cell = new SCARAPITableCell
-	{
-		ID = reader.GetInt32(0),
-		Offset = reader.GetStringSafe(1),
-		CellPeriodType = reader.GetStringSafe(2),
-		PeriodTypeID = reader.GetStringSafe(3),
-		CellPeriodCount = reader.GetStringSafe(4),
-		PeriodLength = reader.GetNullable<int>(5),
-		CellDay = reader.GetStringSafe(6),
-		CellMonth = reader.GetStringSafe(7),
-		CellYear = reader.GetStringSafe(8),
-		CellDate = reader.GetNullable<DateTime>(9),
-		Value = reader.GetStringSafe(10),
-		CompanyFinancialTermID = reader.GetNullable<int>(11),
-		ValueNumeric = reader.GetNullable<decimal>(12),
-		NormalizedNegativeIndicator = reader.GetBoolean(13),
-		ScalingFactorID = reader.GetStringSafe(14),
-		AsReportedScalingFactor = reader.GetStringSafe(15),
-		Currency = reader.GetStringSafe(16),
-		CurrencyCode = reader.GetStringSafe(17),
-		Cusip = reader.GetStringSafe(18),
-		ScarUpdated = reader.GetBoolean(19),
-		IsIncomePositive = reader.GetBoolean(20),
-		XBRLTag = reader.GetStringSafe(21),
-		UpdateStampUTC = reader.GetNullable<DateTime>(22),
-		DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
-		//	DocumentID = reader.GetGuid(23),
-		Label = reader.GetStringSafe(24),
-		ScalingFactorValue = reader.GetDouble(25),
-		ARDErrorTypeId = reader.GetNullable<int>(26),
-		MTMWErrorTypeId = reader.GetNullable<int>(27)
-	};
+									{
+										ID = reader.GetInt32(0),
+										Offset = reader.GetStringSafe(1),
+										CellPeriodType = reader.GetStringSafe(2),
+										PeriodTypeID = reader.GetStringSafe(3),
+										CellPeriodCount = reader.GetStringSafe(4),
+										PeriodLength = reader.GetNullable<int>(5),
+										CellDay = reader.GetStringSafe(6),
+										CellMonth = reader.GetStringSafe(7),
+										CellYear = reader.GetStringSafe(8),
+										CellDate = reader.GetNullable<DateTime>(9),
+										Value = reader.GetStringSafe(10),
+										CompanyFinancialTermID = reader.GetNullable<int>(11),
+										ValueNumeric = reader.GetNullable<decimal>(12),
+										NormalizedNegativeIndicator = reader.GetBoolean(13),
+										ScalingFactorID = reader.GetStringSafe(14),
+										AsReportedScalingFactor = reader.GetStringSafe(15),
+										Currency = reader.GetStringSafe(16),
+										CurrencyCode = reader.GetStringSafe(17),
+										Cusip = reader.GetStringSafe(18),
+										ScarUpdated = reader.GetBoolean(19),
+										IsIncomePositive = reader.GetBoolean(20),
+										XBRLTag = reader.GetStringSafe(21),
+										UpdateStampUTC = reader.GetNullable<DateTime>(22),
+										DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+										//	DocumentID = reader.GetGuid(23),
+										Label = reader.GetStringSafe(24),
+										ScalingFactorValue = reader.GetDouble(25),
+										ARDErrorTypeId = reader.GetNullable<int>(26),
+										MTMWErrorTypeId = reader.GetNullable<int>(27)
+									};
 
 									adjustedOrder = reader.GetInt32(28);
 								} else {
 									cell = new SCARAPITableCell();
 									adjustedOrder = reader.GetInt32(28);
+									cell.CompanyFinancialTermID = reader.GetNullable<int>(34);
 								}
 								if (adjustedOrder < 0) {
 									var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
@@ -378,7 +379,7 @@ WHERE  CompanyID = @Iconum";
 
 				using (SqlCommand cmd = new SqlCommand(TimeSliceIsSummaryQuery, conn)) {
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
-					
+
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						while (sdr.Read()) {
 							int TimeSliceID = sdr.GetInt32(0);
