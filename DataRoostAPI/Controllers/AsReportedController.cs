@@ -470,6 +470,97 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			return helper.UpdateTableRowMetaScalingFactor(id, newValue);
 		}
+		[Route("cells/{id}/column/perioddate")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaPeriodDate(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaPeriodDate(id, newValue);
+		}
+		[Route("cells/{id}/column/columnheader")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaColumnHeader(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaColumnHeader(id, newValue);
+		}
+		[Route("cells/{id}/column/periodtype")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaPeriodType(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaPeriodType(id, newValue);
+		}
+		[Route("cells/{id}/column/periodlength")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaPeriodLength(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaPeriodLength(id, newValue);
+		}
+
+		[Route("cells/{id}/column/currency")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaCurrencyCode(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaCurrencyCode(id, newValue);
+		}
+		[Route("cells/{id}/column/interimtype")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaInterimType(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaInterimType(id, newValue);
+		}
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
