@@ -3864,13 +3864,19 @@ WHERE d.ID = @SFDocumentID
   where dt.DocumentID = @DocumentId and dts.PeriodType is null
 
 
- SELECT  'Missing Currency. ' as Error, * 
+ ;WITH cte (id) as
+(
+ SELECT  dtc.TableCellid
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
  JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
- JOIN TableCell tc ON dtc.TableCellID = tc.id
- where dt.DocumentID = @DocumentId and tc.currencycode is null
+ where dt.DocumentID = @DocumentId 
+)
+ SELECT  'Missing Currency. ' as Error, * 
+ FROM cte
+ JOIN TableCell tc ON cte.id = tc.id 
+ where  tc.currencycode is null
 ";
 			string errorMessage = "";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
