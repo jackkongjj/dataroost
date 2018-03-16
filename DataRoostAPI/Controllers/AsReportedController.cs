@@ -737,9 +737,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
 			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => (c.MTMWValidationFlag || 
+			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => ((c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD") || 
 					(c.LikePeriodValidationFlag
-					&& (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
+					&& (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType) && sh.StaticHierarchyMetaType != "SD")
 					&& templates.First(te => te.TimeSlices.Any(ts => ts.Cells.Contains(c))).TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId
 					)
 				))));
@@ -772,7 +772,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
 					IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
-						.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
+						.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD")));
 					int mtmwcount = mtmwcells.Count();
 					if (mtmwcells.Count() > 0) {
 						errorMessageBuilder.Append(TemplateName + ": MTMW: ");
@@ -783,7 +783,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						isSuccess = false;
 					}
 
-					IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
+					IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
+						 && sh.StaticHierarchyMetaType != "SD")
 						.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
 						&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
 					int lpvcount = lpvcells.Count();
