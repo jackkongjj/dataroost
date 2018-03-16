@@ -319,13 +319,12 @@ ORDER BY ChangeDate DESC";
 			DateTime startTime = DateTime.Now;
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
-			TimeSpan shareClassAndEffortsDuration = DateTime.Now.Subtract(startTime);
 
 			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.Voyager().Name).Select(kvp => kvp.Key).ToList();
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
 
-			DateTime superfastStartTime = DateTime.Now;
-			if (superfastIconums.Count > 0) {
+            // Supercore data is SecPermId based
+            if (superfastIconums.Count > 0) {
 				SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
 					superfastShares.GetLatestCompanyFPEShareData(superfastIconums, reportDate, since);
@@ -336,18 +335,17 @@ ORDER BY ChangeDate DESC";
 						List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
 						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
 							List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-							if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
-								securityItemList = superfastSecurityItems[shareClass.Cusip];
+							if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId)) {
+								securityItemList = superfastSecurityItems[shareClass.PermId];
 							}
 							shareClass.ShareClassData = securityItemList;
 						}
 					}
 				}
 			}
-			TimeSpan superfastDuration = DateTime.Now.Subtract(superfastStartTime);
 
-			DateTime voyagerStartTime = DateTime.Now;
-			if (voyagerIconums.Count > 0) {
+            // Voyager data is PPI based
+            if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
 					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate, since);
@@ -366,7 +364,6 @@ ORDER BY ChangeDate DESC";
 					}
 				}
 			}
-			TimeSpan voyagerDuration = DateTime.Now.Subtract(voyagerStartTime);
 
 			return companyShareClassData;
 		}
@@ -380,14 +377,13 @@ ORDER BY ChangeDate DESC";
         /// <param name="since"></param>
         /// <returns></returns>
         public Dictionary<int, List<ShareClassDataDTO>> GetAllShareClassData(List<int> iconums, string stdCode, DateTime? reportDate, DateTime? since) {
-            DateTime startTime = DateTime.Now;
             Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
             Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
 
             List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.Voyager().Name).Select(kvp => kvp.Key).ToList();
             List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
 
-            DateTime superfastStartTime = DateTime.Now;
+            // Supercore data is SecPermId based
             if (superfastIconums.Count > 0) {
                 SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
                 Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
@@ -399,17 +395,16 @@ ORDER BY ChangeDate DESC";
                         List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
                         foreach (ShareClassDataDTO shareClass in shareClassDataList) {
                             List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-                            if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
-                                securityItemList = superfastSecurityItems[shareClass.Cusip];
+                            if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId)) {
+                                securityItemList = superfastSecurityItems[shareClass.PermId];
                             }
                             shareClass.ShareClassData = securityItemList;
                         }
                     }
                 }
             }
-            TimeSpan superfastDuration = DateTime.Now.Subtract(superfastStartTime);
 
-            DateTime voyagerStartTime = DateTime.Now;
+            // Voyager data is PPI based
             if (voyagerIconums.Count > 0) {
                 VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
                 Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
@@ -429,7 +424,6 @@ ORDER BY ChangeDate DESC";
                     }
                 }
             }
-            TimeSpan voyagerDuration = DateTime.Now.Subtract(voyagerStartTime);
 
             return companyShareClassData;
         }
