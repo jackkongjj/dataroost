@@ -140,7 +140,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 				            join MigrateToTimeSlice mi (nolock) on mi.Iconum = i.iconum and mi.MigrationStatusID = 1
 			            WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
 	                ) temp
-	                WHERE temp.rank = 1";
+	                WHERE temp.rank = 1 and temp.SecPermId IS NOT NULL";
 		
 			DateTime searchDate = DateTime.Now;
 			if (reportDate != null) {
