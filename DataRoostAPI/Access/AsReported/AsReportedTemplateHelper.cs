@@ -861,7 +861,6 @@ where id = @TargetSHID;
 		public ScarResult UpdateStaticHierarchyAddHeader(int id) {
 
 			string query = @"
-BEGIN TRAN
 
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
@@ -931,7 +930,7 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
 SELECT *
   FROM CTE_Children
   order by AdjustedOrder
-ROLLBACK TRAN
+
 ";
 
 			ScarResult response = new ScarResult();
@@ -1014,7 +1013,6 @@ ROLLBACK TRAN
 		public ScarResult UpdateStaticHierarchyLabel(int id, string newLabel) {
 
 			string query = @"
-BEGIN TRAN
 
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
@@ -1086,7 +1084,6 @@ SELECT *
   order by AdjustedOrder
 
 
-ROLLBACK TRAN
 ";
 
 			ScarResult response = new ScarResult();
@@ -1207,9 +1204,9 @@ SELECT * FROM StaticHierarchy WHERE ID = @TargetSHID;
 		}
 
 		public ScarResult UpdateStaticHierarchyMove(int id, string direction) {
-			string BeginTran = @"BEGIN TRAN
+			string BeginTran = @" 
 ";
-			string RollbackTran = @"ROLLBACK TRAN
+			string RollbackTran = @" 
 ";
 			string SQL_MoveDown = @"
  
@@ -1464,7 +1461,6 @@ SELECT *
 
 			string query = @"
 
-BEGIN TRAN
 
 IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType)
 BEGIN
@@ -1478,7 +1474,6 @@ BEGIN
 END
 
 
-ROLLBACK TRAN
 
 ";
 			ScarResult response = new ScarResult();
@@ -1525,7 +1520,6 @@ ROLLBACK TRAN
 
 			string query = @"
 
-BEGIN TRAN
 
 IF @PeriodNoteId is null
 BEGIN
@@ -1545,7 +1539,6 @@ BEGIN
 END
 
 
-ROLLBACK TRAN
 
 ";
 			ScarResult response = new ScarResult();
@@ -2793,7 +2786,6 @@ where dtc.TableCellID = @id
 		public ScarResult CloneUpdateTimeSlice(int id, string InterimType) {
 
 			string query = @"
-BEGIN TRAN
 DECLARE @newId int;
 DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM DocumentTimeSlice where id = @id)
 DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate FROM DocumentTimeSlice where id = @id)
@@ -2899,7 +2891,6 @@ SELECT [Id]
 	,[ManualOrgSet]
 FROM [DocumentTimeSlice] where id = @newId or id = @dts or id = @id;
 
-rollback tran
 ";
 
 
@@ -3487,7 +3478,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 		public ScarResult FlipHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
 			const string query = @"
-BEGIN TRAN
 
 DECLARE @TargetSHID int;
 
@@ -3584,7 +3574,7 @@ LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
-ROLLBACK TRAN
+
 ";
 			ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
@@ -3656,7 +3646,6 @@ ROLLBACK TRAN
 
 		public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
 			const string query = @"
-BEGIN TRAN
 
 DECLARE @TargetSHID int;
 SELECT top 1 @TargetSHID = sh.id
@@ -3763,7 +3752,6 @@ LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
-ROLLBACK TRAN
 ";
 			ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
