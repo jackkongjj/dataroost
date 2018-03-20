@@ -22,13 +22,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 	        const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
+            // CQ 91901: Full update should have higher priority over prelim updated reports
+            // UpdateTypeID = [F = Full, N = Pension, P = Prelim]. This is separate from ReportTypeId which has values P prelim, I interim, A annual
             const string dcQuery =
                 @"SELECT 
                         t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank
 	                FROM (
 		                SELECT 
                             stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.AutoCalcFlag ASC) as rank 
+			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.UpdateTypeID asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM #CompanyIds i (nolock)
 							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
 							join Document d (nolock) on d.DocumentSeriesID = ds.ID
@@ -43,7 +45,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	                ) t2
                     ORDER BY t2.SecPermId, t2.rank";
 
-	        var searchDate = DateTime.Now;
+            var searchDate = DateTime.Now;
 	        if (reportDate != null) {
 	            searchDate = (DateTime) reportDate;
 	        }
@@ -123,11 +125,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
             const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
+            // CQ 91901: Full update should have higher priority over prelim updated reports
+            // UpdateTypeID = [F = Full, N = Pension, P = Prelim]. This is separate from ReportTypeId which has values P prelim, I interim, A annual
+            // AutoCalcFlag with value 0 should be given higher priority
             const string query =
                 @"SELECT temp.Cusip, temp.SecPermId, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
 	                FROM (
 		                SELECT stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.AutoCalcFlag ASC) as rank 
+			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.UpdateTypeID asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM #CompanyIds i (nolock)
 							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
 							join Document d (nolock) on d.DocumentSeriesID = ds.ID
@@ -141,8 +146,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			            WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
 	                ) temp
 	                WHERE temp.rank = 1 and temp.SecPermId IS NOT NULL";
-		
-			DateTime searchDate = DateTime.Now;
+
+            var searchDate = DateTime.Now;
 			if (reportDate != null) {
 				searchDate = (DateTime)reportDate;
 			}
