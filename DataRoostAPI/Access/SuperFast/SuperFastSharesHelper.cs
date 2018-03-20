@@ -22,15 +22,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 	        const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-            // CQ 91901: Full update should have higher priority over prelim updated reports
-            // UpdateTypeID = [F = Full, N = Pension, P = Prelim]. This is separate from ReportTypeId which has values P prelim, I interim, A annual
+            // CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
             const string dcQuery =
                 @"SELECT 
                         t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank
 	                FROM (
 		                SELECT 
                             stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.UpdateTypeID asc, ts.AutoCalcFlag ASC) as rank 
+			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM #CompanyIds i (nolock)
 							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
 							join Document d (nolock) on d.DocumentSeriesID = ds.ID
@@ -125,14 +124,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
             const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-            // CQ 91901: Full update should have higher priority over prelim updated reports
-            // UpdateTypeID = [F = Full, N = Pension, P = Prelim]. This is separate from ReportTypeId which has values P prelim, I interim, A annual
-            // AutoCalcFlag with value 0 should be given higher priority
+            // CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
             const string query =
                 @"SELECT temp.Cusip, temp.SecPermId, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
 	                FROM (
 		                SELECT stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.UpdateTypeID asc, ts.AutoCalcFlag ASC) as rank 
+			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM #CompanyIds i (nolock)
 							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
 							join Document d (nolock) on d.DocumentSeriesID = ds.ID
