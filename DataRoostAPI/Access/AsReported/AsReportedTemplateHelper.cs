@@ -3771,7 +3771,7 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 
 					using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
 						cmd.CommandType = CommandType.StoredProcedure;
-
+						cmd.CommandTimeout = 300;
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
