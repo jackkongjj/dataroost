@@ -263,30 +263,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 
 		[Route("cells/{id}/flipsign/{DocumentId}/")]
-		[HttpGet]
-		public ScarResult FlipSign(string id, Guid DocumentId) {
-			// there shouldn't be a getter for this. My Mistake. 
-			string CompanyId = "36468";
+		[HttpPut]
+		public ScarResult FlipSign(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
+			int targetSH = 1;
+			if (input != null && input.TargetStaticHierarchyID != 0)
+				targetSH = input.TargetStaticHierarchyID;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.FlipSign(id, DocumentId, iconum, 0);
-		}
-
-		[Route("cells/{id}/flipsign/{DocumentId}/")]
-		[HttpPost]
-		public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input) {
-			string CompanyId = "36468";
-			int iconum = PermId.PermId2Iconum(CompanyId);
-			if (input == null || input.TargetStaticHierarchyID == 0)
-				return null;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
+			return helper.FlipSign(id, DocumentId, iconum, targetSH);
 		}
 
 		[Route("cells/{id}/children/flipsign/{DocumentId}/")]
-		[HttpPost]
+		[HttpPut]
 		public ScarResult FlipChildren(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			//if (input == null || input.TargetStaticHierarchyID == 0)
@@ -297,7 +286,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("cells/{id}/historical/flipsign/{DocumentId}/")]
-		[HttpPost]
+		[HttpPut]
 		public ScarResult FlipHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			//if (input == null || input.TargetStaticHierarchyID == 0)
@@ -308,7 +297,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("cells/{id}/children/historical/flipsign/{DocumentId}/")]
-		[HttpPost]
+		[HttpPut]
 		public ScarResult FlipChildrenHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			//if (input == null || input.TargetStaticHierarchyID == 0)
