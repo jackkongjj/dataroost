@@ -333,6 +333,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.AddLikePeriodValidationNote(id, DocumentId);
 		}
 
+		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
+		[HttpPost]
+		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return AddLikePeriodValidationNote(id, DocumentId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddLikePeriodValidationNote(id, DocumentId, input.StringData);
+		}
+
 		[Route("cells/{id}")]
 		[HttpGet]
 		public ScarResult GetTableCell(string id) {
