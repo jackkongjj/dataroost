@@ -315,6 +315,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.AddMakeTheMathWorkNote(id, DocumentId);
 		}
 
+		[Route("cells/{id}/addMTMW/{DocumentId}/")]
+		[HttpPost]
+		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return AddMakeTheMathWorkNote(id, DocumentId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddMakeTheMathWorkNote(id, DocumentId, input.StringData);
+		}
+
 		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
 		[HttpGet]
 		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId) {

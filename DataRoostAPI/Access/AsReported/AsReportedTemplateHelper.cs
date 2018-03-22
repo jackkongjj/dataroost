@@ -4211,6 +4211,49 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			return result;
 		}
 
+		public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId, string newValue) {
+			string query = @"
+
+
+IF @newValue = 0
+BEGIN
+	DELETE FROM MTMWErrorTypeTableCell WHERE TableCellId = @id  
+END
+ELSE
+BEGIN
+	MERGE INTO MTMWErrorTypeTableCell mtmwtc
+	USING (VALUES (@id)) AS s(id) ON  mtmwtc.TableCellId = s.id
+	WHEN NOT MATCHED THEN
+			INSERT ([MTMWErrorTypeId] ,[TableCellId])
+				VALUES (@newValue, @id )
+	WHEN MATCHED THEN
+		UPDATE SET [MTMWErrorTypeId] = @newValue ;
+
+END
+
+
+
+";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					int newInt = -1;
+					bool isSuccess = false;
+					if (!string.IsNullOrEmpty(newValue)) {
+						isSuccess = Int32.TryParse(newValue, out newInt);
+					}
+					cmd.Parameters.AddWithValue("@id", CellId);
+					cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int)
+					{
+						Value = (!isSuccess ? DBNull.Value : (object)newInt)
+					});
+					cmd.ExecuteNonQuery();
+				}
+			}
+			return AddMakeTheMathWorkNote(CellId, DocumentId);
+		}
+
 		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId) {
 			TableCellResult result = new TableCellResult();
 			result.cells = new List<SCARAPITableCell>();
