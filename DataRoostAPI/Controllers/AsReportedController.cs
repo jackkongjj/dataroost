@@ -335,7 +335,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
 		[HttpPost]
-		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId, StringInput input) {
+		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId, StringInput input) {
 			if (input == null || string.IsNullOrEmpty(input.StringData))
 				return AddLikePeriodValidationNote(id, DocumentId);
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
