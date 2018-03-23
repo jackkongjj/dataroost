@@ -4311,7 +4311,7 @@ END
 		}
 
 		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
-			return null;
+			return new SCARAPITableCell[0];
 		}
 		#endregion
 
