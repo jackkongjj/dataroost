@@ -176,7 +176,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 
 			string TimeSliceIsSummaryQuery = @"
 
-select DocumentTimeSliceID, TableType
+select distinct DocumentTimeSliceID, TableType
 from DocumentSeries ds 
 JOIN Document d on ds.ID = d.DocumentSeriesID
 JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
@@ -3162,7 +3162,7 @@ SELECT top 1 @TargetSH = sh.id
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, tc.DocumentTimeSliceID
+SELECT distinct sh.ID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
@@ -3329,7 +3329,7 @@ WHERE sh.ID = @TargetSHID and tc.TableCellid = @cellID
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
-SELECT tc.TableCellID, tc.DocumentTimeSliceID
+SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and tc.DocumentTimeSliceID = @CurrentTimeSliceID
@@ -3348,7 +3348,7 @@ JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, @CurrentTimeSliceID
+SELECT distinct sh.ID, @CurrentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
@@ -3500,7 +3500,7 @@ FROM CTE cte
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
-SELECT tc.TableCellID, tc.DocumentTimeSliceID
+SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
@@ -3515,7 +3515,7 @@ JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, tc.DocumentTimeSliceId
+SELECT distinct sh.ID, tc.DocumentTimeSliceId
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
@@ -3674,7 +3674,7 @@ where cte.id <> @TargetSHID
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
-SELECT tc.TableCellID, tc.DocumentTimeSliceID
+SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
@@ -3693,7 +3693,7 @@ JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, tc.DocumentTimeSliceId
+SELECT distinct  sh.ID, tc.DocumentTimeSliceId
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
@@ -4514,7 +4514,7 @@ WHERE d.ID = @SFDocumentID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, dts.Id
+SELECT distinct sh.ID, dts.Id
 FROM vw_SCARDocumentTimeSlices dts
 JOIN StaticHierarchy sh ON sh.TableTypeId = dts.TableTypeID
 WHERE CompanyID = @iconum
