@@ -76,7 +76,16 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			string query =
 								@"
-SELECT DISTINCT sh.*, shm.Code, tt.Description
+
+BEGIN TRY
+DROP TABLE #StaticHierarchy
+END TRY
+BEGIN CATCH
+END CATCH 
+
+
+SELECT DISTINCT sh.*, shm.Code, tt.Description as 'TableTypeDescription'
+INTO #StaticHierarchy
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -84,7 +93,10 @@ FROM DocumentSeries ds
     JOIN HierarchyMetaTypes shm on sh.StaticHierarchyMetaId = shm.id
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc";
+ORDER BY sh.AdjustedOrder asc
+
+select * from #StaticHierarchy
+";
 
 			string CellsQuery =
 				@"
@@ -103,7 +115,7 @@ null as nul
 				
 FROM DocumentSeries ds WITH (NOLOCK) 
 JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+JOIN #StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
 JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
@@ -113,7 +125,7 @@ JOIN(
 	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
 	JOIN TableCell tc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
 	JOIN DimensionToCell dtc  WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN #StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
 	JOIN TableType tt  WITH (NOLOCK) on tt.ID = sh.TableTypeID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
@@ -122,7 +134,7 @@ JOIN(
 --JOIN (SELECT DISTINCT dts.*, d.PublicationDateTime
 --		FROM DocumentSeries ds
 --			JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
---			JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+--			JOIN #StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
 --			JOIN TableType tt on sh.TableTypeID = tt.ID
 --			JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 --			JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
@@ -139,7 +151,7 @@ LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds WITH (NOLOCK) 
 	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
 	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
 	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
@@ -160,7 +172,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.Pe
 				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""')
 FROM DocumentSeries ds WITH (NOLOCK) 
 	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
 	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
 	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
 	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
@@ -189,7 +201,7 @@ WHERE  CompanyID = @Iconum";
 
 
 			AsReportedTemplate temp = new AsReportedTemplate();
-
+			string query_sproc = @"SCARGetTemplate";
 			temp.StaticHierarchies = new List<StaticHierarchy>();
 			Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 			Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -197,12 +209,14 @@ WHERE  CompanyID = @Iconum";
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
 			Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
-
+			query += CellsQuery + TimeSliceQuery + TimeSliceIsSummaryQuery;
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+				using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 					conn.Open();
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							StaticHierarchy document = new StaticHierarchy
@@ -230,19 +244,13 @@ WHERE  CompanyID = @Iconum";
 								SHChildLookup[document.ParentID.Value].Add(document);
 							}
 						}
-					}
-				}
-				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
-					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
-					cmd.CommandTimeout = 300;
-
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.NextResult();
 
 						int shix = 0;
 						int i = 0;
 						int adjustedOrder = 0;
+						#region read CellsQuery
+
 						while (reader.Read()) {
 							if (reader.GetInt64(29) == 1) {
 								SCARAPITableCell cell;
@@ -320,20 +328,14 @@ WHERE  CompanyID = @Iconum";
 								}
 							}
 						}
-					}
-				}
+#endregion
+						reader.NextResult();
 
 				temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
-				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.Add("@templateName", SqlDbType.VarChar);
-					cmd.Parameters["@templateName"].Value = TemplateName;
-					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
-					cmd.CommandTimeout = 300;
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
+				#region Read TimeSlice
 
-						while (reader.Read()) {
+				while (reader.Read()) {
 							TimeSlice slice = new TimeSlice
 							{
 								Id = reader.GetInt32(0),
@@ -373,22 +375,19 @@ WHERE  CompanyID = @Iconum";
 								} catch { }
 							}
 
-						}
-					}
+
 				}
+				#endregion
 
-				using (SqlCommand cmd = new SqlCommand(TimeSliceIsSummaryQuery, conn)) {
-					cmd.Parameters.AddWithValue("@Iconum", iconum);
-
-					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						while (sdr.Read()) {
-							int TimeSliceID = sdr.GetInt32(0);
+				reader.NextResult();
+						while (reader.Read()) {
+							int TimeSliceID = reader.GetInt32(0);
 
 							if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
 								IsSummaryLookup.Add(TimeSliceID, new List<string>());
 							}
 
-							IsSummaryLookup[TimeSliceID].Add(sdr.GetStringSafe(1));
+							IsSummaryLookup[TimeSliceID].Add(reader.GetStringSafe(1));
 						}
 					}
 				}
