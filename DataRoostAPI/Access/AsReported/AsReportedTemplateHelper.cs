@@ -9,6 +9,7 @@ using System.Net;
 using System.Web;
 using DataRoostAPI.Common.Models.AsReported;
 using FactSet.Data.SqlClient;
+using Newtonsoft.Json.Linq;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
@@ -1638,6 +1639,55 @@ SELECT * FROM DocumentTimeSlice WHERE DocumentId = @docid;
 			return response;
 		}
 
+		public ScarResult UpdateTimeSliceManualOrgSet(int id, string newValue) {
+
+			string query = @"
+
+UPDATE DocumentTimeSlice SET ManualOrgSet = @newValue where Id = @id;
+
+SELECT * FROM DocumentTimeSlice WHERE id = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.TimeSlices = new List<TimeSlice>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newValue", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								Id = reader.GetInt32(0),
+								DocumentId = reader.GetGuid(1),
+								DocumentSeriesId = reader.GetInt32(2),
+								TimeSlicePeriodEndDate = reader.GetDateTime(3),
+								ReportingPeriodEndDate = reader.GetDateTime(4),
+								FiscalDistance = reader.GetInt32(5),
+								Duration = reader.GetInt32(6),
+								PeriodType = reader.GetStringSafe(7),
+								AcquisitionFlag = reader.GetStringSafe(8),
+								AccountingStandard = reader.GetStringSafe(9),
+								ConsolidatedFlag = reader.GetStringSafe(10),
+								IsProForma = reader.GetBoolean(11),
+								IsRecap = reader.GetBoolean(12),
+								CompanyFiscalYear = reader.GetDecimal(13),
+								ReportType = reader.GetStringSafe(14),
+								IsAmended = reader.GetBoolean(15),
+								IsRestated = reader.GetBoolean(16),
+								IsAutoCalc = reader.GetBoolean(17),
+								ManualOrgSet = reader.GetBoolean(18)
+							};
+							response.TimeSlices.Add(slice);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult GetTableCell(string id) {
 
 			string query = @"
@@ -2781,6 +2831,95 @@ where dtc.TableCellID = @id
 			}
 			return response;
 		}
+
+		public ScarResult UpdateTDP(string id, string newValue) {
+			string SQL_MergeCft = @"
+
+DECLARE @newDtsID int = 0;
+
+update dtstc
+set DocumentTimeSliceId =  @newDtsID
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+where dtc.TableCellID = @id
+
+
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+			JObject json = JObject.Parse(newValue);
+
+			ScarResult response = new ScarResult();
+			string sql_query = select_query;
+			if (newValue != "--") {
+				sql_query = query + select_query;
+			}
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newCurrencyCode", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 
 		public ScarResult CloneUpdateTimeSlice(int id, string InterimType) {
 

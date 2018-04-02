@@ -260,6 +260,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.CloneUpdateTimeSlice(id, input.StringData);
 		}
 
+		[Route("timeSlice/{id}/manualorgset")]
+		[HttpPut]
+		public ScarResult PutTimeSliceManualOrgSet(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateTimeSliceManualOrgSet(id, input.StringData);
+		}
 
 
 		[Route("cells/{id}/flipsign/{DocumentId}/")]
@@ -569,6 +578,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 
 			return helper.UpdateTableColumnMetaInterimType(id, newValue);
+		}
+		[Route("tdp/{id}")]
+		[HttpPost]
+		public ScarResult UpdateTDP(string id, StringInput input) {
+			ScarResult result = new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (string.IsNullOrWhiteSpace(newValue)) {
+				result.Message = "bad input";
+			} else {
+				try {
+					
+				} catch (Exception ex) {
+				}
+				result.Message = "SUCCESS";
+			}
+			return result;
+			//return helper.UpdateTableColumnMetaInterimType(id, newValue);
 		}
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
