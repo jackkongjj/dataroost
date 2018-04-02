@@ -2865,9 +2865,9 @@ where dtc.TableCellID = @id
 
 			ScarResult response = new ScarResult();
 			string sql_query = select_query;
-			if (newValue != "--") {
-				sql_query = query + select_query;
-			}
+			//if (newValue != "--") {
+			//	sql_query = query + select_query;
+			//}
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			var sh = new StaticHierarchy();
 			response.StaticHierarchies.Add(sh);
