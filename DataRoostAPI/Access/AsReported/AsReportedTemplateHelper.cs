@@ -3163,7 +3163,7 @@ AS
 		LEFT JOIN ARTimeSliceDerivationComponents artsdc WITH(NOLOCK) ON artsdc.DocumentTimeSliceID = dts.id
 	WHERE 1=1
 	and tt.description = @TypeTable
-	and ds.id = @DocumentSeriesId
+	and ds.id = @DocumentSeriesId and tt.DocumentSeriesID = @DocumentSeriesId
 	group by d.damdocumentid, dts.id 
 )
 SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
@@ -3172,23 +3172,26 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 	JOIN DocumentTimeSlice dts WITH(NOLOCK) on ts.TimeSliceId = dts.Id
   JOIN Document d WITH(NOLOCK) on dts.DocumentId = d.id
 
- 
-
-select d.id as DocumentId, d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count, count(distinct tc.CurrencyCode) as CurrencyCount, max(tc.CurrencyCode) as CurrencyCode 
- INTO #alltimeslices
+select d.id, d.DAMDocumentId, tt.Description, dtc.TableCellID
+ INTO #tableCells
 from DocumentTable dt (nolock)
 join TableType tt (nolock) on dt.TableTypeId = tt.id
 inner join Tablemeta tm (NOLOCK) on tt.Description= tm.ShortName and tm.IsTemplate =1
 JOIN Document d WITH(NOLOCK) ON dt.DocumentId = d.id
 JOIN TableDimension td (nolock) ON dt.ID = td.DocumentTableID and td.DimensionTypeID = 1
 JOIN DimensionToCell dtc WITH(NOLOCK) ON dtc.TableDimensionID = td.ID
-JOIN TableCell tc (NOLOCK) on tc.ID = dtc.TableCellID
- 
 where 
-  tt.Description = @TypeTable and
+  tt.Description = @TypeTable and tt.DocumentSeriesID = @DocumentSeriesId and
   d.documentseriesid =  @DocumentSeriesId
   and (d.ArdExportFlag = 1 or d.IsDocSetUpCompleted = 1 or d.ExportFlag = 1)
- group by d.id, d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate
+
+
+select d.id as DocumentId, d.DAMDocumentId, d.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count, count(distinct tc.CurrencyCode) as CurrencyCount, max(tc.CurrencyCode) as CurrencyCode 
+ INTO #alltimeslices
+from #tableCells d
+JOIN TableCell tc (NOLOCK) on tc.ID = d.TableCellID
+ 
+ group by d.id, d.DAMDocumentId, d.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate
 
 
 select 
