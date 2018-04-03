@@ -3263,10 +3263,12 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePerio
 							slice.DocumentId = reader.GetGuid(ordinals.DocumentId);
 							slice.DamDocumentId = reader.GetGuid(ordinals.DamDocumentId);
 							slice.Id = reader.GetInt32(ordinals.TimeSliceId);
+							if (slice.Id > 0) {
+								slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
+								slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
+							}
 							slice.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesId);
 							slice.PublicationDate = reader.GetDateTime(ordinals.PublicationDate);
-							slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
-							slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
 							slice.FiscalDistance = reader.GetInt32(ordinals.FiscalDistance);
 							slice.CompanyFiscalYear = reader.GetDecimal(ordinals.CompanyFiscalYear);
 							slice.Duration = reader.GetInt32(ordinals.PeriodLength);
