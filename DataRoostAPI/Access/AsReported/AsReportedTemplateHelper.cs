@@ -9,6 +9,7 @@ using System.Net;
 using System.Web;
 using DataRoostAPI.Common.Models.AsReported;
 using FactSet.Data.SqlClient;
+using Newtonsoft.Json.Linq;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
@@ -45,7 +46,7 @@ JOIN(
 	WHERE tc.ID = @cellId
 	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+JOIN DocumentTimeSlice dts on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
@@ -65,11 +66,27 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		#endregion
 
+		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId) {
+			ScarResult newFormat = new ScarResult();
+			AsReportedTemplate oldFormat = GetTemplate(iconum, TemplateName, DocumentId);
+			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
+			newFormat.TimeSlices = oldFormat.TimeSlices;
+			return newFormat;
+		}
 		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			string query =
 								@"
-SELECT DISTINCT sh.*, shm.Code, tt.Description
+
+BEGIN TRY
+DROP TABLE #StaticHierarchy
+END TRY
+BEGIN CATCH
+END CATCH 
+
+
+SELECT DISTINCT sh.*, shm.Code, tt.Description as 'TableTypeDescription'
+INTO #StaticHierarchy
 FROM DocumentSeries ds
 	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
 	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
@@ -77,7 +94,10 @@ FROM DocumentSeries ds
     JOIN HierarchyMetaTypes shm on sh.StaticHierarchyMetaId = shm.id
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc";
+ORDER BY sh.AdjustedOrder asc
+
+select * from #StaticHierarchy
+";
 
 			string CellsQuery =
 				@"
@@ -92,22 +112,22 @@ null as nul
 , tc.DocumentId, tc.Label, tc.ScalingFactorValue,
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as arderr,
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
-				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime, sh.CompanyFinancialTermID
 				
-FROM DocumentSeries ds
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt on sh.TableTypeID = tt.ID
+FROM DocumentSeries ds WITH (NOLOCK) 
+JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+JOIN #StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
-	FROM DocumentSeries ds
-	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt on tt.ID = sh.TableTypeID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc  WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN #StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on tt.ID = sh.TableTypeID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
@@ -115,7 +135,7 @@ JOIN(
 --JOIN (SELECT DISTINCT dts.*, d.PublicationDateTime
 --		FROM DocumentSeries ds
 --			JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
---			JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
+--			JOIN #StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
 --			JOIN TableType tt on sh.TableTypeID = tt.ID
 --			JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 --			JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
@@ -126,21 +146,21 @@ JOIN(
 --		AND tt.Description = @templateName
 --		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
 --	)dts
-join DocumentTimeSlice dts
-	on dts.ID = ts.ID
+join DocumentTimeSlice dts WITH (NOLOCK) 
+	on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf  WITH (NOLOCK) on sf.ID = tc.ScalingFactorID
 	WHERE ds.CompanyID = @iconum
 	AND tt.Description = @templateName
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d on dts.documentid = d.ID
+JOIN Document d  WITH (NOLOCK) on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') asc, dts.Duration desc, d.PublicationDateTime desc, dts.ReportingPeriodEndDate desc
@@ -151,15 +171,15 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.Pe
 
 			string TimeSliceQuery =
 				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""')
-FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
-	JOIN Document d on dts.DocumentId = d.ID
+FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
+	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
+	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
@@ -169,10 +189,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 
 			string TimeSliceIsSummaryQuery = @"
 
-select DocumentTimeSliceID, TableType
+select distinct DocumentTimeSliceID, TableType
 from DocumentSeries ds 
 JOIN Document d on ds.ID = d.DocumentSeriesID
-JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID
+JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
 join DocumentTimeSliceTableTypeIsSummary dtsis on dts.id = dtsis.DocumentTimeSliceID
 WHERE  CompanyID = @Iconum";
 
@@ -182,7 +202,7 @@ WHERE  CompanyID = @Iconum";
 
 
 			AsReportedTemplate temp = new AsReportedTemplate();
-
+			string query_sproc = @"SCARGetTemplate";
 			temp.StaticHierarchies = new List<StaticHierarchy>();
 			Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 			Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -190,12 +210,14 @@ WHERE  CompanyID = @Iconum";
 			Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 			List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
 			Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
-
+			query += CellsQuery + TimeSliceQuery + TimeSliceIsSummaryQuery;
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+				using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 					conn.Open();
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							StaticHierarchy document = new StaticHierarchy
@@ -223,93 +245,98 @@ WHERE  CompanyID = @Iconum";
 								SHChildLookup[document.ParentID.Value].Add(document);
 							}
 						}
-					}
-				}
-				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
-					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
-					cmd.CommandTimeout = 300;
-
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.NextResult();
 
 						int shix = 0;
 						int i = 0;
 						int adjustedOrder = 0;
+						#region read CellsQuery
+
 						while (reader.Read()) {
 							if (reader.GetInt64(29) == 1) {
 								SCARAPITableCell cell;
 								if (reader.GetNullable<int>(0).HasValue) {
 									cell = new SCARAPITableCell
-	{
-		ID = reader.GetInt32(0),
-		Offset = reader.GetStringSafe(1),
-		CellPeriodType = reader.GetStringSafe(2),
-		PeriodTypeID = reader.GetStringSafe(3),
-		CellPeriodCount = reader.GetStringSafe(4),
-		PeriodLength = reader.GetNullable<int>(5),
-		CellDay = reader.GetStringSafe(6),
-		CellMonth = reader.GetStringSafe(7),
-		CellYear = reader.GetStringSafe(8),
-		CellDate = reader.GetNullable<DateTime>(9),
-		Value = reader.GetStringSafe(10),
-		CompanyFinancialTermID = reader.GetNullable<int>(11),
-		ValueNumeric = reader.GetNullable<decimal>(12),
-		NormalizedNegativeIndicator = reader.GetBoolean(13),
-		ScalingFactorID = reader.GetStringSafe(14),
-		AsReportedScalingFactor = reader.GetStringSafe(15),
-		Currency = reader.GetStringSafe(16),
-		CurrencyCode = reader.GetStringSafe(17),
-		Cusip = reader.GetStringSafe(18),
-		ScarUpdated = reader.GetBoolean(19),
-		IsIncomePositive = reader.GetBoolean(20),
-		XBRLTag = reader.GetStringSafe(21),
-		UpdateStampUTC = reader.GetNullable<DateTime>(22),
-		DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
-		//	DocumentID = reader.GetGuid(23),
-		Label = reader.GetStringSafe(24),
-		ScalingFactorValue = reader.GetDouble(25),
-		ARDErrorTypeId = reader.GetNullable<int>(26),
-		MTMWErrorTypeId = reader.GetNullable<int>(27)
-	};
+									{
+										ID = reader.GetInt32(0),
+										Offset = reader.GetStringSafe(1),
+										CellPeriodType = reader.GetStringSafe(2),
+										PeriodTypeID = reader.GetStringSafe(3),
+										CellPeriodCount = reader.GetStringSafe(4),
+										PeriodLength = reader.GetNullable<int>(5),
+										CellDay = reader.GetStringSafe(6),
+										CellMonth = reader.GetStringSafe(7),
+										CellYear = reader.GetStringSafe(8),
+										CellDate = reader.GetNullable<DateTime>(9),
+										Value = reader.GetStringSafe(10),
+										CompanyFinancialTermID = reader.GetNullable<int>(11),
+										ValueNumeric = reader.GetNullable<decimal>(12),
+										NormalizedNegativeIndicator = reader.GetBoolean(13),
+										ScalingFactorID = reader.GetStringSafe(14),
+										AsReportedScalingFactor = reader.GetStringSafe(15),
+										Currency = reader.GetStringSafe(16),
+										CurrencyCode = reader.GetStringSafe(17),
+										Cusip = reader.GetStringSafe(18),
+										ScarUpdated = reader.GetBoolean(19),
+										IsIncomePositive = reader.GetBoolean(20),
+										XBRLTag = reader.GetStringSafe(21),
+										UpdateStampUTC = reader.GetNullable<DateTime>(22),
+										DocumentID = reader.IsDBNull(23) ? new Guid("00000000-0000-0000-0000-000000000000") : reader.GetGuid(23),
+										//	DocumentID = reader.GetGuid(23),
+										Label = reader.GetStringSafe(24),
+										ScalingFactorValue = reader.GetDouble(25),
+										ARDErrorTypeId = reader.GetNullable<int>(26),
+										MTMWErrorTypeId = reader.GetNullable<int>(27)
+									};
 
 									adjustedOrder = reader.GetInt32(28);
 								} else {
 									cell = new SCARAPITableCell();
 									adjustedOrder = reader.GetInt32(28);
+									cell.CompanyFinancialTermID = reader.GetNullable<int>(34);
 								}
+								if (adjustedOrder < 0) {
+									var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
+									if (negSh == null) continue;
+									if (cell.ID == 0) {
+										BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
+									}
 
-								while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
-									shix++;
-								}
+									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
 
-								if (cell.ID == 0) {
-									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
-								}
-								i++;
-								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+									if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId) {
+										negSh.Cells.Add(cell);
+									} else {
+										throw new Exception();
+									}
 
-								if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
-									StaticHierarchies[shix].Cells.Add(cell);
 								} else {
-									throw new Exception();
-								}
+									while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+										shix++;
+									}
 
+									if (cell.ID == 0) {
+										BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+									}
+									i++;
+									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+
+									if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
+										StaticHierarchies[shix].Cells.Add(cell);
+									} else {
+										throw new Exception();
+									}
+								}
 							}
 						}
-					}
-				}
+#endregion
+						reader.NextResult();
 
 				temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
-				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
-					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+				#region Read TimeSlice
 
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-
-						while (reader.Read()) {
+				while (reader.Read()) {
 							TimeSlice slice = new TimeSlice
 							{
 								Id = reader.GetInt32(0),
@@ -349,22 +376,19 @@ WHERE  CompanyID = @Iconum";
 								} catch { }
 							}
 
-						}
-					}
-				}
 
-				using (SqlCommand cmd = new SqlCommand(TimeSliceIsSummaryQuery, conn)) {
-					cmd.Parameters.AddWithValue("@Iconum", iconum);
-					
-					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						while (sdr.Read()) {
-							int TimeSliceID = sdr.GetInt32(0);
+				}
+				#endregion
+
+				reader.NextResult();
+						while (reader.Read()) {
+							int TimeSliceID = reader.GetInt32(0);
 
 							if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
 								IsSummaryLookup.Add(TimeSliceID, new List<string>());
 							}
 
-							IsSummaryLookup[TimeSliceID].Add(sdr.GetStringSafe(1));
+							IsSummaryLookup[TimeSliceID].Add(reader.GetStringSafe(1));
 						}
 					}
 				}
@@ -562,7 +586,7 @@ FROM DocumentSeries ds
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
@@ -837,7 +861,6 @@ where id = @TargetSHID;
 		public ScarResult UpdateStaticHierarchyAddHeader(int id) {
 
 			string query = @"
-BEGIN TRAN
 
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
@@ -907,7 +930,7 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
 SELECT *
   FROM CTE_Children
   order by AdjustedOrder
-ROLLBACK TRAN
+
 ";
 
 			ScarResult response = new ScarResult();
@@ -990,7 +1013,6 @@ ROLLBACK TRAN
 		public ScarResult UpdateStaticHierarchyLabel(int id, string newLabel) {
 
 			string query = @"
-BEGIN TRAN
 
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
@@ -1062,7 +1084,6 @@ SELECT *
   order by AdjustedOrder
 
 
-ROLLBACK TRAN
 ";
 
 			ScarResult response = new ScarResult();
@@ -1183,9 +1204,9 @@ SELECT * FROM StaticHierarchy WHERE ID = @TargetSHID;
 		}
 
 		public ScarResult UpdateStaticHierarchyMove(int id, string direction) {
-			string BeginTran = @"BEGIN TRAN
+			string BeginTran = @" 
 ";
-			string RollbackTran = @"ROLLBACK TRAN
+			string RollbackTran = @" 
 ";
 			string SQL_MoveDown = @"
  
@@ -1440,7 +1461,6 @@ SELECT *
 
 			string query = @"
 
-BEGIN TRAN
 
 IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType)
 BEGIN
@@ -1454,7 +1474,6 @@ BEGIN
 END
 
 
-ROLLBACK TRAN
 
 ";
 			ScarResult response = new ScarResult();
@@ -1501,7 +1520,6 @@ ROLLBACK TRAN
 
 			string query = @"
 
-BEGIN TRAN
 
 IF @PeriodNoteId is null
 BEGIN
@@ -1521,7 +1539,6 @@ BEGIN
 END
 
 
-ROLLBACK TRAN
 
 ";
 			ScarResult response = new ScarResult();
@@ -1571,6 +1588,7 @@ ROLLBACK TRAN
 			}
 			return response;
 		}
+
 		public ScarResult UpdateTimeSliceReportType(int id, string ReportType) {
 
 			string query = @"
@@ -1621,10 +1639,1291 @@ SELECT * FROM DocumentTimeSlice WHERE DocumentId = @docid;
 			return response;
 		}
 
+		public ScarResult UpdateTimeSliceManualOrgSet(int id, string newValue) {
+
+			string query = @"
+
+UPDATE DocumentTimeSlice SET ManualOrgSet = @newValue where Id = @id;
+
+SELECT * FROM DocumentTimeSlice WHERE id = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.TimeSlices = new List<TimeSlice>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newValue", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							TimeSlice slice = new TimeSlice
+							{
+								Id = reader.GetInt32(0),
+								DocumentId = reader.GetGuid(1),
+								DocumentSeriesId = reader.GetInt32(2),
+								TimeSlicePeriodEndDate = reader.GetDateTime(3),
+								ReportingPeriodEndDate = reader.GetDateTime(4),
+								FiscalDistance = reader.GetInt32(5),
+								Duration = reader.GetInt32(6),
+								PeriodType = reader.GetStringSafe(7),
+								AcquisitionFlag = reader.GetStringSafe(8),
+								AccountingStandard = reader.GetStringSafe(9),
+								ConsolidatedFlag = reader.GetStringSafe(10),
+								IsProForma = reader.GetBoolean(11),
+								IsRecap = reader.GetBoolean(12),
+								CompanyFiscalYear = reader.GetDecimal(13),
+								ReportType = reader.GetStringSafe(14),
+								IsAmended = reader.GetBoolean(15),
+								IsRestated = reader.GetBoolean(16),
+								IsAutoCalc = reader.GetBoolean(17),
+								ManualOrgSet = reader.GetBoolean(18)
+							};
+							response.TimeSlices.Add(slice);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult GetTableCell(string id) {
+
+			string query = @"
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableCellMetaNumericValue(string id, string NumericValue) {
+
+			string query = @"
+
+UPDATE TableCell SET ValueNumeric = @NumericValue where ID = @id;
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@NumericValue", NumericValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableCellMetaScalingFactor(string id, string newValue) {
+
+			string query = @"
+
+UPDATE TableCell SET ScalingFactorID = @ScalingFactorID where ID = @id;
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@ScalingFactorID", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableCellMetaPeriodDate(string id, string newValue) {
+
+			string query = @"
+
+UPDATE TableCell SET CellDate = @CellDate where ID = @id;
+UPDATE TableCell SET CellDay = DATEPART(day, @CellDate) where ID = @id;
+UPDATE TableCell SET CellMonth = DATEPART(month, @CellDate) where ID = @id;
+UPDATE TableCell SET CellYear = DATEPART(year, @CellDate) where ID = @id;
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@CellDate", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableCellMetaPeriodType(string id, string newValue) {
+
+			string query = @"
+
+UPDATE TableCell SET PeriodTypeID = @PeriodTypeID where ID = @id;
+UPDATE TableCell SET CellPeriodType = (select top 1 [Description] from [PeriodType] where ID = @PeriodTypeID) where ID = @id;
+
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@PeriodTypeID", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableCellMetaPeriodLength(string id, string newValue) {
+
+			string query = @"
+
+UPDATE TableCell SET PeriodLength = @PeriodLength where ID = @id;
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@PeriodLength", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableCellMetaCurrency(string id, string newValue) {
+
+			string query = @"
+
+UPDATE TableCell SET CurrencyCode = @CurrencyCode where ID = @id;
+UPDATE TableCell SET Currency = (select top 1 [Description] from [Currencies] where [Code] = @CurrencyCode) where ID = @id;
+
+SELECT 'x', * FROM TableCell WHERE ID = @id;
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@CurrencyCode", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableRowMetaCusip(string id, string newValue) {
+
+			string query = @"
+
+update tc
+set cusip = @cusip
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@cusip", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableRowMetaPit(string id, string newValue) {
+
+			string query = @"
+
+update tc
+set PeriodTypeID = 'P', CellPeriodType = 'PIT', PeriodLength = 0
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableRowMetaScalingFactor(string id, string newValue) {
+
+			string query = @"
+
+update tc
+set ScalingFactorID = @ScalingFactorID
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+";
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@ScalingFactorID", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableColumnMetaPeriodDate(string id, string newValue) {
+
+			string query = @"
+update tc
+set CellDate = @cellDate,  CellDay = DATEPART(day, @CellDate), CellMonth = DATEPART(month, @CellDate), CellYear = DATEPART(year, @CellDate)
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+
+			ScarResult response = new ScarResult();
+			string sql_query = select_query;
+			DateTime newDate;
+			if (DateTime.TryParse(newValue, out newDate)) {
+				sql_query = query + select_query;
+			}
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@cellDate", newDate);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+		public ScarResult UpdateTableColumnMetaColumnHeader(string id, string newValue) {
+
+			string query = @"
+update td
+set label = @newLabel
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+
+			ScarResult response = new ScarResult();
+			string sql_query = query + select_query;
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = newValue;
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newLabel", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableColumnMetaPeriodType(string id, string newValue) {
+
+			string query = @"
+update tc
+set PeriodTypeID = @newPeriodType
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+
+			ScarResult response = new ScarResult();
+			string sql_query = query + select_query;
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newPeriodType", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableColumnMetaPeriodLength(string id, string newValue) {
+
+			string query = @"
+update tc
+set PeriodLength =  @newPeriodLength
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+
+			ScarResult response = new ScarResult();
+			string sql_query = query + select_query;
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newPeriodLength", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableColumnMetaCurrencyCode(string id, string newValue) {
+
+			string query = @"
+update tc
+set CurrencyCode =  @newCurrencyCode
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+
+			ScarResult response = new ScarResult();
+			string sql_query = query + select_query;
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newCurrencyCode", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableColumnMetaInterimType(string id, string newValue) {
+			// TODO:
+			// need to handle "--" interim type
+			string query = @"
+
+DECLARE @newDtsID int = 0;
+
+update dtstc
+set DocumentTimeSliceId =  @newDtsID
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+where dtc.TableCellID = @id
+
+
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+
+			ScarResult response = new ScarResult();
+			string sql_query = select_query;
+			if (newValue != "--") {
+				sql_query = query + select_query;
+			}
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newCurrencyCode", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTDP(string id, string newValue) {
+			string SQL_MergeCft = @"
+
+DECLARE @newDtsID int = 0;
+
+update dtstc
+set DocumentTimeSliceId =  @newDtsID
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+where dtc.TableCellID = @id
+
+
+
+";
+
+			string select_query = @"
+
+select  'x', tc.* 
+from [DimensionToCell] dtc 
+JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+where dtc.TableCellID = @id
+
+";
+
+			JObject json = JObject.Parse(newValue);
+
+			ScarResult response = new ScarResult();
+			string sql_query = select_query;
+			//if (newValue != "--") {
+			//	sql_query = query + select_query;
+			//}
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", id);
+					cmd.Parameters.AddWithValue("@newCurrencyCode", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = reader.GetInt32(1),
+									Offset = reader.GetStringSafe(2),
+									CellPeriodType = reader.GetStringSafe(3),
+									PeriodTypeID = reader.GetStringSafe(4),
+									CellPeriodCount = reader.GetStringSafe(5),
+									PeriodLength = reader.GetNullable<int>(6),
+									CellDay = reader.GetStringSafe(7),
+									CellMonth = reader.GetStringSafe(8),
+									CellYear = reader.GetStringSafe(9),
+									CellDate = reader.GetNullable<DateTime>(10),
+									Value = reader.GetStringSafe(11),
+									CompanyFinancialTermID = reader.GetNullable<int>(12),
+									ValueNumeric = reader.GetNullable<decimal>(13),
+									NormalizedNegativeIndicator = reader.GetBoolean(14),
+									ScalingFactorID = reader.GetStringSafe(15),
+									AsReportedScalingFactor = reader.GetStringSafe(16),
+									Currency = reader.GetStringSafe(17),
+									CurrencyCode = reader.GetStringSafe(18),
+									Cusip = reader.GetStringSafe(19)
+								};
+								cell.ScarUpdated = reader.GetBoolean(20);
+								cell.IsIncomePositive = reader.GetBoolean(21);
+								cell.XBRLTag = reader.GetStringSafe(22);
+								//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
+								cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+								cell.Label = reader.GetStringSafe(24);
+								sh.Cells.Add(cell);
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+
 		public ScarResult CloneUpdateTimeSlice(int id, string InterimType) {
 
 			string query = @"
-BEGIN TRAN
 DECLARE @newId int;
 DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM DocumentTimeSlice where id = @id)
 DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate FROM DocumentTimeSlice where id = @id)
@@ -1730,7 +3029,6 @@ SELECT [Id]
 	,[ManualOrgSet]
 FROM [DocumentTimeSlice] where id = @newId or id = @dts or id = @id;
 
-rollback tran
 ";
 
 
@@ -1772,7 +3070,6 @@ rollback tran
 				return response;
 			}
 		}
-
 
 		public ScarResult GetReviewTimeSlice(string TemplateName, int iconum) {
 
@@ -1866,7 +3163,7 @@ AS
 		LEFT JOIN ARTimeSliceDerivationComponents artsdc WITH(NOLOCK) ON artsdc.DocumentTimeSliceID = dts.id
 	WHERE 1=1
 	and tt.description = @TypeTable
-	and ds.id = @DocumentSeriesId
+	and ds.id = @DocumentSeriesId and tt.DocumentSeriesID = @DocumentSeriesId
 	group by d.damdocumentid, dts.id 
 )
 SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
@@ -1875,23 +3172,26 @@ SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 	JOIN DocumentTimeSlice dts WITH(NOLOCK) on ts.TimeSliceId = dts.Id
   JOIN Document d WITH(NOLOCK) on dts.DocumentId = d.id
 
- 
-
-select d.id as DocumentId, d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count, count(distinct tc.CurrencyCode) as CurrencyCount, max(tc.CurrencyCode) as CurrencyCode 
- INTO #alltimeslices
+select d.id, d.DAMDocumentId, tt.Description, dtc.TableCellID
+ INTO #tableCells
 from DocumentTable dt (nolock)
 join TableType tt (nolock) on dt.TableTypeId = tt.id
 inner join Tablemeta tm (NOLOCK) on tt.Description= tm.ShortName and tm.IsTemplate =1
 JOIN Document d WITH(NOLOCK) ON dt.DocumentId = d.id
 JOIN TableDimension td (nolock) ON dt.ID = td.DocumentTableID and td.DimensionTypeID = 1
 JOIN DimensionToCell dtc WITH(NOLOCK) ON dtc.TableDimensionID = td.ID
-JOIN TableCell tc (NOLOCK) on tc.ID = dtc.TableCellID
- 
 where 
-  tt.Description = @TypeTable and
+  tt.Description = @TypeTable and tt.DocumentSeriesID = @DocumentSeriesId and
   d.documentseriesid =  @DocumentSeriesId
   and (d.ArdExportFlag = 1 or d.IsDocSetUpCompleted = 1 or d.ExportFlag = 1)
- group by d.id, d.DAMDocumentId, tt.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate
+
+
+select d.id as DocumentId, d.DAMDocumentId, d.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count, count(distinct tc.CurrencyCode) as CurrencyCount, max(tc.CurrencyCode) as CurrencyCode 
+ INTO #alltimeslices
+from #tableCells d
+JOIN TableCell tc (NOLOCK) on tc.ID = d.TableCellID
+ 
+ group by d.id, d.DAMDocumentId, d.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate
 
 
 select 
@@ -1963,10 +3263,12 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePerio
 							slice.DocumentId = reader.GetGuid(ordinals.DocumentId);
 							slice.DamDocumentId = reader.GetGuid(ordinals.DamDocumentId);
 							slice.Id = reader.GetInt32(ordinals.TimeSliceId);
+							if (slice.Id > 0) {
+								slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
+								slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
+							}
 							slice.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesId);
 							slice.PublicationDate = reader.GetDateTime(ordinals.PublicationDate);
-							slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
-							slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
 							slice.FiscalDistance = reader.GetInt32(ordinals.FiscalDistance);
 							slice.CompanyFiscalYear = reader.GetDecimal(ordinals.CompanyFiscalYear);
 							slice.Duration = reader.GetInt32(ordinals.PeriodLength);
@@ -2003,7 +3305,7 @@ SELECT top 1 @TargetSH = sh.id
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, tc.DocumentTimeSliceID
+SELECT distinct sh.ID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
@@ -2170,7 +3472,7 @@ WHERE sh.ID = @TargetSHID and tc.TableCellid = @cellID
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
-SELECT tc.TableCellID, tc.DocumentTimeSliceID
+SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and tc.DocumentTimeSliceID = @CurrentTimeSliceID
@@ -2189,7 +3491,7 @@ JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, @CurrentTimeSliceID
+SELECT distinct sh.ID, @CurrentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
@@ -2319,7 +3621,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 		public ScarResult FlipHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
 			const string query = @"
-BEGIN TRAN
 
 DECLARE @TargetSHID int;
 
@@ -2342,7 +3643,7 @@ FROM CTE cte
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
-SELECT tc.TableCellID, tc.DocumentTimeSliceID
+SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
@@ -2357,7 +3658,7 @@ JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, tc.DocumentTimeSliceId
+SELECT distinct sh.ID, tc.DocumentTimeSliceId
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
@@ -2416,7 +3717,7 @@ LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
-ROLLBACK TRAN
+
 ";
 			ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
@@ -2488,7 +3789,6 @@ ROLLBACK TRAN
 
 		public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
 			const string query = @"
-BEGIN TRAN
 
 DECLARE @TargetSHID int;
 SELECT top 1 @TargetSHID = sh.id
@@ -2517,7 +3817,7 @@ where cte.id <> @TargetSHID
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
-SELECT tc.TableCellID, tc.DocumentTimeSliceID
+SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
@@ -2536,7 +3836,7 @@ JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, tc.DocumentTimeSliceId
+SELECT distinct  sh.ID, tc.DocumentTimeSliceId
 FROM StaticHierarchy sh
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
@@ -2595,7 +3895,6 @@ LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
-ROLLBACK TRAN
 ";
 			ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
@@ -3055,6 +4354,49 @@ ROLLBACK TRAN
 			return result;
 		}
 
+		public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId, string newValue) {
+			string query = @"
+
+
+IF @newValue = 0
+BEGIN
+	DELETE FROM MTMWErrorTypeTableCell WHERE TableCellId = @id  
+END
+ELSE
+BEGIN
+	MERGE INTO MTMWErrorTypeTableCell mtmwtc
+	USING (VALUES (@id)) AS s(id) ON  mtmwtc.TableCellId = s.id
+	WHEN NOT MATCHED THEN
+			INSERT ([MTMWErrorTypeId] ,[TableCellId])
+				VALUES (@newValue, @id )
+	WHEN MATCHED THEN
+		UPDATE SET [MTMWErrorTypeId] = @newValue ;
+
+END
+
+
+
+";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					int newInt = -1;
+					bool isSuccess = false;
+					if (!string.IsNullOrEmpty(newValue)) {
+						isSuccess = Int32.TryParse(newValue, out newInt);
+					}
+					cmd.Parameters.AddWithValue("@id", CellId);
+					cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int)
+					{
+						Value = (!isSuccess ? DBNull.Value : (object)newInt)
+					});
+					cmd.ExecuteNonQuery();
+				}
+			}
+			return AddMakeTheMathWorkNote(CellId, DocumentId);
+		}
+
 		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId) {
 			TableCellResult result = new TableCellResult();
 			result.cells = new List<SCARAPITableCell>();
@@ -3068,29 +4410,112 @@ ROLLBACK TRAN
 			return result;
 		}
 
+		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId, string newValue) {
+			string query = @"
+
+
+IF @newValue = 0
+BEGIN
+	DELETE FROM ARDErrorTypeTableCell WHERE TableCellId = @id  
+END
+ELSE
+BEGIN
+	MERGE INTO ARDErrorTypeTableCell ardtc
+	USING (VALUES (@id)) AS s(id) ON  ardtc.TableCellId = s.id
+	WHEN NOT MATCHED THEN
+			INSERT ([ARDErrorTypeId] ,[TableCellId])
+				VALUES (@newValue, @id )
+	WHEN MATCHED THEN
+		UPDATE SET [ARDErrorTypeId] = @newValue ;
+
+END
+
+
+
+";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					int newInt = -1;
+					bool isSuccess = false;
+					if (!string.IsNullOrEmpty(newValue)) {
+						isSuccess = Int32.TryParse(newValue, out newInt);
+					}
+					cmd.Parameters.AddWithValue("@id", CellId);
+					cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int)
+					{
+						Value = (!isSuccess ? DBNull.Value : (object)newInt)
+					});
+					cmd.ExecuteNonQuery();
+				}
+			}
+			return AddLikePeriodValidationNote(CellId, DocumentId);
+		}
+
 		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
-			return null;
+			return new SCARAPITableCell[0];
 		}
 		#endregion
 
 		#region Zero-Minute Update
-		public bool UpdateRedStarSlotting(Guid SFDocumentId) {
+		public Tuple<bool, string> UpdateRedStarSlotting(Guid SFDocumentId) {
+			string query = @"
+SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
+FROM StaticHierarchy sh (nolock)
+where sh.id in ({0}) and sh.ParentId is null
+UNION
+SELECT 'redstar_result' as result, 'Red star item in share and per share sections' as msg
+FROM StaticHierarchy sh (nolock)
+where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[weighted average shares\]%'   escape '\')
+";
 			bool isSuccess = false;
+			var sb = new System.Text.StringBuilder();
+			string returnMessage = "";
 			try {
 				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
+					sqlConn.Open();
+						bool isComma = false;
+
 					using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
 						cmd.CommandType = CommandType.StoredProcedure;
 
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
-						sqlConn.Open();
-						cmd.ExecuteNonQuery();
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								var firstfield = "";
+								try {
+									firstfield = sdr.GetStringSafe(0);
+								} catch {
+								}
+								if (firstfield == "RedStarLabels") {
+									var shId = sdr.GetInt32(1).ToString();
+									sb.Append((isComma ? "," : "") + shId);
+									isComma = true;
+								} else {
+									sdr.NextResult();
+								}
+							}
+						}
 						isSuccess = true;
+					}
+					if (isComma) { // at least one ID
+						using (SqlCommand cmd = new SqlCommand(string.Format(query, sb.ToString()), sqlConn)) {
+							//cmd.Parameters.AddWithValue("@SHIds", sb.ToString());
+							using (SqlDataReader sdr = cmd.ExecuteReader()) {
+								if (sdr.Read()) {
+									returnMessage += sdr.GetStringSafe(1);
+									isSuccess = false;
+								}
+							}
+						}
 					}
 				}
 			} catch (Exception ex) {
 				isSuccess = false;
+				returnMessage = "Exception occured during RedStar slotting";
 			}
-			return isSuccess;
+			return new Tuple<bool, string>(isSuccess, returnMessage);
 		}
 
 		public string GetDocumentIsoCountry(Guid SFDocumentId) {
@@ -3147,13 +4572,19 @@ WHERE d.ID = @SFDocumentID
   where dt.DocumentID = @DocumentId and dts.PeriodType is null
 
 
- SELECT  'Missing Currency. ' as Error, * 
+ ;WITH cte (id) as
+(
+ SELECT  dtc.TableCellid
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
  JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
- JOIN TableCell tc ON dtc.TableCellID = tc.id
- where dt.DocumentID = @DocumentId and tc.currencycode is null
+ where dt.DocumentID = @DocumentId 
+)
+ SELECT  'Missing Currency. ' as Error, * 
+ FROM cte
+ JOIN TableCell tc ON cte.id = tc.id 
+ where  tc.currencycode is null
 ";
 			string errorMessage = "";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -3226,7 +4657,7 @@ WHERE d.ID = @SFDocumentID
 DECLARE @SHCells CellList
 
 INSERT @SHCells
-SELECT sh.ID, dts.Id
+SELECT distinct sh.ID, dts.Id
 FROM vw_SCARDocumentTimeSlices dts
 JOIN StaticHierarchy sh ON sh.TableTypeId = dts.TableTypeID
 WHERE CompanyID = @iconum
@@ -3529,6 +4960,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.ContentType = "application/json";
+			request.Timeout = 120000;
 			request.Method = "GET";
 			var response = (HttpWebResponse)request.GetResponse();
 
