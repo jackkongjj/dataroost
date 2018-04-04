@@ -810,6 +810,7 @@ and d.DocumentDate  between
 			foreach (var eboTS in ebObjects.Where(o => o.AutoClacFlag == 0).GroupBy(o => new { o.InterimTypeID, o.ReportTypeID, o.AccountTypeID,  o.EncoreFlag })) {
 				SFTimeseriesDTO ts = timeSlices.FirstOrDefault(o => o.InterimType == eboTS.Key.InterimTypeID && o.ReportType == eboTS.Key.ReportTypeID && o.AccountType == eboTS.Key.AccountTypeID
 				  && o.IsRecap == eboTS.Key.EncoreFlag);
+                if (ts == null) continue;
 				foreach (var ebo in eboTS.GroupBy(o => o.Offset)) {
 					var eb = ebo.FirstOrDefault();
 					string ItemDescription = null;
@@ -825,9 +826,9 @@ and d.DocumentDate  between
                         ScalingFactor = eb.ScalingFactor,
                         XbrlTag = eb.XbrlTag,
                         Label = eb.OffsetLabelWithHierarchy,
-                        PeriodLength = (ts == null) ? "-1" : ts.PeriodLength.ToString(),
-                        PeriodType = (ts == null) ? "" : ts.PeriodType,
-                        Date = (ts == null) ? DateTime.MinValue : ts.PeriodEndDate,
+                        PeriodLength = ts.PeriodLength.ToString(),
+                        PeriodType =  ts.PeriodType,
+                        Date =  ts.PeriodEndDate,
                         ItemDescription = ItemDescription
 					});
 				}
