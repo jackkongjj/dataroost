@@ -2831,6 +2831,68 @@ where dtc.TableCellID = @id
 			}
 			return response;
 		}
+		public class JsonToSQLCompanyFinancialTerm : JsonToSQL {
+			string delete_sql = "DELETE FROM CompanyFinancialTerm where id = {0};";
+			public JsonToSQLCompanyFinancialTerm(string json) : base(json)
+			{
+				_json = json;
+			}
+			public override string Translate() {
+				JObject json = JObject.Parse(_json);
+				if (json[0]["action"].ToString() == "delete") {
+					return string.Format(delete_sql, json[0]["id"].ToString());
+				}
+				return "";
+			}
+
+		}
+		public class JsonToSQL {
+			protected string _json;
+			public JsonToSQL(string json) {
+				_json = json;
+
+			}
+		
+			public virtual string Translate() {
+				JObject json = JObject.Parse(_json);
+				return "";
+			}
+		}
+
+		public ScarResult UpdateTDP(string updateInJson) {
+			ScarResult result = new ScarResult();
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			try {
+				JObject json = JObject.Parse(updateInJson);
+				var cft = json["CompanyFinancialTerm"];
+				var tabledimension = json["TableDimension"];
+				var documentTable = json["DobumenTable"]; // typo in json
+				string test = cft.GetType().ToString();
+				sb.AppendLine(new JsonToSQL(cft.ToString()).Translate());
+				sb.AppendLine(new JsonToSQL(tabledimension.ToString()).Translate());
+				result.Message = sb.ToString();
+				return result;
+
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
+						conn.Open();
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							while (reader.Read()) {
+								SCARAPITableCell cell;
+								if (reader.GetNullable<int>(1).HasValue) {
+
+								}
+							}
+						}
+					}
+				}
+			} catch (Exception ex) {
+				result.Message = ex.Message;
+
+			}
+			return result;
+		}
 
 		public ScarResult UpdateTDP(string id, string newValue) {
 			string SQL_MergeCft = @"

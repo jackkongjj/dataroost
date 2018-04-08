@@ -291,6 +291,7 @@
     <Compile Include="Access\AsReported\CompanyFinancialTermsHelper.cs" />
     <Compile Include="Access\AsReported\DocumentHelper.cs" />
     <Compile Include="Access\Company\CompanyHelper.cs" />
+    <Compile Include="Access\AsReported\TestString.cs" />
     <Compile Include="Access\DirectCollectionHelper.cs" />
     <Compile Include="Access\Kpi\ExportVersionHelper.cs" />
     <Compile Include="Access\Kpi\TimeseriesHelper.cs" />
