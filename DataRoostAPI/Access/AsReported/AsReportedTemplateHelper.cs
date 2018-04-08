@@ -2833,16 +2833,71 @@ where dtc.TableCellID = @id
 		}
 		public class JsonToSQLCompanyFinancialTerm : JsonToSQL {
 			string delete_sql = "DELETE FROM CompanyFinancialTerm where id = {0};";
-			public JsonToSQLCompanyFinancialTerm(string json) : base(json)
+			string merge_sql = @"MERGE CompanyFinancialTerm
+USING (VALUES ({0}, {1}, {2}, '{3}', {4}, {5}, {6})) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
+ON CompanyFinancialTerm.id = src.ID
+WHEN MATCHED THEN
+	UPDATE SET DocumentSeriesID =  src.DocumentSeriesID
+      ,TermStatusID =  src.TermStatusID
+      ,Description =  src.Description
+      ,NormalizedFlag =  src.NormalizedFlag
+      ,EncoreTermFlag =  src.EncoreTermFlag
+      ,ManualUpdate =  src.ManualUpdate 
+WHEN NOT MATCHED THEN
+	INSERT ( DocumentSeriesID
+      ,TermStatusID
+      ,Description
+      ,NormalizedFlag
+      ,EncoreTermFlag
+      ,ManualUpdate) VALUES
+	  (
+	    src.DocumentSeriesID
+      ,src.TermStatusID
+      ,src.Description
+      ,src.NormalizedFlag
+      ,src.EncoreTermFlag
+      ,src.ManualUpdate
+	  );
+
+";
+			private JArray _jarray;
+			public JsonToSQLCompanyFinancialTerm(JToken jToken) : base("")
 			{
-				_json = json;
+				_jarray = (JArray)jToken.SelectToken("") ;
 			}
 			public override string Translate() {
-				JObject json = JObject.Parse(_json);
-				if (json[0]["action"].ToString() == "delete") {
-					return string.Format(delete_sql, json[0]["id"].ToString());
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem	in _jarray) {
+					try {
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].ToString()));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),   
+								elem["obj"]["DocumentSeries"]["ID"].ToString(),   
+								elem["obj"]["TermStatusID"].ToString(),   
+								elem["obj"]["Description"].ToString(), 
+  							(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["EncoreTermFlag"].ToString(),
+								"0" // manual falg
+								));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),
+								elem["obj"]["DocumentSeries"]["ID"].ToString(),
+								elem["obj"]["TermStatusID"].ToString(),
+								elem["obj"]["Description"].ToString(),
+								(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["EncoreTermFlag"].ToString(),
+								"0" // manual falg
+								));
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(ex.Message);
+					}
 				}
-				return "";
+
+				return sb.ToString(); ;
 			}
 
 		}
@@ -2854,8 +2909,7 @@ where dtc.TableCellID = @id
 			}
 		
 			public virtual string Translate() {
-				JObject json = JObject.Parse(_json);
-				return "";
+				return "--";
 			}
 		}
 
@@ -2868,8 +2922,8 @@ where dtc.TableCellID = @id
 				var tabledimension = json["TableDimension"];
 				var documentTable = json["DobumenTable"]; // typo in json
 				string test = cft.GetType().ToString();
-				sb.AppendLine(new JsonToSQL(cft.ToString()).Translate());
-				sb.AppendLine(new JsonToSQL(tabledimension.ToString()).Translate());
+				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
+				//sb.AppendLine(new JsonToSQL(tabledimension.ToString()).Translate());
 				result.Message = sb.ToString();
 				return result;
 
