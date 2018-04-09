@@ -2831,10 +2831,28 @@ where dtc.TableCellID = @id
 			}
 			return response;
 		}
+
+
+		public class JsonToSQL {
+			protected string _json;
+			public JsonToSQL(string json) {
+				_json = json;
+
+			}
+
+			public virtual string Translate() {
+				return "--";
+			}
+		}
+
+
+		private string ConvertJsonStringToSQL(string jsonString) {
+			return "";
+		}
 		public class JsonToSQLCompanyFinancialTerm : JsonToSQL {
 			string delete_sql = "DELETE FROM CompanyFinancialTerm where id = {0};";
 			string merge_sql = @"MERGE CompanyFinancialTerm
-USING (VALUES ({0}, {1}, {2}, '{3}', {4}, {5}, {6})) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
+USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
 ON CompanyFinancialTerm.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET DocumentSeriesID =  src.DocumentSeriesID
@@ -2876,21 +2894,14 @@ WHEN NOT MATCHED THEN
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),   
 								elem["obj"]["DocumentSeries"]["ID"].ToString(),   
-								elem["obj"]["TermStatusID"].ToString(),   
-								elem["obj"]["Description"].ToString(), 
+								elem["obj"]["TermStatusID"].AsValue(),
+								elem["obj"]["Description"].AsString(), 
   							(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
 								elem["obj"]["EncoreTermFlag"].ToString(),
 								"0" // manual falg
 								));
-						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),
-								elem["obj"]["DocumentSeries"]["ID"].ToString(),
-								elem["obj"]["TermStatusID"].ToString(),
-								elem["obj"]["Description"].ToString(),
-								(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
-								elem["obj"]["EncoreTermFlag"].ToString(),
-								"0" // manual falg
-								));
+						} else if (elem["action"].ToString() == "add") {
+
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(ex.Message);
@@ -2901,31 +2912,235 @@ WHEN NOT MATCHED THEN
 			}
 
 		}
-		public class JsonToSQL {
-			protected string _json;
-			public JsonToSQL(string json) {
-				_json = json;
 
+		public class JsonToSQLTableDimension : JsonToSQL {
+			string delete_sql = "DELETE FROM TableDimension where id = {0};";
+			string merge_sql = @"MERGE TableDimension
+USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})) as src ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder)
+ON TableDimension.id = src.ID
+WHEN MATCHED THEN
+	UPDATE SET       DocumentTableID  = src.DocumentTableID 
+      ,DimensionTypeID  = src.DimensionTypeID 
+      ,Label  = src.Label 
+      ,OrigLabel  = src.OrigLabel 
+      ,Location  = src.Location 
+      ,EndLocation  = src.EndLocation 
+      -- ,Parent  = src.Parent 
+      ,InsertedRow  = src.InsertedRow 
+      ,AdjustedOrder  = src.AdjustedOrder 
+WHEN NOT MATCHED THEN
+	INSERT ( DocumentTableID
+      ,DimensionTypeID
+      ,Label
+      ,OrigLabel
+      ,Location
+      ,EndLocation
+      -- ,Parent
+      ,InsertedRow
+      ,AdjustedOrder) VALUES
+	  (
+	    src.DocumentTableID
+,src.DimensionTypeID
+,src.Label
+,src.OrigLabel
+,src.Location
+,src.EndLocation
+--,src.Parent
+,src.InsertedRow
+,src.AdjustedOrder
+	  );
+
+";
+			private JArray _jarray;
+			public JsonToSQLTableDimension(JToken jToken)
+				: base("") {
+				_jarray = (JArray)jToken.SelectToken("");
 			}
-		
-			public virtual string Translate() {
-				return "--";
+			public override string Translate() {
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+								"0",//elem["obj"]["DocumentSeries"]["ID"].ToString(),  -- missing
+								elem["obj"]["DimensionTypeId"].AsValue(),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["OrigLabel"].AsString(),
+								elem["obj"]["Location"].AsValue(),
+								elem["obj"]["EndLocation"].AsValue(),
+								"NULL", //Parent
+								(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["AdjustedOrder"].AsValue()
+								));
+						} else if (elem["action"].ToString() == "add") {
+							
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+					}
+				}
+
+				return sb.ToString(); ;
 			}
+
+		}
+
+		public class JsonToSQLTableCell : JsonToSQL {
+			string delete_sql = "DELETE FROM TableCell where id = {0};";
+			string merge_sql = @"MERGE TableCell
+USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})) 
+	as src (  ID,Offset,CellPeriodType,PeriodTypeID,CellPeriodCount,PeriodLength,CellDay,CellMonth,CellYear,CellDate,Value,CompanyFinancialTermID,ValueNumeric,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,Currency,CurrencyCode,Cusip,ScarUpdated,IsIncomePositive,DocumentId,Label,XBRLTag)
+ON TableCell.id = src.ID
+WHEN MATCHED THEN
+	UPDATE SET  Offset = src.Offset
+      ,CellPeriodType = src.CellPeriodType
+      ,PeriodTypeID = src.PeriodTypeID
+      ,CellPeriodCount = src.CellPeriodCount
+      ,PeriodLength = src.PeriodLength
+      ,CellDay = src.CellDay
+      ,CellMonth = src.CellMonth
+      ,CellYear = src.CellYear
+      ,CellDate = src.CellDate
+      ,Value = src.Value
+      ,CompanyFinancialTermID = src.CompanyFinancialTermID
+      ,ValueNumeric = src.ValueNumeric
+      ,NormalizedNegativeIndicator = src.NormalizedNegativeIndicator
+      ,ScalingFactorID = src.ScalingFactorID
+      ,AsReportedScalingFactor = src.AsReportedScalingFactor
+      ,Currency = src.Currency
+      ,CurrencyCode = src.CurrencyCode
+      ,Cusip = src.Cusip
+      ,ScarUpdated = ScarUpdated
+      ,IsIncomePositive = src.IsIncomePositive
+      ,DocumentId = src.DocumentId
+      ,Label = src.Label
+      ,XBRLTag = src.XBRLTag
+WHEN NOT MATCHED THEN
+	INSERT (Offset
+      ,CellPeriodType
+      ,PeriodTypeID
+      ,CellPeriodCount
+      ,PeriodLength
+      ,CellDay
+      ,CellMonth
+      ,CellYear
+      ,CellDate
+      ,Value
+      ,CompanyFinancialTermID
+      ,ValueNumeric
+      ,NormalizedNegativeIndicator
+      ,ScalingFactorID
+      ,AsReportedScalingFactor
+      ,Currency
+      ,CurrencyCode
+      ,Cusip
+      ,ScarUpdated
+      ,IsIncomePositive
+      ,DocumentId
+      ,Label
+      ,XBRLTag) VALUES
+	  (
+	     src.Offset
+      ,src.CellPeriodType
+      ,src.PeriodTypeID
+      ,src.CellPeriodCount
+      ,src.PeriodLength
+      ,src.CellDay
+      ,src.CellMonth
+      ,src.CellYear
+      ,src.CellDate
+      ,src.Value
+      ,src.CompanyFinancialTermID
+      ,src.ValueNumeric
+      ,src.NormalizedNegativeIndicator
+      ,src.ScalingFactorID
+      ,src.AsReportedScalingFactor
+      ,src.Currency
+      ,src.CurrencyCode
+      ,src.Cusip
+      ,0
+      ,src.IsIncomePositive
+      ,src.DocumentId
+      ,src.Label
+      ,src.XBRLTag
+	  );
+
+";
+			private JArray _jarray;
+			public JsonToSQLTableCell(JToken jToken)
+				: base("") {
+				_jarray = (JArray)jToken.SelectToken("");
+			}
+			public override string Translate() {
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						var s = elem["obj"]["Offset"].AsString();
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Offset"].AsString(),
+								elem["obj"]["CellPeriodType"].AsString(),
+								elem["obj"]["PeriodTypeID"].AsString(),
+								elem["obj"]["CellPeriodCount"].AsString(),
+								elem["obj"]["PeriodLength"].AsValue(),
+								elem["obj"]["CellDay"].AsString(),
+								elem["obj"]["CellMonth"].AsString(),
+								elem["obj"]["CellYear"].AsString(),
+								elem["obj"]["CellDate"].AsString(),
+								elem["obj"]["Value"].AsString(),
+								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+								elem["obj"]["ValueNumeric"].AsValue(),
+								elem["obj"]["NormalizedNegativeIndicator"].AsBoolean(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["AsReportedScalingFactor"].AsString(),
+								elem["obj"]["Currency"].AsString(),
+								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["Cusip"].AsString(),
+								"0",
+								elem["obj"]["IsIncomePositive"].AsBoolean(),
+								elem["obj"]["DocumentId"].AsString(),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["XBRLTag"].AsString()
+								));
+						} else if (elem["action"].ToString() == "add") {
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(ex.Message);
+					}
+				}
+
+				return sb.ToString(); ;
+			}
+
 		}
 
 		public ScarResult UpdateTDP(string updateInJson) {
 			ScarResult result = new ScarResult();
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine("BEGIN TRAN");
 			try {
 				JObject json = JObject.Parse(updateInJson);
 				var cft = json["CompanyFinancialTerm"];
 				var tabledimension = json["TableDimension"];
+				var tablecell = json["TableCell"];
 				var documentTable = json["DobumenTable"]; // typo in json
 				string test = cft.GetType().ToString();
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
-				//sb.AppendLine(new JsonToSQL(tabledimension.ToString()).Translate());
+				sb.AppendLine(new JsonToSQLTableDimension(tabledimension).Translate());
+				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
+				sb.AppendLine();
+				sb.AppendLine("ROLLBACK TRAN");
 				result.Message = sb.ToString();
-				return result;
+
+//				return result;
 
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
@@ -2942,7 +3157,7 @@ WHEN NOT MATCHED THEN
 					}
 				}
 			} catch (Exception ex) {
-				result.Message = ex.Message;
+				result.Message += ex.Message;
 
 			}
 			return result;
@@ -5112,5 +5327,37 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			return returnValue;
 		}
 	
+	}
+	public static class JValueExtension {
+		public static string AsString(this JToken jValue) {
+			string jString = jValue.ToString();
+			string result = "";
+			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase)) {
+				result = "NULL";
+			} else {
+				result = "'" + jString.Replace("'", "''") +"'";
+			}
+			return result;
+		}
+		public static string AsValue(this JToken jValue) {
+			string jString = jValue.ToString();
+			string result = "";
+			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase)) {
+				result = "NULL";
+			} else {
+				result = jString;
+			}
+			return result;
+		}
+		public static string AsBoolean(this JToken jValue) {
+			string jString = jValue.ToString();
+			string result = "0";
+			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase)) {
+				result = "NULL";
+			} else if (string.Equals(jString, "true", StringComparison.InvariantCultureIgnoreCase)) {
+				result = "1";
+			}
+			return result;
+		}
 	}
 }

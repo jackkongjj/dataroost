@@ -589,7 +589,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
 				newValue = input.StringData;
 			}
-			newValue = JsonToSQL.Json_UpdateTDPExample;
+			//newValue = JsonToSQL.Json_UpdateTDPExample;
 			if (string.IsNullOrWhiteSpace(newValue)) {
 				result.Message = "bad input";
 			} else {

@@ -414,8 +414,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
         'OrigLabel': '[Current assets:]Inventories, net',
         'Location': 3,
         'EndLocation': 3,
-        'InsThe thread 0x5298 has exited with code 0 (0x0).
-ertedRow': false,
+        'InsertedRow': false,
         'AdjustedOrder': 2,
         'IsDirty': true
       }
@@ -1289,8 +1288,7 @@ ertedRow': false,
         'Label': '[Series B Preferred Stock][Stockholders\' equity:]Preferred stock, par value (in dollars per share)',
         'OrigLabel': '[Series B Preferred Stock][Stockholders\' equity:]Preferred stock, par value (in dollars per share)',
         'Location': 38,
-        'EndLocThe thread 0x4c40 has exited with code 0 (0x0).
-ation': 38,
+        'EndLocation': 38,
         'InsertedRow': false,
         'AdjustedOrder': 37,
         'IsDirty': true
