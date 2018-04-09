@@ -2875,7 +2875,8 @@ WHEN NOT MATCHED THEN
       ,src.NormalizedFlag
       ,src.EncoreTermFlag
       ,src.ManualUpdate
-	  );
+	  )
+OUTPUT $action, 'CompanyFinancialTerm', inserted.Id INTO @ChangeResult;
 
 ";
 			private JArray _jarray;
@@ -2948,7 +2949,8 @@ WHEN NOT MATCHED THEN
 --,src.Parent
 ,src.InsertedRow
 ,src.AdjustedOrder
-	  );
+	  )
+OUTPUT $action, 'TableDimension', inserted.Id INTO @ChangeResult;
 
 ";
 			private JArray _jarray;
@@ -2966,7 +2968,7 @@ WHEN NOT MATCHED THEN
 							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-								"0",//elem["obj"]["DocumentSeries"]["ID"].ToString(),  -- missing
+								"2",//elem["obj"]["DocumentSeries"]["ID"].ToString(),  -- missing
 								elem["obj"]["DimensionTypeId"].AsValue(),
 								elem["obj"]["Label"].AsString(),
 								elem["obj"]["OrigLabel"].AsString(),
@@ -3067,7 +3069,8 @@ WHEN NOT MATCHED THEN
       ,src.DocumentId
       ,src.Label
       ,src.XBRLTag
-	  );
+	  )
+OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 
 ";
 			private JArray _jarray;
@@ -3126,6 +3129,8 @@ WHEN NOT MATCHED THEN
 			ScarResult result = new ScarResult();
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("BEGIN TRAN");
+			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
+
 			try {
 				JObject json = JObject.Parse(updateInJson);
 				var cft = json["CompanyFinancialTerm"];
@@ -3136,6 +3141,7 @@ WHEN NOT MATCHED THEN
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
+				sb.AppendLine("select * from @ChangeResult");
 				sb.AppendLine();
 				sb.AppendLine("ROLLBACK TRAN");
 				result.Message = sb.ToString();
@@ -3143,16 +3149,20 @@ WHEN NOT MATCHED THEN
 //				return result;
 
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-
 					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
 						conn.Open();
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							System.Text.StringBuilder sbRet = new System.Text.StringBuilder();
+							sbRet.AppendLine("{");
 							while (reader.Read()) {
-								SCARAPITableCell cell;
-								if (reader.GetNullable<int>(1).HasValue) {
-
-								}
+								var changeType = reader.GetStringSafe(0);
+								var tableType = reader.GetStringSafe(1);
+								var Id = reader.GetInt32(2);
+								var newline = string.Format(@"{{'changeType':'{0}', 'tableType':'{1}', 'tableType':{2} }}", changeType, tableType, Id);
+								sbRet.AppendLine(newline);
 							}
+							sbRet.AppendLine("}");
+							result.ReturnValue = new Tuple<bool, string>(true, sbRet.ToString());
 						}
 					}
 				}
