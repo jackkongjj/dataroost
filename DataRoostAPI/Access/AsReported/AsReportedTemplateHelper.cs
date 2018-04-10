@@ -3636,6 +3636,12 @@ UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 E
 ";
 
 			const string SQL_ValidateCells = @"
+
+DECLARE @DocumentSeriesId INT
+SELECT TOP 1 @DocumentSeriesId = DocumentSeriesID
+FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
+
+
 DECLARE @TargetSH int;
 
 SELECT top 1 @TargetSH = sh.id
