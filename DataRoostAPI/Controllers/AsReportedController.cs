@@ -591,16 +591,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 			//newValue = JsonToSQL.Json_UpdateTDPExample;
 			if (string.IsNullOrWhiteSpace(newValue)) {
-				result.Message = "bad input";
+				result.Message = "Missing Json Input";
 			} else {
 				try {
-					 result = helper.UpdateTDP(newValue);
+					result = helper.UpdateTDPByDocumentTableID(id, newValue);
 				} catch (Exception ex) {
 					result.Message += ex.Message;
 				}
 			}
 			return result;
-			//return helper.UpdateTableColumnMetaInterimType(id, newValue);
 		}
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]

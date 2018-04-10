@@ -2850,7 +2850,16 @@ where dtc.TableCellID = @id
 			return "";
 		}
 		public class JsonToSQLCompanyFinancialTerm : JsonToSQL {
-			string delete_sql = "DELETE FROM CompanyFinancialTerm where id = {0};";
+			string delete_sql = @"
+DELETE FROM DimensionToCell 
+where TableCellID in (SELECT id from TableCell
+where CompanyFinancialTermID = {0});
+
+DELETE FROM TableCell where CompanyFinancialTermID = {0};
+
+				DELETE FROM CompanyFinancialTerm where id = {0};
+				
+				";
 			string merge_sql = @"MERGE CompanyFinancialTerm
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
 ON CompanyFinancialTerm.id = src.ID
@@ -2915,7 +2924,10 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id INTO @ChangeResult;
 		}
 
 		public class JsonToSQLTableDimension : JsonToSQL {
-			string delete_sql = "DELETE FROM TableDimension where id = {0};";
+			string delete_sql = @"
+DELETE FROM DimensionToCell where TableDimensionId = {0};
+DELETE FROM TableDimension where id = {0};
+";
 			string merge_sql = @"MERGE TableDimension
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})) as src ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder)
 ON TableDimension.id = src.ID
@@ -2954,8 +2966,10 @@ OUTPUT $action, 'TableDimension', inserted.Id INTO @ChangeResult;
 
 ";
 			private JArray _jarray;
-			public JsonToSQLTableDimension(JToken jToken)
+			private string _dimensionTableId;
+			public JsonToSQLTableDimension(string dimensionTableId, JToken jToken)
 				: base("") {
+					_dimensionTableId = dimensionTableId;
 				_jarray = (JArray)jToken.SelectToken("");
 			}
 			public override string Translate() {
@@ -2968,7 +2982,7 @@ OUTPUT $action, 'TableDimension', inserted.Id INTO @ChangeResult;
 							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-								"2",//elem["obj"]["DocumentSeries"]["ID"].ToString(),  -- missing
+								_dimensionTableId,
 								elem["obj"]["DimensionTypeId"].AsValue(),
 								elem["obj"]["Label"].AsString(),
 								elem["obj"]["OrigLabel"].AsString(),
@@ -3125,7 +3139,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 
 		}
 
-		public ScarResult UpdateTDP(string updateInJson) {
+		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
 			ScarResult result = new ScarResult();
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("BEGIN TRAN");
@@ -3139,7 +3153,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 				var documentTable = json["DobumenTable"]; // typo in json
 				string test = cft.GetType().ToString();
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
-				sb.AppendLine(new JsonToSQLTableDimension(tabledimension).Translate());
+				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
 				sb.AppendLine("select * from @ChangeResult");
 				sb.AppendLine();
@@ -3173,7 +3187,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 			return result;
 		}
 
-		public ScarResult UpdateTDP(string id, string newValue) {
+		public ScarResult UpdateTDP(string id, string newValue, bool obselete) {
 			string SQL_MergeCft = @"
 
 DECLARE @newDtsID int = 0;
