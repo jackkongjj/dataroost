@@ -4325,6 +4325,67 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			return result;
 		}
 
+		public ScarResult SwapValue(string firstCellId, string secondCellId) {
+			const string query = @"
+
+BEGIN TRY
+	BEGIN TRAN
+		DECLARE @docId uniqueidentifier 
+		select top 1 @docId = Documentid from TableCell where id = @firstCellId
+
+		DECLARE @firstCFT int
+		select top 1 @firstCFT = CompanyFinancialTermID from TableCell where id = @firstCellId
+
+		DECLARE @secondCFT int
+		select top 1 @secondCFT = CompanyFinancialTermID from TableCell where id = @secondCellId
+ 
+		IF (@firstCFT is null) RAISERROR('Null CFT', 16, 1);
+		if (@secondCFT is null) RAISERROR('Null CFT', 16, 1);
+		DECLARE @TempCells Table(ID INT)
+		INSERT @TempCells (ID)
+		SELECT ID from TableCell where CompanyFinancialTermID = @secondCFT and Documentid = @docId
+
+		Update TableCell set CompanyFinancialTermID = @secondCFT, ScarUpdated = 1 where CompanyFinancialTermID = @firstCFT and Documentid = @docId
+		Update TableCell set CompanyFinancialTermID = @firstCFT , ScarUpdated = 1 where id in (select id from @TempCells)
+
+		UPDATE CompanyFinancialTerm set TermStatusID = 1 where id = @firstCFT
+		UPDATE CompanyFinancialTerm set TermStatusID = 1 where id = @secondCFT
+		COMMIT 
+		select 1
+END TRY
+BEGIN CATCH
+	ROLLBACK;
+	throw;
+	select 0
+END CATCH
+";
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
+
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@firstCellId ", firstCellId);
+					cmd.Parameters.AddWithValue("@secondCellId", secondCellId);
+
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						int success = reader.GetInt32(0);
+						if (success == 1) {
+							result.ReturnValue = new Tuple<bool, string>(true, "");   //json parse "true" as False????
+						} else {
+							result.ReturnValue = new Tuple<bool,string>(false, "error updating. record rollbackedback");
+						}
+					}
+
+				}
+			}
+			return result;
+		}
+
+
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
 			string query = @"SCARStitchRows";
 

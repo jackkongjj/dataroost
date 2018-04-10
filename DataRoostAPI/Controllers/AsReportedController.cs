@@ -316,6 +316,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.FlipChildrenHistorical(id, DocumentId, iconum, 0);
 		}
 
+		[Route("cells/{id}/swapvalue")]
+		[HttpPut]
+		public ScarResult SwapValue(string id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData)) {
+				var ret = new ScarResult();
+				ret.ReturnValue = new Tuple<bool, string>(false, "Missing Second Cell ID");
+				return ret;
+			}
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.SwapValue(id, input.StringData);
+		}
+
 		[Route("cells/{id}/addMTMW/{DocumentId}/")]
 		[HttpGet]
 		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId) {
