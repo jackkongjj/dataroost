@@ -619,7 +619,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			// ARd validation
 			ScarResult result = null;
 			result = new ScarResult();
-			Tuple<bool, string> returnValue = new Tuple<bool,string>(false, "");
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = "F";
 			bool runOnce = true;
 			string isoCountry = helper.GetDocumentIsoCountry(SfDocumentId);
 			bool isUsDocument = (!string.IsNullOrEmpty(isoCountry) && isoCountry.ToUpper() == "US");
@@ -630,12 +631,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						ExceptionSource = "Exception at DoInterimTypeAndCurrency: ";
 						returnValue = DoInterimTypeAndCurrency(CompanyId, damdocumentId).ReturnValue;
 
-						if (!returnValue.Item1) {
-							break;
-						}
+						if (!(returnValue["Success"] == "T")) {
+ 							break;
+ 						}
 						ExceptionSource = "Exception at DoRedStarSlotting: ";
 						returnValue = DoRedStarSlotting(CompanyId, damdocumentId).ReturnValue;
-						if (!returnValue.Item1) {
+						if (!(returnValue["Success"] == "T")) {
 							break;
 						}
 						ExceptionSource = "Exception at DoSetIncomeOrientation: ";
@@ -644,7 +645,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						ExceptionSource = "Exception at DoMTMWAndLPVValidation: ";
 						returnValue = DoMTMWAndLPVValidation(CompanyId, damdocumentId).ReturnValue;
 
-						if (!returnValue.Item1) {
+						if (!(returnValue["Success"] == "T")) {
 							//System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
 							//string Ids = mtmwRet.cells.Select(x => x.ID.ToString()).Aggregate((a, b) => a + "," + b);
@@ -653,18 +654,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						}
 						ExceptionSource = "Exception at DoARDValidation: ";
 						returnValue = DoARDValidation(CompanyId, damdocumentId).ReturnValue;
-						if (!returnValue.Item1) {
+						if (!(returnValue["Success"] == "T")) {
 							break;
 						}
 						runOnce = false;
 					}
 				} catch (Exception ex) {
-					returnValue = new Tuple<bool, string>(false, ExceptionSource + returnValue.Item2 + ex.Message + new string(ex.StackTrace.Take(1000).ToArray()));
+					returnValue["Success"] = "F";
+					returnValue["Message"] = ExceptionSource + returnValue["Message"] + ex.Message + new string(ex.StackTrace.Take(1000).ToArray());
 				}
 				try {
-					helper.LogError(damdocumentId, startReason, startTime, CompanyId, returnValue.Item1, returnValue.Item2);
+					helper.LogError(damdocumentId, startReason, startTime, CompanyId, (returnValue["Success"] == "T"), returnValue["Message"]);
 				} catch { }
-				return returnValue.Item1;
+				return (returnValue["Success"] == "T");
 				//I think that the plan is for SFAutoStitchingAgent to return success if we succeeded in Zero Minute
 				//and failure if we don't so we probably just have to return true;
 
@@ -716,7 +718,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = new ScarResult();
 			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId, iconum);
-			result.ReturnValue = new Tuple<bool, string>(string.IsNullOrEmpty(errorMessage), errorMessage);
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = string.IsNullOrEmpty(errorMessage) ? "T" : "F";
+			returnValue["Message"] = errorMessage;
+			result.ReturnValue = returnValue;
 			return result;
 		}
 
@@ -812,7 +817,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				errorMessageBuilder = new System.Text.StringBuilder("Multiple MTMW Errors Encountered");
 			}
 
-			result.ReturnValue = new Tuple<bool, string>(isSuccess, errorMessageBuilder.ToString());
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = isSuccess ? "T" : "F";
+			returnValue["Message"] = errorMessageBuilder.ToString();
+			result.ReturnValue = returnValue;
 			return result;
 		}
 

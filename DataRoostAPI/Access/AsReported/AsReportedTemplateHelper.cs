@@ -3751,7 +3751,7 @@ ROLLBACK TRAN
 		#endregion
 
 		#region Zero-Minute Update
-		public Tuple<bool, string> UpdateRedStarSlotting(Guid SFDocumentId) {
+		public Dictionary<string, string> UpdateRedStarSlotting(Guid SFDocumentId) {
 			string query = @"
 SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
 FROM StaticHierarchy sh (nolock)
@@ -3807,7 +3807,10 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 				isSuccess = false;
 				returnMessage = "Exception occured during RedStar slotting";
 			}
-			return new Tuple<bool, string>(isSuccess, returnMessage);
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = isSuccess ? "T" : "F";
+			returnValue["Message"] = returnMessage;
+			return returnValue;
 		}
 
 		public string GetDocumentIsoCountry(Guid SFDocumentId) {
@@ -3840,20 +3843,20 @@ WHERE d.ID = @SFDocumentID
  VALUES 
  ('IS'), ('BS'), ('CF')
 
- SELECT 'Missing Table. ' as Error, *
+ SELECT TOP 1 'Missing Table. ' as Error, *
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  RIGHT JOIN @BigThree bt on bt.Description = tt.description
  where dt.DocumentID = @DocumentId and tt.description is null
 
 
- SELECT  'Missing InterimType. ' as Error, * 
+ SELECT TOP 1 'Missing InterimType. ' as Error, * 
  FROM DocumentTimeSlice dts
  JOIN DocumentTimeSliceTableCell dtstc on dtstc.DocumentTimeSliceId = dts.Id
  JOIN TableCell tc ON dtstc.TableCellID = tc.id
   where dts.DocumentID = @DocumentId and dts.PeriodType is null
 
- SELECT  'Missing InterimType. ' as Error, * 
+ SELECT TOP 1  'Missing InterimType. ' as Error, * 
   FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
@@ -3873,7 +3876,7 @@ WHERE d.ID = @SFDocumentID
  JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
  where dt.DocumentID = @DocumentId 
 )
- SELECT  'Missing Currency. ' as Error, * 
+ SELECT TOP 1 'Missing Currency. ' as Error, * 
  FROM cte
  JOIN TableCell tc ON cte.id = tc.id 
  where  tc.currencycode is null
@@ -4246,7 +4249,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			public DateTime timestamp { get; set; }
 		}
 
-		public Tuple<bool, string> ARDValidation(Guid DocumentID) {
+		public Dictionary<string, string> ARDValidation(Guid DocumentID) {
 			string url = ConfigurationManager.AppSettings["ARDValidationURL"];
 			//string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_ZeroMinute/92C6C824-0F9A-4A5C-BC62-000095729E1B";
 			url = url + DocumentID.ToString(); ;
@@ -4265,7 +4268,9 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				}
 			}
 			bool hasNoError = true;
-			Tuple<bool, string> returnValue = new Tuple<bool, string>(true, "");
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = "T";
+			returnValue["Message"] = "";
 			System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder("ArdValidation: ");
 			if (result != null) {
 				foreach (var test in result.Results) {
@@ -4279,12 +4284,15 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 					}
 				}
 			} else {
-				return new Tuple<bool, string>(false, "ArdValidation did not run successfully");
+				returnValue["Success"] = "F";
+				returnValue["Message"] = "ArdValidation did not run successfully";
+				return returnValue;
 			}
 			if (hasNoError) {
 				errorBuilder = new System.Text.StringBuilder();
 			}
-			returnValue = new Tuple<bool, string>(hasNoError, errorBuilder.ToString());
+			returnValue["Success"] = hasNoError ? "T" : "F";
+			returnValue["Message"] = errorBuilder.ToString();
 			return returnValue;
 		}
 	
