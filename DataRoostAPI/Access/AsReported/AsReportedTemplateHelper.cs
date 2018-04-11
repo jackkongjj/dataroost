@@ -2938,7 +2938,7 @@ WHEN MATCHED THEN
       ,OrigLabel  = src.OrigLabel 
       ,Location  = src.Location 
       ,EndLocation  = src.EndLocation 
-      -- ,Parent  = src.Parent 
+      ,Parent  = TableDimension.Parent 
       ,InsertedRow  = src.InsertedRow 
       ,AdjustedOrder  = src.AdjustedOrder 
 WHEN NOT MATCHED THEN
@@ -2948,7 +2948,7 @@ WHEN NOT MATCHED THEN
       ,OrigLabel
       ,Location
       ,EndLocation
-      -- ,Parent
+      ,Parent
       ,InsertedRow
       ,AdjustedOrder) VALUES
 	  (
@@ -2958,7 +2958,7 @@ WHEN NOT MATCHED THEN
 ,src.OrigLabel
 ,src.Location
 ,src.EndLocation
---,src.Parent
+,src.Parent
 ,src.InsertedRow
 ,src.AdjustedOrder
 	  )
@@ -3030,7 +3030,7 @@ WHEN MATCHED THEN
       ,Currency = src.Currency
       ,CurrencyCode = src.CurrencyCode
       ,Cusip = src.Cusip
-      ,ScarUpdated = ScarUpdated
+      ,ScarUpdated = TableCell.ScarUpdated
       ,IsIncomePositive = src.IsIncomePositive
       ,DocumentId = src.DocumentId
       ,Label = src.Label
@@ -3141,6 +3141,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
 			ScarResult result = new ScarResult();
+			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
@@ -3158,7 +3159,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 				sb.AppendLine("select * from @ChangeResult");
 				sb.AppendLine();
 				sb.AppendLine("ROLLBACK TRAN");
-				result.Message = sb.ToString();
+				result.ReturnValue["DebugMessage"] += sb.ToString();
 
 //				return result;
 
@@ -3176,12 +3177,13 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 								sbRet.AppendLine(newline);
 							}
 							sbRet.AppendLine("}");
-							result.ReturnValue = new Tuple<bool, string>(true, sbRet.ToString());
+ 							result.ReturnValue["Success"] = "T";
+							result.ReturnValue["Message"] = sbRet.ToString();
 						}
 					}
 				}
 			} catch (Exception ex) {
-				result.Message += ex.Message;
+				result.ReturnValue["DebugMessage"] += ex.Message;
 
 			}
 			return result;
@@ -4374,9 +4376,10 @@ END CATCH
 						reader.Read();
 						int success = reader.GetInt32(0);
 						if (success == 1) {
-							result.ReturnValue = new Tuple<bool, string>(true, "");   //json parse "true" as False????
+							result.ReturnValue["Success"] = "T";
+
 						} else {
-							result.ReturnValue = new Tuple<bool,string>(false, "error updating. record rollbackedback");
+							result.ReturnValue["Success"] = "F";
 						}
 					}
 
@@ -4881,7 +4884,7 @@ END
 		#endregion
 
 		#region Zero-Minute Update
-		public Tuple<bool, string> UpdateRedStarSlotting(Guid SFDocumentId) {
+		public Dictionary<string, string> UpdateRedStarSlotting(Guid SFDocumentId) {
 			string query = @"
 SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
 FROM StaticHierarchy sh (nolock)
@@ -4937,7 +4940,10 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 				isSuccess = false;
 				returnMessage = "Exception occured during RedStar slotting";
 			}
-			return new Tuple<bool, string>(isSuccess, returnMessage);
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = isSuccess ? "T" : "F";
+			returnValue["Message"] = returnMessage;
+			return returnValue;
 		}
 
 		public string GetDocumentIsoCountry(Guid SFDocumentId) {
@@ -4970,20 +4976,20 @@ WHERE d.ID = @SFDocumentID
  VALUES 
  ('IS'), ('BS'), ('CF')
 
- SELECT 'Missing Table. ' as Error, *
+ SELECT TOP 1 'Missing Table. ' as Error, *
  FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  RIGHT JOIN @BigThree bt on bt.Description = tt.description
  where dt.DocumentID = @DocumentId and tt.description is null
 
 
- SELECT  'Missing InterimType. ' as Error, * 
+ SELECT TOP 1 'Missing InterimType. ' as Error, * 
  FROM DocumentTimeSlice dts
  JOIN DocumentTimeSliceTableCell dtstc on dtstc.DocumentTimeSliceId = dts.Id
  JOIN TableCell tc ON dtstc.TableCellID = tc.id
   where dts.DocumentID = @DocumentId and dts.PeriodType is null
 
- SELECT  'Missing InterimType. ' as Error, * 
+ SELECT TOP 1 'Missing InterimType. ' as Error, * 
   FROM DocumentTable dt
  JOIN TableType tt ON dt.TableTypeID = tt.id
  JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
@@ -5003,7 +5009,7 @@ WHERE d.ID = @SFDocumentID
  JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
  where dt.DocumentID = @DocumentId 
 )
- SELECT  'Missing Currency. ' as Error, * 
+ SELECT TOP 1 'Missing Currency. ' as Error, * 
  FROM cte
  JOIN TableCell tc ON cte.id = tc.id 
  where  tc.currencycode is null
@@ -5376,7 +5382,8 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			public DateTime timestamp { get; set; }
 		}
 
-		public Tuple<bool, string> ARDValidation(Guid DocumentID) {
+		public Dictionary<string, string> ARDValidation(Guid DocumentID) {
+
 			string url = ConfigurationManager.AppSettings["ARDValidationURL"];
 			//string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/SCAR_ZeroMinute/92C6C824-0F9A-4A5C-BC62-000095729E1B";
 			url = url + DocumentID.ToString(); ;
@@ -5395,7 +5402,9 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				}
 			}
 			bool hasNoError = true;
-			Tuple<bool, string> returnValue = new Tuple<bool, string>(true, "");
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = "T";
+			returnValue["Message"] = "";
 			System.Text.StringBuilder errorBuilder = new System.Text.StringBuilder("ArdValidation: ");
 			if (result != null) {
 				foreach (var test in result.Results) {
@@ -5409,12 +5418,15 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 					}
 				}
 			} else {
-				return new Tuple<bool, string>(false, "ArdValidation did not run successfully");
+				returnValue["Success"] = "F";
+				returnValue["Message"] = "ArdValidation did not run successfully";
+				return returnValue;
 			}
 			if (hasNoError) {
 				errorBuilder = new System.Text.StringBuilder();
 			}
-			returnValue = new Tuple<bool, string>(hasNoError, errorBuilder.ToString());
+			returnValue["Success"] = hasNoError ? "T" : "F";
+			returnValue["Message"] = errorBuilder.ToString();
 			return returnValue;
 		}
 	
