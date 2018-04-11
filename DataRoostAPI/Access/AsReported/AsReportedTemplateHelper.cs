@@ -10,6 +10,7 @@ using System.Web;
 using DataRoostAPI.Common.Models.AsReported;
 using FactSet.Data.SqlClient;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
@@ -2891,9 +2892,14 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id INTO @ChangeResult;
 			private JArray _jarray;
 			public JsonToSQLCompanyFinancialTerm(JToken jToken) : base("")
 			{
-				_jarray = (JArray)jToken.SelectToken("") ;
+				if (jToken == null) {
+					_jarray = null;
+				} else {
+					_jarray = (JArray)jToken.SelectToken("");
+				}
 			}
 			public override string Translate() {
+				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
@@ -2977,9 +2983,14 @@ OUTPUT $action, 'TableDimension', inserted.Id INTO @ChangeResult;
 			public JsonToSQLTableDimension(string dimensionTableId, JToken jToken)
 				: base("") {
 					_dimensionTableId = dimensionTableId;
-				_jarray = (JArray)jToken.SelectToken("");
+					if (jToken == null) {
+						_jarray = null;
+					} else {
+						_jarray = (JArray)jToken.SelectToken("");
+					}
 			}
 			public override string Translate() {
+				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
@@ -3107,13 +3118,19 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 			private JArray _jarray;
 			public JsonToSQLTableCell(JToken jToken)
 				: base("") {
-				_jarray = (JArray)jToken.SelectToken("");
+					if (jToken == null) {
+						_jarray = null;
+					} else {
+						_jarray = (JArray)jToken.SelectToken("");
+					}
 			}
 			public override string Translate() {
+				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
 				foreach (var elem in _jarray) {
+					if (elem == null) continue;
 					try {
 						var s = elem["obj"]["Offset"].AsString();
 						if (elem["action"].ToString() == "delete") {
@@ -3190,6 +3207,9 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 
 			try {
 				JObject json = JObject.Parse(updateInJson);
+				string unquotedJson = updateInJson.Replace("\"", "").Replace("'", "");
+				int totalUpdates = new Regex(Regex.Escape("action: update")).Matches(unquotedJson).Count;
+				int totalInsert =  new Regex(Regex.Escape("action: insert")).Matches(unquotedJson).Count;
 				var cft = json["CompanyFinancialTerm"];
 				var tabledimension = json["TableDimension"];
 				var tablecell = json["TableCell"];
@@ -3198,9 +3218,11 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
-				sb.AppendLine("select * from @ChangeResult");
+				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
+				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
+				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
 				sb.AppendLine();
-				sb.AppendLine("ROLLBACK TRAN");
+				sb.AppendLine(string.Format("IF (@totalInsert = {0} and @totalUpdate = {1}) BEGIN select 'commit'; ROLLBACK TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
 				result.ReturnValue["DebugMessage"] += sb.ToString();
 
 //				return result;
@@ -3219,7 +3241,13 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 								sbRet.AppendLine(newline);
 							}
 							sbRet.AppendLine("}");
- 							result.ReturnValue["Success"] = "T";
+							if (reader.NextResult() && reader.Read()) {
+								if (reader.GetStringSafe(0) == "commit") {
+									result.ReturnValue["Success"] = "T";
+								} else {
+									result.ReturnValue["Success"] = "F";
+								}
+							}
 							result.ReturnValue["Message"] = sbRet.ToString();
 						}
 					}
