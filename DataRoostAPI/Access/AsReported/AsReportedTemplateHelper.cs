@@ -2910,8 +2910,15 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id INTO @ChangeResult;
 								elem["obj"]["EncoreTermFlag"].ToString(),
 								"0" // manual falg
 								));
-						} else if (elem["action"].ToString() == "add") {
-
+						} else if (elem["action"].ToString() == "insert") {
+								sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),   
+								elem["obj"]["DocumentSeries"]["ID"].ToString(),   
+								elem["obj"]["TermStatusID"].AsValue(),
+								elem["obj"]["Description"].AsString(), 
+  							(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["EncoreTermFlag"].ToString(),
+								"0" // manual falg
+								));
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(ex.Message);
@@ -2992,8 +2999,18 @@ OUTPUT $action, 'TableDimension', inserted.Id INTO @ChangeResult;
 								(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
 								elem["obj"]["AdjustedOrder"].AsValue()
 								));
-						} else if (elem["action"].ToString() == "add") {
-							
+						} else if (elem["action"].ToString() == "insert") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							_dimensionTableId,
+							elem["obj"]["DimensionTypeId"].AsValue(),
+							elem["obj"]["Label"].AsString(),
+							elem["obj"]["OrigLabel"].AsString(),
+							elem["obj"]["Location"].AsValue(),
+							elem["obj"]["EndLocation"].AsValue(),
+							"NULL", //Parent
+							(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+							elem["obj"]["AdjustedOrder"].AsValue()
+							));
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
@@ -3127,7 +3144,32 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 								elem["obj"]["Label"].AsString(),
 								elem["obj"]["XBRLTag"].AsString()
 								));
-						} else if (elem["action"].ToString() == "add") {
+						} else if (elem["action"].ToString() == "insert") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							elem["obj"]["Offset"].AsString(),
+							elem["obj"]["CellPeriodType"].AsString(),
+							elem["obj"]["PeriodTypeID"].AsString(),
+							elem["obj"]["CellPeriodCount"].AsString(),
+							elem["obj"]["PeriodLength"].AsValue(),
+							elem["obj"]["CellDay"].AsString(),
+							elem["obj"]["CellMonth"].AsString(),
+							elem["obj"]["CellYear"].AsString(),
+							elem["obj"]["CellDate"].AsString(),
+							elem["obj"]["Value"].AsString(),
+							elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+							elem["obj"]["ValueNumeric"].AsValue(),
+							elem["obj"]["NormalizedNegativeIndicator"].AsBoolean(),
+							elem["obj"]["ScalingFactorID"].AsString(),
+							elem["obj"]["AsReportedScalingFactor"].AsString(),
+							elem["obj"]["Currency"].AsString(),
+							elem["obj"]["CurrencyCode"].AsString(),
+							elem["obj"]["Cusip"].AsString(),
+							"0",
+							elem["obj"]["IsIncomePositive"].AsBoolean(),
+							elem["obj"]["DocumentId"].AsString(),
+							elem["obj"]["Label"].AsString(),
+							elem["obj"]["XBRLTag"].AsString()
+							));
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(ex.Message);

@@ -148,10 +148,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UpdateStaticHierarchySwitchChildrenOrientation(id);
 		}
-
+		
 		[Route("staticHierarchy/{id}/dragdrop/{targetId}/{location}")]
 		[HttpPut]
-		public ScarResult EditHierarchyLabel(string CompanyId, int id, int targetId, string location) {
+		public ScarResult DragDropStaticHierarchyLabel(string CompanyId, int id, int targetId, string location) {
 			if (string.IsNullOrEmpty(location))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
@@ -591,6 +591,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 
 			return helper.UpdateTableColumnMetaInterimType(id, newValue);
+		}
+		[Route("tdp/{TemplateName}/{DocumentId}")]
+		[HttpGet]
+		public ScarResult GetTDP(string CompanyId, string TemplateName, Guid DocumentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 		}
 		[Route("tdp/{id}")]
 		[HttpPost]
