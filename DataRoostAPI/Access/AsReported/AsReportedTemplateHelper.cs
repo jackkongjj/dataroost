@@ -3231,16 +3231,15 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
 						conn.Open();
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
-							System.Text.StringBuilder sbRet = new System.Text.StringBuilder();
-							sbRet.AppendLine("{");
+							List<object> aList = new List<object>();
+
 							while (reader.Read()) {
 								var changeType = reader.GetStringSafe(0);
 								var tableType = reader.GetStringSafe(1);
 								var Id = reader.GetInt32(2);
-								var newline = string.Format(@"{{'changeType':'{0}', 'tableType':'{1}', 'id':{2} }}", changeType, tableType, Id);
-								sbRet.AppendLine(newline);
+								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
+								aList.Add(new {ChangeType = changeType, TableType = tableType, Id = Id});
 							}
-							sbRet.AppendLine("}");
 							if (reader.NextResult() && reader.Read()) {
 								if (reader.GetStringSafe(0) == "commit") {
 									result.ReturnValue["Success"] = "T";
@@ -3248,7 +3247,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 									result.ReturnValue["Success"] = "F";
 								}
 							}
-							result.ReturnValue["Message"] = sbRet.ToString();
+							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented );
 						}
 					}
 				}
