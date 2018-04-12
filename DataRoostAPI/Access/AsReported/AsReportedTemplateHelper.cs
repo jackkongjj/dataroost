@@ -3237,7 +3237,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 								var changeType = reader.GetStringSafe(0);
 								var tableType = reader.GetStringSafe(1);
 								var Id = reader.GetInt32(2);
-								var newline = string.Format(@"{{'changeType':'{0}', 'tableType':'{1}', 'tableType':{2} }}", changeType, tableType, Id);
+								var newline = string.Format(@"{{'changeType':'{0}', 'tableType':'{1}', 'id':{2} }}", changeType, tableType, Id);
 								sbRet.AppendLine(newline);
 							}
 							sbRet.AppendLine("}");
