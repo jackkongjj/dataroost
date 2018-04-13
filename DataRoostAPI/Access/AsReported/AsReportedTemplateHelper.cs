@@ -3198,6 +3198,62 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 
 		}
 
+		public class JsonToSQLDimensionToCell : JsonToSQL {
+			string delete_sql = @"
+DELETE FROM DimensionToCell 
+where TableDimensionID = {0} and TableCellID = {1});
+			
+				";
+			string merge_sql = @"MERGE DimensionToCell
+USING (VALUES ({0}, {1}) as src ( TableDimensionID,TableCellID)
+ON DimensionToCell.TableDimensionID = src.ID AND DimensionToCell.TableCellID = src.TableCellID
+WHEN MATCHED THEN
+	UPDATE SET TableCellID =  DimensionToCell.TableCellID
+WHEN NOT MATCHED THEN
+	INSERT ( TableDimensionID
+      ,TableCellID
+      ) VALUES
+	  (
+	    src.TableDimensionID
+      ,src.TableCellID
+	  )
+OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
+
+";
+			private JArray _jarray;
+			private string _dimensionTableId;
+			public JsonToSQLDimensionToCell(string dimensionTableId, JToken jToken)
+				: base("") {
+				if (jToken == null) {
+					_jarray = null;
+				} else {
+					_jarray = (JArray)jToken.SelectToken("");
+				}
+			}
+			public override string Translate() {
+				if (_jarray == null) return "";
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, _dimensionTableId, elem["obj"]["TableCell"]["ID"].ToString()));
+						} else if (elem["action"].ToString() == "update") { // we still need this to pass the UpdateCheck
+							sb.AppendLine(string.Format(merge_sql, _dimensionTableId, elem["obj"]["TableCell"]["ID"].ToString()));
+						} else if (elem["action"].ToString() == "insert") {
+							sb.AppendLine(string.Format(merge_sql, _dimensionTableId, elem["obj"]["TableCell"]["ID"].ToString()));
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(ex.Message);
+					}
+				}
+
+				return sb.ToString(); ;
+			}
+
+		}
+
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
@@ -3214,10 +3270,12 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 				var tabledimension = json["TableDimension"];
 				var tablecell = json["TableCell"];
 				var documentTable = json["DobumenTable"]; // typo in json
+				var dimensionToCel = json["DimensionToCell"];
 				string test = cft.GetType().ToString();
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
+				sb.AppendLine(new JsonToSQLDimensionToCell(dtid, dimensionToCel).Translate());
 				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
