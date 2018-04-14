@@ -3811,8 +3811,12 @@ EXEC SCARGetTableCellMTMW_GetFirstMTMWParent @SHCells
 INSERT INTO @SHCellsMTMW
 EXEC SCARGetTableCellMTMWCalc @SHParentCells
 
+DECLARE @SHSibilingCells CellList
+INSERT INTO @SHSibilingCells
+EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @SHCells, @DocumentID
+
 INSERT INTO @SHCellsLPV
-EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
+EXEC SCARGetTableCellLikePeriod_ByTableCell @SHSibilingCells, @DocumentID
 
 INSERT @SHCellsError 
 SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
@@ -3998,8 +4002,13 @@ EXEC SCARGetTableCellMTMW_GetFirstMTMWParent @SHCells
 INSERT INTO @SHCellsMTMW
 EXEC SCARGetTableCellMTMWCalc @SHParentCells
 
+DECLARE @SHSibilingCells CellList
+INSERT INTO @SHSibilingCells
+EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @SHCells, @DocumentID
+
+
 INSERT INTO @SHCellsLPV
-EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
+EXEC SCARGetTableCellLikePeriod @SHSibilingCells, @DocumentID
 
 INSERT @SHCellsError 
 SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
@@ -4166,7 +4175,7 @@ INSERT INTO @SHCellsMTMW
 EXEC SCARGetTableCellMTMWCalc @SHParentCells
 
 INSERT INTO @SHCellsLPV
-EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
+EXEC SCARGetTableCellLikePeriod_ByTableCell @SHCells, @DocumentID
 
 INSERT @SHCellsError 
 SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
@@ -4344,7 +4353,7 @@ INSERT INTO @SHCellsMTMW
 EXEC SCARGetTableCellMTMWCalc @SHParentCells
 
 INSERT INTO @SHCellsLPV
-EXEC SCARGetTableCellLikePeriod @SHCells, @DocumentID
+EXEC SCARGetTableCellLikePeriod_ByTableCell @SHCells, @DocumentID
 
 INSERT @SHCellsError 
 SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
@@ -5031,6 +5040,7 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 
 					using (SqlCommand cmd = new SqlCommand("prcUpd_FFDocHist_UpdateAdjustRedStar", sqlConn)) {
 						cmd.CommandType = CommandType.StoredProcedure;
+						cmd.CommandTimeout = 300;
 
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = SFDocumentId;
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
