@@ -625,6 +625,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 			return result;
 		}
+
+		[Route("tdp/{id}")]
+		[HttpDelete]
+		public ScarResult DeleteTDP(string id) {
+			ScarResult result = new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+
+			result = helper.DeleteDocumentTableID(id);
+			return result;
+		}
+
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {

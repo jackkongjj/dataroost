@@ -3316,6 +3316,47 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 			return result;
 		}
 
+		public ScarResult DeleteDocumentTableID(string dtid) {
+			string SQL_Delete = @"
+BEGIN TRY
+	BEGIN TRAN
+			delete from DimensionToCell where TableDimensionID in
+			(select id from TableDimension where DocumentTableID = @id);
+
+			delete from tabledimension where DocumentTableID = @id;
+
+			delete from documenttable where id = @id;
+		COMMIT 
+		select 1
+END TRY
+BEGIN CATCH
+	ROLLBACK;
+  select 0;
+END CATCH
+
+
+
+";
+			ScarResult result = new ScarResult();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(SQL_Delete, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@id", dtid);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+						int success = reader.GetInt32(0);
+						if (success == 1) {
+							result.ReturnValue["Success"] = "T";
+
+						} else {
+							result.ReturnValue["Success"] = "F";
+						}
+					}
+				}
+			}
+			return result;
+		}
 		public ScarResult UpdateTDP(string id, string newValue, bool obselete) {
 			string SQL_MergeCft = @"
 
@@ -4522,7 +4563,6 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
 	ROLLBACK;
-	throw;
 	select 0
 END CATCH
 ";
