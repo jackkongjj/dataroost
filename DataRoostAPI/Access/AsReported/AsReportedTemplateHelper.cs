@@ -3205,8 +3205,8 @@ where TableDimensionID = {0} and TableCellID = {1});
 			
 				";
 			string merge_sql = @"MERGE DimensionToCell
-USING (VALUES ({0}, {1}) as src ( TableDimensionID,TableCellID)
-ON DimensionToCell.TableDimensionID = src.ID AND DimensionToCell.TableCellID = src.TableCellID
+USING (VALUES ({0}, {1})) as src ( TableDimensionID,TableCellID)
+ON DimensionToCell.TableDimensionID = src.TableDimensionID AND DimensionToCell.TableCellID = src.TableCellID
 WHEN MATCHED THEN
 	UPDATE SET TableCellID =  DimensionToCell.TableCellID
 WHEN NOT MATCHED THEN
@@ -3224,6 +3224,7 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 			private string _dimensionTableId;
 			public JsonToSQLDimensionToCell(string dimensionTableId, JToken jToken)
 				: base("") {
+					_dimensionTableId = dimensionTableId;
 				if (jToken == null) {
 					_jarray = null;
 				} else {
@@ -3238,11 +3239,11 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, _dimensionTableId, elem["obj"]["TableCell"]["ID"].ToString()));
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
 						} else if (elem["action"].ToString() == "update") { // we still need this to pass the UpdateCheck
-							sb.AppendLine(string.Format(merge_sql, _dimensionTableId, elem["obj"]["TableCell"]["ID"].ToString()));
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, _dimensionTableId, elem["obj"]["TableCell"]["ID"].ToString()));
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(ex.Message);
