@@ -3271,7 +3271,6 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 				var tablecell = json["TableCell"];
 				var documentTable = json["DobumenTable"]; // typo in json
 				var dimensionToCel = json["DimensionToCell"];
-				string test = cft.GetType().ToString();
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
