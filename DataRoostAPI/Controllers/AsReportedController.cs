@@ -697,7 +697,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
+			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 		}
 
 		public class StitchInput {
@@ -707,6 +707,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		public class UnStitchInput {
 			public int TargetStaticHierarchyID { get; set; }
+			public List<int> DocumentTimeSliceIDs { get; set; }
 		}
 
 		public class ScarInput {

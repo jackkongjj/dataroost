@@ -4759,7 +4759,13 @@ END CATCH
 			return res;
 		}
 
-		public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum) {
+		public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs) {
+
+			DataTable dt = new DataTable();
+			dt.Columns.Add("DocumentTimeSliceID", typeof(Int32));
+			foreach (int i in DocumentTimeSliceIDs) {
+				dt.Rows.Add(i);
+			}
 
 			UnStitchResult res = new UnStitchResult()
 			{
@@ -4779,6 +4785,7 @@ END CATCH
 					cmd.Parameters.AddWithValue("@TargetSH", StaticHierarchyID);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					cmd.Parameters.AddWithValue("@Iconum", Iconum);
+					cmd.Parameters.AddWithValue("@DocumentTimeSliceList", dt);
 
 
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
