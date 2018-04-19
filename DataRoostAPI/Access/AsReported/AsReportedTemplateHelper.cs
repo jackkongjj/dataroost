@@ -3132,7 +3132,6 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 				foreach (var elem in _jarray) {
 					if (elem == null) continue;
 					try {
-						var s = elem["obj"]["Offset"].AsString();
 						if (elem["action"].ToString() == "delete") {
 							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
@@ -5640,7 +5639,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 	public static class JValueExtension {
 		public static string AsString(this JToken jValue) {
 			string jString = jValue.ToString();
-			string result = "";
+			string result = "''";
 			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase)) {
 				result = "NULL";
 			} else {
@@ -5655,6 +5654,9 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				result = "NULL";
 			} else {
 				result = jString;
+			}
+			if (string.IsNullOrWhiteSpace(result)) {
+				result = "NULL";
 			}
 			return result;
 		}
