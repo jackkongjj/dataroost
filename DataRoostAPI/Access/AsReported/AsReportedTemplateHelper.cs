@@ -2763,7 +2763,7 @@ SELECT * from DocumentTimeSlice where id = @id and PeriodType = @newValue;
 			sh.Description = @"";
 			sh.Cells = new List<SCARAPITableCell>();
 			response.ReturnValue = new Dictionary<string, string>();
-			result.ReturnValue["Success"] = "F";
+			response.ReturnValue["Success"] = "F";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -2772,7 +2772,7 @@ SELECT * from DocumentTimeSlice where id = @id and PeriodType = @newValue;
 					cmd.Parameters.AddWithValue("@newDtsID", newValue);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
-							result.ReturnValue["Success"] = "T";
+							response.ReturnValue["Success"] = "T";
 						}
 					}
 				}
@@ -2888,7 +2888,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
 			sh.Description = @"";
 			sh.Cells = new List<SCARAPITableCell>();
 			response.ReturnValue = new Dictionary<string,string>();
-			result.ReturnValue["Success"] = "F";
+			response.ReturnValue["Success"] = "F";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -2897,7 +2897,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
 					cmd.Parameters.AddWithValue("@newDtsID", newValue);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
-							result.ReturnValue["Success"] = "T";
+							response.ReturnValue["Success"] = "T";
 						}
 					}
 				}
@@ -2924,7 +2924,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
 			sh.Description = @"";
 			sh.Cells = new List<SCARAPITableCell>();
 			response.ReturnValue = new Dictionary<string, string>();
-			result.ReturnValue["Success"] = "F";
+			response.ReturnValue["Success"] = "F";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -2933,7 +2933,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
 					cmd.Parameters.AddWithValue("@newDtsID", newValue);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
-							result.ReturnValue["Success"] = "T";
+							response.ReturnValue["Success"] = "T";
 						}
 					}
 				}
@@ -2959,7 +2959,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @oldDtsID
 			sh.Description = @"";
 			sh.Cells = new List<SCARAPITableCell>();
 			response.ReturnValue = new Dictionary<string, string>();
-			result.ReturnValue["Success"] = "T";
+			response.ReturnValue["Success"] = "T";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -2967,7 +2967,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @oldDtsID
 					cmd.Parameters.AddWithValue("@oldDtsID", id);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						if (reader.Read()) {
-							result.ReturnValue["Success"] = "F";
+							response.ReturnValue["Success"] = "F";
 						}
 					}
 				}
