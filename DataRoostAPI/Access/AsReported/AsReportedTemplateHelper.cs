@@ -2745,6 +2745,42 @@ where dtc.TableCellID = @id
 		}
 
 		public ScarResult UpdateTableColumnMetaInterimType(string id, string newValue) {
+
+			string query = @"
+
+UPDATE DocumentTimeSlice SET PeriodType = @newValue
+where id = @id
+
+SELECT * from DocumentTimeSlice where id = @id and PeriodType = @newValue;
+
+";
+
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			response.ReturnValue = new Dictionary<string, string>();
+			result.ReturnValue["Success"] = "F";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@oldDtsID", id);
+					cmd.Parameters.AddWithValue("@newDtsID", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							result.ReturnValue["Success"] = "T";
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateTableColumnMetaInterimType(string id, string newValue, bool obselete) {
 			// TODO:
 			// need to handle "--" interim type
 			string query = @"
@@ -2826,6 +2862,112 @@ where dtc.TableCellID = @id
 								cell.Label = reader.GetStringSafe(24);
 								sh.Cells.Add(cell);
 							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+
+		public ScarResult UpdateDocumentTimeSliceTableCell(string id, string newValue) {
+
+			string query = @"
+
+UPDATE DocumentTimeSliceTableCell 
+SET DocumentTimeSliceId = @newDtsID WHERE DocumentTimeSliceId = @oldDtsID
+
+SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
+";
+
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			response.ReturnValue = new Dictionary<string,string>();
+			result.ReturnValue["Success"] = "F";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@oldDtsID", id);
+					cmd.Parameters.AddWithValue("@newDtsID", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							result.ReturnValue["Success"] = "T";
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult CopyDocumentTimeSliceTableCell(string id, string newValue) {
+
+			string query = @"
+
+INSERT DocumentTimeSliceTableCell
+SELECT @newDtsID, TableCellId FROM  DocumentTimeSliceTableCell
+ WHERE DocumentTimeSliceId = @oldDtsID
+
+SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
+";
+
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			response.ReturnValue = new Dictionary<string, string>();
+			result.ReturnValue["Success"] = "F";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@oldDtsID", id);
+					cmd.Parameters.AddWithValue("@newDtsID", newValue);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							result.ReturnValue["Success"] = "T";
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult DeleteDocumentTimeSliceTableCell(string id, string newValue) {
+
+			string query = @"
+
+DELETE FROM  DocumentTimeSliceTableCell
+ WHERE DocumentTimeSliceId = @oldDtsID
+
+SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @oldDtsID
+";
+
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var sh = new StaticHierarchy();
+			response.StaticHierarchies.Add(sh);
+			sh.Description = @"";
+			sh.Cells = new List<SCARAPITableCell>();
+			response.ReturnValue = new Dictionary<string, string>();
+			result.ReturnValue["Success"] = "T";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@oldDtsID", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							result.ReturnValue["Success"] = "F";
 						}
 					}
 				}
