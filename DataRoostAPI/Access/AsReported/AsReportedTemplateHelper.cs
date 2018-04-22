@@ -3396,6 +3396,181 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 
 		}
 
+		public class JsonToSQLDocumentTimeSlice : JsonToSQL {
+			string delete_sql = @"
+DELETE FROM DocumentTimeSlice where id = {0};
+";
+			string merge_sql = @"MERGE DocumentTimeSlice
+USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18} )) as src (Id,DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet)
+ON DocumentTimeSlice.id = src.ID
+WHEN MATCHED THEN
+	UPDATE SET DocumentId = src.DocumentId
+      ,DocumentSeriesId = src.DocumentSeriesId
+      ,TimeSlicePeriodEndDate = src.TimeSlicePeriodEndDate
+      ,ReportingPeriodEndDate = src.ReportingPeriodEndDate
+      ,FiscalDistance = src.FiscalDistance
+      ,Duration = src.Duration
+      ,PeriodType = src.PeriodType
+      ,AcquisitionFlag = src.AcquisitionFlag
+      ,AccountingStandard = src.AccountingStandard
+      ,ConsolidatedFlag = src.ConsolidatedFlag
+      ,IsProForma = src.IsProForma
+      ,IsRecap = src.IsRecap
+      ,CompanyFiscalYear = src.CompanyFiscalYear
+      ,ReportType = src.ReportType
+      ,IsAmended = src.IsAmended
+      ,IsRestated = src.IsRestated
+      ,IsAutoCalc = src.IsAutoCalc
+      ,ManualOrgSet = src.ManualOrgSet
+WHEN NOT MATCHED THEN
+	INSERT (DocumentId
+,DocumentSeriesId
+,TimeSlicePeriodEndDate
+,ReportingPeriodEndDate
+,FiscalDistance
+,Duration
+,PeriodType
+,AcquisitionFlag
+,AccountingStandard
+,ConsolidatedFlag
+,IsProForma
+,IsRecap
+,CompanyFiscalYear
+,ReportType
+,IsAmended
+,IsRestated
+,IsAutoCalc
+,ManualOrgSet) VALUES
+	  (
+src.DocumentId 
+,src.DocumentSeriesId 
+,src.TimeSlicePeriodEndDate 
+,src.ReportingPeriodEndDate 
+,src.FiscalDistance 
+,src.Duration 
+,src.PeriodType 
+,src.AcquisitionFlag 
+,src.AccountingStandard 
+,src.ConsolidatedFlag 
+,src.IsProForma 
+,src.IsRecap 
+,src.CompanyFiscalYear 
+,src.ReportType 
+,src.IsAmended 
+,src.IsRestated 
+,src.IsAutoCalc 
+,src.ManualOrgSet 
+	  )
+OUTPUT $action, 'DocumentTimeSlice', inserted.Id INTO @ChangeResult;
+
+";
+			private JArray _jarray;
+			private string _dimensionTableId;
+			public JsonToSQLDocumentTimeSlice(JToken jToken)
+				: base("") {
+				if (jToken == null) {
+					_jarray = null;
+				} else {
+					_jarray = (JArray)jToken.SelectToken("");
+				}
+			}
+			public override string Translate() {
+				if (_jarray == null) return "";
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Document"]["ID"].AsString(),
+								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+								elem["obj"]["ReportingPeriodEndDate"].AsString(),
+								elem["obj"]["FiscalDistance"].AsValue(),
+								elem["obj"]["Duration"].AsValue(),
+								elem["obj"]["PeriodType"].AsString(),
+								elem["obj"]["AcquisitionFlag"].AsString(),
+								elem["obj"]["AccountingStandard"].AsString(),
+								elem["obj"]["ConsolidatedFlag"].AsString(),
+								elem["obj"]["IsProForma"].AsBoolean(),
+								elem["obj"]["IsRecap"].AsBoolean(),
+								elem["obj"]["CompanyFiscalYear"].AsValue(),
+								elem["obj"]["ReportStatus"].AsString(),
+								elem["obj"]["IsAmended"].AsBoolean(),
+								elem["obj"]["IsRestated"].AsBoolean(),
+								elem["obj"]["IsAutoCalc"].AsBoolean(),
+								elem["obj"]["ManualOrgSet"].AsBoolean()
+								));
+						} else if (elem["action"].ToString() == "insert") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Document"]["ID"].AsString(),
+								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+								elem["obj"]["ReportingPeriodEndDate"].AsString(),
+								elem["obj"]["FiscalDistance"].AsValue(),
+								elem["obj"]["Duration"].AsValue(),
+								elem["obj"]["PeriodType"].AsString(),
+								elem["obj"]["AcquisitionFlag"].AsString(),
+								elem["obj"]["AccountingStandard"].AsString(),
+								elem["obj"]["ConsolidatedFlag"].AsString(),
+								elem["obj"]["IsProForma"].AsBoolean(),
+								elem["obj"]["IsRecap"].AsBoolean(),
+								elem["obj"]["CompanyFiscalYear"].AsValue(),
+								elem["obj"]["ReportStatus"].AsString(),
+								elem["obj"]["IsAmended"].AsBoolean(),
+								elem["obj"]["IsRestated"].AsBoolean(),
+								elem["obj"]["IsAutoCalc"].AsBoolean(),
+								elem["obj"]["ManualOrgSet"].AsBoolean()
+								));
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+					}
+				}
+
+				return sb.ToString(); ;
+			}
+
+			public string TranslateInsert() {
+				if (_jarray == null) return "";
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						if (elem["action"].ToString() == "insert" || elem["action"].ToString() == null) {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+	elem["obj"]["Document"]["ID"].AsString(),
+	elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+	elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+	elem["obj"]["ReportingPeriodEndDate"].AsString(),
+	elem["obj"]["FiscalDistance"].AsValue(),
+	elem["obj"]["Duration"].AsValue(),
+	elem["obj"]["PeriodType"].AsString(),
+	elem["obj"]["AcquisitionFlag"].AsString(),
+	elem["obj"]["AccountingStandard"].AsString(),
+	elem["obj"]["ConsolidatedFlag"].AsString(),
+	elem["obj"]["IsProForma"].AsBoolean(),
+	elem["obj"]["IsRecap"].AsBoolean(),
+	elem["obj"]["CompanyFiscalYear"].AsValue(),
+	elem["obj"]["ReportStatus"].AsString(),
+	elem["obj"]["IsAmended"].AsBoolean(),
+	elem["obj"]["IsRestated"].AsBoolean(),
+	elem["obj"]["IsAutoCalc"].AsBoolean(),
+	elem["obj"]["ManualOrgSet"].AsBoolean()
+	));
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+					}
+				}
+
+				return sb.ToString(); ;
+			}
+		}
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
@@ -3413,10 +3588,12 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 				var tablecell = json["TableCell"];
 				var documentTable = json["DobumenTable"]; // typo in json
 				var dimensionToCel = json["DimensionToCell"];
+				var documentTimeSlice = json["DocumentTimeSlice"];
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
 				sb.AppendLine(new JsonToSQLDimensionToCell(dtid, dimensionToCel).Translate());
+				sb.AppendLine(new JsonToSQLDocumentTimeSlice(documentTimeSlice).Translate());
 				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
@@ -3586,6 +3763,60 @@ where dtc.TableCellID = @id
 			return response;
 		}
 
+
+		public ScarResult CreateTimeSlice(string updateInJson) {
+			ScarResult result = new ScarResult();
+			result.ReturnValue["DebugMessage"] = "";
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine("BEGIN TRAN");
+			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
+
+			try {
+				JObject json = JObject.Parse(updateInJson);
+				string unquotedJson = updateInJson.Replace("\"", "").Replace("'", "");
+				int totalUpdates = new Regex(Regex.Escape("action: update")).Matches(unquotedJson).Count;
+				int totalInsert = new Regex(Regex.Escape("action: insert")).Matches(unquotedJson).Count;
+				var documentTimeSlice = json["DocumentTimeSlice"];
+				sb.AppendLine(new JsonToSQLDocumentTimeSlice(documentTimeSlice).TranslateInsert());
+				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
+				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
+				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
+				sb.AppendLine();
+				sb.AppendLine(string.Format("IF (1=0) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				result.ReturnValue["DebugMessage"] += sb.ToString();
+
+				//				return result;
+
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
+						conn.Open();
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							List<object> aList = new List<object>();
+
+							while (reader.Read()) {
+								var changeType = reader.GetStringSafe(0);
+								var tableType = reader.GetStringSafe(1);
+								var Id = reader.GetInt32(2);
+								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
+								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id });
+							}
+							if (reader.NextResult() && reader.Read()) {
+								if (reader.GetStringSafe(0) == "commit") {
+									result.ReturnValue["Success"] = "T";
+								} else {
+									result.ReturnValue["Success"] = "F";
+								}
+							}
+							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
+						}
+					}
+				}
+			} catch (Exception ex) {
+				result.ReturnValue["DebugMessage"] += ex.Message;
+
+			}
+			return result;
+		}
 
 		public ScarResult CloneUpdateTimeSlice(int id, string InterimType) {
 
