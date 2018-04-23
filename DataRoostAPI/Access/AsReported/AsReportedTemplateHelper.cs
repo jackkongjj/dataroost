@@ -508,14 +508,23 @@ WHERE  CompanyID = @Iconum";
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
 
-						if (child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6 && child.UnitTypeId != 2) {
+
+						if (
+							(((child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
+								|| ((child.StaticHierarchyMetaId == 2 || child.StaticHierarchyMetaId == 5 || child.StaticHierarchyMetaId == 6) && child.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
+							&& child.UnitTypeId != 2
+							) {
 							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, IsSummaryLookup, ref subChildren, timeSlices);
 							if (subChildren)
 								hasChildren = true;
 
 						}
 					}
-					if (SHChildLookup[sh.Id].Where(c => c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6 && c.UnitTypeId != 2).Count() > 0) {
+					if (SHChildLookup[sh.Id].Where(c =>
+						(((c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
+								|| ((c.StaticHierarchyMetaId == 2 || c.StaticHierarchyMetaId == 5 || c.StaticHierarchyMetaId == 6) && c.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
+							&& c.UnitTypeId != 2
+						).Count() > 0) {
 						if (!cell.ValueNumeric.HasValue && subChildren && !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription)))
 							cell.VirtualValueNumeric = sum;
 
@@ -558,6 +567,18 @@ WHERE  CompanyID = @Iconum";
 							hasChildren = true;
 					}
 					if (SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6).Count() > 0) {
+						if (!cell.ValueNumeric.HasValue && subChildren)
+							cell.VirtualValueNumeric = sum;
+
+						return sum;
+					}
+				} else {
+					foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId == sh.StaticHierarchyMetaId)) {
+						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, IsSummaryLookup, ref subChildren, TimeSlices);
+						if (subChildren)
+							hasChildren = true;
+					}
+					if (SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId == sh.StaticHierarchyMetaId).Count() > 0) {
 						if (!cell.ValueNumeric.HasValue && subChildren)
 							cell.VirtualValueNumeric = sum;
 
