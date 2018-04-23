@@ -239,6 +239,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTimeSlice(id);
 		}
 
+		[Route("timeSlice/{id}")]
+		[HttpPost]
+		public ScarResult CreateTimeSlice(string CompanyId, int id, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.CreateTimeSlice(input.StringData);
+		}
+
 
 		[Route("timeSlice/{id}/reporttype")]
 		[HttpPut]
@@ -637,7 +648,45 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			result = helper.DeleteDocumentTableID(id);
 			return result;
 		}
+		[Route("documenttimeslicetablecell/{id}")]
+		[HttpPut]
+		public ScarResult UpdateDocumentTimeSliceTableCell(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
 
+			return helper.UpdateDocumentTimeSliceTableCell(id, newValue);
+		}
+
+		[Route("documenttimeslicetablecell/{id}")]
+		[HttpPost]
+		public ScarResult CopyDocumentTimeSliceTableCell(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.CopyDocumentTimeSliceTableCell(id, newValue);
+		}
+
+		[Route("documenttimeslicetablecell/{id}")]
+		[HttpDelete]
+		public ScarResult DeleteDocumentTimeSliceTableCell(string id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.DeleteDocumentTimeSliceTableCell(id, "");
+		}
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
