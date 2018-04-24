@@ -359,8 +359,8 @@ WHERE  CompanyID = @Iconum";
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
 								ManualOrgSet = reader.GetBoolean(18),
-								PublicationDate = reader.GetDateTime(19),
-								DamDocumentId = reader.GetGuid(20)
+								PublicationDate = reader.GetDateTime(20),
+								DamDocumentId = reader.GetGuid(21)
 							};
 
 							TimeSlices.Add(slice);
