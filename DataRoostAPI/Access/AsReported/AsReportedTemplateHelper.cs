@@ -3593,6 +3593,64 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id INTO @ChangeResult;
 				return sb.ToString(); ;
 			}
 		}
+
+		public class JsonToSQLDocumentTimeSliceTableCell : JsonToSQL {
+			string delete_sql = @"
+DELETE FROM DocumentTimeSliceTableCell where TableCellId = {0};
+";
+			string merge_sql = @"MERGE DocumentTimeSliceTableCell
+USING (VALUES ({0}, {1})) as src (DocumentTimeSliceId,TableCellId)
+ON DocumentTimeSliceTableCell.TableCellId = src.TableCellId
+WHEN MATCHED THEN
+	UPDATE SET DocumentTimeSliceId = src.DocumentTimeSliceId
+WHEN NOT MATCHED THEN
+	INSERT (DocumentTimeSliceId
+,TableCellId) VALUES
+	  (
+src.DocumentTimeSliceId 
+,src.TableCellId 
+	  )
+OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.Id INTO @ChangeResult;
+
+";
+			private JArray _jarray;
+			private string _dimensionTableId;
+			public JsonToSQLDocumentTimeSliceTableCell(JToken jToken)
+				: base("") {
+				if (jToken == null) {
+					_jarray = null;
+				} else {
+					_jarray = (JArray)jToken.SelectToken("");
+				}
+			}
+			public override string Translate() {
+				if (_jarray == null) return "";
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableCell"]["ID"].AsValue()));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
+								elem["obj"]["TableCell"]["ID"].AsValue()
+								));
+						} else if (elem["action"].ToString() == "insert") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
+								elem["obj"]["TableCell"]["ID"].AsValue()
+								));
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+					}
+				}
+
+				return sb.ToString(); ;
+			}
+
+		}
+
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
@@ -3611,11 +3669,13 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id INTO @ChangeResult;
 				var documentTable = json["DobumenTable"]; // typo in json
 				var dimensionToCel = json["DimensionToCell"];
 				var documentTimeSlice = json["DocumentTimeSlice"];
+				var documentTimeSliceTableCell = json["DocumentTimeSliceTableCell"];
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
 				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
 				sb.AppendLine(new JsonToSQLDimensionToCell(dtid, dimensionToCel).Translate());
 				sb.AppendLine(new JsonToSQLDocumentTimeSlice(documentTimeSlice).Translate());
+				sb.AppendLine(new JsonToSQLDocumentTimeSliceTableCell(documentTimeSliceTableCell).Translate());
 				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
