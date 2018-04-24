@@ -22,70 +22,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 	        const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-	        /*const string nonDcQuery =
-	            @"SELECT t1.Cusip, t1.Value, t1.Date, t1.ItemName, t1.STDCode, t1.iconum 
-	                FROM (
-		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc) as rank 
-			                FROM STDTimeSeriesDetailSecurity stds (nolock)
-				                join PpiIconumMap p (nolock) 
-					                on p.cusip = stds.SecurityID
-				                join STDItem std (nolock)
-					                on stds.STDItemId = std.ID
-					                and std.SecurityFlag = 1
-				                join STDTemplateItem t (nolock)
-					                on t.STDItemID = std.ID
-					                and t.STDTemplateMasterCode = 'PSIT'
-				                join TimeSeries ts (nolock)
-					                on stds.TimeSeriesID = ts.Id
-					                and ts.AutoCalcFlag = 0
-					                and ts.EncoreFlag = 0
-				                join Document d (nolock)
-					                on ts.DocumentID = d.ID
-				                join DocumentSeries ds (nolock)
-					                on d.DocumentSeriesId = ds.Id 
-				                join #CompanyIds i (nolock)
-					                on i.iconum = ds.CompanyID
-				                left join MigrateToTimeSlice mi (nolock)
-					                on mi.Iconum = i.iconum
-					                and mi.MigrationStatusID != 1					
-			                WHERE std.STDCode =  @stdCode AND ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
-	                ) t1";*/
-
+            // CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
             const string dcQuery =
                 @"SELECT 
-                        t2.Cusip, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank 
+                        t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank
 	                FROM (
 		                SELECT 
-                            stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate asc, ts.AutoCalcFlag ASC) as rank 
-			            FROM STDTimeSliceDetailSecurity stds (nolock)
-				            join PpiIconumMap p (nolock)
-					            on p.cusip = stds.SecurityID and p.Iconum > 0
-				            join STDItem std (nolock)
-					            on stds.STDItemId = std.ID
-					            and std.SecurityFlag = 1
-				            join STDTemplateItem t (nolock)
-					            on t.STDItemID = std.ID
-					            and t.STDTemplateMasterCode = 'PSIT'
-				            join dbo.TimeSlice ts (nolock)
-					            on stds.TimeSliceID = ts.Id
-					            and ts.EncoreFlag = 0
-				            join Document d (nolock)
-					            on ts.DocumentID = d.ID
-				            join DocumentSeries ds (nolock)
-					            on d.DocumentSeriesId = ds.Id 
-				            join #CompanyIds i (nolock)
-					            on i.iconum = ds.CompanyID
-				            join MigrateToTimeSlice mi (nolock)
-					            on mi.Iconum = i.iconum
-					            and mi.MigrationStatusID = 1
+                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
+			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
+			            FROM #CompanyIds i (nolock)
+							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
+							join Document d (nolock) on d.DocumentSeriesID = ds.ID
+							join dbo.TimeSlice ts (nolock) on ts.DocumentID = d.ID and ts.EncoreFlag = 0
+							join STDTimeSliceDetailSecurity stds (nolock) on stds.TimeSliceID = ts.Id
+							join STDItem std (nolock) on stds.STDItemId = std.ID and std.SecurityFlag = 1
+							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
+							join (Select distinct cusip, PermId, h.iconum from PpiIconumMapHistory h join #CompanyIds i on h.iconum = i.iconum) p
+								on p.CUSIP = stds.SecurityID and p.iconum = ds.CompanyID and p.Iconum > 0
+				            join MigrateToTimeSlice mi (nolock) on mi.Iconum = i.iconum and mi.MigrationStatusID = 1
 			            WHERE std.STDCode =  @stdCode AND ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
 	                ) t2
-                    ORDER BY t2.rank
-                ";
+                    ORDER BY t2.SecPermId, t2.rank";
 
-	        var searchDate = DateTime.Now;
+            var searchDate = DateTime.Now;
 	        if (reportDate != null) {
 	            searchDate = (DateTime) reportDate;
 	        }
@@ -128,29 +87,30 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	                using (SqlDataReader reader = cmd.ExecuteReader()) {
 	                    while (reader.Read()) {
 	                        string cusip = reader.GetStringSafe(0);
-	                        int iconum = reader.GetInt32(5);
+                            string secPermId = reader.GetStringSafe(1);
+                            int iconum = reader.GetInt32(6);
 
-	                        if (!companyShareData.ContainsKey(iconum) || string.IsNullOrEmpty(cusip)) {
+	                        if (!companyShareData.ContainsKey(iconum) || string.IsNullOrEmpty(secPermId)) {
 	                            // This is possible if PpiIconumMap has same Cusip associated with two different Iconums and we 
 	                            // received request for only one of them. Hence, ignore that extra iconum returned from above query
 	                            continue;
 	                        }
 	                        Dictionary<string, List<ShareClassDataItem>> perShareData = companyShareData[iconum];
-                            if (!perShareData.ContainsKey(cusip)) {
-                                perShareData.Add(cusip, new List<ShareClassDataItem>());
+                            if (!perShareData.ContainsKey(secPermId)) {
+                                perShareData.Add(secPermId, new List<ShareClassDataItem>());
                             }
 
                             decimal tmpValue;
-                            var nullableValue = decimal.TryParse(reader.GetStringSafe(1), out tmpValue) ? tmpValue : (decimal?)null;
+                            var nullableValue = decimal.TryParse(reader.GetStringSafe(2), out tmpValue) ? tmpValue : (decimal?)null;
 	                        if (nullableValue.HasValue) {
                                 ShareClassDataItem item = new ShareClassNumericItem
                                 {
-                                    Name = reader.GetStringSafe(3),
-                                    ItemId = reader.GetStringSafe(4),
+                                    Name = reader.GetStringSafe(4),
+                                    ItemId = reader.GetStringSafe(5),
                                     Value = nullableValue.Value,
-                                    ReportDate = reader.GetDateTime(2)
+                                    ReportDate = reader.GetDateTime(3)
                                 };
-                                perShareData[cusip].Add(item);
+                                perShareData[secPermId].Add(item);
                             }
 	                    }
 	                }
@@ -164,67 +124,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
             const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-	        /*const string nonDcQuery =
-	            @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
+            // CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
+            const string query =
+                @"SELECT temp.Cusip, temp.SecPermId, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
 	                FROM (
-		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSeriesDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSeriesDate desc, ts.AutoCalcFlag ASC) as rank 
-			                FROM STDTimeSeriesDetailSecurity stds (nolock)
-				                join PpiIconumMap p (nolock) 
-					                on p.cusip = stds.SecurityID and p.Iconum > 0
-				                join STDItem std (nolock)
-					                on stds.STDItemId = std.ID
-					                and std.SecurityFlag = 1
-				                join STDTemplateItem t (nolock)
-					                on t.STDItemID = std.ID
-					                and t.STDTemplateMasterCode = 'PSIT'
-				                join TimeSeries ts (nolock)
-					                on stds.TimeSeriesID = ts.Id
-					                and ts.EncoreFlag = 0
-				                join Document d (nolock)
-					                on ts.DocumentID = d.ID
-				                join DocumentSeries ds (nolock)
-					                on d.DocumentSeriesId = ds.Id 
-				                join #CompanyIds i (nolock)
-					                on i.iconum = ds.CompanyID
-				                left join MigrateToTimeSlice mi (nolock)
-					                on mi.Iconum = i.iconum
-			                WHERE ts.TimeSeriesDate <= @searchDate AND (@since IS NULL OR ts.TimeSeriesDate >= @since) and d.ExportFlag = 1
-                                and (mi.Iconum is NULL or mi.MigrationStatusID != 1)
+		                SELECT stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
+			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
+			            FROM #CompanyIds i (nolock)
+							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
+							join Document d (nolock) on d.DocumentSeriesID = ds.ID
+							join dbo.TimeSlice ts (nolock) on ts.DocumentID = d.ID and ts.EncoreFlag = 0
+							join STDTimeSliceDetailSecurity stds (nolock) on stds.TimeSliceID = ts.Id
+							join STDItem std (nolock) on stds.STDItemId = std.ID and std.SecurityFlag = 1
+							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
+							join (Select distinct cusip, PermId, h.iconum from PpiIconumMapHistory h join #CompanyIds i on h.iconum = i.iconum) p
+								on p.CUSIP = stds.SecurityID and p.iconum = ds.CompanyID and p.Iconum > 0
+				            join MigrateToTimeSlice mi (nolock) on mi.Iconum = i.iconum and mi.MigrationStatusID = 1
+			            WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
 	                ) temp
-	                WHERE temp.rank = 1";*/
+	                WHERE temp.rank = 1 and temp.SecPermId IS NOT NULL";
 
-            const string query = 
-                @"SELECT temp.Cusip, temp.Value, temp.Date, temp.ItemName, temp.STDCode, temp.iconum 
-	                FROM (
-		                SELECT stds.SecurityID Cusip, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, stds.SecurityID order by ts.TimeSliceDate desc, ts.AutoCalcFlag ASC) as rank 
-			                FROM STDTimeSliceDetailSecurity stds (nolock)
-				                join PpiIconumMap p (nolock)
-					                on p.cusip = stds.SecurityID and p.Iconum > 0
-				                join STDItem std (nolock)
-					                on stds.STDItemId = std.ID
-					                and std.SecurityFlag = 1
-				                join STDTemplateItem t (nolock)
-					                on t.STDItemID = std.ID
-					                and t.STDTemplateMasterCode = 'PSIT'
-				                join dbo.TimeSlice ts (nolock)
-					                on stds.TimeSliceID = ts.Id
-					                and ts.EncoreFlag = 0
-				                join Document d (nolock)
-					                on ts.DocumentID = d.ID
-				                join DocumentSeries ds (nolock)
-					                on d.DocumentSeriesId = ds.Id 
-				                join #CompanyIds i (nolock)
-					                on i.iconum = ds.CompanyID
-				                join MigrateToTimeSlice mi (nolock)
-					                on mi.Iconum = i.iconum
-					                and mi.MigrationStatusID = 1
-			                WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
-	                ) temp
-	                WHERE temp.rank = 1";
-		
-			DateTime searchDate = DateTime.Now;
+            var searchDate = DateTime.Now;
 			if (reportDate != null) {
 				searchDate = (DateTime)reportDate;
 			}
@@ -265,7 +185,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							string cusip = reader.GetStringSafe(0);
-							int iconum = reader.GetInt32(5);
+                            string secPermId = reader.GetStringSafe(1);
+                            int iconum = reader.GetInt32(6);
 						    if (!companyShareData.ContainsKey(iconum)) {
                                 // This is possible if PpiIconumMap has same Cusip associated with two different Iconums and we 
                                 // received request for only one of them. Hence, ignore that extra iconum returned from above query
@@ -274,19 +195,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 							Dictionary<string, List<ShareClassDataItem>> perShareData = companyShareData[iconum];
 
                             decimal tmpValue;
-                            var nullableValue = decimal.TryParse(reader.GetStringSafe(1), out tmpValue) ? tmpValue : (decimal?)null;
+                            var nullableValue = decimal.TryParse(reader.GetStringSafe(2), out tmpValue) ? tmpValue : (decimal?)null;
 						    if (nullableValue.HasValue) {
                                 ShareClassDataItem item = new ShareClassNumericItem
                                 {
-                                    Name = reader.GetStringSafe(3),
-                                    ItemId = reader.GetStringSafe(4),
+                                    Name = reader.GetStringSafe(4),
+                                    ItemId = reader.GetStringSafe(5),
                                     Value = nullableValue.Value,
-                                    ReportDate = reader.GetDateTime(2)
+                                    ReportDate = reader.GetDateTime(3)
                                 };
-                                if (!perShareData.ContainsKey(cusip)) {
-                                    perShareData.Add(cusip, new List<ShareClassDataItem>());
+                                if (!perShareData.ContainsKey(secPermId)) {
+                                    perShareData.Add(secPermId, new List<ShareClassDataItem>());
                                 }
-                                perShareData[cusip].Add(item);
+                                perShareData[secPermId].Add(item);
                             }
 						    
 						}
