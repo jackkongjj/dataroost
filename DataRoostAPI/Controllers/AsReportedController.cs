@@ -586,9 +586,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
 			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
-			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => ((c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD") || 
+			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => (c.MTMWValidationFlag || 
 					(c.LikePeriodValidationFlag
-					&& ((sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType) && sh.StaticHierarchyMetaType != "SD"))
+					&& (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
 					&& templates.First(te => te.TimeSlices.Any(ts => ts.Cells.Contains(c))).TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId
 					)
 				))));
@@ -630,7 +630,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				//int totalcellcount = cells.Count();
 				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
 				IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
-					.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD" && sh.StaticHierarchyMetaType != "FN")));
+					.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag)));
 				int mtmwcount = mtmwcells.Count();
 				if (mtmwcells.Count() > 0) {
 					errorMessageBuilder.Append(TemplateName + ": MTMW: ");
@@ -641,7 +641,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					isSuccess = false;
 				}
 
-				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType)&& sh.StaticHierarchyMetaType != "SD" && sh.StaticHierarchyMetaType != "FN")
+				IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
 					.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
 					&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
 				int lpvcount = lpvcells.Count();
@@ -650,7 +650,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					foreach (var cell in lpvcells) {
 						var timeslice = templates.First().TimeSlices.FirstOrDefault(x => x.Cells.Contains(cell));
 						errorMessageBuilder.Append(string.Format("{0}({1},{2}) ", cell.DisplayValue.HasValue ? cell.DisplayValue.Value.ToString("0.##") : "-", timeslice.TimeSlicePeriodEndDate.ToString("yyyy-MM-dd"), timeslice.ReportType));
-
 					}
 					isSuccess = false;
 				}
