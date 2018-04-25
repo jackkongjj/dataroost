@@ -225,6 +225,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.UpdateStaticHierarchyAddParent(id);
 		}
 
+		[Route("staticHierarchy/{id}/danglingheader")]
+		[HttpPost]
+		public ScarResult ConvertDanglingHeader(string CompanyId, int id, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyConvertHeader(id, input.StringData);
+		}
+
 
 		//TODO: Add IsSummary
 		[Route("timeSlice/{id}")]
