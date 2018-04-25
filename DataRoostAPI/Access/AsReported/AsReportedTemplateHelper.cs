@@ -3610,7 +3610,7 @@ WHEN NOT MATCHED THEN
 src.DocumentTimeSliceId 
 ,src.TableCellId 
 	  )
-OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.Id INTO @ChangeResult;
+OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeResult;
 
 ";
 			private JArray _jarray;
