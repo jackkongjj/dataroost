@@ -191,7 +191,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UpdateStaticHierarchySeperator(id, false);
 		}
-
+		[Route("staticHierarchy/{id}/header")]
+		[HttpPut]
+		public ScarResult EditHierarchyHeaderLabel(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyHeaderLabel(id, input.StringData);
+		}
 		[Route("staticHierarchy/{id}/header")]
 		[HttpPost]
 		public ScarResult AddHeaderStatichHierarchy(string CompanyId, int id) {
