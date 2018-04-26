@@ -508,6 +508,7 @@ WHERE  CompanyID = @Iconum";
 
 					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
 
+
 						if (
 							(((child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
 								|| ((child.StaticHierarchyMetaId == 2 || child.StaticHierarchyMetaId == 5 || child.StaticHierarchyMetaId == 6) && child.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
@@ -1144,6 +1145,62 @@ SELECT *
 			return response;
 		}
 
+		public ScarResult UpdateStaticHierarchyHeaderLabel(int id, string newLabel) {
+
+			string query = @"
+DECLARE @TableType int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+DECLARE @OrigDescription varchar(1024) = (SELECT dbo.GetHierarchyLabelSafe(Description)  FROM StaticHierarchy WHERE ID = @TargetSHID)
+DECLARE @OrigHierarchyLabel varchar(1024) 
+DECLARE @NewHierarchyLabel varchar(1024)  
+DECLARE @OrigParent varchar(1024)
+
+IF (DATALENGTH(@OrigDescription) > 2)
+BEGIN 
+SET @OrigParent = dbo.GetHierarchyLabelSafe(SUBSTRING(@OrigDescription, 0, DATALENGTH(@OrigDescription)))
+SET @NewHierarchyLabel = @OrigParent + '[' + @NewEndLabel + ']'
+	 UPDATE StaticHierarchy
+	SET Description = Replace(Description, @OrigDescription,@NewHierarchyLabel) 
+	WHERE TableTypeId = @TableType   
+END
+
+
+
+";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							StaticHierarchy sh = new StaticHierarchy
+							{
+								Id = reader.GetInt32(0),
+								CompanyFinancialTermId = reader.GetInt32(1),
+								AdjustedOrder = reader.GetInt32(2),
+								TableTypeId = reader.GetInt32(3),
+								Description = reader.GetStringSafe(4),
+								HierarchyTypeId = reader.GetStringSafe(5)[0],
+								SeparatorFlag = reader.GetBoolean(6),
+								StaticHierarchyMetaId = reader.GetInt32(7),
+								UnitTypeId = reader.GetInt32(8),
+								IsIncomePositive = reader.GetBoolean(9),
+								ChildrenExpandDown = reader.GetBoolean(10),
+								Cells = new List<SCARAPITableCell>()
+							};
+							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
 		public ScarResult UpdateStaticHierarchyAddParent(int id) {
 
 			string query = @"SCAR_InsertStaticHierarchy_AddParent";
@@ -1158,6 +1215,47 @@ SELECT *
 					conn.Open();
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.NextResult(); // skip select statement from CreateCFT
+						while (reader.Read()) {
+							StaticHierarchy sh = new StaticHierarchy
+							{
+								Id = reader.GetInt32(0),
+								CompanyFinancialTermId = reader.GetInt32(1),
+								AdjustedOrder = reader.GetInt32(2),
+								TableTypeId = reader.GetInt32(3),
+								Description = reader.GetStringSafe(4),
+								HierarchyTypeId = reader.GetStringSafe(5)[0],
+								SeparatorFlag = reader.GetBoolean(6),
+								StaticHierarchyMetaId = reader.GetInt32(7),
+								UnitTypeId = reader.GetInt32(8),
+								IsIncomePositive = reader.GetBoolean(9),
+								ChildrenExpandDown = reader.GetBoolean(10),
+								Cells = new List<SCARAPITableCell>()
+							};
+							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateStaticHierarchyConvertHeader(int id, string newValue) {
+
+			string query = @"SCAR_InsertStaticHierarchy_AddParent";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					cmd.Parameters.AddWithValue("@newLabel", newValue);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.NextResult(); // skip select statement from CreateCFT
 						while (reader.Read()) {
