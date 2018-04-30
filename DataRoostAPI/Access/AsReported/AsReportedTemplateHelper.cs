@@ -3462,7 +3462,7 @@ OUTPUT $action, 'TableCell', inserted.Id INTO @ChangeResult;
 		public class JsonToSQLDimensionToCell : JsonToSQL {
 			string delete_sql = @"
 DELETE FROM DimensionToCell 
-where TableDimensionID = {0} and TableCellID = {1});
+where TableDimensionID = {0} and TableCellID = {1};
 			
 				";
 			string merge_sql = @"MERGE DimensionToCell
