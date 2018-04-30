@@ -3814,6 +3814,66 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeR
 			return result;
 		}
 
+		public ScarResult DeleteRowColumnTDPByDocumentTableID(string dtid, string updateInJson) {
+			ScarResult result = new ScarResult();
+			result.ReturnValue["DebugMessage"] = "";
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine("BEGIN TRAN");
+			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
+
+			try {
+				JObject json = JObject.Parse(updateInJson);
+				string unquotedJson = updateInJson.Replace("\"", "").Replace("'", "");
+				int totalUpdates = new Regex(Regex.Escape("action: update")).Matches(unquotedJson).Count;
+				int totalInsert = new Regex(Regex.Escape("action: insert")).Matches(unquotedJson).Count;
+				var tabledimension = json["TableDimension"];
+				var tablecell = json["TableCell"];
+				var dimensionToCel = json["DimensionToCell"];
+				var documentTimeSliceTableCell = json["DocumentTimeSliceTableCell"];
+				sb.AppendLine(new JsonToSQLDimensionToCell(dtid, dimensionToCel).Translate());
+				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
+				sb.AppendLine(new JsonToSQLDocumentTimeSliceTableCell(documentTimeSliceTableCell).Translate());
+				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
+				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
+				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
+				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
+				sb.AppendLine();
+				sb.AppendLine(string.Format("IF (@totalInsert = {0} and @totalUpdate = {1}) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				result.ReturnValue["DebugMessage"] += sb.ToString();
+
+				//				return result;
+
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
+						conn.Open();
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							List<object> aList = new List<object>();
+
+							while (reader.Read()) {
+								var changeType = reader.GetStringSafe(0);
+								var tableType = reader.GetStringSafe(1);
+								var Id = reader.GetInt32(2);
+								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
+								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id });
+							}
+							if (reader.NextResult() && reader.Read()) {
+								if (reader.GetStringSafe(0) == "commit") {
+									result.ReturnValue["Success"] = "T";
+								} else {
+									result.ReturnValue["Success"] = "F";
+								}
+							}
+							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
+						}
+					}
+				}
+			} catch (Exception ex) {
+				result.ReturnValue["DebugMessage"] += ex.Message;
+
+			}
+			return result;
+		}
+
 		public ScarResult DeleteDocumentTableID(string dtid) {
 			string SQL_Delete = @"
 BEGIN TRY
@@ -3942,7 +4002,6 @@ where dtc.TableCellID = @id
 			}
 			return response;
 		}
-
 
 		public ScarResult CreateTimeSlice(string updateInJson) {
 			ScarResult result = new ScarResult();

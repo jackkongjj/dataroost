@@ -656,6 +656,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return result;
 		}
 
+		[Route("tdp/{id}/deleterowcolumn")]
+		[HttpPost]
+		public ScarResult DeleteRowColumnTDP(string id, StringInput input) {
+			ScarResult result = new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			//newValue = JsonToSQL.Json_UpdateTDPExample;
+			if (string.IsNullOrWhiteSpace(newValue)) {
+				result.Message = "Missing Json Input";
+			} else {
+				try {
+					result = helper.DeleteRowColumnTDPByDocumentTableID(id, newValue);
+				} catch (Exception ex) {
+					result.Message += ex.Message;
+				}
+			}
+			return result;
+		}
+
 		[Route("tdp/{id}")]
 		[HttpDelete]
 		public ScarResult DeleteTDP(string id) {
