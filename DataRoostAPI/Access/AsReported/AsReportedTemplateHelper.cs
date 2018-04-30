@@ -3764,7 +3764,7 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeR
 				var cft = json["CompanyFinancialTerm"];
 				var tabledimension = json["TableDimension"];
 				var tablecell = json["TableCell"];
-				var documentTable = json["DocumenTable"]; // typo in json
+				var documentTable = json["DocumentTable"]; // typo in json
 				var dimensionToCel = json["DimensionToCell"];
 				var documentTimeSlice = json["DocumentTimeSlice"];
 				var documentTimeSliceTableCell = json["DocumentTimeSliceTableCell"];
