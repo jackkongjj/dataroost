@@ -3750,6 +3750,79 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeR
 
 		}
 
+		public class JsonToSQLDocumentTable : JsonToSQL {
+			string delete_sql = @"
+DELETE FROM DocumentTable where ID = {0};
+";
+			string merge_sql = @"MERGE DocumentTable
+USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})) as src (ID, TableOrganizationID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
+ON DocumentTable.ID = src.ID
+WHEN MATCHED THEN
+ 
+	UPDATE SET TableOrganizationID = src.TableOrganizationID
+					,Consolidated = src.Consolidated
+					,Unit = src.Unit
+					,ScalingFactorID = src.ScalingFactorID
+					,TableIntID = src.TableIntID
+					,ExceptShare = src.ExceptShare
+ OUTPUT 
+			CASE WHEN $action = 'UPDATE' THEN 'UPDATE'
+				ELSE 'INSERT' 
+			END  ,
+			 'DocumentTable', 
+			 CASE WHEN $action = 'UPDATE' THEN inserted.Id
+				ELSE -1  
+			END INTO @ChangeResult;
+ 
+
+";
+			private JArray _jarray;
+			public JsonToSQLDocumentTable(JToken jToken)
+				: base("") {
+				if (jToken == null) {
+					_jarray = null;
+				} else {
+					_jarray = (JArray)jToken.SelectToken("");
+				}
+			}
+			public override string Translate() {
+				if (_jarray == null) return "";
+				//JObject json = JObject.Parse(_json);
+				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+				foreach (var elem in _jarray) {
+					try {
+						if (elem["action"].ToString() == "delete") {
+							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+						} else if (elem["action"].ToString() == "update") {
+							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+								elem["obj"]["TableOrganizationID"].AsValue(),
+								elem["obj"]["Consolidated"].AsBoolean(),
+								elem["obj"]["Unit"].AsString(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["TableIntID"].AsValue(),
+								elem["obj"]["ExceptShare"].AsBoolean()
+								));
+						} else if (elem["action"].ToString() == "insert") {
+							sb.AppendLine(string.Format(merge_sql, "-1",
+								elem["obj"]["TableOrganizationID"].AsValue(),
+								elem["obj"]["Consolidated"].AsBoolean(),
+								elem["obj"]["Unit"].AsString(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["TableIntID"].AsValue(),
+								elem["obj"]["ExceptShare"].AsBoolean()
+								));
+						}
+					} catch (System.Exception ex) {
+						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+					}
+				}
+
+				return sb.ToString(); ;
+			}
+
+		}
+
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
@@ -3765,7 +3838,7 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeR
 				var cft = json["CompanyFinancialTerm"];
 				var tabledimension = json["TableDimension"];
 				var tablecell = json["TableCell"];
-				var documentTable = json["DocumentTable"]; // typo in json
+				var documentTable = json["DocumentTable"];  
 				var dimensionToCel = json["DimensionToCell"];
 				var documentTimeSlice = json["DocumentTimeSlice"];
 				var documentTimeSliceTableCell = json["DocumentTimeSliceTableCell"];
@@ -3775,6 +3848,7 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeR
 				sb.AppendLine(new JsonToSQLDimensionToCell(dtid, dimensionToCel).Translate());
 				sb.AppendLine(new JsonToSQLDocumentTimeSlice(documentTimeSlice).Translate());
 				sb.AppendLine(new JsonToSQLDocumentTimeSliceTableCell(documentTimeSliceTableCell).Translate());
+				sb.AppendLine(new JsonToSQLDocumentTable(documentTable).Translate());
 				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
