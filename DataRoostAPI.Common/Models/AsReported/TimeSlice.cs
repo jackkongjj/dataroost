@@ -73,6 +73,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("ManualOrgSet")]
 		public bool ManualOrgSet { get; set; }
 
+		[JsonProperty("TableTypeID")]
+		public int TableTypeID { get; set; }
+
 		[JsonProperty("NumberOfCells")]
 		public int NumberOfCells { get; set; }
 

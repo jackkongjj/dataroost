@@ -37,7 +37,7 @@ JOIN TableType tt on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
 	FROM DocumentSeries ds
-	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
+	JOIN dbo.DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
 	JOIN Document d on dts.DocumentId = d.ID
 	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
 	JOIN TableCell tc on dtstc.TableCellID = tc.ID
@@ -47,7 +47,7 @@ JOIN(
 	WHERE tc.ID = @cellId
 	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
+JOIN dbo.DocumentTimeSlice dts on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
@@ -122,7 +122,7 @@ JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
 	FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+	JOIN dbo.DocumentTimeSlice dts  WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
 	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
 	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
 	JOIN TableCell tc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
@@ -141,13 +141,13 @@ JOIN(
 --			JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 --			JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
 --			JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
---			JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+--			JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
 --			JOIN Document d on dts.DocumentId = d.ID
 --		WHERE ds.CompanyID = @iconum
 --		AND tt.Description = @templateName
 --		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
 --	)dts
-join DocumentTimeSlice dts WITH (NOLOCK) 
+join dbo.DocumentTimeSlice dts WITH (NOLOCK) 
 	on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 LEFT JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
@@ -179,7 +179,7 @@ FROM DocumentSeries ds WITH (NOLOCK)
 	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
 	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
 	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
+	JOIN dbo.DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
 	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
@@ -193,7 +193,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 select distinct DocumentTimeSliceID, TableType
 from DocumentSeries ds 
 JOIN Document d on ds.ID = d.DocumentSeriesID
-JOIN DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
+JOIN dbo.DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
 join DocumentTimeSliceTableTypeIsSummary dtsis on dts.id = dtsis.DocumentTimeSliceID
 WHERE  CompanyID = @Iconum";
 
@@ -610,7 +610,7 @@ FROM DocumentSeries ds
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
+	JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
@@ -666,7 +666,7 @@ FROM DocumentSeries ds
 	JOIN TableType tt on sh.TableTypeID = tt.ID
 	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
 	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+	JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
 
 WHERE sh.id = @id
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
@@ -1540,7 +1540,7 @@ SELECT *
 
 		public TimeSlice GetTimeSlice(int id) {
 
-			string query = @"SELECT * FROM DocumentTimeSlice WHERE ID = @id";
+			string query = @"SELECT * FROM dbo.DocumentTimeSlice WHERE ID = @id";
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				StaticHierarchy sh;
@@ -1591,7 +1591,7 @@ ELSE
 BEGIN
 	INSERT DocumentTimeSliceTableTypeIsSummary ([DocumentTimeSliceID],[TableType])
 	VALUES (@Id, @TableType)
-	SELECT * FROM DocumentTimeSlice WHERE ID = @id
+	SELECT * FROM dbo.DocumentTimeSlice WHERE ID = @id
 END
 
 
@@ -1656,7 +1656,7 @@ BEGIN
 	WHEN MATCHED THEN
 		UPDATE SET [PeriodNoteID] = @PeriodNoteId ;
 
-   SELECT * FROM DocumentTimeSlice WHERE ID = @id
+   SELECT * FROM dbo.DocumentTimeSlice WHERE ID = @id
 END
 
 
@@ -1714,10 +1714,10 @@ END
 
 			string query = @"
 
-declare @docid uniqueidentifier = (select documentid from DocumentTimeSlice where id = @id)
-UPDATE DocumentTimeSlice SET ReportType = @ReportType where DocumentId = @docid;
+declare @docid uniqueidentifier = (select documentid from dbo.DocumentTimeSlice where id = @id)
+UPDATE dbo.DocumentTimeSlice SET ReportType = @ReportType where DocumentId = @docid;
 
-SELECT * FROM DocumentTimeSlice WHERE DocumentId = @docid;
+SELECT * FROM dbo.DocumentTimeSlice WHERE DocumentId = @docid;
 
 ";
 			ScarResult response = new ScarResult();
@@ -1764,9 +1764,9 @@ SELECT * FROM DocumentTimeSlice WHERE DocumentId = @docid;
 
 			string query = @"
 
-UPDATE DocumentTimeSlice SET ManualOrgSet = @newValue where Id = @id;
+UPDATE dbo.DocumentTimeSlice SET ManualOrgSet = @newValue where id = @id;
 
-SELECT * FROM DocumentTimeSlice WHERE id = @id;
+SELECT * FROM dbo.DocumentTimeSlice WHERE id = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -1775,35 +1775,36 @@ SELECT * FROM DocumentTimeSlice WHERE id = @id;
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
-					cmd.Parameters.AddWithValue("@id", id);
-					cmd.Parameters.AddWithValue("@newValue", newValue);
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							TimeSlice slice = new TimeSlice
-							{
-								Id = reader.GetInt32(0),
-								DocumentId = reader.GetGuid(1),
-								DocumentSeriesId = reader.GetInt32(2),
-								TimeSlicePeriodEndDate = reader.GetDateTime(3),
-								ReportingPeriodEndDate = reader.GetDateTime(4),
-								FiscalDistance = reader.GetInt32(5),
-								Duration = reader.GetInt32(6),
-								PeriodType = reader.GetStringSafe(7),
-								AcquisitionFlag = reader.GetStringSafe(8),
-								AccountingStandard = reader.GetStringSafe(9),
-								ConsolidatedFlag = reader.GetStringSafe(10),
-								IsProForma = reader.GetBoolean(11),
-								IsRecap = reader.GetBoolean(12),
-								CompanyFiscalYear = reader.GetDecimal(13),
-								ReportType = reader.GetStringSafe(14),
-								IsAmended = reader.GetBoolean(15),
-								IsRestated = reader.GetBoolean(16),
-								IsAutoCalc = reader.GetBoolean(17),
-								ManualOrgSet = reader.GetBoolean(18)
-							};
-							response.TimeSlices.Add(slice);
+						cmd.Parameters.AddWithValue("@id", id);
+						cmd.Parameters.AddWithValue("@newValue", newValue);
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							while (reader.Read()) {
+								TimeSlice slice = new TimeSlice
+								{
+									Id = reader.GetInt32(0),
+									DocumentId = reader.GetGuid(1),
+									DocumentSeriesId = reader.GetInt32(2),
+									TimeSlicePeriodEndDate = reader.GetDateTime(3),
+									ReportingPeriodEndDate = reader.GetDateTime(4),
+									FiscalDistance = reader.GetInt32(5),
+									Duration = reader.GetInt32(6),
+									PeriodType = reader.GetStringSafe(7),
+									AcquisitionFlag = reader.GetStringSafe(8),
+									AccountingStandard = reader.GetStringSafe(9),
+									ConsolidatedFlag = reader.GetStringSafe(10),
+									IsProForma = reader.GetBoolean(11),
+									IsRecap = reader.GetBoolean(12),
+									CompanyFiscalYear = reader.GetDecimal(13),
+									ReportType = reader.GetStringSafe(14),
+									IsAmended = reader.GetBoolean(15),
+									IsRestated = reader.GetBoolean(16),
+									IsAutoCalc = reader.GetBoolean(17),
+									ManualOrgSet = reader.GetBoolean(18),
+									TableTypeID = reader.GetInt32(19)
+								};
+								response.TimeSlices.Add(slice);
+							}
 						}
-					}
 				}
 			}
 			return response;
@@ -2868,10 +2869,10 @@ where dtc.TableCellID = @id
 
 			string query = @"
 
-UPDATE DocumentTimeSlice SET PeriodType = @newValue
+UPDATE dbo.DocumentTimeSlice SET PeriodType = @newValue
 where id = @id
 
-SELECT * from DocumentTimeSlice where id = @id and PeriodType = @newValue;
+SELECT * from dbo.DocumentTimeSlice where id = @id and PeriodType = @newValue;
 
 ";
 
@@ -3518,11 +3519,11 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID INTO @ChangeResult;
 
 		public class JsonToSQLDocumentTimeSlice : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM DocumentTimeSlice where id = {0};
+DELETE FROM dbo.DocumentTimeSlice where id = {0};
 ";
-			string merge_sql = @"MERGE DocumentTimeSlice
+			string merge_sql = @"MERGE dbo.DocumentTimeSlice
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18} )) as src (Id,DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet)
-ON DocumentTimeSlice.id = src.ID
+ON dbo.DocumentTimeSlice.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET DocumentId = src.DocumentId
       ,DocumentSeriesId = src.DocumentSeriesId
@@ -4135,10 +4136,10 @@ where dtc.TableCellID = @id
 
 			string query = @"
 DECLARE @newId int;
-DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM DocumentTimeSlice where id = @id)
-DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate FROM DocumentTimeSlice where id = @id)
-DECLARE @oldPeriodType varchar(10) = (SELECT PeriodType FROM DocumentTimeSlice where id = @id)
-DECLARE @dts int = (SELECT top 1 ID FROM DocumentTimeSlice dts where dts.PeriodType = @newPeriodType AND dts.DocumentId = @DocId and dts.TimeSlicePeriodEndDate = @TimeSlicePeriodEndDate);
+DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM dbo.DocumentTimeSlice where id = @id)
+DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate FROM dbo.DocumentTimeSlice where id = @id)
+DECLARE @oldPeriodType varchar(10) = (SELECT PeriodType FROM dbo.DocumentTimeSlice where id = @id)
+DECLARE @dts int = (SELECT top 1 ID FROM dbo.DocumentTimeSlice dts where dts.PeriodType = @newPeriodType AND dts.DocumentId = @DocId and dts.TimeSlicePeriodEndDate = @TimeSlicePeriodEndDate);
 
 if @newPeriodType <> @oldPeriodType
 BEGIN
@@ -4148,7 +4149,7 @@ BEGIN
 		BEGIN
 			IF (EXISTS ( SELECT TOP 1 id FROM [InterimType] WHERE ID = @newPeriodType and Duration is not null))  
 			BEGIN
-				INSERT DocumentTimeSlice
+				INSERT dbo.DocumentTimeSlice
 						( [DocumentId]
 							  ,[DocumentSeriesId]
 							  ,[TimeSlicePeriodEndDate]
@@ -4186,7 +4187,7 @@ BEGIN
 							  ,[IsRestated]
 							  ,[IsAutoCalc]
 							  ,[ManualOrgSet]
-						  FROM [DocumentTimeSlice] where id = @id;
+						  FROM dbo.DocumentTimeSlice where id = @id;
 
 						select @newId =  cast(scope_identity() as int);
 
@@ -4204,7 +4205,7 @@ BEGIN
 		BEGIN
 			UPDATE [DocumentTimeSliceTableCell] SET  DocumentTimeSliceId = @dts
 				WHERE DocumentTimeSliceId = @id;
-			UPDATE [DocumentTimeSlice] SET  PeriodType = @newPeriodType
+			UPDATE dbo.DocumentTimeSlice SET  PeriodType = @newPeriodType
 			WHERE Id = @id;
 			SET @newId = @Id
 		END
@@ -4212,7 +4213,7 @@ BEGIN
 	ELSE -- if new periodtype is --
 	BEGIN
 		DELETE FROM [DocumentTimeSliceTableCell]  WHERE DocumentTimeSliceId = @id; 
-		DELETE FROM [DocumentTimeSlice] where id = @Id
+		DELETE FROM dbo.DocumentTimeSlice where id = @Id
 		SET @newId = @Id
 	END
 	
@@ -4237,7 +4238,7 @@ SELECT [Id]
 	,[IsRestated]
 	,[IsAutoCalc]
 	,[ManualOrgSet]
-FROM [DocumentTimeSlice] where id = @newId or id = @dts or id = @id;
+FROM dbo.DocumentTimeSlice where id = @newId or id = @dts or id = @id;
 
 ";
 
@@ -4299,7 +4300,7 @@ join statichierarchy sh on sh.companyfinancialtermid = cft.id
 join TableType tt on sh.tabletypeid = tt.id
 join TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermId
 join DocumentTimeSliceTableCell dtstc on tc.id = dtstc.tablecellid
-join documenttimeslice dts on dts.id = dtstc.documenttimesliceid and dts.DocumentSeriesId = ds.ID
+join dbo.documenttimeslice dts on dts.id = dtstc.documenttimesliceid and dts.DocumentSeriesId = ds.ID
 join Document d on dts.documentid = d.id
 join MTMWErrorTypeTableCell mtmtc on tc.id = mtmtc.tablecellid
 join MTMWErrorType mtm on mtmtc.MTMWErrorTypeId = mtm.ID
@@ -4363,7 +4364,7 @@ AS
 (
 	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id), count(distinct tc.CurrencyCode), max(tc.CurrencyCode), count(artsdc.DocumentTimeSliceID)
 		FROM DocumentSeries ds WITH (NOLOCK)
-		JOIN DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+		JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
 		JOIN Document d WITH (NOLOCK) on dts.DocumentId = d.ID
 		JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on dts.ID = dtstc.DocumentTimeSliceID
 		JOIN TableCell tc WITH (NOLOCK) on dtstc.TableCellID = tc.ID
@@ -4379,7 +4380,7 @@ AS
 SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 	INTO #nonempty
 	FROM cte_timeslice ts WITH (NOLOCK)
-	JOIN DocumentTimeSlice dts WITH(NOLOCK) on ts.TimeSliceId = dts.Id
+	JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) on ts.TimeSliceId = dts.Id
   JOIN Document d WITH(NOLOCK) on dts.DocumentId = d.id
 
 select d.id, d.DAMDocumentId, tt.Description, dtc.TableCellID
@@ -5882,7 +5883,7 @@ WHERE d.ID = @SFDocumentID
 
 
  SELECT TOP 1 'Missing InterimType. ' as Error, * 
- FROM DocumentTimeSlice dts
+ FROM dbo.DocumentTimeSlice dts
  JOIN DocumentTimeSliceTableCell dtstc on dtstc.DocumentTimeSliceId = dts.Id
  JOIN TableCell tc ON dtstc.TableCellID = tc.id
   where dts.DocumentID = @DocumentId and dts.PeriodType is null
@@ -5894,7 +5895,7 @@ WHERE d.ID = @SFDocumentID
  JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
  JOIN TableCell tc ON dtc.TableCellID = tc.id
  JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.Id
- JOIN DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+ JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
   where dt.DocumentID = @DocumentId and dts.PeriodType is null
 
 
@@ -6064,7 +6065,7 @@ JOIN TableType tt on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
 	FROM DocumentSeries ds
-	JOIN DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
+	JOIN dbo.DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
 	JOIN Document d on dts.DocumentId = d.ID
 	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
 	JOIN TableCell tc on dtstc.TableCellID = tc.ID
@@ -6074,7 +6075,7 @@ JOIN(
 	WHERE ds.CompanyID = @iconum
 	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN DocumentTimeSlice dts on dts.ID = ts.ID
+JOIN dbo.DocumentTimeSlice dts on dts.ID = ts.ID
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
 	FROM DocumentSeries ds
