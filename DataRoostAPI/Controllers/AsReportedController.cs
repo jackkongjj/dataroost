@@ -241,7 +241,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.UpdateStaticHierarchyConvertHeader(id, input.StringData);
+			return helper.UpdateStaticHierarchyConvertDanglingHeader(id, input.StringData);
 		}
 
 

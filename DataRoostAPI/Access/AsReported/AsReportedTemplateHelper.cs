@@ -1241,9 +1241,9 @@ END
 			return response;
 		}
 
-		public ScarResult UpdateStaticHierarchyConvertHeader(int id, string newValue) {
+		public ScarResult UpdateStaticHierarchyConvertDanglingHeader(int id, string newValue) {
 
-			string query = @"SCAR_InsertStaticHierarchy_AddParent";
+			string query = @"SCAR_UpdateStaticHierarchy_ConvertDanglingHeader";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
