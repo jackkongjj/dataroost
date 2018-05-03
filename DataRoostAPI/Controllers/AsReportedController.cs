@@ -107,6 +107,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTemplateSkeleton(iconum, TemplateName);
 		}
 
+		[Route("templates/{TemplateName}/{DocumentId}/copyhierarchy")]
+		[HttpPost]
+		public ScarResult CopyDocumentHierarchy(string CompanyId, string TemplateName, Guid DocumentId, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			int tabletypeID;
+			if (input == null || string.IsNullOrEmpty(input.StringData) || !int.TryParse(input.StringData, out tabletypeID))
+				return null;
+			if (tabletypeID <= 0)
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.CopyDocumentHierarchy(iconum, tabletypeID, DocumentId);
+		}
 		//TODO: Add Derivation Meta for cells, add MTMW and like period validation indicators.
 		[Route("staticHierarchy/{id}")]
 		[HttpGet]

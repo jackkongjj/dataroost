@@ -744,6 +744,106 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			}
 		}
 
+		public ScarResult CopyDocumentHierarchy(int iconum, int TableTypeid, Guid DocumentId) {
+
+			string query = @"
+DECLARE @newDocumentTableId int;
+BEGIN TRY
+	BEGIN TRAN
+
+				Declare @DocSeriesId int;
+				Declare @DocumentDate DateTime;
+				Declare @LatestScalingFactor Varchar(6);
+				
+
+				select @DocumentDate= DocumentDate,@DocSeriesId=DocumentSeriesID from Document Where Id=@DocumentId;
+
+				select TOP 1 @LatestScalingFactor = ISNULL(dt.ScalingFactorID, 'A')
+				from DocumentTable dt 
+				inner join Document d on d.ID=dt.DocumentID and dt.TableTypeId = @TableTypeId
+				where dt.ScalingFactorID<>'A' and d.DocumentDate<@DocumentDate
+				order by d.DocumentDate DESC, d.ReportTypeID ASC
+
+				INSERT DocumentTable(DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
+				VALUES (@DocumentId, 1, @TableTypeId, 1, @LatestScalingFactor, @LatestScalingFactor, -1, 0)
+
+				select @newDocumentTableId =  cast(scope_identity() as int);
+				select * from DocumentTable where id = @newDocumentTableId
+
+				DECLARE @newTableDimensionColumn int;
+				INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
+				VALUES (@newDocumentTableId, 2, '', '', -1, -1, NULL, 0, -1)
+				select @newTableDimensionColumn =  cast(scope_identity() as int);
+				select * from TableDimension where id = @newTableDimensionColumn
+
+				DECLARE @newTableDimensionRows TABLE(Id int, CFT int, AdjustedOrder int)
+				MERGE INTO TableDimension
+				USING (	SELECT sh.Description, sh.AdjustedOrder, sh.CompanyFinancialTermId
+					FROM StaticHierarchy sh where sh.TableTypeId = @TableTypeId) as Src ON 1=0
+				WHEN NOT MATCHED THEN
+					INSERT (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
+					VALUES (@newDocumentTableId, 1, src.Description, 'Description', -1, -1, NULL, 0, src.AdjustedOrder)
+				OUTPUT inserted.ID, src.CompanyFinancialTermId, inserted.AdjustedOrder into @newTableDimensionRows(Id, CFT, AdjustedOrder);
+				select * FROM TableDimension where id = @newDocumentTableId
+
+
+				DECLARE @newTableCells TABLE(Id int, CFT int, AdjustedOrder int)
+				MERGE INTO TableCell
+				USING (	SELECT sh.Description, sh.CompanyFinancialTermId, sh.AdjustedOrder
+					FROM StaticHierarchy sh where sh.TableTypeId = @TableTypeId) as Src ON 1=0
+				WHEN NOT MATCHED THEN
+					INSERT (Offset,CompanyFinancialTermId,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,ScarUpdated,IsIncomePositive,DocumentId,Label)
+					VALUES ('', src.CompanyFinancialTermId, 0, @LatestScalingFactor, @LatestScalingFactor, 0, 1, @DocumentId, src.description)
+				OUTPUT inserted.ID, inserted.CompanyFinancialTermId, src.AdjustedOrder into @newTableCells(Id, CFT, AdjustedOrder);
+				select * from @newTableCells
+
+				INSERT INTO DimensionToCell(TableDimensionID,TableCellID)
+				SELECT r.id, tc.id FROM
+				@newTableDimensionRows r 
+				JOIN @newTableCells tc ON r.CFT = tc.CFT and r.AdjustedOrder = tc.AdjustedOrder
+
+				INSERT INTO DimensionToCell (TableDimensionID,TableCellID)
+				SELECT @newTableDimensionColumn, tc.ID FROM
+				@newTableCells tc
+
+				SELECT * FROM DimensionToCell where TableDimensionID = @newTableDimensionColumn or
+				TableDimensionID in (select id from @newTableDimensionRows)
+
+		COMMIT; 
+		select * from DocumentTable where id = @newDocumentTableId
+END TRY
+BEGIN CATCH
+	ROLLBACK;
+  select 0;
+END CATCH
+";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentId", DocumentId);
+					cmd.Parameters.AddWithValue("@TableTypeId", TableTypeid);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						if (reader.Read()) {
+							int newDocumentTableId = reader.GetInt32(0);
+							if (newDocumentTableId > 0) {
+								response.ReturnValue["Success"] = "T";
+								response.ReturnValue["DocumentTableId"] = newDocumentTableId.ToString();
+							} else {
+								response.ReturnValue["Success"] = "F";
+							}
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult UpdateStaticHierarchySeperator(int id, bool isGroup) {
 
 			string query = @"
