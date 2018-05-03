@@ -3755,24 +3755,39 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId INTO @ChangeR
 DELETE FROM DocumentTable where ID = {0};
 ";
 			string merge_sql = @"MERGE DocumentTable
-USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})) as src (ID, TableOrganizationID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
+USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})) as src (ID, DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
 ON DocumentTable.ID = src.ID
 WHEN MATCHED THEN
  
-	UPDATE SET TableOrganizationID = src.TableOrganizationID
+	UPDATE SET 
+				  DocumentID = DocumentTable.DocumentID
+					,TableOrganizationID = src.TableOrganizationID
+					,TableTypeID = DocumentTable.TableTypeID
 					,Consolidated = src.Consolidated
 					,Unit = src.Unit
 					,ScalingFactorID = src.ScalingFactorID
 					,TableIntID = src.TableIntID
 					,ExceptShare = src.ExceptShare
- OUTPUT 
-			CASE WHEN $action = 'UPDATE' THEN 'UPDATE'
-				ELSE 'INSERT' 
-			END  ,
-			 'DocumentTable', 
-			 CASE WHEN $action = 'UPDATE' THEN inserted.Id
-				ELSE -1  
-			END INTO @ChangeResult;
+WHEN NOT MATCHED THEN
+	INSERT ( DocumentID
+      ,TableOrganizationID
+      ,TableTypeID
+      ,Consolidated
+      ,Unit
+      ,ScalingFactorID
+      ,TableIntID
+      ,ExceptShare) VALUES
+	  (
+			src.DocumentID
+		,src.TableOrganizationID
+		,src.TableTypeID
+		,src.Consolidated
+		,src.Unit
+		,src.ScalingFactorID
+		,src.TableIntID
+		,src.ExceptShare
+	  )
+OUTPUT $action, 'DocumentTable', inserted.Id INTO @ChangeResult;
  
 
 ";
@@ -3796,7 +3811,9 @@ WHEN MATCHED THEN
 							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+								"'00000000-0000-0000-0000-000000000000'",
 								elem["obj"]["TableOrganizationID"].AsValue(),
+								"0",
 								elem["obj"]["Consolidated"].AsBoolean(),
 								elem["obj"]["Unit"].AsString(),
 								elem["obj"]["ScalingFactorID"].AsString(),
