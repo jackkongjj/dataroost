@@ -172,6 +172,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.DragDropStaticHierarchyLabel(id, targetId, location.ToUpper());
 		}
 
+		[Route("staticHierarchy/{id}/dragdrop/header/{location}")]
+		[HttpPut]
+		public ScarResult DragDropStaticHierarchyLabel(string CompanyId, int id, string location, StringDictionary dict) {
+			if (string.IsNullOrEmpty(location))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			int tableTypeid;
+			int.TryParse(dict.StringData["TableTypeId"], out tableTypeid);
+			return helper.DragDropStaticHierarchyLabelByString(tableTypeid, dict.StringData["DraggedLabel"], dict.StringData["TargetLabel"], location.ToUpper());
+		}
+
+
 		[Route("staticHierarchy/{id}/unittype")]
 		[HttpPut]
 		public ScarResult UpdateStatichHierarchyUnitType(string CompanyId, int id, StringInput input) {
@@ -827,6 +840,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		public class StringInput {
 			public string StringData { get; set; }
+		}
+		public class StringDictionary {
+			public Dictionary<string, string> StringData { get; set; }
 		}
 	}
 

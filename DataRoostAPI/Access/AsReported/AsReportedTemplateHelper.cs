@@ -1638,6 +1638,34 @@ SELECT *
 			return response;
 		}
 
+		public ScarResult DragDropStaticHierarchyLabelByString(int tableTypeId, string DraggedLabel, string TargetLabel, string Location) {
+
+			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
+
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@DraggedLabel", DraggedLabel);
+					cmd.Parameters.AddWithValue("@TargetLabel", TargetLabel);
+					cmd.Parameters.AddWithValue("@TableTypeID", tableTypeId);
+					cmd.Parameters.AddWithValue("@Location", Location);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						int i = 0; 
+						while (reader.Read()) {
+							i++;
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public TimeSlice GetTimeSlice(int id) {
 
 			string query = @"SELECT * FROM dbo.DocumentTimeSlice WHERE ID = @id";
