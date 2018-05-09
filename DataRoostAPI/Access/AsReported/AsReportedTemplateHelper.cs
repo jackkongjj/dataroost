@@ -359,6 +359,7 @@ WHERE  CompanyID = @Iconum";
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
 								ManualOrgSet = reader.GetBoolean(18),
+								TableTypeID = reader.GetInt32(19),
 								PublicationDate = reader.GetDateTime(20),
 								DamDocumentId = reader.GetGuid(21)
 							};
@@ -3981,6 +3982,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id INTO @ChangeResult;
 				int totalUpdates = new Regex(Regex.Escape("action: update")).Matches(unquotedJson).Count;
 				int totalInsert =  new Regex(Regex.Escape("action: insert")).Matches(unquotedJson).Count;
 				var cft = json["CompanyFinancialTerm"];
+				var shs = json["StaticHierarchy"];
 				var tabledimension = json["TableDimension"];
 				var tablecell = json["TableCell"];
 				var documentTable = json["DocumentTable"];  
