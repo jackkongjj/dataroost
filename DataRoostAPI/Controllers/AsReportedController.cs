@@ -883,6 +883,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			public string StringData { get; set; }
 		}
 
+
 		[Route("documents/{damdocumentId}")]
 		[HttpPut]
 		public bool ExecuteZeroMinuteUpdate(string CompanyId, Guid damdocumentId, StringInput input) {
@@ -909,6 +910,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			ScarResult result = null;
 			result = new ScarResult();
 			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = "F";
 			bool runOnce = true;
 			string isoCountry = helper.GetDocumentIsoCountry(SfDocumentId);
 			bool isUsDocument = (!string.IsNullOrEmpty(isoCountry) && isoCountry.ToUpper() == "US");
@@ -923,9 +925,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 							break;
 						}
 						ExceptionSource = "Exception at DoRedStarSlotting: ";
-						returnValue = DoRedStarSlotting(CompanyId, damdocumentId).ReturnValue;
+						var RedStarReturnValue = returnValue = DoRedStarSlotting(CompanyId, damdocumentId).ReturnValue;
 						if (!(returnValue["Success"] == "T")) {
-							break;
+							if (returnValue["Message"].StartsWith("Exception")) { // if it's real exception, not redstar warning
+								break;
+							}
 						}
 						ExceptionSource = "Exception at DoSetIncomeOrientation: ";
 						DoSetIncomeOrientation(CompanyId, damdocumentId);
@@ -938,6 +942,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 							//string Ids = mtmwRet.cells.Select(x => x.ID.ToString()).Aggregate((a, b) => a + "," + b);
 							//returnValue = new Tuple<bool, string>(false, "mtmwlpvfailed: " + Ids);
+							break;
+						}
+						if (!(RedStarReturnValue["Success"] == "T")) {
+							ExceptionSource = "Exception at DoRedStarSlotting: ";
+							returnValue = RedStarReturnValue;
 							break;
 						}
 						ExceptionSource = "Exception at DoARDValidation: ";
