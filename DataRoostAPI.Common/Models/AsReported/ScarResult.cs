@@ -7,12 +7,12 @@ using Newtonsoft.Json;
 
 namespace DataRoostAPI.Common.Models.AsReported {
 	public class ScarResult {
-		
 		public ScarResult() {
 			ReturnValue = new Dictionary<string, string>();
 			ReturnValue["Success"] = "F";
 			ReturnValue["Message"] = "";
 		}
+
 
 		[JsonProperty("staticHierarchyAdjustedOrders")]
 		public List<StaticHierarchyAdjustedOrder> StaticHierarchyAdjustedOrders { get; set; }
@@ -33,8 +33,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("TimeSlices")]
 		public List<TimeSlice> TimeSlices { get; set; }
 
-		[JsonProperty("errorMessage")]
-		public string ErrorMessage { get; set; }
+		[JsonProperty("Message")]
+		public string Message { get; set; }
 
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }

@@ -107,6 +107,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.GetTemplateSkeleton(iconum, TemplateName);
 		}
 
+		[Route("templates/{TemplateName}/{DocumentId}/copyhierarchy")]
+		[HttpPost]
+		public ScarResult CopyDocumentHierarchy(string CompanyId, string TemplateName, Guid DocumentId, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			int tabletypeID;
+			if (input == null || string.IsNullOrEmpty(input.StringData) || !int.TryParse(input.StringData, out tabletypeID))
+				return null;
+			if (tabletypeID <= 0)
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.CopyDocumentHierarchy(iconum, tabletypeID, DocumentId);
+		}
 		//TODO: Add Derivation Meta for cells, add MTMW and like period validation indicators.
 		[Route("staticHierarchy/{id}")]
 		[HttpGet]
@@ -148,16 +161,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UpdateStaticHierarchySwitchChildrenOrientation(id);
 		}
-
+		
 		[Route("staticHierarchy/{id}/dragdrop/{targetId}/{location}")]
 		[HttpPut]
-		public ScarResult EditHierarchyLabel(string CompanyId, int id, int targetId, string location) {
+		public ScarResult DragDropStaticHierarchyLabel(string CompanyId, int id, int targetId, string location) {
 			if (string.IsNullOrEmpty(location))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.DragDropStaticHierarchyLabel(id, targetId, location.ToUpper());
 		}
+
+		[Route("staticHierarchy/{id}/dragdrop/header/{location}")]
+		[HttpPut]
+		public ScarResult DragDropStaticHierarchyLabel(string CompanyId, int id, string location, StringDictionary dict) {
+			if (string.IsNullOrEmpty(location))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			int tableTypeid;
+			int.TryParse(dict.StringData["TableTypeId"], out tableTypeid);
+			return helper.DragDropStaticHierarchyLabelByString(tableTypeid, dict.StringData["DraggedLabel"], dict.StringData["TargetLabel"], location.ToUpper());
+		}
+
 
 		[Route("staticHierarchy/{id}/unittype")]
 		[HttpPut]
@@ -191,7 +217,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UpdateStaticHierarchySeperator(id, false);
 		}
-
+		[Route("staticHierarchy/{id}/header")]
+		[HttpPut]
+		public ScarResult EditHierarchyHeaderLabel(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyHeaderLabel(id, input.StringData);
+		}
 		[Route("staticHierarchy/{id}/header")]
 		[HttpPost]
 		public ScarResult AddHeaderStatichHierarchy(string CompanyId, int id) {
@@ -225,6 +259,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.UpdateStaticHierarchyAddParent(id);
 		}
 
+		[Route("staticHierarchy/{id}/danglingheader")]
+		[HttpPost]
+		public ScarResult ConvertDanglingHeader(string CompanyId, int id, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.UpdateStaticHierarchyConvertDanglingHeader(id, input.StringData);
+		}
+
 
 		//TODO: Add IsSummary
 		[Route("timeSlice/{id}")]
@@ -237,6 +282,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.GetTimeSlice(id);
+		}
+
+		[Route("timeSlice/{id}")]
+		[HttpPost]
+		public ScarResult CreateTimeSlice(string CompanyId, int id, StringInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return null;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.CreateTimeSlice(input.StringData);
 		}
 
 
@@ -260,33 +316,31 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.CloneUpdateTimeSlice(id, input.StringData);
 		}
 
-
-
-		[Route("cells/{id}/flipsign/{DocumentId}/")]
-		[HttpGet]
-		public ScarResult FlipSign(string id, Guid DocumentId) {
-			// there shouldn't be a getter for this. My Mistake. 
-			string CompanyId = "36468";
-			int iconum = PermId.PermId2Iconum(CompanyId);
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.FlipSign(id, DocumentId, iconum, 0);
-		}
-
-		[Route("cells/{id}/flipsign/{DocumentId}/")]
-		[HttpPost]
-		public ScarResult FlipSign(string id, Guid DocumentId, ScarInput input) {
-			string CompanyId = "36468";
-			int iconum = PermId.PermId2Iconum(CompanyId);
-			if (input == null || input.TargetStaticHierarchyID == 0)
+		[Route("timeSlice/{id}/manualorgset")]
+		[HttpPut]
+		public ScarResult PutTimeSliceManualOrgSet(string CompanyId, int id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.FlipSign(id, DocumentId, iconum, input.TargetStaticHierarchyID);
+			return helper.UpdateTimeSliceManualOrgSet(id, input.StringData);
+		}
+
+
+		[Route("cells/{id}/flipsign/{DocumentId}/")]
+		[HttpPut]
+		public ScarResult FlipSign(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			int targetSH = 1;
+			if (input != null && input.TargetStaticHierarchyID != 0)
+				targetSH = input.TargetStaticHierarchyID;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.FlipSign(id, DocumentId, iconum, targetSH);
 		}
 
 		[Route("cells/{id}/children/flipsign/{DocumentId}/")]
-		[HttpPost]
+		[HttpPut]
 		public ScarResult FlipChildren(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			//if (input == null || input.TargetStaticHierarchyID == 0)
@@ -297,7 +351,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("cells/{id}/historical/flipsign/{DocumentId}/")]
-		[HttpPost]
+		[HttpPut]
 		public ScarResult FlipHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			//if (input == null || input.TargetStaticHierarchyID == 0)
@@ -308,7 +362,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		[Route("cells/{id}/children/historical/flipsign/{DocumentId}/")]
-		[HttpPost]
+		[HttpPut]
 		public ScarResult FlipChildrenHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			//if (input == null || input.TargetStaticHierarchyID == 0)
@@ -316,6 +370,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.FlipChildrenHistorical(id, DocumentId, iconum, 0);
+		}
+
+		[Route("cells/{id}/swapvalue")]
+		[HttpPut]
+		public ScarResult SwapValue(string id, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData)) {
+				var ret = new ScarResult();
+				ret.ReturnValue["Success"] = "F";
+				return ret;
+			}
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.SwapValue(id, input.StringData);
 		}
 
 		[Route("cells/{id}/addMTMW/{DocumentId}/")]
@@ -326,12 +393,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return helper.AddMakeTheMathWorkNote(id, DocumentId);
 		}
 
+		[Route("cells/{id}/addMTMW/{DocumentId}/")]
+		[HttpPost]
+		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return AddMakeTheMathWorkNote(id, DocumentId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddMakeTheMathWorkNote(id, DocumentId, input.StringData);
+		}
+
 		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
 		[HttpGet]
 		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.AddLikePeriodValidationNote(id, DocumentId);
+		}
+
+		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
+		[HttpPost]
+		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId, StringInput input) {
+			if (input == null || string.IsNullOrEmpty(input.StringData))
+				return AddLikePeriodValidationNote(id, DocumentId);
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.AddLikePeriodValidationNote(id, DocumentId, input.StringData);
 		}
 
 		[Route("cells/{id}")]
@@ -470,6 +557,204 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			return helper.UpdateTableRowMetaScalingFactor(id, newValue);
 		}
+		[Route("cells/{id}/column/perioddate")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaPeriodDate(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaPeriodDate(id, newValue);
+		}
+		[Route("cells/{id}/column/columnheader")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaColumnHeader(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaColumnHeader(id, newValue);
+		}
+		[Route("cells/{id}/column/periodtype")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaPeriodType(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaPeriodType(id, newValue);
+		}
+		[Route("cells/{id}/column/periodlength")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaPeriodLength(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaPeriodLength(id, newValue);
+		}
+
+		[Route("cells/{id}/column/currency")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaCurrencyCode(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaCurrencyCode(id, newValue);
+		}
+		[Route("cells/{id}/column/interimtype")]
+		[HttpPut]
+		public ScarResult UpdateTableColumnMetaInterimType(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateTableColumnMetaInterimType(id, newValue);
+		}
+		[Route("tdp/{TemplateName}/{DocumentId}")]
+		[HttpGet]
+		public ScarResult GetTDP(string CompanyId, string TemplateName, Guid DocumentId) {
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			if (TemplateName == null)
+				return null;
+
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
+		}
+		[Route("tdp/{id}")]
+		[HttpPost]
+		public ScarResult UpdateTDP(string id, StringInput input) {
+			ScarResult result = new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			//newValue = JsonToSQL.Json_UpdateTDPExample;
+			if (string.IsNullOrWhiteSpace(newValue)) {
+				result.Message = "Missing Json Input";
+			} else {
+				try {
+					result = helper.UpdateTDPByDocumentTableID(id, newValue);
+				} catch (Exception ex) {
+					result.Message += ex.Message;
+				}
+			}
+			return result;
+		}
+
+		[Route("tdp/{id}/deleterowcolumn")]
+		[HttpPost]
+		public ScarResult DeleteRowColumnTDP(string id, StringInput input) {
+			ScarResult result = new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			//newValue = JsonToSQL.Json_UpdateTDPExample;
+			if (string.IsNullOrWhiteSpace(newValue)) {
+				result.Message = "Missing Json Input";
+			} else {
+				try {
+					result = helper.DeleteRowColumnTDPByDocumentTableID(id, newValue);
+				} catch (Exception ex) {
+					result.Message += ex.Message;
+				}
+			}
+			return result;
+		}
+
+		[Route("tdp/{id}")]
+		[HttpDelete]
+		public ScarResult DeleteTDP(string id) {
+			ScarResult result = new ScarResult();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+
+			result = helper.DeleteDocumentTableID(id);
+			return result;
+		}
+		[Route("documenttimeslicetablecell/{id}")]
+		[HttpPut]
+		public ScarResult UpdateDocumentTimeSliceTableCell(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.UpdateDocumentTimeSliceTableCell(id, newValue);
+		}
+
+		[Route("documenttimeslicetablecell/{id}")]
+		[HttpPost]
+		public ScarResult CopyDocumentTimeSliceTableCell(string id, StringInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			string newValue = "";
+			if (input != null && !string.IsNullOrEmpty(input.StringData)) {
+				newValue = input.StringData;
+			}
+			if (!string.IsNullOrWhiteSpace(newValue)) {
+				return null;
+			}
+
+			return helper.CopyDocumentTimeSliceTableCell(id, newValue);
+		}
+
+		[Route("documenttimeslicetablecell/{id}")]
+		[HttpDelete]
+		public ScarResult DeleteDocumentTimeSliceTableCell(string id) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.DeleteDocumentTimeSliceTableCell(id, "");
+		}
 		[Route("templates/{TemplateName}/timeslice/{DocumentId}/")]
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
@@ -529,7 +814,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum);
+			return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 		}
 
 		public class StitchInput {
@@ -539,6 +824,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		public class UnStitchInput {
 			public int TargetStaticHierarchyID { get; set; }
+			public List<int> DocumentTimeSliceIDs { get; set; }
 		}
 
 		public class ScarInput {
@@ -554,6 +840,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		public class StringInput {
 			public string StringData { get; set; }
+		}
+		public class StringDictionary {
+			public Dictionary<string, string> StringData { get; set; }
 		}
 	}
 
@@ -593,6 +882,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public class StringInput {
 			public string StringData { get; set; }
 		}
+
 
 		[Route("documents/{damdocumentId}")]
 		[HttpPut]
@@ -751,7 +1041,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
 			IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => ((c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD") || 
 					(c.LikePeriodValidationFlag
-					&& (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType) && sh.StaticHierarchyMetaType != "SD")
+					&& ((sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType) && sh.StaticHierarchyMetaType != "SD"))
 					&& templates.First(te => te.TimeSlices.Any(ts => ts.Cells.Contains(c))).TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId
 					)
 				))));
@@ -784,7 +1074,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
 
 					IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
-						.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD")));
+						.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD" && sh.StaticHierarchyMetaType != "FN")));
 					int mtmwcount = mtmwcells.Count();
 					if (mtmwcells.Count() > 0) {
 						errorMessageBuilder.Append(TemplateName + ": MTMW: ");
@@ -795,8 +1085,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						isSuccess = false;
 					}
 
-					IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType))
-						 && sh.StaticHierarchyMetaType != "SD")
+					IEnumerable<SCARAPITableCell> lpvcells = templates.SelectMany(t => t.StaticHierarchies.Where(sh => (sh.UnitTypeId == 2 || sh.UnitTypeId == 1 || LPVMetaTypes.Contains(sh.StaticHierarchyMetaType)) && sh.StaticHierarchyMetaType != "SD" && sh.StaticHierarchyMetaType != "FN")
 						.SelectMany(sh => sh.Cells.Where(c => c.LikePeriodValidationFlag
 						&& templates.First().TimeSlices.First(ti => ti.Cells.Contains(c)).DamDocumentId == damdocumentId)));
 					int lpvcount = lpvcells.Count();
@@ -823,7 +1112,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				isSuccess = false;
 				errorMessageBuilder = new System.Text.StringBuilder("Multiple MTMW Errors Encountered");
 			}
-
 			Dictionary<string, string> returnValue = new Dictionary<string, string>();
 			returnValue["Success"] = isSuccess ? "T" : "F";
 			returnValue["Message"] = errorMessageBuilder.ToString();
