@@ -4649,8 +4649,7 @@ AS
 		JOIN StaticHierarchy sh WITH (NOLOCK) on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
 		JOIN TableType tt WITH (NOLOCK) on tt.ID = sh.TableTypeID  
 		LEFT JOIN ARTimeSliceDerivationComponents artsdc WITH(NOLOCK) ON artsdc.DocumentTimeSliceID = dts.id
-	WHERE 1=1
-	and tt.description = @TypeTable
+	WHERE tt.description = @TypeTable
 	and ds.id = @DocumentSeriesId and tt.DocumentSeriesID = @DocumentSeriesId
 	group by d.damdocumentid, dts.id 
 )
@@ -4670,10 +4669,9 @@ JOIN TableDimension td (nolock) ON dt.ID = td.DocumentTableID and td.DimensionTy
 JOIN DimensionToCell dtc WITH(NOLOCK) ON dtc.TableDimensionID = td.ID
 where 
   tt.Description = @TypeTable and tt.DocumentSeriesID = @DocumentSeriesId and
-  d.documentseriesid =  @DocumentSeriesId
-  and (d.ArdExportFlag = 1 or d.IsDocSetUpCompleted = 1 or d.ExportFlag = 1)
-
-
+  d.documentseriesid =  @DocumentSeriesId and 
+(d.DAMDocumentId = @DocumentID or d.ArdExportFlag = 1 or d.IsDocSetUpCompleted = 1 or d.ExportFlag = 1) 
+  
 select d.id as DocumentId, d.DAMDocumentId, d.Description, tc.PeriodLength, tc.PeriodTypeID, tc.CellDate, count(*) as count, count(distinct tc.CurrencyCode) as CurrencyCount, max(tc.CurrencyCode) as CurrencyCode 
  INTO #alltimeslices
 from #tableCells d
@@ -4704,12 +4702,14 @@ select
 	,ISNULL(n.ReportType, d.ReportTypeID) as ReportType
 	,ISNULL(n.ReportTypeID, d.ReportTypeID) as ReportTypeID
 	,ISNULL(n.IsAutoCalc, 0) as IsAutoCalc
-
+INTO #tmptimeslices
 from #alltimeslices  a
 JOIN Document d WITH(NOLOCK) on a.DAMDocumentId  = d.DAMDocumentId
 LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePeriodEndDate = a.CellDate
  order by a.CellDate desc
 
+select distinct ts.*
+from #tmptimeslices ts 
 ";
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -4751,8 +4751,8 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePerio
 							slice.DocumentId = reader.GetGuid(ordinals.DocumentId);
 							slice.DamDocumentId = reader.GetGuid(ordinals.DamDocumentId);
 							slice.Id = reader.GetInt32(ordinals.TimeSliceId);
+							slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
 							if (slice.Id > 0) {
-								slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
 								slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
 							}
 							slice.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesId);
