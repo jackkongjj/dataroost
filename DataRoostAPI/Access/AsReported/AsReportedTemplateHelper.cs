@@ -1699,7 +1699,8 @@ SELECT *
 							IsAmended = reader.GetBoolean(15),
 							IsRestated = reader.GetBoolean(16),
 							IsAutoCalc = reader.GetBoolean(17),
-							ManualOrgSet = reader.GetBoolean(18)
+							ManualOrgSet = reader.GetBoolean(18),
+							TableTypeID = reader.GetInt32(19)
 						};
 						return slice;
 					}
@@ -1756,7 +1757,8 @@ END
 								IsAmended = reader.GetBoolean(15),
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
-								ManualOrgSet = reader.GetBoolean(18)
+								ManualOrgSet = reader.GetBoolean(18),
+								TableTypeID = reader.GetInt32(19)
 							};
 							response.TimeSlices.Add(slice);
 						}
@@ -1829,7 +1831,8 @@ END
 								IsAmended = reader.GetBoolean(15),
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
-								ManualOrgSet = reader.GetBoolean(18)
+								ManualOrgSet = reader.GetBoolean(18),
+								TableTypeID = reader.GetInt32(19)
 							};
 							response.TimeSlices.Add(slice);
 						}
@@ -1879,7 +1882,8 @@ SELECT * FROM dbo.DocumentTimeSlice WHERE DocumentId = @docid;
 								IsAmended = reader.GetBoolean(15),
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
-								ManualOrgSet = reader.GetBoolean(18)
+								ManualOrgSet = reader.GetBoolean(18),
+								TableTypeID = reader.GetInt32(19)
 							};
 							response.TimeSlices.Add(slice);
 						}
@@ -4359,7 +4363,7 @@ where dtc.TableCellID = @id
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("BEGIN TRAN");
-			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
+			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER, Info INTEGER)");
 
 			try {
 				JObject json = JObject.Parse(updateInJson);
@@ -4389,7 +4393,7 @@ where dtc.TableCellID = @id
 								var tableType = reader.GetStringSafe(1);
 								var Id = reader.GetInt32(2);
 								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
-								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id });
+								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = -1 });
 							}
 							if (reader.NextResult() && reader.Read()) {
 								if (reader.GetStringSafe(0) == "commit") {
@@ -4444,7 +4448,8 @@ BEGIN
 							  ,[IsAmended]
 							  ,[IsRestated]
 							  ,[IsAutoCalc]
-							  ,[ManualOrgSet])
+							  ,[ManualOrgSet]
+                ,[TableTypeID])
 
 						SELECT TOP 1 [DocumentId]
 							  ,[DocumentSeriesId]
@@ -4464,6 +4469,7 @@ BEGIN
 							  ,[IsRestated]
 							  ,[IsAutoCalc]
 							  ,[ManualOrgSet]
+                ,[TableTypeID]  
 						  FROM dbo.DocumentTimeSlice where id = @id;
 
 						select @newId =  cast(scope_identity() as int);
@@ -4515,6 +4521,7 @@ SELECT [Id]
 	,[IsRestated]
 	,[IsAutoCalc]
 	,[ManualOrgSet]
+  ,[TableTypeID] 
 FROM dbo.DocumentTimeSlice where id = @newId or id = @dts or id = @id;
 
 ";
@@ -4549,7 +4556,8 @@ FROM dbo.DocumentTimeSlice where id = @newId or id = @dts or id = @id;
 								IsAmended = reader.GetBoolean(15),
 								IsRestated = reader.GetBoolean(16),
 								IsAutoCalc = reader.GetBoolean(17),
-								ManualOrgSet = reader.GetBoolean(18)
+								ManualOrgSet = reader.GetBoolean(18),
+								TableTypeID = reader.GetInt32(19),
 							};
 							response.TimeSlices.Add(slice);
 						}
@@ -4700,7 +4708,8 @@ select
 	,ISNULL(n.DocumentDate, d.DocumentDate) as DocumentDate
 	,ISNULL(n.PublicationDateTime, d.PublicationDateTime) as PublicationDateTime
 	,ISNULL(n.ReportType, d.ReportTypeID) as ReportType
-	,ISNULL(n.ReportTypeID, d.ReportTypeID) as ReportTypeID
+  ,ISNULL(n.ReportTypeID, d.ReportTypeID) as ReportTypeID
+	,ISNULL(n.TableTypeID, -1) as TableTypeID
 	,ISNULL(n.IsAutoCalc, 0) as IsAutoCalc
 INTO #tmptimeslices
 from #alltimeslices  a
@@ -4744,7 +4753,8 @@ from #tmptimeslices ts
 							NumberOfCells = reader.GetOrdinal("NumberofCell"),
 							CurrencyCode = reader.GetOrdinal("CurrencyCode"),
 							CurrencyCount = reader.GetOrdinal("CurrencyCount"),
-							ArComponent = reader.GetOrdinal("ArComponent")
+							ArComponent = reader.GetOrdinal("ArComponent"),
+							TableTypeID = reader.GetOrdinal("TableTypeID")
 						};
 						while (reader.Read()) {
 							TimeSlice slice = new TimeSlice();
@@ -4766,6 +4776,7 @@ from #tmptimeslices ts
 							slice.NumberOfCells = reader.GetInt32(ordinals.NumberOfCells);
 							slice.Currency = reader.GetInt32(ordinals.CurrencyCount) == 1 ? reader.GetStringSafe(ordinals.CurrencyCode) : null;
 							slice.AccountingStandard = reader.GetInt32(ordinals.ArComponent).ToString();
+							slice.TableTypeID = reader.GetInt32(ordinals.TableTypeID); 
 							response.TimeSlices.Add(slice);
 						}
 					}
