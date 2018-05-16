@@ -171,7 +171,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.Pe
 ";//I hate this query, it is so bad
 
 			string TimeSliceQuery =
-				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""')
+				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, dtspn.PeriodNoteID, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') as CHARINDEX
 FROM DocumentSeries ds WITH (NOLOCK) 
 	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
 	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
@@ -181,6 +181,7 @@ FROM DocumentSeries ds WITH (NOLOCK)
 	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
 	JOIN dbo.DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
 	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
+  LEFT JOIN DocumentTimeSlicePeriodNotes dtspn WITH (nolock) on dts.ID = dtspn.DocumentTimeSliceID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
@@ -200,7 +201,6 @@ WHERE  CompanyID = @Iconum";
 
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
-
 
 			AsReportedTemplate temp = new AsReportedTemplate();
 			string query_sproc = @"SCARGetTemplate";
@@ -361,10 +361,12 @@ WHERE  CompanyID = @Iconum";
 								ManualOrgSet = reader.GetBoolean(18),
 								TableTypeID = reader.GetInt32(19),
 								PublicationDate = reader.GetDateTime(20),
-								DamDocumentId = reader.GetGuid(21)
+								DamDocumentId = reader.GetGuid(21),
+								PeriodNoteID = reader.GetNullable<byte>(22)
 							};
 
 							TimeSlices.Add(slice);
+
 							Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
 							if (!TimeSliceMap.ContainsKey(tup)) {
 								TimeSliceMap.Add(tup, new List<int>());
@@ -437,7 +439,10 @@ WHERE  CompanyID = @Iconum";
 								(CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, temp.TimeSlices) != CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasChildren, temp.TimeSlices)) &&
 										!tc.MTMWErrorTypeId.HasValue && hasChildren && sh.UnitTypeId != 2
 										&& !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription));
-					} catch { break; }
+					} catch (Exception ex) {
+						Console.WriteLine(ex.Message);
+						break;
+					}
 				}
 			}
 
@@ -4776,7 +4781,7 @@ from #tmptimeslices ts
 							slice.NumberOfCells = reader.GetInt32(ordinals.NumberOfCells);
 							slice.Currency = reader.GetInt32(ordinals.CurrencyCount) == 1 ? reader.GetStringSafe(ordinals.CurrencyCode) : null;
 							slice.AccountingStandard = reader.GetInt32(ordinals.ArComponent).ToString();
-							slice.TableTypeID = reader.GetInt32(ordinals.TableTypeID); 
+							slice.TableTypeID = reader.GetInt32(ordinals.TableTypeID);
 							response.TimeSlices.Add(slice);
 						}
 					}
