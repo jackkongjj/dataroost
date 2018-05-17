@@ -236,13 +236,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("staticHierarchy/{id}/header")]
 		[HttpDelete]
-		public ScarResult DeleteHeaderStatichHierarchyWithId(string CompanyId, ScarStringListInput input) {
-			return DeleteHeaderStatichHierarchy(CompanyId, input);
+		public ScarResult DeleteHeaderStaticHierarchyWithId(string CompanyId, ScarStringListInput input) {
+			return DeleteHeaderStaticHierarchy(CompanyId, input);
 		}
 
 		[Route("staticHierarchy/header")]
 		[HttpDelete]
-		public ScarResult DeleteHeaderStatichHierarchy(string CompanyId, ScarStringListInput input) {
+		public ScarResult DeleteHeaderStaticHierarchy(string CompanyId, ScarStringListInput input) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
@@ -257,6 +257,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			return helper.UpdateStaticHierarchyAddParent(id);
+		}
+
+		[Route("staticHierarchy/parent")]
+		[HttpDelete]
+		public ScarResult DeleteParentStaticHierarchy(string CompanyId, ScarStringListInput input) {
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
+				return null;
+
+			return helper.UpdateStaticHierarchyDeleteParent(input.StringData, input.StaticHierarchyIDs);
 		}
 
 		[Route("staticHierarchy/{id}/danglingheader")]

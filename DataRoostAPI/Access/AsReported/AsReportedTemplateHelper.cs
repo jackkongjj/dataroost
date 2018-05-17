@@ -1140,6 +1140,48 @@ SELECT *
 			return response;
 		}
 
+		public ScarResult UpdateStaticHierarchyDeleteParent(string headerText, List<int> StaticHierarchyIds) {
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DeleteParent";
+
+			DataTable dt = new DataTable();
+			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
+			foreach (int i in StaticHierarchyIds) {
+				dt.Rows.Add(i);
+			}
+
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.Parameters.AddWithValue("@HeaderText", headerText);
+					cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							StaticHierarchy sh = new StaticHierarchy
+							{
+								Id = reader.GetInt32(0),
+								CompanyFinancialTermId = reader.GetInt32(1),
+								AdjustedOrder = reader.GetInt32(2),
+								TableTypeId = reader.GetInt32(3),
+								Description = reader.GetStringSafe(4),
+								HierarchyTypeId = reader.GetStringSafe(5)[0],
+								SeparatorFlag = reader.GetBoolean(6),
+								StaticHierarchyMetaId = reader.GetInt32(7),
+								UnitTypeId = reader.GetInt32(8),
+								IsIncomePositive = reader.GetBoolean(9),
+								ChildrenExpandDown = reader.GetBoolean(10),
+								Cells = new List<SCARAPITableCell>()
+							};
+							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
 		public ScarResult UpdateStaticHierarchyLabel(int id, string newLabel) {
 
 			string query = @"
@@ -1309,7 +1351,7 @@ END
 		}
 		public ScarResult UpdateStaticHierarchyAddParent(int id) {
 
-			string query = @"SCAR_InsertStaticHierarchy_AddParent";
+			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_AddParent";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -1349,7 +1391,7 @@ END
 
 		public ScarResult UpdateStaticHierarchyConvertDanglingHeader(int id, string newValue) {
 
-			string query = @"SCAR_UpdateStaticHierarchy_ConvertDanglingHeader";
+			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_ConvertDanglingHeader";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
