@@ -174,7 +174,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("staticHierarchy/{id}/dragdrop/header/{location}")]
 		[HttpPut]
-		public ScarResult DragDropStaticHierarchyLabel(string CompanyId, int id, string location, StringDictionary dict) {
+		public ScarResult DragDropStaticHierarchyLabelByString(string CompanyId, int id, string location, StringDictionary dict) {
 			if (string.IsNullOrEmpty(location))
 				return null;
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();

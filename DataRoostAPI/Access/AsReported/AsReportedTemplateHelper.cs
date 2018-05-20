@@ -1600,54 +1600,17 @@ SELECT *
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
 
 			string query = @"
+BEGIN TRY
+	BEGIN TRAN
 DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy where id = @TargetSHID)
 
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID , @Location
+	COMMIT 
+END TRY
+BEGIN CATCH
+	ROLLBACK;
+END CATCH
 
-;WITH CTE_Children ([Id]
-      ,[CompanyFinancialTermId]
-      ,[AdjustedOrder]
-      ,[TableTypeId]
-      ,[Description]
-      ,[HierarchyTypeId]
-      ,[SeperatorFlag]
-      ,[StaticHierarchyMetaId]
-      ,[UnitTypeId]
-      ,[IsIncomePositive]
-      ,[ChildrenExpandDown]
-      ,[ParentID]) AS(
-	SELECT [Id]
-      ,[CompanyFinancialTermId]
-      ,[AdjustedOrder]
-      ,[TableTypeId]
-      ,[Description]
-      ,[HierarchyTypeId]
-      ,[SeperatorFlag]
-      ,[StaticHierarchyMetaId]
-      ,[UnitTypeId]
-      ,[IsIncomePositive]
-      ,[ChildrenExpandDown]
-      ,[ParentID] FROM StaticHierarchy WHERE ID = @DraggedSHID
-	UNION ALL
- 
-	SELECT sh.[Id]
-      ,sh.[CompanyFinancialTermId]
-      ,sh.[AdjustedOrder]
-      ,sh.[TableTypeId]
-      ,sh.[Description]
-      ,sh.[HierarchyTypeId]
-      ,sh.[SeperatorFlag]
-      ,sh.[StaticHierarchyMetaId]
-      ,sh.[UnitTypeId]
-      ,sh.[IsIncomePositive]
-      ,sh.[ChildrenExpandDown]
-      ,sh.[ParentID] 
-	FROM StaticHierarchy sh
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
-)
- 
-SELECT *
-  FROM CTE_Children
 ";
 
 			ScarResult response = new ScarResult();
@@ -1663,22 +1626,22 @@ SELECT *
 					cmd.Parameters.AddWithValue("@Location", Location);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
-							StaticHierarchy sh = new StaticHierarchy
-							{
-								Id = reader.GetInt32(0),
-								CompanyFinancialTermId = reader.GetInt32(1),
-								AdjustedOrder = reader.GetInt32(2),
-								TableTypeId = reader.GetInt32(3),
-								Description = reader.GetStringSafe(4),
-								HierarchyTypeId = reader.GetStringSafe(5)[0],
-								SeparatorFlag = reader.GetBoolean(6),
-								StaticHierarchyMetaId = reader.GetInt32(7),
-								UnitTypeId = reader.GetInt32(8),
-								IsIncomePositive = reader.GetBoolean(9),
-								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
-							};
-							response.StaticHierarchies.Add(sh);
+							//StaticHierarchy sh = new StaticHierarchy
+							//{
+							//	Id = reader.GetInt32(0),
+							//	CompanyFinancialTermId = reader.GetInt32(1),
+							//	AdjustedOrder = reader.GetInt32(2),
+							//	TableTypeId = reader.GetInt32(3),
+							//	Description = reader.GetStringSafe(4),
+							//	HierarchyTypeId = reader.GetStringSafe(5)[0],
+							//	SeparatorFlag = reader.GetBoolean(6),
+							//	StaticHierarchyMetaId = reader.GetInt32(7),
+							//	UnitTypeId = reader.GetInt32(8),
+							//	IsIncomePositive = reader.GetBoolean(9),
+							//	ChildrenExpandDown = reader.GetBoolean(10),
+							//	Cells = new List<SCARAPITableCell>()
+							//};
+							//response.StaticHierarchies.Add(sh);
 						}
 					}
 				}
