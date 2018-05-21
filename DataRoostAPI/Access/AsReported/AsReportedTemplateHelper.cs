@@ -4187,6 +4187,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
+						cmd.CommandTimeout = 0;
 						conn.Open();
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							List<object> aList = new List<object>();
@@ -4247,6 +4248,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
+						cmd.CommandTimeout = 0;
 						conn.Open();
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							List<object> aList = new List<object>();
