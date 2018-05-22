@@ -4159,8 +4159,15 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 								var changeType = reader.GetStringSafe(0);
 								var tableType = reader.GetStringSafe(1);
 								var Id = reader.GetInt32(2);
+								var Info = -1;
+								try {
+									Info = reader.GetInt32(3);
+								}catch(Exception ex) {
+									
+								}
+
 								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
-								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id });
+								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
 							}
 							if (reader.NextResult() && reader.Read()) {
 								if (reader.GetStringSafe(0) == "commit") {
