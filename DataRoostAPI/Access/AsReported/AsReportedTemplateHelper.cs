@@ -3561,7 +3561,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
-								elem["obj"]["DocumentId"].AsString(),
+								(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
 								elem["obj"]["Label"].AsString(),
 								elem["obj"]["XBRLTag"].AsString()
 								));
@@ -3587,7 +3587,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 							elem["obj"]["Cusip"].AsString(),
 							"0",
 							elem["obj"]["IsIncomePositive"].AsBoolean(),
-							elem["obj"]["DocumentId"].AsString(),
+							(elem["obj"]["DocumentId"].AsString().Length >5? elem["obj"]["DocumentId"].AsString(): elem["obj"]["DocumentId"].AsValue()),
 							elem["obj"]["Label"].AsString(),
 							elem["obj"]["XBRLTag"].AsString()
 							));
@@ -4112,6 +4112,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
+			updateInJson = updateInJson.Replace("&quot;", "\"");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -4188,6 +4189,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult DeleteRowColumnTDPByDocumentTableID(string dtid, string updateInJson) {
+			updateInJson = updateInJson.Replace("&quot;", "\"");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
