@@ -4916,7 +4916,7 @@ FROM cte_level
 GROUP BY SHRootID
 
 SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
-				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, ISNULL(tc.ValueNumeric, dbo.GetTableCellDisplayValue(lpv.StaticHierarchyID, lpv.DocumentTimeSliceID)), tc.NormalizedNegativeIndicator, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, ISNULL(tc.CompanyFinancialTermID, sh.CompanyFinancialTermId), ISNULL(tc.ValueNumeric, dbo.GetTableCellDisplayValue(lpv.StaticHierarchyID, lpv.DocumentTimeSliceID)), tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
 				tc.XBRLTag, 
 				tc.DocumentId, tc.Label, sf.Value,
@@ -4999,7 +4999,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell = new SCARAPITableCell
 									{
 										ID = reader.GetInt32(1),
-										ValueNumeric = reader.GetNullable<decimal>(13),
+										CompanyFinancialTermID = reader.GetNullable<int>(12),
+										VirtualValueNumeric = reader.GetNullable<decimal>(13),
 									};
 									cell.ARDErrorTypeId = reader.GetNullable<int>(26);
 									cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
