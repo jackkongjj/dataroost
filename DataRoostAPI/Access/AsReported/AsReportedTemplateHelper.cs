@@ -387,7 +387,9 @@ WHERE  CompanyID = @Iconum";
 						reader.NextResult();
 						while (reader.Read()) {
 							int TimeSliceID = reader.GetInt32(0);
-
+							if(TimeSlices.FirstOrDefault(t => t.Id== TimeSliceID) != null) {
+								TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
+							}
 							if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
 								IsSummaryLookup.Add(TimeSliceID, new List<string>());
 							}
