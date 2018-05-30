@@ -5823,7 +5823,7 @@ END CATCH
 							StaticHierarchyID = r.GetInt32(0),
 							DocumentTimeSliceID = r.GetInt32(1),
 							TableCellID = r.GetInt32(2),
-							ValueNumeric = r.GetDecimal(3),
+							ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
 							IsIncomePositive = r.GetBoolean(4),
 							ScalingFactorValue = r.GetDouble(5),
 							RootStaticHierarchyID = r.GetInt32(6),
@@ -5837,7 +5837,7 @@ END CATCH
 							StaticHierarchyID = r.GetInt32(0),
 							DocumentTimeSliceID = r.GetInt32(1),
 							TableCellID = r.GetInt32(2),
-							ValueNumeric = r.GetDecimal(3),
+							ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
 							IsIncomePositive = r.GetBoolean(4),
 							ScalingFactorValue = r.GetDouble(5),
 							RootStaticHierarchyID = r.GetInt32(6),
@@ -5901,7 +5901,7 @@ END CATCH
 									IsIncomePositive = sdr.GetBoolean(20),
 									XBRLTag = sdr.GetStringSafe(21),
 									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
-									DocumentID = sdr.GetGuid(23),
+									DocumentID = sdr.GetNullable<Guid>(23).HasValue ? sdr.GetGuid(23) : Guid.Empty,
 									Label = sdr.GetStringSafe(24),
 									ScalingFactorValue = sdr.GetDouble(25),
 									ARDErrorTypeId = sdr.GetNullable<int>(26),
@@ -5920,7 +5920,7 @@ END CATCH
 			}
 
 			foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells) {
-				decimal value = cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
+				decimal value = (cell.ValueNumeric.HasValue ? cell.ValueNumeric.Value : 0) * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
 				decimal sum = 0;
 				bool any = false;
 				foreach (CellMTMWComponent c in res.DTSToMTMWComponent[res.CellToDTS[cell]]) {
@@ -6045,7 +6045,7 @@ END CATCH
 									IsIncomePositive = sdr.GetBoolean(20),
 									XBRLTag = sdr.GetStringSafe(21),
 									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
-									DocumentID = sdr.GetGuid(23),
+									DocumentID = sdr.GetNullable<Guid>(23).HasValue ? sdr.GetGuid(23) : Guid.Empty,
 									Label = sdr.GetStringSafe(24),
 									ScalingFactorValue = sdr.GetDouble(25),
 									ARDErrorTypeId = sdr.GetNullable<int>(26),
@@ -6079,7 +6079,7 @@ END CATCH
 							StaticHierarchyID = r.GetInt32(0),
 							DocumentTimeSliceID = r.GetInt32(3),
 							TableCellID = r.GetInt32(4),
-							ValueNumeric = r.GetDecimal(8),
+							ValueNumeric = r.GetNullable<Decimal>(8).HasValue ? r.GetDecimal(8) : 0,
 							IsIncomePositive = r.GetBoolean(9),
 							ScalingFactorValue = r.GetDouble(10),
 							RootStaticHierarchyID = r.GetInt32(6),
