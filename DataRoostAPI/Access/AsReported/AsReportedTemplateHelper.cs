@@ -1099,6 +1099,30 @@ SELECT *
 			return response;
 		}
 
+		public ScarResult DeleteStaticHierarchy(List<int> StaticHierarchyIds) {
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var inclause = string.Join(",", StaticHierarchyIds);
+			string query1 = @"delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in ({0})";
+			string query2 = @"delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in ({0})";
+			string query3 = @"delete from dbo.statichierarchy where Id in ({0})";
+			String q1 = string.Format(query1, inclause);
+			String q2 = string.Format(query2, inclause);
+			String q3 = string.Format(query3, inclause);
+			String finalquery = q1 + q2 + q3;
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.NextResult();
+						reader.Read();
+						reader.NextResult();
+						reader.Read();
+					}
+				}
+			}
+			return response;
+		}
 
 		public ScarResult UpdateStaticHierarchyDeleteHeader(string headerText, List<int> StaticHierarchyIds) {
 			ScarResult response = new ScarResult();
