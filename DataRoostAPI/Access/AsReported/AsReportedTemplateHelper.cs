@@ -6397,7 +6397,7 @@ WHERE d.ID = @SFDocumentID
 			return isoCountry;
 		}
 
-		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum) {
+		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum, string ContentType = "Full") {
 			string query = @"
 
  DECLARE @BigThree Table (Description varchar(64))
@@ -6450,6 +6450,7 @@ WHERE d.ID = @SFDocumentID
 				using (SqlCommand cmd = new SqlCommand("prcInsert_CreateDocumentTimeSlices", conn)) {
 					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@DocID", SFDocumentId);
+					cmd.Parameters.AddWithValue("@ContentType", ContentType);
 					cmd.ExecuteNonQuery();
 				}
 
