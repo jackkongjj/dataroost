@@ -387,7 +387,7 @@ WHERE  CompanyID = @Iconum";
 						reader.NextResult();
 						while (reader.Read()) {
 							int TimeSliceID = reader.GetInt32(0);
-							if(TimeSlices.FirstOrDefault(t => t.Id== TimeSliceID) != null) {
+							if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
 								TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
 							}
 							if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
@@ -3614,7 +3614,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 							elem["obj"]["Cusip"].AsString(),
 							"0",
 							elem["obj"]["IsIncomePositive"].AsBoolean(),
-							(elem["obj"]["DocumentId"].AsString().Length >5? elem["obj"]["DocumentId"].AsString(): elem["obj"]["DocumentId"].AsValue()),
+							(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
 							elem["obj"]["Label"].AsString(),
 							elem["obj"]["XBRLTag"].AsString()
 							));
@@ -4190,8 +4190,8 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 								var Info = -1;
 								try {
 									Info = reader.GetInt32(3);
-								}catch(Exception ex) {
-									
+								} catch (Exception ex) {
+
 								}
 
 								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
@@ -4283,7 +4283,7 @@ BEGIN TRY
 	BEGIN TRAN
 			delete from DimensionToCell where TableDimensionID in
 			(select id from TableDimension where DocumentTableID = @id);
-      delete FROM Tablelink where tabledimensionid1 in (select ID from tabledimension where DocumentTableID = @id)"+ @" or tabledimensionid2 in (select ID from tabledimension where DocumentTableID = @id);
+      delete FROM Tablelink where tabledimensionid1 in (select ID from tabledimension where DocumentTableID = @id)" + @" or tabledimensionid2 in (select ID from tabledimension where DocumentTableID = @id);
 			delete from tabledimension where DocumentTableID = @id;
 			delete from documenttable where id = @id;
 		COMMIT 
@@ -4805,7 +4805,9 @@ from #tmptimeslices ts
 							slice.DocumentId = reader.GetGuid(ordinals.DocumentId);
 							slice.DamDocumentId = reader.GetGuid(ordinals.DamDocumentId);
 							slice.Id = reader.GetInt32(ordinals.TimeSliceId);
-							slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
+							if (!reader.IsDBNull(ordinals.PeriodEndDate))
+								slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
+
 							if (slice.Id > 0) {
 								slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
 							}
