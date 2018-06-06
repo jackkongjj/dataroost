@@ -36,7 +36,7 @@ namespace DataRoostAPI.Common.Models {
 		public DateTime DocumentDate { get; set; }
 
 		[JsonProperty("damDocumentId")]
-		public Guid DamDocumentId { get; set; }
+		public Guid? DamDocumentId { get; set; }
 
 		[JsonProperty("isRecap")]
 		public bool IsRecap { get; set; }

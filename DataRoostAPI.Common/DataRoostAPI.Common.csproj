@@ -92,6 +92,7 @@
       <HintPath>..\packages\System.Spatial.5.8.1\lib\net40\System.Spatial.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -152,6 +153,7 @@
     <Compile Include="Models\TimeseriesDTO.cs" />
     <Compile Include="Models\TimeseriesValues\ARDItem.cs" />
     <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
+    <Compile Include="Models\TimeseriesValues\ExprObjectTree.cs" />
     <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
     <Compile Include="Models\TimeseriesValues\KPINode.cs" />
     <Compile Include="Models\TimeseriesValues\SegmentNode.cs" />

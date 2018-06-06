@@ -23,6 +23,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <UseGlobalApplicationHostFile />
+    <Use64BitIISExpress />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -357,7 +358,6 @@
     <Compile Include="Controllers\SegmentController.cs" />
     <Compile Include="Controllers\SfVoyController.cs" />
     <Compile Include="Controllers\SharesController.cs" />
-    <Compile Include="Controllers\SuperFastController.cs" />
     <Compile Include="Controllers\KpiController.cs" />
     <Compile Include="Controllers\TimeSliceController.cs" />
     <Compile Include="Controllers\TintController.cs" />
@@ -367,6 +367,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\ExprStoreClient.cs" />
     <Compile Include="Helpers\StringExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />

@@ -8,7 +8,7 @@ namespace DataRoostAPI.Common.Models.SuperFast {
 	public class SFTimeseriesDTO : TimeseriesDTO {
 
 		[JsonProperty("sfDocumentId")]
-		public Guid SFDocumentId { get; set; }
+		public Guid? SFDocumentId { get; set; }
 
 	}
 }
