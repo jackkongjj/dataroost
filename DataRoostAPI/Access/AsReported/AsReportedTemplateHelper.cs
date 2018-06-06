@@ -387,7 +387,7 @@ WHERE  CompanyID = @Iconum";
 						reader.NextResult();
 						while (reader.Read()) {
 							int TimeSliceID = reader.GetInt32(0);
-							if(TimeSlices.FirstOrDefault(t => t.Id== TimeSliceID) != null) {
+							if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
 								TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
 							}
 							if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
@@ -3370,6 +3370,7 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 		public class JsonToSQLTableDimension : JsonToSQL {
 			string delete_sql = @"
 DELETE FROM DimensionToCell where TableDimensionId = {0};
+DELETE FROM Tablelink where TableDimensionID1 = {0} or TableDimensionID2 = {0};
 DELETE FROM TableDimension where id = {0};
 ";
 			string merge_sql = @"MERGE TableDimension
@@ -3613,7 +3614,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 							elem["obj"]["Cusip"].AsString(),
 							"0",
 							elem["obj"]["IsIncomePositive"].AsBoolean(),
-							(elem["obj"]["DocumentId"].AsString().Length >5? elem["obj"]["DocumentId"].AsString(): elem["obj"]["DocumentId"].AsValue()),
+							(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
 							elem["obj"]["Label"].AsString(),
 							elem["obj"]["XBRLTag"].AsString()
 							));
@@ -4189,8 +4190,8 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 								var Info = -1;
 								try {
 									Info = reader.GetInt32(3);
-								}catch(Exception ex) {
-									
+								} catch (Exception ex) {
+
 								}
 
 								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
@@ -4282,9 +4283,8 @@ BEGIN TRY
 	BEGIN TRAN
 			delete from DimensionToCell where TableDimensionID in
 			(select id from TableDimension where DocumentTableID = @id);
-
+      delete FROM Tablelink where tabledimensionid1 in (select ID from tabledimension where DocumentTableID = @id)" + @" or tabledimensionid2 in (select ID from tabledimension where DocumentTableID = @id);
 			delete from tabledimension where DocumentTableID = @id;
-
 			delete from documenttable where id = @id;
 		COMMIT 
 		select 1
@@ -4293,9 +4293,6 @@ BEGIN CATCH
 	ROLLBACK;
   select 0;
 END CATCH
-
-
-
 ";
 			ScarResult result = new ScarResult();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -4808,7 +4805,9 @@ from #tmptimeslices ts
 							slice.DocumentId = reader.GetGuid(ordinals.DocumentId);
 							slice.DamDocumentId = reader.GetGuid(ordinals.DamDocumentId);
 							slice.Id = reader.GetInt32(ordinals.TimeSliceId);
-							slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
+							if (!reader.IsDBNull(ordinals.PeriodEndDate))
+								slice.TimeSlicePeriodEndDate = reader.GetDateTime(ordinals.PeriodEndDate);
+
 							if (slice.Id > 0) {
 								slice.ReportingPeriodEndDate = reader.GetDateTime(ordinals.DocumentDate);
 							}
@@ -6400,7 +6399,7 @@ WHERE d.ID = @SFDocumentID
 			return isoCountry;
 		}
 
-		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum) {
+		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum, string ContentType = "Full") {
 			string query = @"
 
  DECLARE @BigThree Table (Description varchar(64))
@@ -6453,6 +6452,7 @@ WHERE d.ID = @SFDocumentID
 				using (SqlCommand cmd = new SqlCommand("prcInsert_CreateDocumentTimeSlices", conn)) {
 					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@DocID", SFDocumentId);
+					cmd.Parameters.AddWithValue("@ContentType", ContentType);
 					cmd.ExecuteNonQuery();
 				}
 

@@ -1036,13 +1036,30 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 			var result = new ScarResult();
-			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId, iconum);
+			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId, iconum, "Full");
 			Dictionary<string, string> returnValue = new Dictionary<string, string>();
 			returnValue["Success"] = string.IsNullOrEmpty(errorMessage) ? "T" : "F";
 			returnValue["Message"] = errorMessage;
 			result.ReturnValue = returnValue;
 			return result;
 		}
+		[Route("documents/{damdocumentId}/validatetables/{ContentType}")]
+		[HttpPut]
+		public ScarResult DoInterimTypeAndCurrency(string CompanyId, Guid damdocumentId, string ContentType) {
+			var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
+			Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			var result = new ScarResult();
+			var errorMessage = helper.CheckParsedTableInterimTypeAndCurrency(SfDocumentId, iconum, ContentType);
+			Dictionary<string, string> returnValue = new Dictionary<string, string>();
+			returnValue["Success"] = string.IsNullOrEmpty(errorMessage) ? "T" : "F";
+			returnValue["Message"] = errorMessage;
+			result.ReturnValue = returnValue;
+			return result;
+		}
+
 
 		private List<string> LPVMetaTypes = new List<string>() { "NI", "RV", "TA", "TL", "LE", "PS", "PE", "CC" };
 
