@@ -243,7 +243,12 @@ WHERE  CompanyID = @Iconum";
 							SHLookup.Add(document.Id, document);
 							SHChildLookup.Add(document.Id, new List<StaticHierarchy>());
 							if (document.ParentID != null) {
-								SHChildLookup[document.ParentID.Value].Add(document);
+								//						SHChildLookup[document.ParentID.Value].Add(document);
+								if (SHChildLookup.ContainsKey(document.ParentID.Value))
+									SHChildLookup[document.ParentID.Value].Add(document);
+								else {
+									SHChildLookup.Add(document.ParentID.Value, new List<StaticHierarchy>());
+								}
 							}
 						}
 						reader.NextResult();
