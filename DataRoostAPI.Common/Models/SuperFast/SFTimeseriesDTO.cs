@@ -9,6 +9,7 @@ namespace DataRoostAPI.Common.Models.SuperFast {
 
 		[JsonProperty("sfDocumentId")]
 		public Guid? SFDocumentId { get; set; }
+        public string CollectionTypeId { get; set; }
 
-	}
+    }
 }
