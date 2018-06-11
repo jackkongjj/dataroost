@@ -247,7 +247,7 @@ WHERE  CompanyID = @Iconum";
 								if (SHChildLookup.ContainsKey(document.ParentID.Value))
 									SHChildLookup[document.ParentID.Value].Add(document);
 								else {
-									SHChildLookup.Add(document.ParentID.Value, new List<StaticHierarchy>());
+									//SHChildLookup.Add(document.ParentID.Value, new List<StaticHierarchy>());
 								}
 							}
 						}
@@ -1206,6 +1206,33 @@ SELECT *
 								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			return response;
+		}
+
+		public ScarResult UpdateStaticHierarchyCusip(int id, string newCusip) {
+
+			string deletequery = @"delete from dbo.StaticHierarchySecurity where StaticHierarchyId in ({0})";
+			string insertquery = @"insert into dbo.StaticHierarchySecurity (StaticHierarchyId,SecPermId) values ({0},'{1}')";
+
+			String q1 = string.Format(deletequery, id);
+			String q2 = string.Format(insertquery, id, newCusip);
+
+			ScarResult response = new ScarResult();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(q1, conn)) {
+					conn.Open();
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						reader.Read();
+					}
+				}
+				if (newCusip.Length > 5) {
+					using (SqlCommand cmd = new SqlCommand(q2, conn)) {
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							reader.Read();
 						}
 					}
 				}

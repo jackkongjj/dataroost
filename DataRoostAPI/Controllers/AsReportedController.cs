@@ -195,6 +195,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("staticHierarchy/cusip/{id}")]
+		[HttpPut]
+		public ScarResult UpdateHierarchyCusip(string CompanyId, int id, StringInput input) {
+			try {
+				if (input == null || string.IsNullOrEmpty(input.StringData))
+					return null;
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.UpdateStaticHierarchyCusip(id, input.StringData);
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("staticHierarchy/{id}/move")]
 		[HttpPut]
 		public ScarResult MoveStaticHierarchy(string CompanyId, int id, StringInput input) {
