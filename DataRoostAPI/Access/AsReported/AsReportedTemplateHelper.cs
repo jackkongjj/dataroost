@@ -5776,7 +5776,12 @@ BEGIN TRY
 		INSERT @TempCells (ID)
 		SELECT ID from TableCell where CompanyFinancialTermID = @secondCFT and Documentid = @docId
 
-		Update TableCell set CompanyFinancialTermID = @secondCFT, ScarUpdated = 1 where CompanyFinancialTermID = @firstCFT and Documentid = @docId
+		DECLARE @TempCells2 Table(ID INT)
+		INSERT @TempCells2 (ID)
+		SELECT ID from TableCell where CompanyFinancialTermID = @firstCFT and Documentid = @docId
+
+
+		Update TableCell set CompanyFinancialTermID = @secondCFT, ScarUpdated = 1 where id in (select id from @TempCells2)
 		Update TableCell set CompanyFinancialTermID = @firstCFT , ScarUpdated = 1 where id in (select id from @TempCells)
 
 		UPDATE CompanyFinancialTerm set TermStatusID = 1 where id = @firstCFT
