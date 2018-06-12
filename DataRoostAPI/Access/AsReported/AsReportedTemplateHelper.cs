@@ -30,36 +30,36 @@ SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPer
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
 				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
-FROM DocumentSeries ds
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt on sh.TableTypeID = tt.ID
+FROM DocumentSeries ds WITH (NOLOCK) 
+JOIN CompanyFinancialTerm cft  WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
-	FROM DocumentSeries ds
-	JOIN dbo.DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt on tt.ID = sh.TableTypeID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK)  on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc WITH (NOLOCK)  on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK)  on tt.ID = sh.TableTypeID
 	WHERE tc.ID = @cellId
 	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
-JOIN dbo.DocumentTimeSlice dts on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
+JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK)  on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
+	JOIN TableCell tc WITH (NOLOCK)  on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf WITH (NOLOCK)  on sf.ID = tc.ScalingFactorID
 	WHERE tc.ID = @cellId
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d on dts.documentid = d.ID
+JOIN Document d WITH (NOLOCK)  on dts.documentid = d.ID
 WHERE 1=1
 ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
 
@@ -88,11 +88,11 @@ END CATCH
 
 SELECT DISTINCT sh.*, shm.Code, tt.Description as 'TableTypeDescription'
 INTO #StaticHierarchy
-FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-    JOIN HierarchyMetaTypes shm on sh.StaticHierarchyMetaId = shm.id
+FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
+    JOIN HierarchyMetaTypes shm WITH (NOLOCK) on sh.StaticHierarchyMetaId = shm.id
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc
@@ -192,10 +192,10 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 			string TimeSliceIsSummaryQuery = @"
 
 select distinct DocumentTimeSliceID, TableType
-from DocumentSeries ds 
-JOIN Document d on ds.ID = d.DocumentSeriesID
-JOIN dbo.DocumentTimeSlice dts on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
-join DocumentTimeSliceTableTypeIsSummary dtsis on dts.id = dtsis.DocumentTimeSliceID
+from DocumentSeries ds WITH (NOLOCK) 
+JOIN Document d WITH (NOLOCK) on ds.ID = d.DocumentSeriesID
+JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
+join DocumentTimeSliceTableTypeIsSummary dtsis WITH (NOLOCK) on dts.id = dtsis.DocumentTimeSliceID
 WHERE  CompanyID = @Iconum";
 
 
@@ -607,23 +607,23 @@ WHERE  CompanyID = @Iconum";
 			string query =
 				@"
 SELECT DISTINCT sh.ID, sh.AdjustedOrder
-FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
+FROM DocumentSeries ds WITH (NOLOCK)
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc";
 
 			string TimeSliceQuery =
 				@"SELECT DISTINCT dts.ID, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate
-FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
+FROM DocumentSeries ds WITH (NOLOCK)
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on tc.ID = dtstc.TableCellID
+	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
 WHERE ds.CompanyID = @iconum
 AND tt.Description = @templateName
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
@@ -673,13 +673,13 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 		(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
 		(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
 sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate
-FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
-	JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
+FROM DocumentSeries ds WITH (NOLOCK)
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on tc.ID = dtstc.TableCellID
+	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID
 
 WHERE sh.id = @id
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
@@ -772,8 +772,8 @@ BEGIN TRY
 				select @DocumentDate= DocumentDate,@DocSeriesId=DocumentSeriesID from Document Where Id=@DocumentId;
 
 				select TOP 1 @LatestScalingFactor = ISNULL(dt.ScalingFactorID, 'A')
-				from DocumentTable dt 
-				inner join Document d on d.ID=dt.DocumentID and dt.TableTypeId = @TableTypeId
+				from DocumentTable dt  WITH (NOLOCK)
+				inner join Document d WITH (NOLOCK) on d.ID=dt.DocumentID and dt.TableTypeId = @TableTypeId
 				where dt.ScalingFactorID<>'A' and d.DocumentDate<@DocumentDate
 				order by d.DocumentDate DESC, d.ReportTypeID ASC
 
@@ -781,13 +781,13 @@ BEGIN TRY
 				VALUES (@DocumentId, 1, @TableTypeId, 1, @LatestScalingFactor, @LatestScalingFactor, -1, 0)
 
 				select @newDocumentTableId =  cast(scope_identity() as int);
-				select * from DocumentTable where id = @newDocumentTableId
+				select * from DocumentTable WITH (NOLOCK) where id = @newDocumentTableId
 
 				DECLARE @newTableDimensionColumn int;
 				INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
 				VALUES (@newDocumentTableId, 2, '', '', -1, -1, NULL, 0, -1)
 				select @newTableDimensionColumn =  cast(scope_identity() as int);
-				select * from TableDimension where id = @newTableDimensionColumn
+				select * from TableDimension WITH (NOLOCK) where id = @newTableDimensionColumn
 
 				DECLARE @newTableDimensionRows TABLE(Id int, CFT int, AdjustedOrder int)
 				MERGE INTO TableDimension
@@ -819,7 +819,7 @@ BEGIN TRY
 				SELECT @newTableDimensionColumn, tc.ID FROM
 				@newTableCells tc
 
-				SELECT * FROM DimensionToCell where TableDimensionID = @newTableDimensionColumn or
+				SELECT * FROM DimensionToCell WITH (NOLOCK) where TableDimensionID = @newTableDimensionColumn or
 				TableDimensionID in (select id from @newTableDimensionRows)
 
 		COMMIT; 
@@ -864,7 +864,7 @@ UPDATE StaticHierarchy SET SeperatorFlag = @newValue
 WHERE id = @TargetSHID;
 
 select * 
-FROM StaticHierarchy
+FROM StaticHierarchy WITH (NOLOCK)
 where id = @TargetSHID;
 ";
 
@@ -910,7 +910,7 @@ UPDATE StaticHierarchy SET UnitTypeId = @newValue
 WHERE id = @TargetSHID;
 
 select * 
-FROM StaticHierarchy
+FROM StaticHierarchy WITH (NOLOCK)
 where id = @TargetSHID;
 ";
 
@@ -956,7 +956,7 @@ UPDATE StaticHierarchy SET StaticHierarchyMetaId = @newValue
 WHERE id = @TargetSHID;
 
 select * 
-FROM StaticHierarchy
+FROM StaticHierarchy WITH (NOLOCK)
 where id = @TargetSHID;
 ";
 
@@ -1011,10 +1011,10 @@ DECLARE @NewHierarchyLabel varchar(1024)
 	WHERE ID = @TargetSHID
 
 ;WITH CTE_Children(ID) AS(
-	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	SELECT ID FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
 	SELECT sh.Id 
-	FROM StaticHierarchy sh
+	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 ) UPDATE sh
    SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel)
@@ -1256,10 +1256,10 @@ DECLARE @NewHierarchyLabel varchar(1024)
 
 
 ;WITH CTE_Children(ID) AS(
-	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	SELECT ID FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
 	SELECT sh.Id 
-	FROM StaticHierarchy sh
+	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 ) UPDATE sh
    SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel)
@@ -1290,7 +1290,7 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,[UnitTypeId]
       ,[IsIncomePositive]
       ,[ChildrenExpandDown]
-      ,[ParentID] FROM StaticHierarchy WHERE ID = @TargetSHID
+      ,[ParentID] FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
  
 	SELECT sh.[Id]
@@ -1305,7 +1305,7 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,sh.[IsIncomePositive]
       ,sh.[ChildrenExpandDown]
       ,sh.[ParentID] 
-	FROM StaticHierarchy sh
+	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 )
  
@@ -1494,7 +1494,7 @@ END
 UPDATE StaticHierarchy set ChildrenExpandDown = CASE WHEN ChildrenExpandDown = 1 THEN 0 ELSE 1 END
 																WHERE ID = @TargetSHID; 
 
-SELECT * FROM StaticHierarchy WHERE ID = @TargetSHID; 
+SELECT * FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID; 
 ";
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -1537,10 +1537,10 @@ SELECT * FROM StaticHierarchy WHERE ID = @TargetSHID;
 ";
 			string SQL_MoveDown = @"
  
-DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] where TableTypeId = @tableTypeId order by AdjustedOrder desc)
+DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] WITH (NOLOCK) where TableTypeId = @tableTypeId order by AdjustedOrder desc)
 DECLARE @TargetSHID INT;
 
 	select TOP 1 @TargetSHID= sh.id
@@ -1555,10 +1555,10 @@ DECLARE @TargetSHID INT;
 ";
 			string SQL_MoveUp = @"
  
-DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] where TableTypeId = @tableTypeId order by AdjustedOrder)
+DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] WITH (NOLOCK) where TableTypeId = @tableTypeId order by AdjustedOrder)
 DECLARE @TargetSHID INT;
 
 	select TOP 1 @TargetSHID= sh.id
@@ -1573,18 +1573,18 @@ DECLARE @TargetSHID INT;
 ";
 			string SQL_MoveLeft = @"
  
-DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] where TableTypeId = @tableTypeId order by AdjustedOrder)
+DECLARE @tableTypeId INT  = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @adjustedOrder INT = (SELECT TOP 1 AdjustedOrder from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @Description varchar(60) = (SELECT TOP 1 Description from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @maxTargetId INT = (SELECT TOP 1 Id from [StaticHierarchy] WITH (NOLOCK) where TableTypeId = @tableTypeId order by AdjustedOrder)
 DECLARE @TargetSHID INT;
 
-DECLARE @DraggedParentId int = (SELECT TOP 1 ParentID from [StaticHierarchy] where id = @DraggedSHID)
-DECLARE @DraggedParentParentId int = (SELECT TOP 1 ParentID from [StaticHierarchy] where id = @DraggedParentId)
+DECLARE @DraggedParentId int = (SELECT TOP 1 ParentID from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
+DECLARE @DraggedParentParentId int = (SELECT TOP 1 ParentID from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedParentId)
 
 
 SELECT *
-  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] where tabletypeid = @tableTypeId
+  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] WITH (NOLOCK) where tabletypeid = @tableTypeId
   order by AdjustedOrder
 
 
@@ -1596,7 +1596,7 @@ ELSE
 BEGIN
 
 	DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
-		SELECT ID FROM [StaticHierarchy] WHERE id <> @DraggedSHID and parentid = @DraggedParentId
+		SELECT ID FROM [StaticHierarchy] WITH (NOLOCK) WHERE id <> @DraggedSHID and parentid = @DraggedParentId
 	OPEN cur
 	FETCH NEXT FROM cur INTO @TargetSHID
 	WHILE @@FETCH_STATUS = 0 
@@ -1608,9 +1608,9 @@ END
 ";
 
 			string query = @"
-DECLARE @tableTypeId2 INT = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] where id = @DraggedSHID)
+DECLARE @tableTypeId2 INT = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
 SELECT *
-  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] where tabletypeid = @tableTypeId2
+  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] WITH (NOLOCK) where tabletypeid = @tableTypeId2
   order by AdjustedOrder
 
 			";
@@ -1660,7 +1660,7 @@ SELECT *
 			string query = @"
 BEGIN TRY
 	BEGIN TRAN
-DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy where id = @TargetSHID)
+DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy WITH (NOLOCK) where id = @TargetSHID)
 
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop @DraggedSHID, @TargetSHID , @Location
 	COMMIT 
@@ -1737,7 +1737,7 @@ END CATCH
 
 		public TimeSlice GetTimeSlice(int id) {
 
-			string query = @"SELECT * FROM dbo.DocumentTimeSlice WHERE ID = @id";
+			string query = @"SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE ID = @id";
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				StaticHierarchy sh;
@@ -1781,7 +1781,7 @@ END CATCH
 			string query = @"
 
 
-IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType)
+IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK) WHERE DocumentTimeSliceID = @id and TableType = @TableType)
 BEGIN
 	DELETE FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType
 END
@@ -1914,10 +1914,10 @@ END
 
 			string query = @"
 
-declare @docid uniqueidentifier = (select documentid from dbo.DocumentTimeSlice where id = @id)
+declare @docid uniqueidentifier = (select documentid from dbo.DocumentTimeSlice WITH (NOLOCK) where id = @id)
 UPDATE dbo.DocumentTimeSlice SET ReportType = @ReportType where DocumentId = @docid;
 
-SELECT * FROM dbo.DocumentTimeSlice WHERE DocumentId = @docid;
+SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE DocumentId = @docid;
 
 ";
 			ScarResult response = new ScarResult();
@@ -1967,7 +1967,7 @@ SELECT * FROM dbo.DocumentTimeSlice WHERE DocumentId = @docid;
 
 UPDATE dbo.DocumentTimeSlice SET ManualOrgSet = @newValue where id = @id;
 
-SELECT * FROM dbo.DocumentTimeSlice WHERE id = @id;
+SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE id = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2015,7 +2015,7 @@ SELECT * FROM dbo.DocumentTimeSlice WHERE id = @id;
 
 			string query = @"
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2076,7 +2076,7 @@ SELECT 'x', * FROM TableCell WHERE ID = @id;
 
 UPDATE TableCell SET ValueNumeric = @NumericValue where ID = @id;
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2137,7 +2137,7 @@ SELECT 'x', * FROM TableCell WHERE ID = @id;
 
 UPDATE TableCell SET ScalingFactorID = @ScalingFactorID where ID = @id;
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2201,7 +2201,7 @@ UPDATE TableCell SET CellDay = DATEPART(day, @CellDate) where ID = @id;
 UPDATE TableCell SET CellMonth = DATEPART(month, @CellDate) where ID = @id;
 UPDATE TableCell SET CellYear = DATEPART(year, @CellDate) where ID = @id;
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2264,7 +2264,7 @@ UPDATE TableCell SET PeriodTypeID = @PeriodTypeID where ID = @id;
 UPDATE TableCell SET CellPeriodType = (select top 1 [Description] from [PeriodType] where ID = @PeriodTypeID) where ID = @id;
 
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2325,7 +2325,7 @@ SELECT 'x', * FROM TableCell WHERE ID = @id;
 
 UPDATE TableCell SET PeriodLength = @PeriodLength where ID = @id;
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2387,7 +2387,7 @@ SELECT 'x', * FROM TableCell WHERE ID = @id;
 UPDATE TableCell SET CurrencyCode = @CurrencyCode where ID = @id;
 UPDATE TableCell SET Currency = (select top 1 [Description] from [Currencies] where [Code] = @CurrencyCode) where ID = @id;
 
-SELECT 'x', * FROM TableCell WHERE ID = @id;
+SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
 ";
 			ScarResult response = new ScarResult();
@@ -2457,10 +2457,10 @@ where dtc.TableCellID = @id
 
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 
@@ -2531,10 +2531,10 @@ where dtc.TableCellID = @id
 
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 
@@ -2604,10 +2604,10 @@ where dtc.TableCellID = @id
 
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 1
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 
@@ -2681,10 +2681,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -2763,10 +2763,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -2843,10 +2843,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -2923,10 +2923,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -3003,10 +3003,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -3073,7 +3073,7 @@ where dtc.TableCellID = @id
 UPDATE dbo.DocumentTimeSlice SET PeriodType = @newValue
 where id = @id
 
-SELECT * from dbo.DocumentTimeSlice where id = @id and PeriodType = @newValue;
+SELECT * from dbo.DocumentTimeSlice WITH (NOLOCK) where id = @id and PeriodType = @newValue;
 
 ";
 
@@ -3125,10 +3125,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -3199,7 +3199,7 @@ where dtc.TableCellID = @id
 UPDATE DocumentTimeSliceTableCell 
 SET DocumentTimeSliceId = @newDtsID WHERE DocumentTimeSliceId = @oldDtsID
 
-SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
+SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId = @newDtsID
 ";
 
 
@@ -3232,10 +3232,10 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
 			string query = @"
 
 INSERT DocumentTimeSliceTableCell
-SELECT @newDtsID, TableCellId FROM  DocumentTimeSliceTableCell
+SELECT @newDtsID, TableCellId FROM  DocumentTimeSliceTableCell WITH (NOLOCK)
  WHERE DocumentTimeSliceId = @oldDtsID
 
-SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
+SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId = @newDtsID
 ";
 
 
@@ -3270,7 +3270,7 @@ SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @newDtsID
 DELETE FROM  DocumentTimeSliceTableCell
  WHERE DocumentTimeSliceId = @oldDtsID
 
-SELECT * from DocumentTimeSliceTableCell WHERE DocumentTimeSliceId = @oldDtsID
+SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId = @oldDtsID
 ";
 
 
@@ -4367,10 +4367,10 @@ where dtc.TableCellID = @id
 			string select_query = @"
 
 select  'x', tc.* 
-from [DimensionToCell] dtc 
-JOIN [TableDimension] td on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
-JOIN [DimensionToCell] dtc2 on td.ID = dtc2.TableDimensionID
-JOIN [TableCell] tc on tc.id = dtc2.TableCellID
+from [DimensionToCell] dtc  WITH (NOLOCK)
+JOIN [TableDimension] td WITH (NOLOCK) on dtc.TableDimensionID = td.ID and td.DimensionTypeID = 2
+JOIN [DimensionToCell] dtc2 WITH (NOLOCK) on td.ID = dtc2.TableDimensionID
+JOIN [TableCell] tc WITH (NOLOCK) on tc.id = dtc2.TableCellID
 where dtc.TableCellID = @id
 
 ";
@@ -4493,10 +4493,10 @@ where dtc.TableCellID = @id
 
 			string query = @"
 DECLARE @newId int;
-DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM dbo.DocumentTimeSlice where id = @id)
-DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate FROM dbo.DocumentTimeSlice where id = @id)
-DECLARE @oldPeriodType varchar(10) = (SELECT PeriodType FROM dbo.DocumentTimeSlice where id = @id)
-DECLARE @dts int = (SELECT top 1 ID FROM dbo.DocumentTimeSlice dts where dts.PeriodType = @newPeriodType AND dts.DocumentId = @DocId and dts.TimeSlicePeriodEndDate = @TimeSlicePeriodEndDate);
+DECLARE @DocId uniqueidentifier = (SELECT DocumentId FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @id)
+DECLARE @TimeSlicePeriodEndDate datetime = (SELECT TimeSlicePeriodEndDate WITH (NOLOCK) FROM dbo.DocumentTimeSlice where id = @id)
+DECLARE @oldPeriodType varchar(10) = (SELECT PeriodType FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @id)
+DECLARE @dts int = (SELECT top 1 ID FROM dbo.DocumentTimeSlice dts WITH (NOLOCK) where dts.PeriodType = @newPeriodType AND dts.DocumentId = @DocId and dts.TimeSlicePeriodEndDate = @TimeSlicePeriodEndDate);
 
 if @newPeriodType <> @oldPeriodType
 BEGIN
@@ -4504,7 +4504,7 @@ BEGIN
 	BEGIN
 		IF (@dts IS NULL)
 		BEGIN
-			IF (EXISTS ( SELECT TOP 1 id FROM [InterimType] WHERE ID = @newPeriodType and Duration is not null))  
+			IF (EXISTS ( SELECT TOP 1 id FROM [InterimType] WITH (NOLOCK) WHERE ID = @newPeriodType and Duration is not null))  
 			BEGIN
 				INSERT dbo.DocumentTimeSlice
 						( [DocumentId]
@@ -4598,7 +4598,7 @@ SELECT [Id]
 	,[IsAutoCalc]
 	,[ManualOrgSet]
   ,[TableTypeID] 
-FROM dbo.DocumentTimeSlice where id = @newId or id = @dts or id = @id;
+FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @newId or id = @dts or id = @id;
 
 ";
 
@@ -4655,16 +4655,16 @@ tc.CellDate as PubDate,
 dts.CompanyFiscalYear as DataYear,
 dbo.GetEndLabel(sh.Description) as DataLabel,
 mtm.Description as Comment
-from DocumentSeries ds
-join CompanyFinancialTerm cft on ds.id = cft.documentseriesid
-join statichierarchy sh on sh.companyfinancialtermid = cft.id
-join TableType tt on sh.tabletypeid = tt.id
-join TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermId
-join DocumentTimeSliceTableCell dtstc on tc.id = dtstc.tablecellid
-join dbo.documenttimeslice dts on dts.id = dtstc.documenttimesliceid and dts.DocumentSeriesId = ds.ID
-join Document d on dts.documentid = d.id
-join MTMWErrorTypeTableCell mtmtc on tc.id = mtmtc.tablecellid
-join MTMWErrorType mtm on mtmtc.MTMWErrorTypeId = mtm.ID
+from DocumentSeries ds WITH (NOLOCK)
+join CompanyFinancialTerm cft WITH (NOLOCK) on ds.id = cft.documentseriesid
+join statichierarchy sh WITH (NOLOCK) on sh.companyfinancialtermid = cft.id
+join TableType tt WITH (NOLOCK) on sh.tabletypeid = tt.id
+join TableCell tc WITH (NOLOCK) on tc.CompanyFinancialTermID = sh.CompanyFinancialTermId
+join DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on tc.id = dtstc.tablecellid
+join dbo.documenttimeslice dts WITH (NOLOCK) on dts.id = dtstc.documenttimesliceid and dts.DocumentSeriesId = ds.ID
+join Document d WITH (NOLOCK) on dts.documentid = d.id
+join MTMWErrorTypeTableCell mtmtc WITH (NOLOCK) on tc.id = mtmtc.tablecellid
+join MTMWErrorType mtm WITH (NOLOCK) on mtmtc.MTMWErrorTypeId = mtm.ID
 where companyid = @Iconum
 and tt.description = @TableType
 
@@ -4890,14 +4890,14 @@ DECLARE @CellsForMTMW CellList
 
 INSERT @CellsForLPV
 SELECT distinct sh.ID, tc.DocumentTimeSliceID
-FROM StaticHierarchy sh
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+FROM StaticHierarchy sh WITH (NOLOCK)
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
 
 INSERT @CellsForMTMW
 SELECT distinct sh.ID, tc.DocumentTimeSliceID
-FROM StaticHierarchy sh
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+FROM StaticHierarchy sh WITH (NOLOCK)
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
 
 DECLARE @ParentCells TABLE(StaticHierarchyID int, DocumentTimeSliceID int, TablecellID int)
@@ -4907,12 +4907,12 @@ AS
 (
        SELECT sh.ID, sh.CompanyFinancialTermID, sh.ParentID, c.DocumentTimeSliceID, tc.TableCellID, 1, c.StaticHierarchyID, c.DocumentTimeSliceID
        FROM @CellsForLPV c
-       JOIN StaticHierarchy sh ON sh.ID = c.StaticHierarchyID
-       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+       JOIN StaticHierarchy sh WITH (NOLOCK) ON sh.ID = c.StaticHierarchyID
+       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc WITH (NOLOCK) on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -4965,8 +4965,8 @@ AS
 	UNION ALL
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
-	JOIN StaticHierarchy sh ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
 )
 SELECT MAX(level)
 FROM cte_level
@@ -4982,12 +4982,12 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
 				sh.id as 'StaticHierarchyId'
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
-JOIN Document d on dts.DocumentID = d.ID
-LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
-LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
+LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
 
@@ -5097,10 +5097,10 @@ FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
 DECLARE @OldStaticHierarchyList StaticHierarchyList
 
 ;WITH CTE_Children(ID) AS(
-	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	SELECT ID FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
 	SELECT sh.Id 
-	FROM StaticHierarchy sh
+	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
@@ -5109,17 +5109,17 @@ where cte.id <> @TargetSHID
  
 DECLARE @CurrentTimeSliceID int 
 SELECT @CurrentTimeSliceID =  tc.DocumentTimeSliceID
-FROM StaticHierarchy sh
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+FROM StaticHierarchy sh WITH (NOLOCK)
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 WHERE sh.ID = @TargetSHID and tc.TableCellid = @cellID
  
 
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
 SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and tc.DocumentTimeSliceID = @CurrentTimeSliceID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and tc.DocumentTimeSliceID = @CurrentTimeSliceID
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
@@ -5133,15 +5133,15 @@ DECLARE @CellsForMTMW CellList
 
 INSERT @CellsForLPV
 SELECT distinct sh.ID, @CurrentTimeSliceID
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 
 INSERT @CellsForMTMW
 SELECT distinct sh.ID, @CurrentTimeSliceID
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 
 
 DECLARE @ParentCells TABLE(StaticHierarchyID int, DocumentTimeSliceID int, TablecellID int)
@@ -5151,12 +5151,12 @@ AS
 (
        SELECT sh.ID, sh.CompanyFinancialTermID, sh.ParentID, c.DocumentTimeSliceID, tc.TableCellID, 1, c.StaticHierarchyID, c.DocumentTimeSliceID
        FROM @CellsForLPV c
-       JOIN StaticHierarchy sh ON sh.ID = c.StaticHierarchyID
-       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+       JOIN StaticHierarchy sh WITH (NOLOCK) ON sh.ID = c.StaticHierarchyID
+       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc WITH (NOLOCK) on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -5211,8 +5211,8 @@ AS
 	UNION ALL
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
-	JOIN StaticHierarchy sh ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
 )
 SELECT MAX(level)
 FROM cte_level
@@ -5228,12 +5228,12 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
 				sh.id as 'StaticHierarchyId'
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
-JOIN Document d on dts.DocumentID = d.ID
-LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
-LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
+LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
@@ -5339,7 +5339,7 @@ FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
 DECLARE @OldStaticHierarchyList StaticHierarchyList
 
 ;WITH CTE(ID) AS(
-	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	SELECT ID FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
 FROM CTE cte
@@ -5347,9 +5347,9 @@ FROM CTE cte
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
 SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
 
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
@@ -5363,15 +5363,15 @@ DECLARE @CellsForMTMW CellList
 
 INSERT @CellsForLPV
 SELECT distinct sh.ID, tc.DocumentTimeSliceId
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 
 INSERT @CellsForMTMW
 SELECT distinct sh.ID, tc.DocumentTimeSliceId
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 
 DECLARE @ParentCells TABLE(StaticHierarchyID int, DocumentTimeSliceID int, TablecellID int)
 
@@ -5380,12 +5380,12 @@ AS
 (
        SELECT sh.ID, sh.CompanyFinancialTermID, sh.ParentID, c.DocumentTimeSliceID, tc.TableCellID, 1, c.StaticHierarchyID, c.DocumentTimeSliceID
        FROM @CellsForLPV c
-       JOIN StaticHierarchy sh ON sh.ID = c.StaticHierarchyID
-       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+       JOIN StaticHierarchy sh WITH (NOLOCK) ON sh.ID = c.StaticHierarchyID
+       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc WITH (NOLOCK) on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -5437,8 +5437,8 @@ AS
 	UNION ALL
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
-	JOIN StaticHierarchy sh ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
 )
 SELECT MAX(level)
 FROM cte_level
@@ -5454,12 +5454,12 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
 				sh.id as 'StaticHierarchyId'
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
-JOIN Document d on dts.DocumentID = d.ID
-LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
-LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
+LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
@@ -5565,10 +5565,10 @@ FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
 DECLARE @OldStaticHierarchyList StaticHierarchyList
 
 ;WITH CTE_Children(ID) AS(
-	SELECT ID FROM StaticHierarchy WHERE ID = @TargetSHID
+	SELECT ID FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
 	SELECT sh.Id 
-	FROM StaticHierarchy sh
+	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
@@ -5580,9 +5580,9 @@ where cte.id <> @TargetSHID
 DECLARE @OldSHCells CellList
 INSERT @OldSHCells
 SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
@@ -5596,15 +5596,15 @@ DECLARE @CellsForMTMW CellList
 
 INSERT @CellsForLPV
 SELECT distinct  sh.ID, tc.DocumentTimeSliceId
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 
 INSERT @CellsForMTMW
 SELECT distinct  sh.ID, tc.DocumentTimeSliceId
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
 
 DECLARE @ParentCells TABLE(StaticHierarchyID int, DocumentTimeSliceID int, TablecellID int)
 
@@ -5613,12 +5613,12 @@ AS
 (
        SELECT sh.ID, sh.CompanyFinancialTermID, sh.ParentID, c.DocumentTimeSliceID, tc.TableCellID, 1, c.StaticHierarchyID, c.DocumentTimeSliceID
        FROM @CellsForLPV c
-       JOIN StaticHierarchy sh ON sh.ID = c.StaticHierarchyID
-       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+       JOIN StaticHierarchy sh WITH (NOLOCK) ON sh.ID = c.StaticHierarchyID
+       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc WITH (NOLOCK) on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -5671,8 +5671,8 @@ AS
 	UNION ALL
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
-	JOIN StaticHierarchy sh ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
 )
 SELECT MAX(level)
 FROM cte_level
@@ -5689,12 +5689,12 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
 				sh.id as 'StaticHierarchyId'
-FROM StaticHierarchy sh
+FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
-JOIN Document d on dts.DocumentID = d.ID
-LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
-LEFT JOIN ScalingFactor sf ON tc.ScalingFactorID = sf.ID
+LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
  
@@ -5789,23 +5789,23 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 BEGIN TRY
 	BEGIN TRAN
 		DECLARE @docId uniqueidentifier 
-		select top 1 @docId = Documentid from TableCell where id = @firstCellId
+		select top 1 @docId = Documentid from TableCell WITH (NOLOCK) where id = @firstCellId
 
 		DECLARE @firstCFT int
-		select top 1 @firstCFT = CompanyFinancialTermID from TableCell where id = @firstCellId
+		select top 1 @firstCFT = CompanyFinancialTermID from TableCell WITH (NOLOCK) where id = @firstCellId
 
 		DECLARE @secondCFT int
-		select top 1 @secondCFT = CompanyFinancialTermID from TableCell where id = @secondCellId
+		select top 1 @secondCFT = CompanyFinancialTermID from TableCell WITH (NOLOCK) where id = @secondCellId
  
 		IF (@firstCFT is null) RAISERROR('Null CFT', 16, 1);
 		if (@secondCFT is null) RAISERROR('Null CFT', 16, 1);
 		DECLARE @TempCells Table(ID INT)
 		INSERT @TempCells (ID)
-		SELECT ID from TableCell where CompanyFinancialTermID = @secondCFT and Documentid = @docId
+		SELECT ID from TableCell WITH (NOLOCK) where CompanyFinancialTermID = @secondCFT and Documentid = @docId
 
 		DECLARE @TempCells2 Table(ID INT)
 		INSERT @TempCells2 (ID)
-		SELECT ID from TableCell where CompanyFinancialTermID = @firstCFT and Documentid = @docId
+		SELECT ID from TableCell WITH (NOLOCK) where CompanyFinancialTermID = @firstCFT and Documentid = @docId
 
 
 		Update TableCell set CompanyFinancialTermID = @secondCFT, ScarUpdated = 1 where id in (select id from @TempCells2)
@@ -6354,11 +6354,11 @@ END
 		public Dictionary<string, string> UpdateRedStarSlotting(Guid SFDocumentId) {
 			string query = @"
 SELECT 'redstar_result' as result, 'Red star item is not part of the static hierarchy' as msg
-FROM StaticHierarchy sh (nolock)
+FROM StaticHierarchy sh WITH (NOLOCK)
 where sh.id in ({0}) and sh.ParentId is null
 UNION
 SELECT 'redstar_result' as result, 'Red star item in share and per share sections' as msg
-FROM StaticHierarchy sh (nolock)
+FROM StaticHierarchy sh WITH (NOLOCK)
 where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '\' or lower(sh.Description) like '%\[weighted average shares\]%'   escape '\')
 ";
 			bool isSuccess = false;
@@ -6417,8 +6417,8 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 		public string GetDocumentIsoCountry(Guid SFDocumentId) {
 			string query = @"
 select TOP 1 isoCountry
-from Document d
-join PPIIconumMap pim on d.PPI = pim.PPI
+from Document d WITH (NOLOCK)
+join PPIIconumMap pim WITH (NOLOCK) on d.PPI = pim.PPI
 WHERE d.ID = @SFDocumentID 
 ";
 			string isoCountry = "";
@@ -6445,41 +6445,41 @@ WHERE d.ID = @SFDocumentID
  ('IS'), ('BS'), ('CF')
 
  SELECT TOP 1 'Missing Table. ' as Error, *
- FROM DocumentTable dt
- JOIN TableType tt ON dt.TableTypeID = tt.id
+ FROM DocumentTable dt WITH (NOLOCK)
+ JOIN TableType tt WITH (NOLOCK) ON dt.TableTypeID = tt.id
  RIGHT JOIN @BigThree bt on bt.Description = tt.description
  where dt.DocumentID = @DocumentId and tt.description is null
 
 
  SELECT TOP 1 'Missing InterimType. ' as Error, * 
- FROM dbo.DocumentTimeSlice dts
- JOIN DocumentTimeSliceTableCell dtstc on dtstc.DocumentTimeSliceId = dts.Id
- JOIN TableCell tc ON dtstc.TableCellID = tc.id
+ FROM dbo.DocumentTimeSlice dts WITH (NOLOCK)
+ JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on dtstc.DocumentTimeSliceId = dts.Id
+ JOIN TableCell tc WITH (NOLOCK) ON dtstc.TableCellID = tc.id
   where dts.DocumentID = @DocumentId and dts.PeriodType is null
 
  SELECT TOP 1 'Missing InterimType. ' as Error, * 
-  FROM DocumentTable dt
- JOIN TableType tt ON dt.TableTypeID = tt.id
- JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
- JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
- JOIN TableCell tc ON dtc.TableCellID = tc.id
- JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.Id
- JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+  FROM DocumentTable dt WITH (NOLOCK)
+ JOIN TableType tt WITH (NOLOCK) ON dt.TableTypeID = tt.id
+ JOIN TableDimension td WITH (NOLOCK) on dt.TableIntID = td.DocumentTableID
+ JOIN DimensionToCell dtc WITH (NOLOCK) on dtc.TableDimensionID = td.ID
+ JOIN TableCell tc WITH (NOLOCK) ON dtc.TableCellID = tc.id
+ JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on dtstc.TableCellId = tc.Id
+ JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on dtstc.DocumentTimeSliceId = dts.Id
   where dt.DocumentID = @DocumentId and dts.PeriodType is null
 
 
  ;WITH cte (id) as
 (
  SELECT  dtc.TableCellid
- FROM DocumentTable dt
- JOIN TableType tt ON dt.TableTypeID = tt.id
- JOIN TableDimension td on dt.TableIntID = td.DocumentTableID
- JOIN DimensionToCell dtc on dtc.TableDimensionID = td.ID
+ FROM DocumentTable dt WITH (NOLOCK)
+ JOIN TableType tt WITH (NOLOCK) ON dt.TableTypeID = tt.id
+ JOIN TableDimension td WITH (NOLOCK) on dt.TableIntID = td.DocumentTableID
+ JOIN DimensionToCell dtc WITH (NOLOCK) on dtc.TableDimensionID = td.ID
  where dt.DocumentID = @DocumentId 
 )
  SELECT TOP 1 'Missing Currency. ' as Error, * 
  FROM cte
- JOIN TableCell tc ON cte.id = tc.id 
+ JOIN TableCell tc WITH (NOLOCK) ON cte.id = tc.id 
  where  tc.currencycode is null
 ";
 			string errorMessage = "";
@@ -6538,8 +6538,8 @@ WHERE d.ID = @SFDocumentID
  DECLARE  @IconumList TABLE(CompanyId INT)
  INSERT @IconumList(CompanyId )
  SELECT ds.CompanyID 
- FROM Document d
- JOIN DocumentSeries ds on d.DocumentSeriesID = ds.id
+ FROM Document d WITH (NOLOCK)
+ JOIN DocumentSeries ds WITH (NOLOCK) on d.DocumentSeriesID = ds.id
  WHERE d.id = @DocumentId
  IF (@GuessedIconum not in (SELECT CompanyId from @IconumList))
  BEGIN
@@ -6555,8 +6555,8 @@ DECLARE @SHCells CellList
 
 INSERT @SHCells
 SELECT distinct sh.ID, dts.Id
-FROM vw_SCARDocumentTimeSlices dts
-JOIN StaticHierarchy sh ON sh.TableTypeId = dts.TableTypeID
+FROM vw_SCARDocumentTimeSlices dts WITH (NOLOCK)
+JOIN StaticHierarchy sh WITH (NOLOCK) ON sh.TableTypeId = dts.TableTypeID
 WHERE CompanyID = @iconum
 
 
@@ -6605,8 +6605,8 @@ AND ChildrenSum <> CellValue
  DECLARE  @IconumList TABLE(CompanyId INT)
  INSERT @IconumList(CompanyId )
  SELECT ds.CompanyID 
- FROM Document d
- JOIN DocumentSeries ds on d.DocumentSeriesID = ds.id
+ FROM Document d WITH (NOLOCK)
+ JOIN DocumentSeries ds WITH (NOLOCK) on d.DocumentSeriesID = ds.id
  WHERE d.id = @DocumentId
  IF (@GuessedIconum not in (SELECT CompanyId from @IconumList))
  BEGIN
@@ -6628,37 +6628,37 @@ null
 				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as ArdError,
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as MtmwError, 
 				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
-FROM DocumentSeries ds
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt on sh.TableTypeID = tt.ID
+FROM DocumentSeries ds WITH (NOLOCK)
+JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
 JOIN(
 	SELECT distinct dts.ID
-	FROM DocumentSeries ds
-	JOIN dbo.DocumentTimeSlice dts on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt on tt.ID = sh.TableTypeID
+	FROM DocumentSeries ds WITH (NOLOCK)
+	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d WITH (NOLOCK) on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh WITH (NOLOCK) on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK) on tt.ID = sh.TableTypeID
 	WHERE ds.CompanyID = @iconum
 	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ) as ts on 1=1
 JOIN dbo.DocumentTimeSlice dts on dts.ID = ts.ID
 JOIN(
 	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds
-	JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt on sh.TableTypeID = tt.ID
-	JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
-	JOIN ARDErrorTypeTableCell aetc ON tc.Id = aetc.TableCellId
-	JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf on sf.ID = tc.ScalingFactorID
+	FROM DocumentSeries ds WITH (NOLOCK)
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
+	JOIN TableCell tc WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+	JOIN ARDErrorTypeTableCell aetc WITH (NOLOCK) ON tc.Id = aetc.TableCellId
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf WITH (NOLOCK) on sf.ID = tc.ScalingFactorID
 	WHERE ds.CompanyID = @iconum
 ) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d on dts.documentid = d.ID
+JOIN Document d WITH (NOLOCK) on dts.documentid = d.ID
 WHERE ds.CompanyID = @iconum
 ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
 
@@ -6734,7 +6734,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 			using (SqlConnection conn = new SqlConnection(ConnectionString)) {
 				conn.Open();
-				using (SqlCommand cmd = new SqlCommand(@"SELECT tt.Description FROM DocumentSeries ds JOIN TableType tt ON tt.DocumentSeriesID = ds.ID WHERE ds.CompanyID = @Iconum", conn)) {
+				using (SqlCommand cmd = new SqlCommand(@"SELECT tt.Description FROM DocumentSeries ds WITH (NOLOCK) JOIN TableType tt WITH (NOLOCK) ON tt.DocumentSeriesID = ds.ID WHERE ds.CompanyID = @Iconum", conn)) {
 					cmd.Parameters.AddWithValue(@"@Iconum", Iconum);
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						return sdr.Cast<IDataRecord>().Select(r => r.GetStringSafe(0)).ToList();
@@ -6750,7 +6750,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
-				using (SqlCommand cmd = new SqlCommand("select ID, TableTypeID from [dbo].[vw_SCARDocumentTimeSlices] WHERE DocumentID = @DocumentID", conn)) {
+				using (SqlCommand cmd = new SqlCommand("select ID, TableTypeID from [dbo].[vw_SCARDocumentTimeSlices] WITH (NOLOCK) WHERE DocumentID = @DocumentID", conn)) {
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						Tables = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToList();
