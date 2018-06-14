@@ -221,7 +221,7 @@ WHERE  CompanyID = @Iconum";
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
-							StaticHierarchy document = new StaticHierarchy
+							StaticHierarchy shs = new StaticHierarchy
 							{
 								Id = reader.GetInt32(0),
 								CompanyFinancialTermId = reader.GetInt32(1),
@@ -239,16 +239,14 @@ WHERE  CompanyID = @Iconum";
 								TableTypeDescription = reader.GetStringSafe(13),
 								Cells = new List<SCARAPITableCell>()
 							};
-							StaticHierarchies.Add(document);
-							SHLookup.Add(document.Id, document);
-							SHChildLookup.Add(document.Id, new List<StaticHierarchy>());
-							if (document.ParentID != null) {
-								//						SHChildLookup[document.ParentID.Value].Add(document);
-								if (SHChildLookup.ContainsKey(document.ParentID.Value))
-									SHChildLookup[document.ParentID.Value].Add(document);
-								else {
-									//SHChildLookup.Add(document.ParentID.Value, new List<StaticHierarchy>());
-								}
+							StaticHierarchies.Add(shs);
+							SHLookup.Add(shs.Id, shs);
+							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
+							if (shs.ParentID != null) {
+								if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
+									SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
+
+								SHChildLookup[shs.ParentID.Value].Add(shs);
 							}
 						}
 						reader.NextResult();
@@ -294,7 +292,6 @@ WHERE  CompanyID = @Iconum";
 										ARDErrorTypeId = reader.GetNullable<int>(26),
 										MTMWErrorTypeId = reader.GetNullable<int>(27)
 									};
-
 									adjustedOrder = reader.GetInt32(28);
 								} else {
 									cell = new SCARAPITableCell();
@@ -403,7 +400,6 @@ WHERE  CompanyID = @Iconum";
 						}
 					}
 				}
-
 			}
 
 
@@ -427,6 +423,8 @@ WHERE  CompanyID = @Iconum";
 						ts.Cells.Add(tc);
 						List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
+						bool hasValidChild = false;
+						decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
 						bool whatever = false;
 						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
 
@@ -439,13 +437,24 @@ WHERE  CompanyID = @Iconum";
 							tc.DocumentTimeSliceID = ts.Id;
 						}
 
-						bool hasChildren = false;
-						bool whatever2 = false;
+						bool ChildrenSumEqual = false;
+						if (!tc.ValueNumeric.HasValue || !hasValidChild)
+							ChildrenSumEqual = true;
+						else {
+							decimal diff = cellValue - calcChildSum;
+							diff = Math.Abs(diff);
+
+							if (tc.ScalingFactorValue == 1.0)
+								ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
+							else
+								ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+						}
 
 						tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
-								(CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, temp.TimeSlices) != CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasChildren, temp.TimeSlices)) &&
-										!tc.MTMWErrorTypeId.HasValue && hasChildren && sh.UnitTypeId != 2
+								!ChildrenSumEqual &&
+										!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2
 										&& !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription));
+
 					} catch (Exception ex) {
 						Console.WriteLine(ex.Message);
 						break;
@@ -454,6 +463,21 @@ WHERE  CompanyID = @Iconum";
 			}
 
 			return temp;
+		}
+
+
+		public decimal getDecimal(decimal value, double ScalingFactorValue, Boolean ispositive) {
+			decimal factor = Decimal.Parse("" + ScalingFactorValue);
+			int m = 1;
+			if ((value > 0 && !ispositive) || (value < 0 && ispositive))
+				m = -1;
+			decimal t1 = Math.Abs(value);
+			decimal test = Decimal.Parse("" + Math.Abs(value));
+			decimal tmp = Decimal.Parse("" + Math.Abs(value)) * factor;
+			if (m < 0) {
+				tmp = -tmp;
+			}
+			return tmp;
 		}
 
 		private bool LPV(Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup,
@@ -502,7 +526,55 @@ WHERE  CompanyID = @Iconum";
 			//return matches.Any(m => CalculateCellValue(sh.Cells[m], BlankCells, SHChildLookup, IsSummaryLookup, ref whatever2, timeSlices) != cellValue && ((sh.Cells[m].ValueNumeric.HasValue || sh.Cells[m].VirtualValueNumeric.HasValue)));
 		}
 
+		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup,
+	Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> timeSlices) {
+			if (cell.ValueNumeric.HasValue) {
+				//hasChildren = true;
+				if (!cell.VirtualValueNumeric.HasValue)
+					return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
+			} else if (cell.ID == 0 && cell.VirtualValueNumeric.HasValue) {
+				//hasChildren = true;
+				return cell.VirtualValueNumeric.Value;
+			} else {
+				/*
+				if (BlankCells.ContainsKey(cell)) {
+					decimal sum = 0;
+					StaticHierarchy sh = BlankCells[cell].Item1;
+					int timesliceIndex = BlankCells[cell].Item2;
+					TimeSlice ts = timeSlices[timesliceIndex];
+					bool subChildren = false;
 
+					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
+						hasChildren = true;
+						if (
+							(((child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
+								|| ((child.StaticHierarchyMetaId == 2 || child.StaticHierarchyMetaId == 5 || child.StaticHierarchyMetaId == 6) && child.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
+							&& child.UnitTypeId != 2
+							) {
+							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, IsSummaryLookup, ref subChildren, timeSlices);
+							if (subChildren)
+								hasChildren = true;
+
+						}
+					}
+					if (SHChildLookup[sh.Id].Where(c =>
+						(((c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
+								|| ((c.StaticHierarchyMetaId == 2 || c.StaticHierarchyMetaId == 5 || c.StaticHierarchyMetaId == 6) && c.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
+							&& c.UnitTypeId != 2
+						).Count() > 0) {
+						if (!cell.ValueNumeric.HasValue && hasChildren && !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription))) {
+							cell.VirtualValueNumeric = sum;
+						}
+						return sum;
+					}
+				}
+				*/
+			}
+			return 0;
+		}
+
+
+		/*
 		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup,
 			Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> timeSlices) {
 			if (cell.ValueNumeric.HasValue) {
@@ -548,6 +620,8 @@ WHERE  CompanyID = @Iconum";
 			return 0;
 		}
 
+		*/
+
 		private IEnumerable<SCARAPITableCell> GetChildren(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
 
 			StaticHierarchy sh = CellLookup[cell].Item1;
@@ -563,43 +637,56 @@ WHERE  CompanyID = @Iconum";
 			}
 		}
 
-		private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> TimeSlices) {
+		private decimal CalculateChildSum(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup, Dictionary<int, List<string>> IsSummaryLookup, ref bool hasValidChild, List<TimeSlice> TimeSlices) {
+			decimal vv = 0;
 			if (CellLookup.ContainsKey(cell)) {
-				decimal sum = 0;
 				StaticHierarchy sh = CellLookup[cell].Item1;
 				int timesliceIndex = CellLookup[cell].Item2;
 				TimeSlice ts = TimeSlices[timesliceIndex];
 
-				bool subChildren = false;
-
-				if (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6) {
-
-					foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6)) {
-						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, IsSummaryLookup, ref subChildren, TimeSlices);
-						if (subChildren)
-							hasChildren = true;
+				foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
+					if (sh.StaticHierarchyMetaId == 2 || sh.StaticHierarchyMetaId == 5 || sh.StaticHierarchyMetaId == 6) {
+						if (sh.StaticHierarchyMetaId != child.StaticHierarchyMetaId)
+							continue;
 					}
-					if (SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId != 2 && s.StaticHierarchyMetaId != 5 && s.StaticHierarchyMetaId != 6).Count() > 0) {
-						if (!cell.ValueNumeric.HasValue && subChildren)
-							cell.VirtualValueNumeric = sum;
-
-						return sum;
+					if (!(sh.StaticHierarchyMetaId == 2 || sh.StaticHierarchyMetaId == 5 || sh.StaticHierarchyMetaId == 6)) {
+						if (child.StaticHierarchyMetaId == 2 || child.StaticHierarchyMetaId == 5 || child.StaticHierarchyMetaId == 6)
+							continue;
 					}
-				} else {
-					foreach (StaticHierarchy child in SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId == sh.StaticHierarchyMetaId)) {
-						sum += CalculateCellValue(child.Cells[timesliceIndex], CellLookup, SHChildLookup, IsSummaryLookup, ref subChildren, TimeSlices);
-						if (subChildren)
-							hasChildren = true;
-					}
-					if (SHChildLookup[sh.Id].Where(s => s.StaticHierarchyMetaId == sh.StaticHierarchyMetaId).Count() > 0) {
-						if (!cell.ValueNumeric.HasValue && subChildren)
-							cell.VirtualValueNumeric = sum;
 
-						return sum;
+					if (child.TableTypeDescription != "NG-IS") {
+						if (child.UnitTypeId == 2)
+							continue;
+					} else {
+						if ((sh.UnitTypeId == 2 && child.UnitTypeId != 2) || (sh.UnitTypeId != 2 && child.UnitTypeId == 2))
+							continue;
+					}
+
+					SCARAPITableCell cc = child.Cells[timesliceIndex];
+					if (cc == null)
+						continue;
+
+					if (cc.ValueNumeric.HasValue) {
+						decimal tmp = getDecimal(cc.ValueNumeric.Value, cc.ScalingFactorValue, cc.IsIncomePositive); //   cc.ValueNumeric.Value;
+						vv += tmp;
+						hasValidChild = true;
+						continue;
+					}
+					if (cc.ID > 0) {
+						continue;
+					}
+
+					if (SHChildLookup[child.Id].Count() > 0) {
+						decimal headerTotal = CalculateChildSum(cc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, TimeSlices);
+						if (headerTotal != 0) {
+							cc.VirtualValueNumeric = headerTotal;
+							hasValidChild = true;
+							vv += headerTotal;
+						}
 					}
 				}
 			}
-			return 0;
+			return vv;
 		}
 
 		public AsReportedTemplateSkeleton GetTemplateSkeleton(int iconum, string TemplateName) {
