@@ -3585,7 +3585,9 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public class JsonToSQLTableCell : JsonToSQL {
-			string delete_sql = "DELETE FROM TableCell where id = {0};";
+			string delete_sql = @"
+DELETE FROM DimensionToCell where TableCellId = {0};
+DELETE FROM TableCell where id = {0};";
 			string merge_sql = @"MERGE TableCell
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})) 
 	as src (  ID,Offset,CellPeriodType,PeriodTypeID,CellPeriodCount,PeriodLength,CellDay,CellMonth,CellYear,CellDate,Value,CompanyFinancialTermID,ValueNumeric,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,Currency,CurrencyCode,Cusip,ScarUpdated,IsIncomePositive,DocumentId,Label,XBRLTag)
@@ -4352,9 +4354,9 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				var dimensionToCel = json["DimensionToCell"];
 				var documentTimeSliceTableCell = json["DocumentTimeSliceTableCell"];
 				sb.AppendLine(new JsonToSQLDimensionToCell(dtid, dimensionToCel).Translate());
-				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
 				sb.AppendLine(new JsonToSQLDocumentTimeSliceTableCell(documentTimeSliceTableCell).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
+				sb.AppendLine(new JsonToSQLTableCell(tablecell).Translate());
 				sb.AppendLine("select * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
