@@ -845,8 +845,8 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 		}
 
 		public ScarResult CopyDocumentHierarchy(int iconum, int TableTypeid, Guid DocumentId) {
-
-			string query = @"
+			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
+			string text_query = @"
 DECLARE @newDocumentTableId int;
 BEGIN TRY
 	BEGIN TRAN
@@ -922,10 +922,9 @@ END CATCH
 			response.StaticHierarchies = new List<StaticHierarchy>();
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-
-
+				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@DocumentId", DocumentId);
 					cmd.Parameters.AddWithValue("@TableTypeId", TableTypeid);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
