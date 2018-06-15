@@ -3404,11 +3404,11 @@ SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId
 			string delete_sql = @"
 DELETE FROM DimensionToCell 
 where TableCellID in (SELECT id from TableCell
-where CompanyFinancialTermID = {0});
+where CompanyFinancialTermID in ({0}));
 
-DELETE FROM TableCell where CompanyFinancialTermID = {0};
+DELETE FROM TableCell where CompanyFinancialTermID in ({0});
 
-				DELETE FROM CompanyFinancialTerm where id = {0};
+				DELETE FROM CompanyFinancialTerm where id in ({0});
 				
 				";
 			string merge_sql = @"MERGE CompanyFinancialTerm
@@ -3451,11 +3451,12 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].ToString()));
+							deleted_ids.Add(elem["obj"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].ToString()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),
 								elem["obj"]["DocumentSeries"]["ID"].ToString(),
@@ -3480,16 +3481,22 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 					}
 				}
 
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 		}
 
 		public class JsonToSQLTableDimension : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM DimensionToCell where TableDimensionId = {0};
-DELETE FROM Tablelink where TableDimensionID1 = {0} or TableDimensionID2 = {0};
-DELETE FROM TableDimension where id = {0};
+DELETE FROM DimensionToCell where TableDimensionId in ({0});
+DELETE FROM Tablelink where TableDimensionID1 in ({0}) or TableDimensionID2 in ({0});
+DELETE FROM TableDimension where id in ({0});
 ";
 			string merge_sql = @"MERGE TableDimension
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})) as src ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder)
@@ -3543,11 +3550,12 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							deleted_ids.Add(elem["obj"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								_dimensionTableId,
@@ -3577,16 +3585,21 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
-
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 		}
 
 		public class JsonToSQLTableCell : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM DimensionToCell where TableCellId = {0};
-DELETE FROM TableCell where id = {0};";
+DELETE FROM DimensionToCell where TableCellId in ({0});
+DELETE FROM TableCell where id in ({0});";
 			string merge_sql = @"MERGE TableCell
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})) 
 	as src (  ID,Offset,CellPeriodType,PeriodTypeID,CellPeriodCount,PeriodLength,CellDay,CellMonth,CellYear,CellDate,Value,CompanyFinancialTermID,ValueNumeric,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,Currency,CurrencyCode,Cusip,ScarUpdated,IsIncomePositive,DocumentId,Label,XBRLTag)
@@ -3680,12 +3693,13 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					if (elem == null) continue;
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							deleted_ids.Add(elem["obj"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
@@ -3743,8 +3757,13 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 						sb.AppendLine(ex.Message);
 					}
 				}
-
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 		}
@@ -3808,7 +3827,7 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 
 		public class JsonToSQLDocumentTimeSlice : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM dbo.DocumentTimeSlice where id = {0};
+DELETE FROM dbo.DocumentTimeSlice where id in ({0});
 ";
 			string merge_sql = @"MERGE dbo.DocumentTimeSlice
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19} )) as src (Id,DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
@@ -3891,11 +3910,12 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							deleted_ids.Add(elem["obj"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Document"]["ID"].AsString(),
@@ -3945,8 +3965,13 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
-
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 			public string TranslateInsert() {
@@ -3990,7 +4015,7 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 
 		public class JsonToSQLStaticHierarchy : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM dbo.StaticHierarchy where id = {0};
+DELETE FROM dbo.StaticHierarchy where id in ({0});
 ";
 			string merge_sql = @"MERGE dbo.StaticHierarchy
 USING ( select {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} ,ISNULL(max(AdjustedOrder), -1)  from dbo.StaticHierarchy where tabletypeID = {3} ) as src (Id,CompanyFinancialTermId,AdjustedOrder,TableTypeId
@@ -4039,11 +4064,12 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							deleted_ids.Add(elem["obj"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
@@ -4077,8 +4103,13 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
-
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 			public string TranslateInsert() {
@@ -4114,7 +4145,7 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 
 		public class JsonToSQLDocumentTimeSliceTableCell : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM DocumentTimeSliceTableCell where TableCellId = {0};
+DELETE FROM DocumentTimeSliceTableCell where TableCellId in ({0});
 ";
 			string merge_sql = @"MERGE DocumentTimeSliceTableCell
 USING (VALUES ({0}, {1})) as src (DocumentTimeSliceId,TableCellId)
@@ -4144,11 +4175,12 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId,0 INTO @Chang
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableCell"]["ID"].AsValue()));
+							deleted_ids.Add(elem["obj"]["TableCell"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableCell"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
 								elem["obj"]["TableCell"]["ID"].AsValue()
@@ -4162,15 +4194,20 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId,0 INTO @Chang
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
-
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 		}
 
 		public class JsonToSQLDocumentTable : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM DocumentTable where ID = {0};
+DELETE FROM DocumentTable where ID in ({0});
 ";
 			string merge_sql = @"MERGE DocumentTable
 USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})) as src (ID, DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
@@ -4222,11 +4259,12 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
+				List<string> deleted_ids = new List<string>();
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							deleted_ids.Add(elem["obj"]["ID"].AsValue());
+							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								"'00000000-0000-0000-0000-000000000000'",
@@ -4252,8 +4290,13 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
-
-				return sb.ToString(); ;
+				string result = "";
+				if (deleted_ids.Count > 0) {
+					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+				} else {
+					result = sb.ToString();
+				}
+				return result;
 			}
 
 		}
