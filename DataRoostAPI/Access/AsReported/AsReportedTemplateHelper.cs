@@ -3624,7 +3624,7 @@ WHEN MATCHED THEN
       ,CurrencyCode = src.CurrencyCode
       ,Cusip = src.Cusip
       ,ScarUpdated = TableCell.ScarUpdated
-      ,IsIncomePositive = src.IsIncomePositive
+      ,IsIncomePositive = TableCell.IsIncomePositive
       ,DocumentId = src.DocumentId
       ,Label = src.Label
       ,XBRLTag = src.XBRLTag
