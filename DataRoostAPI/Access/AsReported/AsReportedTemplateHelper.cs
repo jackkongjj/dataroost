@@ -425,6 +425,9 @@ WHERE  CompanyID = @Iconum";
 
 						bool hasValidChild = false;
 						decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
+						if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue) {
+							tc.VirtualValueNumeric = calcChildSum;
+						}
 						bool whatever = false;
 						decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
 
