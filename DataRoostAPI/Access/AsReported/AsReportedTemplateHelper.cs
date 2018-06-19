@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Web;
+using System.Net.Mail;
 using DataRoostAPI.Common.Models.AsReported;
 using FactSet.Data.SqlClient;
 using Newtonsoft.Json.Linq;
@@ -1193,6 +1194,21 @@ SELECT *
 			return response;
 		}
 
+		public static void SendEmail(string subject, string emailBody) {
+			try {
+				SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
+				MailMessage message = new MailMessage();
+				message.From = mailFrom;
+				message.To.Add(new MailAddress("ljiang@factset.com", "Lun Jiang"));
+				message.Subject = subject + " from " + Environment.MachineName;
+				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+				message.Body = emailBody;
+				message.IsBodyHtml = true;
+				mySMTP.Send(message);
+			} catch { }
+		}
+
 		public ScarResult DeleteStaticHierarchy(List<int> StaticHierarchyIds) {
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -1204,6 +1220,7 @@ SELECT *
 			String q2 = string.Format(query2, inclause);
 			String q3 = string.Format(query3, inclause);
 			String finalquery = q1 + q2 + q3;
+			SendEmail("DataRoost Bulk StaticHierarchy Delete - DeleteStaticHierarchy", q3);
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
@@ -1309,7 +1326,7 @@ SELECT *
 
 			String q1 = string.Format(deletequery, id);
 			String q2 = string.Format(insertquery, id, newCusip);
-
+			SendEmail("DataRoost Bulk StaticHierarchy Delete - UpdateStaticHierarchyCusip", id.ToString());
 			ScarResult response = new ScarResult();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(q1, conn)) {
@@ -4109,6 +4126,7 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 				string result = "";
 				if (deleted_ids.Count > 0) {
 					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+					SendEmail("DataRoost Bulk StaticHierarchy Delete - JsonToSQLStaticHierarchy", result);
 				} else {
 					result = sb.ToString();
 				}
