@@ -426,7 +426,7 @@ WHERE  CompanyID = @Iconum";
 
 						bool hasValidChild = false;
 						decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
-						if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue) {
+						if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
 							tc.VirtualValueNumeric = calcChildSum;
 						}
 						bool whatever = false;
@@ -681,11 +681,13 @@ WHERE  CompanyID = @Iconum";
 					}
 
 					if (SHChildLookup[child.Id].Count() > 0) {
-						decimal headerTotal = CalculateChildSum(cc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, TimeSlices);
-						if (headerTotal != 0) {
-							cc.VirtualValueNumeric = headerTotal;
-							hasValidChild = true;
-							vv += headerTotal;
+						if (!IsSummaryLookup.ContainsKey(ts.Id)) {
+							decimal headerTotal = CalculateChildSum(cc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, TimeSlices);
+							if (headerTotal != 0) {
+								cc.VirtualValueNumeric = headerTotal;
+								hasValidChild = true;
+								vv += headerTotal;
+							}
 						}
 					}
 				}
