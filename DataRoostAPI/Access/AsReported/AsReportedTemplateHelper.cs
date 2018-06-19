@@ -5078,7 +5078,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null
+WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -5086,7 +5086,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null
+WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
@@ -5322,7 +5322,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null
+WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -5330,7 +5330,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null
+WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
@@ -5550,7 +5550,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null
+WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -5558,7 +5558,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null
+WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
@@ -5784,7 +5784,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null
+WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -5792,7 +5792,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null
+WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
