@@ -15,7 +15,29 @@ using System.Runtime.InteropServices;
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
 	public class AsReportedController : ApiController {
+		public static void SendEmail(string subject, string emailBody) {
+			try {
+				SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
+				MailMessage message = new MailMessage();
+				message.From = mailFrom;
+				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
+				var leo = new MailAddress("lchang@factset.com", "Lun Jiang");
+				message.To.Add(ljiang);
+				//message.To.Add(leo);
+				message.Subject = subject + " from " + Environment.MachineName;
+				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+				message.Body = emailBody;
+				message.IsBodyHtml = true;
+				mySMTP.Send(message);
+			} catch { }
+		}
+
 		private void LogError(Exception ex) {
+			string msg = ex.Message + ex.StackTrace;
+			if (ex.InnerException != null)
+				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
+			SendEmail("DataRoost Exception", msg);
 		}
 
 		[Route("documents/{documentId}")]
