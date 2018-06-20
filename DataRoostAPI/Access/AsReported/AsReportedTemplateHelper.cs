@@ -5086,7 +5086,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
@@ -5330,7 +5330,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE TableCellID is not null
 
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
@@ -5558,7 +5558,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
@@ -5792,7 +5792,7 @@ EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
 INSERT @CellsForMTMW
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is not null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
