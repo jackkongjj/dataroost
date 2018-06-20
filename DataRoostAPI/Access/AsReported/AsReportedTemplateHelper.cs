@@ -456,8 +456,7 @@ WHERE  CompanyID = @Iconum";
 
 						tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
 								!ChildrenSumEqual &&
-										!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2
-										&& !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription));
+										!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
 
 					} catch (Exception ex) {
 						Console.WriteLine(ex.Message);
