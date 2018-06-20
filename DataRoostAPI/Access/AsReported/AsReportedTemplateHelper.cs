@@ -242,7 +242,9 @@ WHERE  CompanyID = @Iconum";
 							};
 							StaticHierarchies.Add(shs);
 							SHLookup.Add(shs.Id, shs);
-							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
+							if(!SHChildLookup.ContainsKey(shs.Id))
+								SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
+
 							if (shs.ParentID != null) {
 								if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
 									SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
