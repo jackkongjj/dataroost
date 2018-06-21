@@ -320,20 +320,30 @@ WHERE  CompanyID = @Iconum";
 									}
 
 								} else {
-									while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder || (cell.ID !=0 && cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId)) {
+									while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
 										shix++;
 										if (shix >= StaticHierarchies.Count())
 											break;
 									}
-
+									var currSh = StaticHierarchies.FirstOrDefault(x => x.AdjustedOrder == adjustedOrder && x.CompanyFinancialTermId == cell.CompanyFinancialTermID);
+									if (currSh == null) {
+										continue;
+									}
+									//while (adjustedOrder == StaticHierarchies[shix].AdjustedOrder && cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId) {
+									//	shix++;
+									//	if (shix >= StaticHierarchies.Count())
+									//		break;
+									//}
+									if (shix >= StaticHierarchies.Count())
+										break;
 									if (cell.ID == 0) {
-										BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+										BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
 									}
 									i++;
-									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(StaticHierarchies[shix], StaticHierarchies[shix].Cells.Count));
+									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
 
-									if (cell.ID == 0 || cell.CompanyFinancialTermID == StaticHierarchies[shix].CompanyFinancialTermId) {
-										StaticHierarchies[shix].Cells.Add(cell);
+									if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
+										currSh.Cells.Add(cell);
 									} else {
 										throw new Exception();
 									}
@@ -1100,8 +1110,9 @@ where id = @TargetSHID;
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
 DECLARE @NewHierarchyLabel varchar(1024)  
+DECLARE @TableTypeID INT
 
-
+SET @TableTypeID = (SELECT TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
  SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe(Description) + '[' + dbo.GetEndLabelSafe(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
  SET @NewHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe	(Description) + '[ ][' + dbo.GetEndLabelSafe(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
 	 UPDATE StaticHierarchy
@@ -1119,6 +1130,7 @@ DECLARE @NewHierarchyLabel varchar(1024)
 FROM CTE_Children cte
 JOIN StaticHierarchy sh on cte.ID = SH.Id   
 
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeID
 
 ;WITH CTE_Children ([Id]
       ,[CompanyFinancialTermId]
