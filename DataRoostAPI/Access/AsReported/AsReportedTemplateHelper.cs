@@ -79,6 +79,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			string query =
 								@"
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 
 BEGIN TRY
 DROP TABLE #StaticHierarchy
@@ -103,6 +104,8 @@ select * from #StaticHierarchy
 
 			string CellsQuery =
 				@"
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+
 --SELECT *
 --FROM (
 SELECT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
@@ -172,7 +175,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.Pe
 ";//I hate this query, it is so bad
 
 			string TimeSliceQuery =
-				@"SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, dtspn.PeriodNoteID, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') as CHARINDEX
+				@"
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+
+SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, dtspn.PeriodNoteID, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') as CHARINDEX
 FROM DocumentSeries ds WITH (NOLOCK) 
 	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
 	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
@@ -191,6 +197,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""A
 ";
 
 			string TimeSliceIsSummaryQuery = @"
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 
 select distinct DocumentTimeSliceID, TableType
 from DocumentSeries ds WITH (NOLOCK) 
