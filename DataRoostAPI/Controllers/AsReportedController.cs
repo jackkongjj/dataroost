@@ -33,11 +33,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			} catch { }
 		}
 
-		private void LogError(Exception ex) {
+		private void LogError(Exception ex, string extra = "") {
 			string msg = ex.Message + ex.StackTrace;
 			if (ex.InnerException != null)
 				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
-			SendEmail("DataRoost Exception", msg);
+			SendEmail("DataRoost Exception", msg + extra);
 		}
 
 		[Route("documents/{documentId}")]
@@ -143,7 +143,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
-				LogError(ex);
+				LogError(ex, string.Format("CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
 				return null;
 			}
 		}
