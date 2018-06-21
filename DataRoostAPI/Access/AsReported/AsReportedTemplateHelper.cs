@@ -252,6 +252,7 @@ WHERE  CompanyID = @Iconum";
 								SHChildLookup[shs.ParentID.Value].Add(shs);
 							}
 						}
+
 						reader.NextResult();
 
 						int shix = 0;
@@ -260,6 +261,8 @@ WHERE  CompanyID = @Iconum";
 						#region read CellsQuery
 
 						while (reader.Read()) {
+							if (shix >= StaticHierarchies.Count())
+								break;
 							if (reader.GetInt64(29) == 1) {
 								SCARAPITableCell cell;
 								if (reader.GetNullable<int>(0).HasValue) {
@@ -310,15 +313,17 @@ WHERE  CompanyID = @Iconum";
 
 									CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
 
-									if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId) {
+									if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId ) {
 										negSh.Cells.Add(cell);
 									} else {
 										throw new Exception();
 									}
 
 								} else {
-									while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+									while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder || (cell.ID !=0 && cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId)) {
 										shix++;
+										if (shix >= StaticHierarchies.Count())
+											break;
 									}
 
 									if (cell.ID == 0) {
