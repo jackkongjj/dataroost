@@ -224,6 +224,7 @@ WHERE  CompanyID = @Iconum";
 				using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 					conn.Open();
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 120;
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
