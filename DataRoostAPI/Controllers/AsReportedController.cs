@@ -56,6 +56,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("documents/SplitAdjustmentDate/{documentId}")]
+		[HttpPut]
+		public ScarResult UpdateSplitAdjustmentDate(string CompanyId, Guid documentId, StringInput input) {
+			try {
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+				DocumentHelper helper = new DocumentHelper(sfConnectionString, damConnectionString);
+
+				var errorMessage = helper.UpdateSplitAdjustmentDate(documentId.ToString(), input.StringData, iconum);
+
+				var result = new ScarResult();
+				Dictionary<string, string> returnValue = new Dictionary<string, string>();
+				returnValue["Success"] = string.IsNullOrEmpty(errorMessage) ? "T" : "F";
+				returnValue["Message"] = errorMessage;
+				result.ReturnValue = returnValue;
+				return result;
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("history/{documentId}")]
 		[HttpGet]
 		public AsReportedDocument[] GetDocuments(string CompanyId, string documentId) {
@@ -1492,8 +1515,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 		}
-
-
+				
 		private List<string> LPVMetaTypes = new List<string>() { "NI", "RV", "TA", "TL", "LE", "PS", "PE", "CC" };
 
 		[Route("documents/{damdocumentId}/mtmwandlpv2")]
