@@ -3555,7 +3555,6 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 		public class JsonToSQLTableDimension : JsonToSQL {
 			string delete_sql = @"
 DELETE FROM DimensionToCell where TableDimensionId in ({0});
-DELETE FROM Tablelink where TableDimensionID1 in ({0}) or TableDimensionID2 in ({0});
 DELETE FROM TableDimension where id in ({0});
 ";
 			string merge_sql = @"MERGE TableDimension
@@ -4507,7 +4506,6 @@ BEGIN TRY
 	BEGIN TRAN
 			delete from DimensionToCell where TableDimensionID in
 			(select id from TableDimension where DocumentTableID = @id);
-      delete FROM Tablelink where tabledimensionid1 in (select ID from tabledimension where DocumentTableID = @id)" + @" or tabledimensionid2 in (select ID from tabledimension where DocumentTableID = @id);
 			delete from tabledimension where DocumentTableID = @id;
 			delete from documenttable where id = @id;
 		COMMIT 
