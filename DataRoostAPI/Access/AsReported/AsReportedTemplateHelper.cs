@@ -1134,7 +1134,7 @@ DECLARE @TableTypeID INT
 
 SET @TableTypeID = (SELECT TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
  SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe(Description) + '[' + dbo.GetEndLabelSafe(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
- SET @NewHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe	(Description) + '[ ][' + dbo.GetEndLabelSafe(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
+ SET @NewHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe	(Description) + '[New Header][' + dbo.GetEndLabelSafe(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
 	 UPDATE StaticHierarchy
 	SET Description = (dbo.GetHierarchyLabelSafe(@OrigDescription) + '[ ]' + dbo.GetEndLabelSafe(Description))
 	WHERE ID = @TargetSHID
