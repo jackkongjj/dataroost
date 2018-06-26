@@ -171,6 +171,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("templates/{TemplateName}/{DocumentId}")]
+		[HttpPost]
+		public ScarResult PostTemplate(string CompanyId, string TemplateName, Guid DocumentId, StringInput data) {
+			try {
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.CreateStaticHierarchyForTemplate(0, TemplateName, DocumentId);
+			} catch (Exception ex) {
+				LogError(ex, string.Format("CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
 
 		[Route("templates/{TemplateName}/skeleton/")]
 		[HttpGet]

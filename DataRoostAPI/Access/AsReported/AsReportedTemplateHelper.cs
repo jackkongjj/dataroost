@@ -68,6 +68,34 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		#endregion
 
+		public ScarResult CreateStaticHierarchyForTemplate(int iconum, string TemplateName, Guid DocumentId) {
+
+			ScarResult temp = new ScarResult();
+			string query_sproc = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CreateStaticHierarchyIfNecessary";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				#region Using SqlConnection
+				using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
+					conn.Open();
+					temp.Message += "ConnOpen.";
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 120;
+					//cmd.Parameters.AddWithValue("@iconum", iconum);
+					//cmd.Parameters.AddWithValue("@templateName", TemplateName);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						temp.Message += "StaticHierarchy.";
+						while (reader.Read()) {
+							break;
+						}
+
+					}
+				}
+				#endregion
+			}
+			return temp;
+		}
+
+
 		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId) {
 			ScarResult newFormat = new ScarResult();
 			AsReportedTemplate oldFormat = GetTemplate(iconum, TemplateName, DocumentId);
