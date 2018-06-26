@@ -11,6 +11,7 @@ using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
 using System.Diagnostics;
 using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
+using System.Net.NetworkInformation;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
@@ -154,6 +155,42 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		public static double PingTimeAverage(string host, int echoNum) {
+			long totalTime = 0;
+			int timeout = 120;
+			Ping pingSender = new Ping();
+
+			for (int i = 0; i < echoNum; i++) {
+				PingReply reply = pingSender.Send(host, timeout);
+				if (reply.Status == IPStatus.Success) {
+					totalTime += reply.RoundtripTime;
+				}
+			}
+			return totalTime / echoNum;
+		}
+
+		public static string PingMessage() {
+			string result = "PingTime: ";
+			try {
+				string hostname = "ffdamsql-staging.prod.factset.com";
+				string searchString = "Data Source=tcp:";
+				var connectString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				var startindex = connectString.IndexOf(searchString);
+				if (startindex <= 0) {
+					searchString = "Data Source=";
+					startindex = connectString.IndexOf(searchString);
+				}
+				startindex += searchString.Length;
+				hostname = connectString.Substring(startindex);
+				var endIndex = hostname.IndexOf(";");
+				hostname = hostname.Substring(0, endIndex);
+				result += string.Format("{0} ms ", PingTimeAverage(hostname, 4));
+			} catch {
+				result += "error";
+			}
+			return result;
+		}
+
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpGet]
 		public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
@@ -166,7 +203,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
-				LogError(ex, string.Format("CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
 				return null;
 			}
 		}
