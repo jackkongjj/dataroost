@@ -241,7 +241,7 @@ WHERE  CompanyID = @Iconum";
 
 			AsReportedTemplate temp = new AsReportedTemplate();
 			try {
-				temp.Message = "Start.";
+				temp.Message = "Start." + DateTime.UtcNow.ToString();
 				string query_sproc = @"SCARGetTemplate";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -254,15 +254,15 @@ WHERE  CompanyID = @Iconum";
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					#region Using SqlConnection
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
-						conn.Open();
-						temp.Message += "ConnOpen.";
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
 						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+						conn.Open();
+						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString(); 
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
-							temp.Message += "StaticHierarchy.";
+							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString(); 
 							while (reader.Read()) {
 								StaticHierarchy shs = new StaticHierarchy
 								{
@@ -282,6 +282,7 @@ WHERE  CompanyID = @Iconum";
 									TableTypeDescription = reader.GetStringSafe(13),
 									Cells = new List<SCARAPITableCell>()
 								};
+								temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString();
 								StaticHierarchies.Add(shs);
 								SHLookup.Add(shs.Id, shs);
 								if (!SHChildLookup.ContainsKey(shs.Id))
@@ -294,14 +295,14 @@ WHERE  CompanyID = @Iconum";
 									SHChildLookup[shs.ParentID.Value].Add(shs);
 								}
 							}
-
+							temp.Message += "Cells." + DateTime.UtcNow.ToString(); 
 							reader.NextResult();
-
+							temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString(); 
 							int shix = 0;
 							int i = 0;
 							int adjustedOrder = 0;
 							#region read CellsQuery
-							temp.Message += "Cell.";
+							temp.Message += "Cell2." + DateTime.UtcNow.ToString(); 
 							while (reader.Read()) {
 								if (shix >= StaticHierarchies.Count())
 									break;
@@ -393,8 +394,9 @@ WHERE  CompanyID = @Iconum";
 								}
 							}
 							#endregion
+							temp.Message += "TimeSlice." + DateTime.UtcNow.ToString(); 
 							reader.NextResult();
-							temp.Message += "TimeSlice.";
+							temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString(); 
 							temp.TimeSlices = new List<TimeSlice>();
 							List<TimeSlice> TimeSlices = temp.TimeSlices;
 							#region Read TimeSlice
@@ -447,7 +449,7 @@ WHERE  CompanyID = @Iconum";
 							#endregion
 
 							reader.NextResult();
-							temp.Message += "IsSummary.";
+							temp.Message += "IsSummary." + DateTime.UtcNow.ToString(); 
 							while (reader.Read()) {
 								int TimeSliceID = reader.GetInt32(0);
 								if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
@@ -528,7 +530,7 @@ WHERE  CompanyID = @Iconum";
 				temp.Message += "Finished.";
 
 			} catch (Exception ex) {
-				throw new Exception(temp.Message, ex);
+				throw new Exception(temp.Message + ex.Message, ex);
 			}
 			return temp;
 		}
