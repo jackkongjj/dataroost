@@ -1428,6 +1428,9 @@ SELECT *
 
 			string query = @"
 
+DECLARE @TableTypeId INT = (SELECT TableTypeId FROM StaticHierarchy WHERE ID = @TargetSHID)
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
+
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
 DECLARE @NewHierarchyLabel varchar(1024)  
@@ -1538,7 +1541,9 @@ SELECT *
 		public ScarResult UpdateStaticHierarchyHeaderLabel(int id, string newLabel) {
 
 			string query = @"
-DECLARE @TableType int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
+
 DECLARE @OrigDescription varchar(1024) = (SELECT dbo.GetHierarchyLabelSafe(Description)  FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @OrigHierarchyLabel varchar(1024) 
 DECLARE @NewHierarchyLabel varchar(1024)  
@@ -1550,7 +1555,7 @@ SET @OrigParent = dbo.GetHierarchyLabelSafe(SUBSTRING(@OrigDescription, 0, DATAL
 SET @NewHierarchyLabel = @OrigParent + '[' + @NewEndLabel + ']'
 	 UPDATE StaticHierarchy
 	SET Description = Replace(Description, @OrigDescription,@NewHierarchyLabel) 
-	WHERE TableTypeId = @TableType   
+	WHERE TableTypeId = @TableTypeId   
 END
 
 
@@ -1675,8 +1680,13 @@ END
 		public ScarResult UpdateStaticHierarchySwitchChildrenOrientation(int id) {
 			const string SQL_SwitchChildrenOrientation = @"
 
+DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
+
 UPDATE StaticHierarchy set ChildrenExpandDown = CASE WHEN ChildrenExpandDown = 1 THEN 0 ELSE 1 END
 																WHERE ID = @TargetSHID; 
+
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
 SELECT * FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID; 
 ";
