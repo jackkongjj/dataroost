@@ -268,6 +268,7 @@ WHERE  CompanyID = @Iconum";
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString(); 
 							while (reader.Read()) {
+								temp.Message += "Read." + DateTime.UtcNow.ToString(); 
 								StaticHierarchy shs = new StaticHierarchy
 								{
 									Id = reader.GetInt32(0),
@@ -289,14 +290,17 @@ WHERE  CompanyID = @Iconum";
 								temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString();
 								StaticHierarchies.Add(shs);
 								SHLookup.Add(shs.Id, shs);
+								temp.Message += "SHLookup." + DateTime.UtcNow.ToString(); 
 								if (!SHChildLookup.ContainsKey(shs.Id))
 									SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
 
 								if (shs.ParentID != null) {
+									temp.Message += "ParentID." + DateTime.UtcNow.ToString(); 
 									if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
 										SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
 
 									SHChildLookup[shs.ParentID.Value].Add(shs);
+									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString(); 
 								}
 							}
 							temp.Message += "Cells." + DateTime.UtcNow.ToString(); 
