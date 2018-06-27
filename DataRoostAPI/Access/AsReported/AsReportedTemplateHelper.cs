@@ -255,12 +255,16 @@ WHERE  CompanyID = @Iconum";
 					#region Using SqlConnection
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
-						cmd.CommandTimeout = 120;
+						cmd.CommandTimeout = 60;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 						conn.Open();
-						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString(); 
+						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
+						//using (DataTable dt = new DataTable()) {
+						//	dt.Load(reader);
+						//	Console.WriteLine(dt.Rows.Count);
+						//}
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString(); 
 							while (reader.Read()) {
@@ -530,7 +534,7 @@ WHERE  CompanyID = @Iconum";
 				temp.Message += "Finished.";
 
 			} catch (Exception ex) {
-				throw new Exception(temp.Message + ex.Message, ex);
+				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
 			}
 			return temp;
 		}
