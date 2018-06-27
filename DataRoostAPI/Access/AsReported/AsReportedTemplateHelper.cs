@@ -266,41 +266,44 @@ WHERE  CompanyID = @Iconum";
 						//	Console.WriteLine(dt.Rows.Count);
 						//}
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
-							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString(); 
+							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
 							while (reader.Read()) {
-								temp.Message += "Read." + DateTime.UtcNow.ToString(); 
+								temp.Message += "Read." + DateTime.UtcNow.ToString();
 								StaticHierarchy shs = new StaticHierarchy
 								{
 									Id = reader.GetInt32(0),
 									CompanyFinancialTermId = reader.GetInt32(1),
 									AdjustedOrder = reader.GetInt32(2),
 									TableTypeId = reader.GetInt32(3),
-									Description = reader.GetStringSafe(4),
-									HierarchyTypeId = reader.GetStringSafe(5)[0],
-									SeparatorFlag = reader.GetBoolean(6),
-									StaticHierarchyMetaId = reader.GetInt32(7),
-									UnitTypeId = reader.GetInt32(8),
-									IsIncomePositive = reader.GetBoolean(9),
-									ChildrenExpandDown = reader.GetBoolean(10),
-									ParentID = reader.GetNullable<int>(11),
-									StaticHierarchyMetaType = reader.GetStringSafe(12),
-									TableTypeDescription = reader.GetStringSafe(13),
-									Cells = new List<SCARAPITableCell>()
+									Description = reader.GetStringSafe(4)
 								};
+								temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString();
+								shs.HierarchyTypeId = reader.GetStringSafe(5)[0];
+								shs.SeparatorFlag = reader.GetBoolean(6);
+								shs.StaticHierarchyMetaId = reader.GetInt32(7);
+								shs.UnitTypeId = reader.GetInt32(8);
+								temp.Message += "shsIsIncomePositive." + DateTime.UtcNow.ToString();
+								shs.IsIncomePositive = reader.GetBoolean(9);
+								shs.ChildrenExpandDown = reader.GetBoolean(10);
+								shs.ParentID = reader.GetNullable<int>(11);
+								shs.StaticHierarchyMetaType = reader.GetStringSafe(12);
+								shs.TableTypeDescription = reader.GetStringSafe(13);
+								temp.Message += "shsCell." + DateTime.UtcNow.ToString();
+								shs.Cells = new List<SCARAPITableCell>();
 								temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString();
 								StaticHierarchies.Add(shs);
 								SHLookup.Add(shs.Id, shs);
-								temp.Message += "SHLookup." + DateTime.UtcNow.ToString(); 
+								temp.Message += "SHLookup." + DateTime.UtcNow.ToString();
 								if (!SHChildLookup.ContainsKey(shs.Id))
 									SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
 
 								if (shs.ParentID != null) {
-									temp.Message += "ParentID." + DateTime.UtcNow.ToString(); 
+									temp.Message += "ParentID." + DateTime.UtcNow.ToString();
 									if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
 										SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
 
 									SHChildLookup[shs.ParentID.Value].Add(shs);
-									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString(); 
+									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString();
 								}
 							}
 							temp.Message += "Cells." + DateTime.UtcNow.ToString(); 
@@ -3877,8 +3880,15 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 
 		public class JsonToSQLDimensionToCell : JsonToSQL {
 			string delete_sql = @"
-DELETE FROM DimensionToCell 
-where TableDimensionID = {0} and TableCellID = {1};
+DECLARE @TempDTS TABLE(TableDimensionID int, TableCellID int)
+INSERT INTO @TempDTS (TableDimensionID, TableCellID)
+VALUES  {0}
+DELETE DimensionToCell
+FROM #TempDTS tdts
+JOIN DimensionToCell dts ON tdts.TableDimensionID = dts.TableDimensionID AND tdts.TableCellID = dts.TableCellID 
+
+--DELETE FROM DimensionToCell 
+--where TableDimensionID = {0} and TableCellID = {1};
 			
 				";
 			string merge_sql = @"MERGE DimensionToCell
