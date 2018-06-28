@@ -255,7 +255,7 @@ WHERE  CompanyID = @Iconum";
 					#region Using SqlConnection
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
-						cmd.CommandTimeout = 60;
+						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
@@ -4169,7 +4169,7 @@ WHEN NOT MATCHED THEN
 ,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown) VALUES
 	  (
 src.CompanyFinancialTermId 
-,CASE src.AdjustedOrder WHEN -1 THEN -10 ELSE src.MaxAdjustedOrder+1 END
+,CASE src.AdjustedOrder WHEN -1 THEN -101 ELSE src.MaxAdjustedOrder+1 END
 ,src.TableTypeId 
 ,src.Description 
 ,src.HierarchyTypeId 
