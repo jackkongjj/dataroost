@@ -4182,6 +4182,9 @@ src.CompanyFinancialTermId
 OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @ChangeResult;
 
 ";
+			string cleanup_sql = @"
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
+";
 			private JArray _jarray;
 			public JsonToSQLStaticHierarchy(JToken jToken)
 				: base("") {
@@ -4196,6 +4199,7 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 				List<string> deleted_ids = new List<string>();
+				string tableTypeId = null;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
@@ -4215,6 +4219,9 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
 								elem["obj"]["ParentID"].AsValue()
 								));
+							if (string.IsNullOrEmpty(tableTypeId)) {
+								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
+							}
 						} else if (elem["action"].ToString() == "insert") {
 							sb.AppendLine(string.Format(merge_sql, 0,
 								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
@@ -4229,10 +4236,16 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
 								"NULL"
 								));
+							if (string.IsNullOrEmpty(tableTypeId)) {
+								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
+							}
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
+				}
+				if (!string.IsNullOrEmpty(tableTypeId)) {
+					sb.AppendLine(string.Format(cleanup_sql, tableTypeId));
 				}
 				string result = "";
 				if (deleted_ids.Count > 0) {
