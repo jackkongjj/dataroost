@@ -1273,7 +1273,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
 			} catch (Exception ex) {
-				LogError(ex);
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, stitchInput.TargetStaticHierarchyID, string.Join("|", stitchInput.StitchingStaticHierarchyIDs)));
 				return null;
 			}
 		}
@@ -1292,7 +1293,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 			} catch (Exception ex) {
-				LogError(ex);
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, unstitchInput.TargetStaticHierarchyID, string.Join("|", unstitchInput.DocumentTimeSliceIDs)));
 				return null;
 			}
 		}
