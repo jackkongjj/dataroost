@@ -4995,10 +4995,10 @@ select top 1 @DocumentSeriesId = d.DocumentSeriesID
 	FROM Document d WITH (NOLOCK)
 	where d.DAMDocumentId = @DocumentID;
 
-;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode, ArComponent)
+;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode, ArComponent, PeriodLength)
 AS
 (
-	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id), count(distinct tc.CurrencyCode), max(tc.CurrencyCode), count(artsdc.DocumentTimeSliceID)
+	SELECT distinct   d.damdocumentid, dts.id, count(distinct tc.id), count(distinct tc.CurrencyCode), max(tc.CurrencyCode), count(artsdc.DocumentTimeSliceID), max(tc.PeriodLength)
 		FROM DocumentSeries ds WITH (NOLOCK)
 		JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
 		JOIN Document d WITH (NOLOCK) on dts.DocumentId = d.ID
@@ -5066,7 +5066,7 @@ select
 INTO #tmptimeslices
 from #alltimeslices  a
 JOIN Document d WITH(NOLOCK) on a.DAMDocumentId  = d.DAMDocumentId
-LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID  and n.TimeSlicePeriodEndDate = a.CellDate
+LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID and n.TimeSlicePeriodEndDate = a.CellDate and a.PeriodLength = n.PeriodLength
  order by a.CellDate desc
 
 select distinct ts.*
