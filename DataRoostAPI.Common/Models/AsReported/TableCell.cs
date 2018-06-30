@@ -23,12 +23,12 @@ namespace DataRoostAPI.Common.Models.AsReported {
 
 		private readonly Regex rxHtmlBookmark = new Regex(@"o(-?\d+)\|l(\d+)", RegexOptions.Compiled);
 
-	    public int Create(string cellValue, string cellOffset, bool cellHasBoundingBox, string cellPeriodType,
-	        string cellPeriodLength, string cellDay, string cellMonth, string cellYear, int termId, string scaling,
-	        string tableType, byte rootId, string currency, string xbrlTag, Guid DocumentId, string Label,
-	        string tintOffSet) {
+		public int Create(string cellValue, string cellOffset, bool cellHasBoundingBox, string cellPeriodType,
+				string cellPeriodLength, string cellDay, string cellMonth, string cellYear, int termId, string scaling,
+				string tableType, byte rootId, string currency, string xbrlTag, Guid DocumentId, string Label,
+				string tintOffSet) {
 
-	        const string sqltxt = @"
+			const string sqltxt = @"
 declare @tableCellId int = null
 
 select @tableCellId= id from tablecell where documentid = @DocumentId and offset = @Offset;
@@ -40,126 +40,122 @@ set @tableCellId = scope_identity()
 end
 									select @tableCellId";
 
-	        using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
-	        using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
-	            cmd.CommandTimeout = 300;
-	            cmd.Parameters.AddWithValue("@TermID", termId);
-	            cmd.Parameters.AddWithValue("@DocumentId", DocumentId);
-	            cmd.Parameters.AddWithValue("@Label", Label);
-	            cmd.Parameters.AddWithValue("@Offset", cellOffset);
-	            cmd.Parameters.Add(new SqlParameter("@CellDay", SqlDbType.VarChar, 6) {Value = DbParameterSafe(cellDay)});
-	            cmd.Parameters.Add(new SqlParameter("@Value", SqlDbType.NVarChar, 2048)
-	            {
-	                Value = cellValue == null ? "" : cellValue
-	            });
-	            cmd.Parameters.Add(new SqlParameter("@CellYear", SqlDbType.VarChar, 4) {Value = DbParameterSafe(cellYear)});
-	            cmd.Parameters.Add(new SqlParameter("@CellMonth", SqlDbType.VarChar, 12)
-	            {
-	                Value = DbParameterSafe(cellYear)
-	            });
-	            cmd.Parameters.Add(new SqlParameter("@CellPeriodType", SqlDbType.VarChar, 12)
-	            {
-	                Value = DbParameterSafe(cellPeriodType)
-	            });
-	            cmd.Parameters.Add(new SqlParameter("@CellPeriodCount", SqlDbType.VarChar, 12)
-	            {
-	                Value = DbParameterSafe(cellPeriodLength)
-	            });
-	            cmd.Parameters.Add(new SqlParameter("@ARscale", SqlDbType.VarChar, 64) {Value = DbParameterSafe(scaling)});
-	            cmd.Parameters.Add(new SqlParameter("@currency", SqlDbType.VarChar, 32) {Value = DbParameterSafe(currency)});
-	            cmd.Parameters.Add(new SqlParameter("@currencyCode", SqlDbType.VarChar, 32)
-	            {
-	                Value = DbParameterSafe(NormalizeCurrency(currency))
-	            });
-	            cmd.Parameters.Add(new SqlParameter("@xbrlTag", SqlDbType.VarChar) {Value = DbParameterSafe(xbrlTag)});
+			using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
+			using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
+				cmd.CommandTimeout = 300;
+				cmd.Parameters.AddWithValue("@TermID", termId);
+				cmd.Parameters.AddWithValue("@DocumentId", DocumentId);
+				cmd.Parameters.AddWithValue("@Label", Label);
+				cmd.Parameters.AddWithValue("@Offset", cellOffset);
+				cmd.Parameters.Add(new SqlParameter("@CellDay", SqlDbType.VarChar, 6) { Value = DbParameterSafe(cellDay) });
+				cmd.Parameters.Add(new SqlParameter("@Value", SqlDbType.NVarChar, 2048)
+				{
+					Value = cellValue == null ? "" : cellValue
+				});
+				cmd.Parameters.Add(new SqlParameter("@CellYear", SqlDbType.VarChar, 4) { Value = DbParameterSafe(cellYear) });
+				cmd.Parameters.Add(new SqlParameter("@CellMonth", SqlDbType.VarChar, 12)
+				{
+					Value = DbParameterSafe(cellYear)
+				});
+				cmd.Parameters.Add(new SqlParameter("@CellPeriodType", SqlDbType.VarChar, 12)
+				{
+					Value = DbParameterSafe(cellPeriodType)
+				});
+				cmd.Parameters.Add(new SqlParameter("@CellPeriodCount", SqlDbType.VarChar, 12)
+				{
+					Value = DbParameterSafe(cellPeriodLength)
+				});
+				cmd.Parameters.Add(new SqlParameter("@ARscale", SqlDbType.VarChar, 64) { Value = DbParameterSafe(scaling) });
+				cmd.Parameters.Add(new SqlParameter("@currency", SqlDbType.VarChar, 32) { Value = DbParameterSafe(currency) });
+				cmd.Parameters.Add(new SqlParameter("@currencyCode", SqlDbType.VarChar, 32)
+				{
+					Value = DbParameterSafe(NormalizeCurrency(currency))
+				});
+				cmd.Parameters.Add(new SqlParameter("@xbrlTag", SqlDbType.VarChar) { Value = DbParameterSafe(xbrlTag) });
 
-	            ObservableCollection<TableMeta> tm =
-	                new ObservableCollection<TableMeta>(TableMeta.GetAll(_sfConnectionString));
+				ObservableCollection<TableMeta> tm =
+						new ObservableCollection<TableMeta>(TableMeta.GetAll(_sfConnectionString));
 
-	            cmd.Parameters.AddWithValue("@PeriodLength", cellPeriodLength);
+				cmd.Parameters.AddWithValue("@PeriodLength", cellPeriodLength);
 
-	            //Scaling
-	            cmd.Parameters.Add(new SqlParameter("@scale", SqlDbType.Char, 1)
-	            {
-	                Value = getNormalizedScalingFactorId(scaling)
-	            });
+				//Scaling
+				cmd.Parameters.Add(new SqlParameter("@scale", SqlDbType.Char, 1)
+				{
+					Value = getNormalizedScalingFactorId(scaling)
+				});
 
-	            //PeriodType
-	            if (!string.IsNullOrEmpty(tableType) && tm.Any(x => x.PITFlag && tableType.ToLower() == x.Name.ToLower()))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "P"});
-	            else if (cellPeriodType.ToLower().Contains("day"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "D"});
-	            else if (cellPeriodType.ToLower().Contains("week"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "W"});
-	            else if (cellPeriodType.ToLower().Contains("month"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "M"});
-	            else if (cellPeriodType.ToLower().Contains("quarter"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "Q"});
-	            else if (cellPeriodType.ToLower().Contains("year"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "Y"});
-	            else if (cellPeriodType.ToLower().Contains("inception"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "I"});
-	            else if (cellPeriodType.ToLower().Contains("pit"))
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = "P"});
-	            else
-	                cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) {Value = DBNull.Value});
-
-
-	            bool isNeg = false;
-	            double? valuenumeric = GetNormalizedValue(cellValue, out isNeg);
-
-	            if (valuenumeric.HasValue)
-	                cmd.Parameters.AddWithValue("@ValueNumb", valuenumeric.Value);
-	            else
-	                cmd.Parameters.AddWithValue("@ValueNumb", DBNull.Value);
-
-	            cmd.Parameters.AddWithValue("@negind", isNeg == true ? 1 : 0);
+				//PeriodType
+				if (!string.IsNullOrEmpty(tableType) && tm.Any(x => x.PITFlag && tableType.ToLower() == x.Name.ToLower()))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "P" });
+				else if (cellPeriodType.ToLower().Contains("day"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "D" });
+				else if (cellPeriodType.ToLower().Contains("week"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "W" });
+				else if (cellPeriodType.ToLower().Contains("month"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "M" });
+				else if (cellPeriodType.ToLower().Contains("quarter"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "Q" });
+				else if (cellPeriodType.ToLower().Contains("year"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "Y" });
+				else if (cellPeriodType.ToLower().Contains("inception"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "I" });
+				else if (cellPeriodType.ToLower().Contains("pit"))
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = "P" });
+				else
+					cmd.Parameters.Add(new SqlParameter("@PeriodTypeID", SqlDbType.Char, 1) { Value = DBNull.Value });
 
 
+				bool isNeg = false;
+				double? valuenumeric = GetNormalizedValue(cellValue, out isNeg);
 
-	            DateTime dt = DateTime.MinValue;
-	            if (cellYear != "" && cellMonth != "" && cellDay != "") {
-	                int year = Regex.IsMatch(cellYear, @"^\d+$") ? int.Parse(cellYear) : -1;
+				if (valuenumeric.HasValue)
+					cmd.Parameters.AddWithValue("@ValueNumb", valuenumeric.Value);
+				else
+					cmd.Parameters.AddWithValue("@ValueNumb", DBNull.Value);
 
-	                int month;
-	                if (Regex.IsMatch(cellMonth, @"^\d+$")) {
-	                    month = int.Parse(cellMonth);
-	                }
-	                else {
-	                    try {
-	                        month = Convert.ToDateTime(cellMonth + " 01, 1900").Month;
-	                    }
-	                    catch (Exception) {
-	                        month = -1;
-	                    }
-	                }
-
-	                int day = Regex.IsMatch(cellDay, @"^\d+$") ? int.Parse(cellDay) : -1;
+				cmd.Parameters.AddWithValue("@negind", isNeg == true ? 1 : 0);
 
 
-	                if (month != -1 && year != -1 && day != -1 && year > 1753 && year < 9999) {
-	                    try {
-	                        dt = new DateTime(year, month, day);
-	                    }
-	                    catch {
-	                        /*Do nothing, bad date format*/
-	                    }
-	                }
-	            }
 
-	            if (dt != DateTime.MinValue && dt <= DateTime.Now) {
-	                cmd.Parameters.AddWithValue("@cellDate", dt);
-	            }
-	            else {
-	                cmd.Parameters.AddWithValue("@cellDate", DBNull.Value);
-	            }
+				DateTime dt = DateTime.MinValue;
+				if (cellYear != "" && cellMonth != "" && cellDay != "") {
+					int year = Regex.IsMatch(cellYear, @"^\d+$") ? int.Parse(cellYear) : -1;
 
-	            sqlConn.Open();
-	            return Convert.ToInt32(cmd.ExecuteScalar());
-	        }
-	    }
+					int month;
+					if (Regex.IsMatch(cellMonth, @"^\d+$")) {
+						month = int.Parse(cellMonth);
+					} else {
+						try {
+							month = Convert.ToDateTime(cellMonth + " 01, 1900").Month;
+						} catch (Exception) {
+							month = -1;
+						}
+					}
 
-	    public string getNormalizedScalingFactorId(string scaling) {
+					int day = Regex.IsMatch(cellDay, @"^\d+$") ? int.Parse(cellDay) : -1;
+
+
+					if (month != -1 && year != -1 && day != -1 && year > 1753 && year < 9999) {
+						try {
+							dt = new DateTime(year, month, day);
+						} catch {
+							/*Do nothing, bad date format*/
+						}
+					}
+				}
+
+				if (dt != DateTime.MinValue && dt <= DateTime.Now) {
+					cmd.Parameters.AddWithValue("@cellDate", dt);
+				} else {
+					cmd.Parameters.AddWithValue("@cellDate", DBNull.Value);
+				}
+
+				sqlConn.Open();
+				return Convert.ToInt32(cmd.ExecuteScalar());
+			}
+		}
+
+		public string getNormalizedScalingFactorId(string scaling) {
 			if (scaling.ToLower().Contains("trillion"))
 				return "R";
 			else if (scaling.ToLower().Contains("billion"))
@@ -251,8 +247,8 @@ end
 		}
 
 	}
-    
-    public class SCARAPITableCell {
+
+	public class SCARAPITableCell {
 
 		[JsonProperty("_id")]
 		public int ID { get; set; }
@@ -353,18 +349,21 @@ end
 
 		[JsonProperty("displayValue")]
 		public decimal?
-			DisplayValue {
-			get {
+			DisplayValue
+		{
+			get
+			{
 				if (ValueNumeric.HasValue) {
-					return ValueNumeric.Value * (IsIncomePositive ? 1 : -1) * (decimal)ScalingFactorValue;
-				} else if (VirtualValueNumeric.HasValue) {
-					return VirtualValueNumeric.Value;
+					if (!VirtualValueNumeric.HasValue)
+						return ValueNumeric.Value * (IsIncomePositive ? 1 : -1) * (decimal)ScalingFactorValue;
 				} else {
-					return null;
+					if (ID == 0 && VirtualValueNumeric.HasValue) {
+						return VirtualValueNumeric.Value;
+					}
 				}
+				return null;
 			}
 		}
-
 
 		[JsonProperty("staticHierarchyID")]
 		public int StaticHierarchyID { get; set; }

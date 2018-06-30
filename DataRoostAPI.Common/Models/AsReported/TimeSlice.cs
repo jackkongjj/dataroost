@@ -73,11 +73,20 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("ManualOrgSet")]
 		public bool ManualOrgSet { get; set; }
 
+		[JsonProperty("TableTypeID")]
+		public int TableTypeID { get; set; }
+
 		[JsonProperty("NumberOfCells")]
 		public int NumberOfCells { get; set; }
 
 		[JsonProperty("Currency")]
 		public string Currency { get; set; }
+
+		[JsonProperty("PeriodNoteID")]
+		public byte? PeriodNoteID { get; set; }
+
+		[JsonProperty("IsSummary")]
+		public bool IsSummary { get; set; }
 
 		[JsonIgnore]
 		public List<SCARAPITableCell> Cells { get; set; }

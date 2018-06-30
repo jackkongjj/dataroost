@@ -18,7 +18,10 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("reportType")]
 		public string ReportType { get; set; }
 
-		[JsonProperty("items")]
+        public int TemplateId { get; set; }
+
+
+        [JsonProperty("items")]
 		public List<TemplateItemDTO> Items { get; set; }
 	}
 }

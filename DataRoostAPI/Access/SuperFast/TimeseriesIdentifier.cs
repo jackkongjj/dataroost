@@ -4,7 +4,7 @@ using DataRoostAPI.Common.Models.SuperFast;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 	public class TimeseriesIdentifier : IdentifierBase {
-		public Guid SFDocumentId { get; set; }
+		public Guid? SFDocumentId { get; set; }
 		public int CompanyFiscalYear { get; set; }
 		public DateTime PeriodEndDate { get; set; }
 		public string InterimType { get; set; }

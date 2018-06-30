@@ -9,19 +9,19 @@ using DataRoostAPI.Common.Models.SfVoy;
 
 namespace DataRoostAPI.Common.Interfaces {
 	public interface ISfVoyDataAccess {
-		StandardizationType[] GetDataTypes(string companyId);
+		StandardizationType[] GetDataTypes(string companyId,string statementType);
 
-		TemplateDTO[] GetTemplateList(string companyId, StandardizationType standardizationType);
+		TemplateDTO[] GetTemplateList(string companyId, string statementType,StandardizationType standardizationType);
 
-		TemplateDTO GetTemplate(string companyId, StandardizationType standardizationType, string templateId);
+		TemplateDTO GetTemplate(string companyId, string statementType, StandardizationType standardizationType, string templateId);
 
-		SfVoyTimeSeries[] GetTimeseriesList(string companyId, StandardizationType standardizationType, string templateId);
+		SfVoyTimeSeries[] GetTimeseriesList(string companyId, string statementType, StandardizationType standardizationType, string templateId);
 
-		SfVoyTimeSeries[] GetTimeseriesList(string companyId, StandardizationType standardizationType, string templateId, int startYear, int endYear);
+		SfVoyTimeSeries[] GetTimeseriesList(string companyId, string statementType, StandardizationType standardizationType, string templateId, int startYear, int endYear);
 
-		SfVoyTimeSeries[] GetTimeseriesListWithValue(string companyId, StandardizationType standardizationType, string templateId, int year);
+		SfVoyTimeSeries[] GetTimeseriesListWithValue(string companyId, string statementType, StandardizationType standardizationType, string templateId, int year);
 
-		SfVoyTimeSeries GetTimeseries(string companyId, StandardizationType standardizationType, string templateId, string timeseriesId);
+		SfVoyTimeSeries GetTimeseries(string companyId, string statementType, StandardizationType standardizationType, string templateId, string timeseriesId);
 
 	}
 }

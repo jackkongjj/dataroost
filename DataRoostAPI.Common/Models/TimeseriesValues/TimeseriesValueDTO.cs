@@ -73,18 +73,22 @@ namespace DataRoostAPI.Common.Models.TimeseriesValues {
 		}
 
 		[JsonProperty("_id")]
-		public int Id { get; set; }
+		public string Id { get; set; }
 
-		[JsonProperty("operation")]
-		public string Operation { get; set; }
+        public List<ExprObjectTree> MathMl { get; set; }
 
-		[JsonProperty("leftNode")]
-		public ExpressionNode LeftNode { get; set; }
+        [JsonProperty("operation")]
+        public string Operation { get; set; }
 
-		[JsonProperty("rightNode")]
-		public ExpressionNode RightNode { get; set; }
+        [JsonProperty("leftNode")]
+        public ExpressionNode LeftNode { get; set; }
 
-	}
+        [JsonProperty("rightNode")]
+        public ExpressionNode RightNode { get; set; }
+
+
+
+    }
 
 	public class ExpressionTimeseriesValueDetailVoySDBDTO : ExpressionTimeseriesValueDetailDTO {
 
