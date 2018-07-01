@@ -486,7 +486,6 @@ WHERE  CompanyID = @Iconum";
 					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
 						ch.Level = sh.Level + 1;
 					}
-
 					for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
@@ -503,6 +502,59 @@ WHERE  CompanyID = @Iconum";
 							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
 								tc.VirtualValueNumeric = calcChildSum;
 							}
+
+
+							//bool whatever = false;
+							//decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
+
+							//List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
+
+							//if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
+							//) {
+							//	tc.LikePeriodValidationFlag = true;
+							//	tc.StaticHierarchyID = sh.Id;
+							//	tc.DocumentTimeSliceID = ts.Id;
+							//}
+
+							//bool ChildrenSumEqual = false;
+							//if (!tc.ValueNumeric.HasValue || !hasValidChild)
+							//	ChildrenSumEqual = true;
+							//else {
+							//	decimal diff = cellValue - calcChildSum;
+							//	diff = Math.Abs(diff);
+
+							//	if (tc.ScalingFactorValue == 1.0)
+							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
+							//	else
+							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+							//}
+
+							//tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
+							//		!ChildrenSumEqual &&
+							//				!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
+
+						} catch (Exception ex) {
+							Console.WriteLine(ex.Message);
+							break;
+						}
+					}
+					for (int i = 0; i < sh.Cells.Count; i++) {
+						try {
+							TimeSlice ts = temp.TimeSlices[i];
+
+							SCARAPITableCell tc = sh.Cells[i];
+							if (ts.Cells == null) {
+								ts.Cells = new List<SCARAPITableCell>();
+							}
+							ts.Cells.Add(tc);
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+
+							bool hasValidChild = false;
+							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
+							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
+								tc.VirtualValueNumeric = calcChildSum;
+							}
+
 							bool whatever = false;
 							decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
 
