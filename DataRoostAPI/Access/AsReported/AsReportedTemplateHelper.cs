@@ -4496,7 +4496,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
-			updateInJson = updateInJson.Replace("&quot;", "\\\"");
+			updateInJson = updateInJson.Replace("&quot;", "\\\"").Replace("\\", "\\\\");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -7231,7 +7231,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase)) {
 				result = "NULL";
 			} else {
-				result = "'" + jString.Replace("'", "''") + "'";
+				result = "'" + jString.Replace("'", "''").Replace("\\\\", "\\") + "'";
 			}
 			return result;
 		}
