@@ -6191,6 +6191,7 @@ END CATCH
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 180;
 					cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
@@ -6360,6 +6361,7 @@ END CATCH
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand("SCARUnStitchRows", conn)) {
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 120;
 					cmd.Parameters.AddWithValue("@TargetSH", StaticHierarchyID);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					cmd.Parameters.AddWithValue("@Iconum", Iconum);
