@@ -3864,7 +3864,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
 								elem["obj"]["CellPeriodType"].AsString(),
-								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+								elem["obj"]["PeriodTypeID"].AsSafeString(),
 								elem["obj"]["CellPeriodCount"].AsString(),
 								elem["obj"]["PeriodLength"].AsValue(),
 								elem["obj"]["CellDay"].AsString(),
@@ -3878,7 +3878,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["CurrencyCode"].AsSafeString(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -3890,7 +3890,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 							elem["obj"]["Offset"].AsString(),
 							elem["obj"]["CellPeriodType"].AsString(),
-							elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+							elem["obj"]["PeriodTypeID"].AsSafeString(),
 							elem["obj"]["CellPeriodCount"].AsString(),
 							elem["obj"]["PeriodLength"].AsValue(),
 							elem["obj"]["CellDay"].AsString(),
@@ -3904,7 +3904,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 							elem["obj"]["ScalingFactorID"].AsString(),
 							elem["obj"]["AsReportedScalingFactor"].AsString(),
 							elem["obj"]["Currency"].AsString(),
-							elem["obj"]["CurrencyCode"].AsString(),
+							elem["obj"]["CurrencyCode"].AsSafeString(),
 							elem["obj"]["Cusip"].AsString(),
 							"0",
 							elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -7225,6 +7225,16 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 
 	}
 	public static class JValueExtension {
+		public static string AsSafeString(this JToken jValue) {
+			string jString = jValue.ToString();
+			string result = "''";
+			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase) || jString.Length < 1) {
+				result = "NULL";
+			} else {
+				result = "'" + jString.Replace("'", "''").Replace("\\\\", "\\") + "'";
+			}
+			return result;
+		}
 		public static string AsString(this JToken jValue) {
 			string jString = jValue.ToString();
 			string result = "''";
