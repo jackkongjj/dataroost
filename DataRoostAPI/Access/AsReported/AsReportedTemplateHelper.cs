@@ -4496,7 +4496,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
-			updateInJson = updateInJson.Replace("&quot;", "\\\"");
+			updateInJson = updateInJson.Replace("&quot;", "\\\"").Replace("\\", "\\\\");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -6191,6 +6191,7 @@ END CATCH
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 180;
 					cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
@@ -6360,6 +6361,7 @@ END CATCH
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand("SCARUnStitchRows", conn)) {
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 120;
 					cmd.Parameters.AddWithValue("@TargetSH", StaticHierarchyID);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					cmd.Parameters.AddWithValue("@Iconum", Iconum);
@@ -7176,7 +7178,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 		public Dictionary<string, string> ARDValidation(Guid DocumentID) {
 
 			string url = ConfigurationManager.AppSettings["ARDValidationURL"];
-            //string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/Full/92C6C824-0F9A-4A5C-BC62-000095729E1B";
+			//string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/Full/92C6C824-0F9A-4A5C-BC62-000095729E1B";
             url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.ContentType = "application/json";
@@ -7229,7 +7231,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase)) {
 				result = "NULL";
 			} else {
-				result = "'" + jString.Replace("'", "''") + "'";
+				result = "'" + jString.Replace("'", "''").Replace("\\\\", "\\") + "'";
 			}
 			return result;
 		}
