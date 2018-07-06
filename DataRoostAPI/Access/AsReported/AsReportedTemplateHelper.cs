@@ -3573,7 +3573,7 @@ DELETE FROM TableCell where CompanyFinancialTermID in ({0});
 				
 				";
 			string merge_sql = @"MERGE CompanyFinancialTerm
-USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
+USING ({0}) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
 ON CompanyFinancialTerm.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET DocumentSeriesID =  src.DocumentSeriesID
@@ -3610,16 +3610,22 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				List<string> deleted_ids = new List<string>();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							deleted_ids.Add(elem["obj"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].ToString()));
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("{0}", elem["obj"]["ID"].AsValue()));
+								is_deleting = true;
+							} else {
+								deleting_ids.Append(string.Format(",{0}", elem["obj"]["ID"].AsValue()));
+							}
 						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
 								elem["obj"]["DocumentSeries"]["ID"].ToString(),
 								elem["obj"]["TermStatusID"].AsValue(),
 								elem["obj"]["Description"].AsString(),
@@ -3627,26 +3633,50 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["EncoreTermFlag"].ToString(),
 								"0" // manual falg
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
+elem["obj"]["DocumentSeries"]["ID"].ToString(),
+elem["obj"]["TermStatusID"].AsValue(),
+elem["obj"]["Description"].AsString(),
+(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+elem["obj"]["EncoreTermFlag"].ToString(),
+"0" // manual flag
+));
+							}
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].ToString(),
-							elem["obj"]["DocumentSeries"]["ID"].ToString(),
-							elem["obj"]["TermStatusID"].AsValue(),
-							elem["obj"]["Description"].AsString(),
-							(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
-							elem["obj"]["EncoreTermFlag"].ToString(),
-							"0" // manual falg
-							));
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
+								elem["obj"]["DocumentSeries"]["ID"].ToString(),
+								elem["obj"]["TermStatusID"].AsValue(),
+								elem["obj"]["Description"].AsString(),
+								(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["EncoreTermFlag"].ToString(),
+								"0" // manual falg
+								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
+elem["obj"]["DocumentSeries"]["ID"].ToString(),
+elem["obj"]["TermStatusID"].AsValue(),
+elem["obj"]["Description"].AsString(),
+(string.Equals(elem["obj"]["NormalizedFlag"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+elem["obj"]["EncoreTermFlag"].ToString(),
+"0" // manual flag
+));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(ex.Message);
+						merging_ids.AppendLine(@"/*" + ex.Message + @"*/");
 					}
 				}
 
 				string result = "";
-				if (deleted_ids.Count > 0) {
-					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				}
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
@@ -3659,7 +3689,7 @@ DELETE FROM DimensionToCell where TableDimensionId in ({0});
 DELETE FROM TableDimension where id in ({0});
 ";
 			string merge_sql = @"MERGE TableDimension
-USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})) as src ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder)
+USING ({0}) as src ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder)
 ON TableDimension.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET       DocumentTableID  = TableDimension.DocumentTableID 
@@ -3708,16 +3738,22 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				List<string> deleted_ids = new List<string>();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							deleted_ids.Add(elem["obj"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("{0}", elem["obj"]["ID"].AsValue()));
+								is_deleting = true;
+							} else {
+								deleting_ids.Append(string.Format(",{0}", elem["obj"]["ID"].AsValue()));
+							}
 						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
 								_dimensionTableId,
 								elem["obj"]["DimensionTypeId"].AsValue(),
 								elem["obj"]["Label"].AsString(),
@@ -3728,28 +3764,58 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 								(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
 								elem["obj"]["AdjustedOrder"].AsValue()
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
+								_dimensionTableId,
+								elem["obj"]["DimensionTypeId"].AsValue(),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["OrigLabel"].AsString(),
+								elem["obj"]["Location"].AsValue(),
+								elem["obj"]["EndLocation"].AsValue(),
+								"NULL", //Parent
+								(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["AdjustedOrder"].AsValue()
+								));
+							}
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-							_dimensionTableId,
-							elem["obj"]["DimensionTypeId"].AsValue(),
-							elem["obj"]["Label"].AsString(),
-							elem["obj"]["OrigLabel"].AsString(),
-							elem["obj"]["Location"].AsValue(),
-							elem["obj"]["EndLocation"].AsValue(),
-							"NULL", //Parent
-							(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
-							elem["obj"]["AdjustedOrder"].AsValue()
-							));
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
+								_dimensionTableId,
+								elem["obj"]["DimensionTypeId"].AsValue(),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["OrigLabel"].AsString(),
+								elem["obj"]["Location"].AsValue(),
+								elem["obj"]["EndLocation"].AsValue(),
+								"NULL", //Parent
+								(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["AdjustedOrder"].AsValue()
+								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
+								_dimensionTableId,
+								elem["obj"]["DimensionTypeId"].AsValue(),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["OrigLabel"].AsString(),
+								elem["obj"]["Location"].AsValue(),
+								elem["obj"]["EndLocation"].AsValue(),
+								"NULL", //Parent
+								(string.Equals(elem["obj"]["InsertedRow"].ToString(), "true", StringComparison.InvariantCultureIgnoreCase) ? "1" : "0"),
+								elem["obj"]["AdjustedOrder"].AsValue()
+								));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+						merging_ids.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
 				string result = "";
-				if (deleted_ids.Count > 0) {
-					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				}
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
@@ -3761,7 +3827,7 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 DELETE FROM DimensionToCell where TableCellId in ({0});
 DELETE FROM TableCell where id in ({0});";
 			string merge_sql = @"MERGE TableCell
-USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})) 
+USING ({0}) 
 	as src (  ID,Offset,CellPeriodType,PeriodTypeID,CellPeriodCount,PeriodLength,CellDay,CellMonth,CellYear,CellDate,Value,CompanyFinancialTermID,ValueNumeric,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,Currency,CurrencyCode,Cusip,ScarUpdated,IsIncomePositive,DocumentId,Label,XBRLTag)
 ON TableCell.id = src.ID
 WHEN MATCHED THEN
@@ -3851,17 +3917,23 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				List<string> deleted_ids = new List<string>();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					if (elem == null) continue;
 					try {
 						if (elem["action"].ToString() == "delete") {
-							deleted_ids.Add(elem["obj"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("{0}", elem["obj"]["ID"].AsValue()));
+								is_deleting = true;
+							} else {
+								deleting_ids.Append(string.Format(",{0}", elem["obj"]["ID"].AsValue()));
+							}
 						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
 								elem["obj"]["CellPeriodType"].AsString(),
 								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
@@ -3886,42 +3958,100 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["Label"].AsString(),
 								elem["obj"]["XBRLTag"].AsString()
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Offset"].AsString(),
+								elem["obj"]["CellPeriodType"].AsString(),
+								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+								elem["obj"]["CellPeriodCount"].AsString(),
+								elem["obj"]["PeriodLength"].AsValue(),
+								elem["obj"]["CellDay"].AsString(),
+								elem["obj"]["CellMonth"].AsString(),
+								elem["obj"]["CellYear"].AsString(),
+								elem["obj"]["CellDate"].AsString(),
+								elem["obj"]["Value"].AsString(),
+								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+								elem["obj"]["ValueNumeric"].AsValue(),
+								elem["obj"]["NormalizedNegativeIndicator"].AsBoolean(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["AsReportedScalingFactor"].AsString(),
+								elem["obj"]["Currency"].AsString(),
+								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["Cusip"].AsString(),
+								"0",
+								elem["obj"]["IsIncomePositive"].AsBoolean(),
+								(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["XBRLTag"].AsString()
+								));
+							}
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-							elem["obj"]["Offset"].AsString(),
-							elem["obj"]["CellPeriodType"].AsString(),
-							elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
-							elem["obj"]["CellPeriodCount"].AsString(),
-							elem["obj"]["PeriodLength"].AsValue(),
-							elem["obj"]["CellDay"].AsString(),
-							elem["obj"]["CellMonth"].AsString(),
-							elem["obj"]["CellYear"].AsString(),
-							elem["obj"]["CellDate"].AsString(),
-							elem["obj"]["Value"].AsString(),
-							elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
-							elem["obj"]["ValueNumeric"].AsValue(),
-							elem["obj"]["NormalizedNegativeIndicator"].AsBoolean(),
-							elem["obj"]["ScalingFactorID"].AsString(),
-							elem["obj"]["AsReportedScalingFactor"].AsString(),
-							elem["obj"]["Currency"].AsString(),
-							elem["obj"]["CurrencyCode"].AsString(),
-							elem["obj"]["Cusip"].AsString(),
-							"0",
-							elem["obj"]["IsIncomePositive"].AsBoolean(),
-							(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
-							elem["obj"]["Label"].AsString(),
-							elem["obj"]["XBRLTag"].AsString()
-							));
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Offset"].AsString(),
+								elem["obj"]["CellPeriodType"].AsString(),
+								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+								elem["obj"]["CellPeriodCount"].AsString(),
+								elem["obj"]["PeriodLength"].AsValue(),
+								elem["obj"]["CellDay"].AsString(),
+								elem["obj"]["CellMonth"].AsString(),
+								elem["obj"]["CellYear"].AsString(),
+								elem["obj"]["CellDate"].AsString(),
+								elem["obj"]["Value"].AsString(),
+								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+								elem["obj"]["ValueNumeric"].AsValue(),
+								elem["obj"]["NormalizedNegativeIndicator"].AsBoolean(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["AsReportedScalingFactor"].AsString(),
+								elem["obj"]["Currency"].AsString(),
+								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["Cusip"].AsString(),
+								"0",
+								elem["obj"]["IsIncomePositive"].AsBoolean(),
+								(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["XBRLTag"].AsString()
+								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Offset"].AsString(),
+								elem["obj"]["CellPeriodType"].AsString(),
+								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+								elem["obj"]["CellPeriodCount"].AsString(),
+								elem["obj"]["PeriodLength"].AsValue(),
+								elem["obj"]["CellDay"].AsString(),
+								elem["obj"]["CellMonth"].AsString(),
+								elem["obj"]["CellYear"].AsString(),
+								elem["obj"]["CellDate"].AsString(),
+								elem["obj"]["Value"].AsString(),
+								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+								elem["obj"]["ValueNumeric"].AsValue(),
+								elem["obj"]["NormalizedNegativeIndicator"].AsBoolean(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["AsReportedScalingFactor"].AsString(),
+								elem["obj"]["Currency"].AsString(),
+								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["Cusip"].AsString(),
+								"0",
+								elem["obj"]["IsIncomePositive"].AsBoolean(),
+								(elem["obj"]["DocumentId"].AsString().Length > 5 ? elem["obj"]["DocumentId"].AsString() : elem["obj"]["DocumentId"].AsValue()),
+								elem["obj"]["Label"].AsString(),
+								elem["obj"]["XBRLTag"].AsString()
+								));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(ex.Message);
+						merging_ids.AppendLine(@"/*" + ex.Message + @"*/");
 					}
 				}
 				string result = "";
-				if (deleted_ids.Count > 0) {
-					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				}
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
@@ -3938,10 +4068,7 @@ DELETE DimensionToCell
 FROM @TempDTS tdts
 JOIN DimensionToCell dts ON tdts.TableDimensionID = dts.TableDimensionID AND tdts.TableCellID = dts.TableCellID; 
 				";
-			
-//--DELETE FROM DimensionToCell 
-//--where TableDimensionID = {0} and TableCellID = {1};
-			
+						
 			string merge_sql = @"MERGE DimensionToCell
 USING ({0}) as src ( TableDimensionID,TableCellID)
 ON DimensionToCell.TableDimensionID = src.TableDimensionID AND DimensionToCell.TableCellID = src.TableCellID
@@ -3971,7 +4098,6 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -3984,7 +4110,6 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 								is_deleting = true;
 							} else {
 								deleting_ids.Append(string.Format(",({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
-								//sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
 							}
 						} else if (elem["action"].ToString() == "update") { // we still need this to pass the UpdateCheck
 							if (!is_merging) {
@@ -4023,7 +4148,7 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 DELETE FROM dbo.DocumentTimeSlice where id in ({0});
 ";
 			string merge_sql = @"MERGE dbo.DocumentTimeSlice
-USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19} )) as src (Id,DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
+USING ({0}) as src (Id,DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
 ON dbo.DocumentTimeSlice.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET DocumentId = src.DocumentId
@@ -4101,16 +4226,22 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				List<string> deleted_ids = new List<string>();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							deleted_ids.Add(elem["obj"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("{0}", elem["obj"]["ID"].AsValue()));
+								is_deleting = true;
+							} else {
+								deleting_ids.Append(string.Format(",{0}", elem["obj"]["ID"].AsValue()));
+							}
 						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Document"]["ID"].AsString(),
 								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
 								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
@@ -4131,8 +4262,33 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ManualOrgSet"].AsBoolean(),
 								elem["obj"]["TableTypeID"].AsValue()
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Document"]["ID"].AsString(),
+								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+								elem["obj"]["ReportingPeriodEndDate"].AsString(),
+								elem["obj"]["FiscalDistance"].AsValue(),
+								elem["obj"]["Duration"].AsValue(),
+								elem["obj"]["PeriodType"].AsString(),
+								elem["obj"]["AcquisitionFlag"].AsString().Length > 0 ? elem["obj"]["AcquisitionFlag"].AsString() : elem["obj"]["AcquisitionFlag"].AsValue(),
+								elem["obj"]["AccountingStandard"].AsString(),
+								elem["obj"]["ConsolidatedFlag"].AsString(),
+								elem["obj"]["IsProForma"].AsBoolean(),
+								elem["obj"]["IsRecap"].AsBoolean(),
+								elem["obj"]["CompanyFiscalYear"].AsValue(),
+								elem["obj"]["ReportStatus"].AsString(),
+								elem["obj"]["IsAmended"].AsBoolean(),
+								elem["obj"]["IsRestated"].AsBoolean(),
+								elem["obj"]["IsAutoCalc"].AsBoolean(),
+								elem["obj"]["ManualOrgSet"].AsBoolean(),
+								elem["obj"]["TableTypeID"].AsValue()
+								));
+							}
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Document"]["ID"].AsString(),
 								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
 								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
@@ -4153,56 +4309,110 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ManualOrgSet"].AsBoolean(),
 								elem["obj"]["TableTypeID"].AsValue()
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Document"]["ID"].AsString(),
+								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+								elem["obj"]["ReportingPeriodEndDate"].AsString(),
+								elem["obj"]["FiscalDistance"].AsValue(),
+								elem["obj"]["Duration"].AsValue(),
+								elem["obj"]["PeriodType"].AsString(),
+								elem["obj"]["AcquisitionFlag"].AsString().Length > 0 ? elem["obj"]["AcquisitionFlag"].AsString() : elem["obj"]["AcquisitionFlag"].AsValue(),
+								elem["obj"]["AccountingStandard"].AsString(),
+								elem["obj"]["ConsolidatedFlag"].AsString(),
+								elem["obj"]["IsProForma"].AsBoolean(),
+								elem["obj"]["IsRecap"].AsBoolean(),
+								elem["obj"]["CompanyFiscalYear"].AsValue(),
+								elem["obj"]["ReportStatus"].AsString(),
+								elem["obj"]["IsAmended"].AsBoolean(),
+								elem["obj"]["IsRestated"].AsBoolean(),
+								elem["obj"]["IsAutoCalc"].AsBoolean(),
+								elem["obj"]["ManualOrgSet"].AsBoolean(),
+								elem["obj"]["TableTypeID"].AsValue()
+								));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+						merging_ids.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
 				string result = "";
-				if (deleted_ids.Count > 0) {
-					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				}
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
 
 			public string TranslateInsert() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				bool is_merging = false;
 
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "insert" || elem["action"].ToString() == null) {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-	elem["obj"]["Document"]["ID"].AsString(),
-	elem["obj"]["DocumentSeries"]["ID"].AsValue(),
-	elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
-	elem["obj"]["ReportingPeriodEndDate"].AsString(),
-	elem["obj"]["FiscalDistance"].AsValue(),
-	elem["obj"]["Duration"].AsValue(),
-	elem["obj"]["PeriodType"].AsString(),
-	elem["obj"]["AcquisitionFlag"].AsString(),
-	elem["obj"]["AccountingStandard"].AsString(),
-	elem["obj"]["ConsolidatedFlag"].AsString(),
-	elem["obj"]["IsProForma"].AsBoolean(),
-	elem["obj"]["IsRecap"].AsBoolean(),
-	elem["obj"]["CompanyFiscalYear"].AsValue(),
-	elem["obj"]["ReportStatus"].AsString(),
-	elem["obj"]["IsAmended"].AsBoolean(),
-	elem["obj"]["IsRestated"].AsBoolean(),
-	elem["obj"]["IsAutoCalc"].AsBoolean(),
-	elem["obj"]["ManualOrgSet"].AsBoolean(),
-	elem["obj"]["TableTypeID"].AsValue()
-	));
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Document"]["ID"].AsString(),
+								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+								elem["obj"]["ReportingPeriodEndDate"].AsString(),
+								elem["obj"]["FiscalDistance"].AsValue(),
+								elem["obj"]["Duration"].AsValue(),
+								elem["obj"]["PeriodType"].AsString(),
+								elem["obj"]["AcquisitionFlag"].AsString().Length > 0 ? elem["obj"]["AcquisitionFlag"].AsString() : elem["obj"]["AcquisitionFlag"].AsValue(),
+								elem["obj"]["AccountingStandard"].AsString(),
+								elem["obj"]["ConsolidatedFlag"].AsString(),
+								elem["obj"]["IsProForma"].AsBoolean(),
+								elem["obj"]["IsRecap"].AsBoolean(),
+								elem["obj"]["CompanyFiscalYear"].AsValue(),
+								elem["obj"]["ReportStatus"].AsString(),
+								elem["obj"]["IsAmended"].AsBoolean(),
+								elem["obj"]["IsRestated"].AsBoolean(),
+								elem["obj"]["IsAutoCalc"].AsBoolean(),
+								elem["obj"]["ManualOrgSet"].AsBoolean(),
+								elem["obj"]["TableTypeID"].AsValue()
+								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19})", elem["obj"]["ID"].AsValue(),
+								elem["obj"]["Document"]["ID"].AsString(),
+								elem["obj"]["DocumentSeries"]["ID"].AsValue(),
+								elem["obj"]["TimeSlicePeriodEndDate"].AsString(),
+								elem["obj"]["ReportingPeriodEndDate"].AsString(),
+								elem["obj"]["FiscalDistance"].AsValue(),
+								elem["obj"]["Duration"].AsValue(),
+								elem["obj"]["PeriodType"].AsString(),
+								elem["obj"]["AcquisitionFlag"].AsString().Length > 0 ? elem["obj"]["AcquisitionFlag"].AsString() : elem["obj"]["AcquisitionFlag"].AsValue(),
+								elem["obj"]["AccountingStandard"].AsString(),
+								elem["obj"]["ConsolidatedFlag"].AsString(),
+								elem["obj"]["IsProForma"].AsBoolean(),
+								elem["obj"]["IsRecap"].AsBoolean(),
+								elem["obj"]["CompanyFiscalYear"].AsValue(),
+								elem["obj"]["ReportStatus"].AsString(),
+								elem["obj"]["IsAmended"].AsBoolean(),
+								elem["obj"]["IsRestated"].AsBoolean(),
+								elem["obj"]["IsAutoCalc"].AsBoolean(),
+								elem["obj"]["ManualOrgSet"].AsBoolean(),
+								elem["obj"]["TableTypeID"].AsValue()
+								));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+						merging_ids.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
 
-				return sb.ToString(); ;
+				string result = "";
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
+				}
+				return result;
 			}
 		}
 
@@ -4258,7 +4468,6 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 				List<string> deleted_ids = new List<string>();
 				string tableTypeId = null;
@@ -4266,7 +4475,6 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 					try {
 						if (elem["action"].ToString() == "delete") {
 							deleted_ids.Add(elem["obj"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
 								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
@@ -4320,7 +4528,6 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 
 			public string TranslateInsert() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
 				foreach (var elem in _jarray) {
@@ -4354,7 +4561,7 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 DELETE FROM DocumentTimeSliceTableCell where TableCellId in ({0});
 ";
 			string merge_sql = @"MERGE DocumentTimeSliceTableCell
-USING (VALUES ({0}, {1})) as src (DocumentTimeSliceId,TableCellId)
+USING ({0}) as src (DocumentTimeSliceId,TableCellId)
 ON DocumentTimeSliceTableCell.TableCellId = src.TableCellId
 WHEN MATCHED THEN
 	UPDATE SET DocumentTimeSliceId = src.DocumentTimeSliceId
@@ -4379,32 +4586,52 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId,0 INTO @Chang
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				List<string> deleted_ids = new List<string>();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							deleted_ids.Add(elem["obj"]["TableCell"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableCell"]["ID"].AsValue()));
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("{0}", elem["obj"]["TableCell"]["ID"].AsValue()));
+								is_deleting = true;
+							} else {
+								deleting_ids.Append(string.Format(",{0}", elem["obj"]["TableCell"]["ID"].AsValue()));
+							}
 						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1})", elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
 								elem["obj"]["TableCell"]["ID"].AsValue()
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1})", elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
+								elem["obj"]["TableCell"]["ID"].AsValue()
+								));
+							}
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1})", elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
 								elem["obj"]["TableCell"]["ID"].AsValue()
 								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1})", elem["obj"]["DocumentTimeSlice"]["ID"].AsValue(),
+								elem["obj"]["TableCell"]["ID"].AsValue()
+								));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+						merging_ids.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
 				string result = "";
-				if (deleted_ids.Count > 0) {
-					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				}
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
@@ -4416,7 +4643,7 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId,0 INTO @Chang
 DELETE FROM DocumentTable where ID in ({0});
 ";
 			string merge_sql = @"MERGE DocumentTable
-USING (VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})) as src (ID, DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
+USING ({0}) as src (ID, DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
 ON DocumentTable.ID = src.ID
 WHEN MATCHED THEN
  
@@ -4463,16 +4690,22 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 			}
 			public override string Translate() {
 				if (_jarray == null) return "";
-				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				List<string> deleted_ids = new List<string>();
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							deleted_ids.Add(elem["obj"]["ID"].AsValue());
-							//sb.AppendLine(string.Format(delete_sql, elem["obj"]["ID"].AsValue()));
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("{0}", elem["obj"]["ID"].AsValue()));
+								is_deleting = true;
+							} else {
+								deleting_ids.Append(string.Format(",{0}", elem["obj"]["ID"].AsValue()));
+							}
 						} else if (elem["action"].ToString() == "update") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})", elem["obj"]["ID"].AsValue(),
 								"'00000000-0000-0000-0000-000000000000'",
 								elem["obj"]["TableOrganizationID"].AsValue(),
 								"0",
@@ -4482,25 +4715,53 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["TableIntID"].AsValue(),
 								elem["obj"]["ExceptShare"].AsBoolean()
 								));
-						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, "-1",
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})", elem["obj"]["ID"].AsValue(),
+								"'00000000-0000-0000-0000-000000000000'",
 								elem["obj"]["TableOrganizationID"].AsValue(),
+								"0",
 								elem["obj"]["Consolidated"].AsBoolean(),
 								elem["obj"]["Unit"].AsString(),
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["TableIntID"].AsValue(),
 								elem["obj"]["ExceptShare"].AsBoolean()
 								));
+							}
+						} else if (elem["action"].ToString() == "insert") {
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})", "-1",
+								elem["obj"]["TableOrganizationID"].AsValue(),
+								"0", // ?????
+								elem["obj"]["Consolidated"].AsBoolean(),
+								elem["obj"]["Unit"].AsString(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["TableIntID"].AsValue(),
+								elem["obj"]["ExceptShare"].AsBoolean()
+								));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})", "-1",
+								elem["obj"]["TableOrganizationID"].AsValue(),
+								"0", // ??????
+								elem["obj"]["Consolidated"].AsBoolean(),
+								elem["obj"]["Unit"].AsString(),
+								elem["obj"]["ScalingFactorID"].AsString(),
+								elem["obj"]["TableIntID"].AsValue(),
+								elem["obj"]["ExceptShare"].AsBoolean()
+								));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
+						merging_ids.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
 				string result = "";
-				if (deleted_ids.Count > 0) {
-					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				}
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
