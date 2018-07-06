@@ -3960,7 +3960,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								));
 								is_merging = true;
 							} else {
-								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
 								elem["obj"]["CellPeriodType"].AsString(),
 								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
@@ -4015,7 +4015,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								));
 								is_merging = true;
 							} else {
-								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
+								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
 								elem["obj"]["CellPeriodType"].AsString(),
 								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
