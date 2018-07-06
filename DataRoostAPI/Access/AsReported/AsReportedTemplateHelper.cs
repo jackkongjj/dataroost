@@ -4496,7 +4496,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
-			updateInJson = updateInJson.Replace("&quot;", "\\\"").Replace("\\", "\\\\");
+			updateInJson = updateInJson.Replace("&quotx;", "\\\"").Replace("\\", "\\\\");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
