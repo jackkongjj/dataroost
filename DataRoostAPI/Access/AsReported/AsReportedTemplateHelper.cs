@@ -3943,7 +3943,7 @@ JOIN DimensionToCell dts ON tdts.TableDimensionID = dts.TableDimensionID AND tdt
 //--where TableDimensionID = {0} and TableCellID = {1};
 			
 			string merge_sql = @"MERGE DimensionToCell
-USING (VALUES ({0}, {1})) as src ( TableDimensionID,TableCellID)
+USING ({0}) as src ( TableDimensionID,TableCellID)
 ON DimensionToCell.TableDimensionID = src.TableDimensionID AND DimensionToCell.TableCellID = src.TableCellID
 WHEN MATCHED THEN
 	UPDATE SET TableCellID =  DimensionToCell.TableCellID
@@ -3972,34 +3972,46 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 			public override string Translate() {
 				if (_jarray == null) return "";
 				//JObject json = JObject.Parse(_json);
-				System.Text.StringBuilder sb = new System.Text.StringBuilder();
-				System.Text.StringBuilder deleted_ids = new System.Text.StringBuilder();
-				bool noDeletion = true;
+				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
+				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
+				bool is_deleting = false;
+				bool is_merging = false;
 				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
-							if (noDeletion) {
-								deleted_ids.Append(string.Format("({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
-								noDeletion = false;
+							if (!is_deleting) {
+								deleting_ids.Append(string.Format("({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+								is_deleting = true;
 							} else {
-								deleted_ids.Append(string.Format(",({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+								deleting_ids.Append(string.Format(",({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
 								//sb.AppendLine(string.Format(delete_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
 							}
 						} else if (elem["action"].ToString() == "update") { // we still need this to pass the UpdateCheck
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+							}
 						} else if (elem["action"].ToString() == "insert") {
-							sb.AppendLine(string.Format(merge_sql, elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+							if (!is_merging) {
+								merging_ids.AppendLine(string.Format("VALUES ({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+								is_merging = true;
+							} else {
+								merging_ids.AppendLine(string.Format(",({0}, {1})", elem["obj"]["TableDimension"]["ID"].ToString(), elem["obj"]["TableCell"]["ID"].ToString()));
+							}
 						}
 					} catch (System.Exception ex) {
-						sb.AppendLine(ex.Message);
+						merging_ids.AppendLine(ex.Message);
 					}
 				}
 
 				string result = "";
-				if (!noDeletion) {
-					result = string.Format(delete_sql, deleted_ids.ToString()) + sb.ToString();
-				} else {
-					result = sb.ToString();
+				if (is_deleting) {
+					result += string.Format(delete_sql, deleting_ids.ToString());
+				} 
+				if (is_merging) {
+					result += string.Format(merge_sql, merging_ids.ToString());
 				}
 				return result;
 			}
