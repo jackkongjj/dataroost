@@ -105,6 +105,380 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 		}
 		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
+			
+			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
+			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
+
+			AsReportedTemplate temp = new AsReportedTemplate();
+			try {
+				temp.Message = "Start." + DateTime.UtcNow.ToString();
+				string query_sproc = @"SCARGetTemplate";
+				temp.StaticHierarchies = new List<StaticHierarchy>();
+				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+				Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
+				Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
+				List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
+				Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
+				DataSet dataSet = new DataSet();
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					#region Using SqlConnection
+					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
+						cmd.CommandType = System.Data.CommandType.StoredProcedure;
+						cmd.CommandTimeout = 120;
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+						conn.Open();
+						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
+						//using (DataTable dt = new DataTable()) {
+						//	dt.Load(reader);
+						//	Console.WriteLine(dt.Rows.Count);
+						//}
+						SqlDataAdapter da = new SqlDataAdapter(cmd);
+						da.Fill(dataSet);
+						conn.Close();
+						temp.Message += "Filled." + DateTime.UtcNow.ToString();
+						var shTable = dataSet.Tables[0];
+						if (shTable != null) {
+							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
+							foreach (DataRow row in shTable.Rows) {
+								temp.Message += "Read." + DateTime.UtcNow.ToString();
+								StaticHierarchy shs = new StaticHierarchy
+								{
+									Id = row[0].AsInt32(),
+									CompanyFinancialTermId = row[1].AsInt32(),
+									AdjustedOrder = row[2].AsInt32(),
+									TableTypeId = row[3].AsInt32(),
+									Description = row[4].AsString()
+								};
+								temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString();
+								shs.HierarchyTypeId = row[5].AsString()[0];
+								shs.SeparatorFlag = row[6].AsBoolean();
+								shs.StaticHierarchyMetaId = row[7].AsInt32();
+								shs.UnitTypeId = row[8].AsInt32();
+								temp.Message += "shsIsIncomePositive." + DateTime.UtcNow.ToString();
+								shs.IsIncomePositive = row[9].AsBoolean();
+								shs.ChildrenExpandDown = row[10].AsBoolean();
+								shs.ParentID = row[11].AsInt32Nullable();
+								shs.StaticHierarchyMetaType = row[12].AsString();
+								shs.TableTypeDescription = row[13].ToString();
+								temp.Message += "shsCell." + DateTime.UtcNow.ToString();
+								shs.Cells = new List<SCARAPITableCell>();
+								temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString();
+								StaticHierarchies.Add(shs);
+								SHLookup.Add(shs.Id, shs);
+								temp.Message += "SHLookup." + DateTime.UtcNow.ToString();
+								if (!SHChildLookup.ContainsKey(shs.Id))
+									SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
+
+								if (shs.ParentID != null) {
+									temp.Message += "ParentID." + DateTime.UtcNow.ToString();
+									if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
+										SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
+
+									SHChildLookup[shs.ParentID.Value].Add(shs);
+									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString();
+								}
+							}
+						}
+						var cellTable = dataSet.Tables[1];
+						temp.Message += "Cells." + DateTime.UtcNow.ToString();
+						temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString();
+						int shix = 0;
+						int i = 0;
+						int adjustedOrder = 0;
+
+						if (cellTable != null) {
+							#region read CellsQuery
+							temp.Message += "Cell2." + DateTime.UtcNow.ToString();
+							foreach (DataRow row in cellTable.Rows) {
+								if (shix >= StaticHierarchies.Count())
+									break;
+								if (row[29].AsInt64() == 1) {
+									SCARAPITableCell cell;
+									if (row[0].AsInt32Nullable().HasValue) {
+										cell = new SCARAPITableCell
+										{
+											ID = row[0].AsInt32(),
+											Offset = row[1].AsString(),
+											CellPeriodType = row[2].AsString(),
+											PeriodTypeID = row[3].AsString(),
+											CellPeriodCount = row[4].AsString(),
+											PeriodLength = row[5].AsInt32Nullable(),
+											CellDay = row[6].AsString(),
+											CellMonth = row[7].AsString(),
+											CellYear = row[8].AsString(),
+											CellDate = row[9].AsDateTimeNullable(),
+											Value = row[10].AsString(),
+											CompanyFinancialTermID = row[11].AsInt32Nullable(),
+											ValueNumeric = row[12].AsDecimalNullable(),
+											NormalizedNegativeIndicator = row[13].AsBoolean(),
+											ScalingFactorID = row[14].AsString(),
+											AsReportedScalingFactor = row[15].AsString(),
+											Currency = row[16].AsString(),
+											CurrencyCode = row[17].AsString(),
+											Cusip = row[18].AsString(),
+											ScarUpdated = row[19].AsBoolean(),
+											IsIncomePositive = row[20].AsBoolean(),
+											XBRLTag = row[21].AsString(),
+											UpdateStampUTC = row[22].AsDateTimeNullable(),
+											DocumentID = row[23].AsGuid(),
+											Label = row[24].AsString(),
+											ScalingFactorValue = row[25].AsDouble(),
+											ARDErrorTypeId = row[26].AsInt32Nullable(),
+											MTMWErrorTypeId = row[27].AsInt32Nullable()
+										};
+										adjustedOrder = row[28].AsInt32();
+									} else {
+										cell = new SCARAPITableCell();
+										adjustedOrder = row[28].AsInt32();
+										cell.CompanyFinancialTermID = row[34].AsInt32Nullable();
+									}
+									if (adjustedOrder < 0) {
+										var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
+										if (negSh == null) continue;
+										if (cell.ID == 0) {
+											BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
+										}
+
+										CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
+
+										if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId) {
+											negSh.Cells.Add(cell);
+										} else {
+											throw new Exception();
+										}
+
+									} else {
+										while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+											shix++;
+											if (shix >= StaticHierarchies.Count())
+												break;
+										}
+										var currSh = StaticHierarchies.FirstOrDefault(x => x.AdjustedOrder == adjustedOrder && x.CompanyFinancialTermId == cell.CompanyFinancialTermID);
+										if (currSh == null) {
+											continue;
+										}
+										//while (adjustedOrder == StaticHierarchies[shix].AdjustedOrder && cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId) {
+										//	shix++;
+										//	if (shix >= StaticHierarchies.Count())
+										//		break;
+										//}
+										if (shix >= StaticHierarchies.Count())
+											break;
+										if (cell.ID == 0) {
+											BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
+										}
+										i++;
+										CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
+
+										if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
+											currSh.Cells.Add(cell);
+										} else {
+											throw new Exception();
+										}
+									}
+								}
+							}
+							#endregion
+						}
+						var timesliceTable = dataSet.Tables[2];
+						temp.Message += "TimeSlice." + DateTime.UtcNow.ToString();
+						temp.TimeSlices = new List<TimeSlice>();
+						List<TimeSlice> TimeSlices = temp.TimeSlices;
+						if (timesliceTable != null) {
+							temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString();
+							#region Read TimeSlice
+							foreach (DataRow row in timesliceTable.Rows) {
+								TimeSlice slice = new TimeSlice
+								{
+									Id = row[0].AsInt32(),
+									DocumentId = row[1].AsGuid(),
+									DocumentSeriesId = row[2].AsInt32(),
+									TimeSlicePeriodEndDate = row[3].AsDateTime(),
+									ReportingPeriodEndDate = row[4].AsDateTime(),
+									FiscalDistance = row[5].AsInt32(),
+									Duration = row[6].AsInt32(),
+									PeriodType = row[7].AsString(),
+									AcquisitionFlag = row[8].AsString(),
+									AccountingStandard = row[9].AsString(),
+									ConsolidatedFlag = row[10].AsString(),
+									IsProForma = row[11].AsBoolean(),
+									IsRecap = row[12].AsBoolean(),
+									CompanyFiscalYear = row[13].AsDecimal(),
+									ReportType = row[14].AsString(),
+									IsAmended = row[15].AsBoolean(),
+									IsRestated = row[16].AsBoolean(),
+									IsAutoCalc = row[17].AsBoolean(),
+									ManualOrgSet = row[18].AsBoolean(),
+									TableTypeID = row[19].AsInt32(),
+									PublicationDate = row[20].AsDateTime(),
+									DamDocumentId = row[21].AsGuid(),
+									PeriodNoteID = row[22].AsByteNullable()
+								};
+
+								TimeSlices.Add(slice);
+
+								Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
+								if (!TimeSliceMap.ContainsKey(tup)) {
+									TimeSliceMap.Add(tup, new List<int>());
+								}
+
+								TimeSliceMap[tup].Add(TimeSlices.Count - 1);
+
+								foreach (StaticHierarchy sh in temp.StaticHierarchies) {
+									try {
+										CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+									} catch { }
+								}
+
+
+							}
+							#endregion
+						}
+						var issummaryTable = dataSet.Tables[3];
+						temp.Message += "IsSummary." + DateTime.UtcNow.ToString();
+						if (issummaryTable != null) {
+							temp.Message += "IsSummary2." + DateTime.UtcNow.ToString();
+							foreach (DataRow row in issummaryTable.Rows) {
+								int TimeSliceID = row[0].AsInt32();
+								if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
+									TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
+								}
+								if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
+									IsSummaryLookup.Add(TimeSliceID, new List<string>());
+								}
+
+								IsSummaryLookup[TimeSliceID].Add(row[1].AsString());
+							}
+						}
+					}
+					#endregion
+				}
+
+				temp.Message += "Calculate.";
+				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
+
+					if (!sh.ParentID.HasValue) {
+						sh.Level = 0;
+					}
+					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
+						ch.Level = sh.Level + 1;
+					}
+					for (int i = 0; i < sh.Cells.Count; i++) {
+						try {
+							TimeSlice ts = temp.TimeSlices[i];
+
+							SCARAPITableCell tc = sh.Cells[i];
+							if (ts.Cells == null) {
+								ts.Cells = new List<SCARAPITableCell>();
+							}
+							ts.Cells.Add(tc);
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+
+							bool hasValidChild = false;
+							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
+							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
+								tc.VirtualValueNumeric = calcChildSum;
+							}
+
+
+							//bool whatever = false;
+							//decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
+
+							//List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
+
+							//if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
+							//) {
+							//	tc.LikePeriodValidationFlag = true;
+							//	tc.StaticHierarchyID = sh.Id;
+							//	tc.DocumentTimeSliceID = ts.Id;
+							//}
+
+							//bool ChildrenSumEqual = false;
+							//if (!tc.ValueNumeric.HasValue || !hasValidChild)
+							//	ChildrenSumEqual = true;
+							//else {
+							//	decimal diff = cellValue - calcChildSum;
+							//	diff = Math.Abs(diff);
+
+							//	if (tc.ScalingFactorValue == 1.0)
+							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
+							//	else
+							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+							//}
+
+							//tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
+							//		!ChildrenSumEqual &&
+							//				!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
+
+						} catch (Exception ex) {
+							Console.WriteLine(ex.Message);
+							break;
+						}
+					}
+					for (int i = 0; i < sh.Cells.Count; i++) {
+						try {
+							TimeSlice ts = temp.TimeSlices[i];
+
+							SCARAPITableCell tc = sh.Cells[i];
+							if (ts.Cells == null) {
+								ts.Cells = new List<SCARAPITableCell>();
+							}
+							ts.Cells.Add(tc);
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+
+							bool hasValidChild = false;
+							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
+							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
+								tc.VirtualValueNumeric = calcChildSum;
+							}
+
+							bool whatever = false;
+							decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
+
+							List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
+
+							if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
+							) {
+								tc.LikePeriodValidationFlag = true;
+								tc.StaticHierarchyID = sh.Id;
+								tc.DocumentTimeSliceID = ts.Id;
+							}
+
+							bool ChildrenSumEqual = false;
+							if (!tc.ValueNumeric.HasValue || !hasValidChild)
+								ChildrenSumEqual = true;
+							else {
+								decimal diff = cellValue - calcChildSum;
+								diff = Math.Abs(diff);
+
+								if (tc.ScalingFactorValue == 1.0)
+									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
+								else
+									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+							}
+
+							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
+									!ChildrenSumEqual &&
+											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
+
+						} catch (Exception ex) {
+							Console.WriteLine(ex.Message);
+							break;
+						}
+					}
+				}
+				temp.Message += "Finished.";
+			} catch (Exception ex) {
+				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
+			}
+			return temp;
+		}
+
+		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
+			var sw = System.Diagnostics.Stopwatch.StartNew();
 			#region Old Queries
 			string query =
 								@"
@@ -306,14 +680,14 @@ WHERE  CompanyID = @Iconum";
 									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString();
 								}
 							}
-							temp.Message += "Cells." + DateTime.UtcNow.ToString(); 
+							temp.Message += "Cells." + DateTime.UtcNow.ToString();
 							reader.NextResult();
-							temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString(); 
+							temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString();
 							int shix = 0;
 							int i = 0;
 							int adjustedOrder = 0;
 							#region read CellsQuery
-							temp.Message += "Cell2." + DateTime.UtcNow.ToString(); 
+							temp.Message += "Cell2." + DateTime.UtcNow.ToString();
 							while (reader.Read()) {
 								if (shix >= StaticHierarchies.Count())
 									break;
@@ -405,9 +779,9 @@ WHERE  CompanyID = @Iconum";
 								}
 							}
 							#endregion
-							temp.Message += "TimeSlice." + DateTime.UtcNow.ToString(); 
+							temp.Message += "TimeSlice." + DateTime.UtcNow.ToString();
 							reader.NextResult();
-							temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString(); 
+							temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString();
 							temp.TimeSlices = new List<TimeSlice>();
 							List<TimeSlice> TimeSlices = temp.TimeSlices;
 							#region Read TimeSlice
@@ -460,7 +834,7 @@ WHERE  CompanyID = @Iconum";
 							#endregion
 
 							reader.NextResult();
-							temp.Message += "IsSummary." + DateTime.UtcNow.ToString(); 
+							temp.Message += "IsSummary." + DateTime.UtcNow.ToString();
 							while (reader.Read()) {
 								int TimeSliceID = reader.GetInt32(0);
 								if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
@@ -597,8 +971,6 @@ WHERE  CompanyID = @Iconum";
 			}
 			return temp;
 		}
-
-
 		public decimal getDecimal(decimal value, double ScalingFactorValue, Boolean ispositive) {
 			decimal factor = Decimal.Parse("" + ScalingFactorValue);
 			int m = 1;
@@ -7528,6 +7900,120 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				result = "NULL";
 			} else if (string.Equals(jString, "true", StringComparison.InvariantCultureIgnoreCase)) {
 				result = "1";
+			}
+			return result;
+		}
+	}
+		public static class ObjectExtension {
+		public static string AsString(this object o) {
+			if (Convert.IsDBNull(o)) {
+				return null;
+			}
+			string jString = o.ToString();
+			string result = jString;
+			return result;
+		}
+		public static byte? AsByteNullable(this object o) {
+			string jString = o.ToString();
+			byte temp;
+			byte? result;
+			if (!byte.TryParse(jString, out temp)) {
+				result = null;
+			} else {
+				result = temp;
+			}
+			return result;
+		}
+		public static int AsInt32(this object o) {
+			string jString = o.ToString();
+			int result;
+			if (!int.TryParse(jString, out result)) {
+				result = 0;
+			}
+			return result;
+		}
+		public static int? AsInt32Nullable(this object o) {
+			string jString = o.ToString();
+			int temp;
+			int? result;
+			if (!int.TryParse(jString, out temp)) {
+				result = null;
+			} else {
+				result = temp;
+			}
+			return result;
+		}
+		public static Int64 AsInt64(this object o) {
+			string jString = o.ToString();
+			long result;
+			if (!long.TryParse(jString, out result)) {
+				result = 0;
+			}
+			return result;
+		}
+		public static double AsDouble(this object o) {
+			string jString = o.ToString();
+			double result;
+			if (!double.TryParse(jString, out result)) {
+				result = default(double);
+			}
+			return result;
+		}
+		public static decimal AsDecimal(this object o) {
+			string jString = o.ToString();
+			decimal result;
+			if (!decimal.TryParse(jString, out result)) {
+				result = default(decimal);
+			}
+			return result;
+		}
+		public static decimal? AsDecimalNullable(this object o) {
+			string jString = o.ToString();
+			decimal temp;
+			decimal? result;
+			if (!decimal.TryParse(jString, out temp)) {
+				result = null;
+			} else {
+				result = temp;
+			}
+			return result;
+		}
+
+		public static bool AsBoolean(this object o) {
+			string jString = o.ToString();
+			bool result;
+			if (!bool.TryParse(jString, out result)) {
+				result = false;
+			}
+			return result;
+		}
+		public static Guid AsGuid(this object o) {
+			if (Convert.IsDBNull(o)) {
+				return new Guid("00000000-0000-0000-0000-000000000000");
+			}
+			string jString = o.ToString();
+			Guid result;
+			if (!Guid.TryParse(jString, out result)) {
+				result = new Guid("00000000-0000-0000-0000-000000000000");
+			}
+			return result;
+		}
+		public static DateTime AsDateTime(this object o) {
+			string jString = o.ToString();
+			DateTime result;
+			if (!DateTime.TryParse(jString, out result)) {
+				result = DateTime.MinValue;
+			} 
+			return result;
+		}
+		public static DateTime? AsDateTimeNullable(this object o) {
+			string jString = o.ToString();
+			DateTime temp;
+			DateTime? result;
+			if (!DateTime.TryParse(jString, out temp)) {
+				result = null;
+			} else {
+				result = temp;
 			}
 			return result;
 		}
