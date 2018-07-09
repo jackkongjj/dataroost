@@ -1210,7 +1210,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTimeSliceByTemplate(TemplateName, DocumentId);
+				return helper.GetTimeSliceByTemplate(CompanyId,TemplateName, DocumentId);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;

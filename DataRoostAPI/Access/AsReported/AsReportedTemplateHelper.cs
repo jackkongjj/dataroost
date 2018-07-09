@@ -4499,7 +4499,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
-			updateInJson = updateInJson.Replace("&quotx;", "\\\"").Replace("\\", "\\\\");
+			updateInJson = updateInJson.Replace("\\", "\\\\").Replace("&quotx;", "\\\"");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -5039,13 +5039,16 @@ and tt.description = @TableType
 			}
 		}
 
-		public ScarResult GetTimeSliceByTemplate(string TemplateName, Guid DocumentId) {
+		public ScarResult GetTimeSliceByTemplate(string companyId, string TemplateName, Guid DocumentId) {
 
 			string SQL_query = @"
 DECLARE @DocumentSeriesId int;
 select top 1 @DocumentSeriesId = d.DocumentSeriesID
 	FROM Document d WITH (NOLOCK)
-	where d.DAMDocumentId = @DocumentID;
+join DocumentSeries ds with(nolock)
+  on d.DocumentSeriesID = ds.ID
+	where d.DAMDocumentId = @DocumentID
+  and ds.companyId = @companyId;
 
 ;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode, ArComponent, PeriodLength)
 AS
@@ -5134,6 +5137,8 @@ from #tmptimeslices ts
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					cmd.Parameters.AddWithValue("@TypeTable", TemplateName);
+					cmd.Parameters.AddWithValue("@companyId", companyId);
+					
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						var ordinals = new
 						{
