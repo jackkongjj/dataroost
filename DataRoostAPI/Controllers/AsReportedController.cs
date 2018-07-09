@@ -191,6 +191,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return result;
 		}
 
+		[Route("templates/{TemplateName}/{DocumentId}/june")]
+		[HttpGet]
+		public ScarResult GetTemplateJune(string CompanyId, string TemplateName, Guid DocumentId) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetTemplateInScarResultJune(iconum, TemplateName, DocumentId);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
+
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpGet]
 		public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {

@@ -103,6 +103,13 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
 		}
+		public ScarResult GetTemplateInScarResultJune(int iconum, string TemplateName, Guid DocumentId) {
+			ScarResult newFormat = new ScarResult();
+			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
+			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
+			newFormat.TimeSlices = oldFormat.TimeSlices;
+			return newFormat;
+		}
 		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 
@@ -147,7 +154,6 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				if (shTable != null) {
 					temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
 					foreach (DataRow row in shTable.Rows) {
-						temp.Message += "Read." + DateTime.UtcNow.ToString();
 						StaticHierarchy shs = new StaticHierarchy
 						{
 							Id = row[0].AsInt32(),
@@ -156,33 +162,26 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							TableTypeId = row[3].AsInt32(),
 							Description = row[4].AsString()
 						};
-						temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString();
 						shs.HierarchyTypeId = row[5].AsString()[0];
 						shs.SeparatorFlag = row[6].AsBoolean();
 						shs.StaticHierarchyMetaId = row[7].AsInt32();
 						shs.UnitTypeId = row[8].AsInt32();
-						temp.Message += "shsIsIncomePositive." + DateTime.UtcNow.ToString();
 						shs.IsIncomePositive = row[9].AsBoolean();
 						shs.ChildrenExpandDown = row[10].AsBoolean();
 						shs.ParentID = row[11].AsInt32Nullable();
 						shs.StaticHierarchyMetaType = row[12].AsString();
 						shs.TableTypeDescription = row[13].ToString();
-						temp.Message += "shsCell." + DateTime.UtcNow.ToString();
 						shs.Cells = new List<SCARAPITableCell>();
-						temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString();
 						StaticHierarchies.Add(shs);
 						SHLookup.Add(shs.Id, shs);
-						temp.Message += "SHLookup." + DateTime.UtcNow.ToString();
 						if (!SHChildLookup.ContainsKey(shs.Id))
 							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
 
 						if (shs.ParentID != null) {
-							temp.Message += "ParentID." + DateTime.UtcNow.ToString();
 							if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
 								SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
 
 							SHChildLookup[shs.ParentID.Value].Add(shs);
-							temp.Message += "ChildLookup." + DateTime.UtcNow.ToString();
 						}
 					}
 				}
