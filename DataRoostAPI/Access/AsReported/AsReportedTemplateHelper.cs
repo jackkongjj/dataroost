@@ -1739,6 +1739,54 @@ SELECT *
 			return response;
 		}
 
+		public ScarResult CleanupStaticHierarchy(List<int> StaticHierarchyIds) {
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			var inclause = string.Join(",", StaticHierarchyIds);
+			string query = @"
+DECLARE @AllStaticHierarchy TABLE
+(ID int, CompanyFinancialTermID int);
+INSERT @AllStaticHierarchy 
+SELECT distinct ID, CompanyFinancialTermID from StaticHierarchy where id in ({0});
+
+
+DECLARE @GoodStaticHierarchy TABLE
+(ID int, CFT int);
+
+INSERT @GoodStaticHierarchy
+Select distinct sh.id, sh.CompanyFinancialTermID from 
+@AllStaticHierarchy sh 
+JOIN TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.ID 
+
+INSERT @GoodStaticHierarchy
+Select distinct sh.id, sh.CompanyFinancialTermID from 
+@AllStaticHierarchy sh 
+JOIN TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+JOIN DimensionToCell dtc on dtc.TableCellId = tc.ID 
+
+DELETE FROM @AllStaticHierarchy where id in (select id from @GoodStaticHierarchy)
+delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (select id from @AllStaticHierarchy);
+delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (select id from @AllStaticHierarchy);
+delete from dbo.statichierarchy where Id in (select id from @AllStaticHierarchy);
+SELECT id From @AllStaticHierarchy
+";
+			String finalquery = string.Format(query, inclause);
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							sb.AppendLine(reader.GetInt32(0).AsInt32().ToString() + ",");
+						}
+					}
+				}
+			}
+			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
+			return response;
+		}
+
 		public ScarResult UpdateStaticHierarchyDeleteHeader(string headerText, List<int> StaticHierarchyIds) {
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();

@@ -462,6 +462,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("staticHierarchy/cleanup")]
+		[HttpDelete]
+		public ScarResult CleanupStaticHierarchyWithId(string CompanyId, ScarStringListInput input) {
+			try {
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
+					return null;
+
+				return helper.CleanupStaticHierarchy(input.StaticHierarchyIDs);
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("staticHierarchy/{id}/header")]
 		[HttpDelete]
 		public ScarResult DeleteHeaderStaticHierarchyWithId(string CompanyId, ScarStringListInput input) {
