@@ -98,7 +98,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId) {
 			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplate(iconum, TemplateName, DocumentId);
+			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
 			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
