@@ -191,6 +191,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			return result;
 		}
 
+		[Route("templates/{TemplateName}/{DocumentId}/june")]
+		[HttpGet]
+		public ScarResult GetTemplateJune(string CompanyId, string TemplateName, Guid DocumentId) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetTemplateInScarResultJune(iconum, TemplateName, DocumentId);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
+
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpGet]
 		public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
@@ -456,6 +473,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					return null;
 
 				return helper.DeleteStaticHierarchy(input.StaticHierarchyIDs);
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
+		[Route("staticHierarchy/cleanup")]
+		[HttpDelete]
+		public ScarResult CleanupStaticHierarchyWithId(string CompanyId, ScarStringListInput input) {
+			try {
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
+					return null;
+
+				return helper.CleanupStaticHierarchy(input.StaticHierarchyIDs);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;
