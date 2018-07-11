@@ -132,7 +132,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					#region Using SqlConnection
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
-						cmd.CommandTimeout = 30;
+						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
