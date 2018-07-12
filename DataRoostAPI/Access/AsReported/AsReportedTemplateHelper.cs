@@ -1738,7 +1738,48 @@ SELECT *
 			return response;
 		}
 
-		public ScarResult CleanupStaticHierarchy(List<int> StaticHierarchyIds) {
+		public ScarResult CleanupStaticHierarchy(int iconum, string tableType) {
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			string query = @"
+
+declare @SHIDS TABLE(StaticHierarchyID int)
+
+INSERT @SHIDS(StaticHierarchyID)
+select sh.ID
+from DocumentSeries ds
+join TableType tt on ds.ID = tt.DocumentSeriesID
+JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesID = ds.ID
+JOIN StaticHierarchy sh on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
+where companyid = @Iconum
+AND tt.Description = @TableType
+AND NOT EXISTS(select CompanyFinancialTermId FROM TableCell WHERE CompanyFinancialTermID = sh.CompanyFinancialTermID)
+
+delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
+delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
+DELETE FROM StaticHierarchySecurity WHERE StaticHierarchyId in (SELECT StaticHierarchyID FROM @SHIDS);
+DELETE FROM StaticHierarchy WHERE Id in (SELECT StaticHierarchyID FROM @SHIDS);
+SELECT StaticHierarchyID FROM @SHIDS
+";
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
+					cmd.Parameters.AddWithValue("@TableType", tableType);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							sb.AppendLine(reader.GetInt32(0).AsInt32().ToString() + ",");
+						}
+					}
+				}
+			}
+			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
+			return response;
+		}
+
+
+		public ScarResult CleanupStaticHierarchyOld(List<int> StaticHierarchyIds) {
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			var inclause = string.Join(",", StaticHierarchyIds);
@@ -5468,7 +5509,7 @@ where dtc.TableCellID = @id
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
 				sb.AppendLine();
-				sb.AppendLine(string.Format("IF (@totalInsert = {0} and @totalUpdate = {1}) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				sb.AppendLine(string.Format("IF (@totalInsert = {0} and @totalUpdate = 0) BEGIN select 'commit'; ROLLBACK TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
 				result.ReturnValue["DebugMessage"] += sb.ToString();
 
 				//				return result;
