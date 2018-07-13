@@ -1754,7 +1754,9 @@ JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesID = ds.ID
 JOIN StaticHierarchy sh on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
 where companyid = @Iconum
 AND tt.Description = @TableType
-AND NOT EXISTS(select CompanyFinancialTermId FROM TableCell WHERE CompanyFinancialTermID = sh.CompanyFinancialTermID)
+AND NOT EXISTS(select CompanyFinancialTermId FROM TableCell tc
+				join DimensionToCell dtc on tc.id = dtc.TableCellID
+				WHERE tc.CompanyFinancialTermID = sh.CompanyFinancialTermID)
 
 delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
 delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
