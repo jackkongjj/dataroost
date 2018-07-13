@@ -1354,6 +1354,8 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
 			string text_query = @"
 DECLARE @newDocumentTableId int;
+SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
+GO
 BEGIN TRY
 	BEGIN TRAN
 
@@ -2369,6 +2371,8 @@ SELECT *
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
 
 			string query = @"
+SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
+GO
 BEGIN TRY
 	BEGIN TRAN
 DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy WITH (NOLOCK) where id = @TargetSHID)
@@ -4036,8 +4040,20 @@ DELETE FROM TableCell where CompanyFinancialTermID in ({0});
 				DELETE FROM CompanyFinancialTerm where id in ({0});
 				
 				";
-			string merge_sql = @"MERGE CompanyFinancialTerm
-USING ({0}) as src ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate)
+			string merge_sql = @"
+DECLARE @CompanyFinancialTerm TABLE (
+	[ID] [int] NOT NULL,
+	[DocumentSeriesID] [int] NOT NULL,
+	[TermStatusID] [int] NOT NULL,
+	[Description] [varchar](1024) NOT NULL,
+	[NormalizedFlag] [bit] NOT NULL,
+	[EncoreTermFlag] [int] NOT NULL,
+	[ManualUpdate] [bit] NOT NULL);
+
+{0}
+
+MERGE CompanyFinancialTerm
+USING (@CompanyFinancialTerm) as src 
 ON CompanyFinancialTerm.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET DocumentSeriesID =  src.DocumentSeriesID
@@ -4089,7 +4105,7 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 							}
 						} else if (elem["action"].ToString() == "update") {
 							if (!is_merging) {
-								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
+								merging_ids.AppendLine(string.Format("INSERT @CompanyFinancialTerm ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate) VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
 								elem["obj"]["DocumentSeries"]["ID"].ToString(),
 								elem["obj"]["TermStatusID"].AsValue(),
 								elem["obj"]["Description"].AsString(),
@@ -4110,7 +4126,7 @@ elem["obj"]["EncoreTermFlag"].ToString(),
 							}
 						} else if (elem["action"].ToString() == "insert") {
 							if (!is_merging) {
-								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
+								merging_ids.AppendLine(string.Format("INSERT @CompanyFinancialTerm ( ID ,DocumentSeriesID ,TermStatusID ,Description ,NormalizedFlag ,EncoreTermFlag ,ManualUpdate) VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6})", elem["obj"]["ID"].ToString(),
 								elem["obj"]["DocumentSeries"]["ID"].ToString(),
 								elem["obj"]["TermStatusID"].AsValue(),
 								elem["obj"]["Description"].AsString(),
@@ -4152,8 +4168,23 @@ elem["obj"]["EncoreTermFlag"].ToString(),
 DELETE FROM DimensionToCell where TableDimensionId in ({0});
 DELETE FROM TableDimension where id in ({0});
 ";
-			string merge_sql = @"MERGE TableDimension
-USING ({0}) as src ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder)
+			string merge_sql = @"
+DECLARE @TableDimension(
+	[ID] [int] NOT NULL,
+	[DocumentTableID] [int] NOT NULL,
+	[DimensionTypeID] [int] NULL,
+	[Label] [varchar](2048) NULL,
+	[OrigLabel] [varchar](4096) NULL,
+	[Location] [int] NOT NULL,
+	[EndLocation] [int] NOT NULL,
+	[Parent] [int] NULL,
+	[InsertedRow] [bit] NOT NULL,
+	[AdjustedOrder] [int] NOT NULL);
+
+{0}
+
+MERGE TableDimension
+USING (@TableDimension) as src
 ON TableDimension.id = src.ID
 WHEN MATCHED THEN
 	UPDATE SET       DocumentTableID  = TableDimension.DocumentTableID 
@@ -4217,7 +4248,7 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 							}
 						} else if (elem["action"].ToString() == "update") {
 							if (!is_merging) {
-								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
+								merging_ids.AppendLine(string.Format("INSERT @TableDimension ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder) VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
 								_dimensionTableId,
 								elem["obj"]["DimensionTypeId"].AsValue(),
 								elem["obj"]["Label"].AsString(),
@@ -4244,7 +4275,7 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 							}
 						} else if (elem["action"].ToString() == "insert") {
 							if (!is_merging) {
-								merging_ids.AppendLine(string.Format("VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
+								merging_ids.AppendLine(string.Format("INSERT @TableDimension ( ID  ,DocumentTableID  ,DimensionTypeID  ,Label  ,OrigLabel  ,Location  ,EndLocation  ,Parent  ,InsertedRow  ,AdjustedOrder) VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9})", elem["obj"]["ID"].AsValue(),
 								_dimensionTableId,
 								elem["obj"]["DimensionTypeId"].AsValue(),
 								elem["obj"]["Label"].AsString(),
@@ -5238,6 +5269,8 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+			sb.AppendLine("GO");
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER, Info INTEGER)");
 
@@ -5315,6 +5348,8 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+			sb.AppendLine("GO");
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
 
@@ -5374,6 +5409,8 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 
 		public ScarResult DeleteDocumentTableID(string dtid) {
 			string SQL_Delete = @"
+SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
+GO
 BEGIN TRY
 	BEGIN TRAN
 			delete from DimensionToCell where TableDimensionID in
@@ -5500,6 +5537,8 @@ where dtc.TableCellID = @id
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+			sb.AppendLine("GO");
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER, Info INTEGER)");
 
@@ -6850,7 +6889,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 		public ScarResult SwapValue(string firstCellId, string secondCellId) {
 			const string query = @"
-
+SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
+GO
 BEGIN TRY
 	BEGIN TRAN
 		DECLARE @docId uniqueidentifier 
