@@ -219,10 +219,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 		public Dictionary<string, List<ShareClassDataItem>> GetCurrentShareDataItems(int iconum) {
 
-			string queryNonDC = @"SELECT s.ID, s.STDItemID, s.STDExpressionID, s.Value, i.STDCode, i.ItemName, s.Date, s.SecurityID, i.StdItemTypeId
-                                FROM vw_STDCompanyDetail s
+			string queryPantheon = @"SELECT s.ID, s.STDItemID, '', s.Value, i.STDCode, i.ItemName, '', s.SecurityID, i.StdItemTypeId
+                                FROM SuperCore.STDTimeSliceDetail s
                                     JOIN STDItem i ON i.ID = s.STDItemID
-                                WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
+								join SuperCore.TimeSlice ts with (nolock) on s.TimeSliceID = ts.ID
+								join SuperCore.DocumentTimeSlice dts with (nolock)  on dts.timesliceid = ts.id
+								join dbo.documentseries ds on ds.id = dts.documentseriesid
+                  WHERE ds.CompanyID =  @iconum AND s.SecurityID IS NOT NULL";
 
 
 			string queryDC = @"SELECT s.ID, s.STDItemID, null STDExpressionID, case when  (s.MathML is not null and s.MathML != '<null/>') then s.Value  ELSE null end  Value,
@@ -231,9 +234,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
                                     JOIN STDItem i ON i.ID = s.STDItemID
                                 WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
 
-			bool isIconumDC = IsIconumDC(iconum);
+			bool isIconumPantheon = IsIconumPantheon(iconum);
 
-			string query = isIconumDC ? queryDC : queryNonDC;
+			string query = isIconumPantheon ? queryPantheon :queryDC ;
 
 			Dictionary<string, List<ShareClassDataItem>> perShareData = new Dictionary<string, List<ShareClassDataItem>>();
 			using (SqlConnection connection = new SqlConnection(_connectionString)) {
@@ -254,7 +257,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 						    string itemTypeId = reader.GetString(8);
                             ShareClassDataItem item = null;
 
-                            if (itemTypeId == "E") {
+                            if (itemTypeId == "E" || itemTypeId == "S") {
                                 // It's a decimal value
                                 decimal tmpValue;
                                 var value = decimal.TryParse(reader.GetStringSafe(3), out tmpValue) ? tmpValue : (decimal?)null;
@@ -271,11 +274,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
                                 // It's a date value
                                 DateTime? reportDate;
                                 DateTime tmpValue;
-                                if (isIconumDC) {
-                                    reportDate = DateTime.TryParse(reader.GetStringSafe(3), out tmpValue) ? tmpValue : (DateTime?)null;
-                                } else {
-                                    reportDate = DateTime.TryParse(reader.GetStringSafe(6), out tmpValue) ? tmpValue : (DateTime?)null;
-                                }
+                                
+                                reportDate = DateTime.TryParse(reader.GetStringSafe(3), out tmpValue) ? tmpValue : (DateTime?)null;
+                                
 
                                 if (reportDate.HasValue) {
                                     item = new ShareClassDateItem
@@ -298,9 +299,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 			return perShareData;
 		}
 
-		private bool IsIconumDC(int iconum) {
+		private bool IsIconumPantheon(int iconum) {
 			bool result = false;
-			const string query = @"if exists (SELECT * from dbo.MigrateToTimeSlice where MigrationStatusID = 1 and Iconum = @iconum)
+			const string query = @"if exists (SELECT * from SuperCore.MigrateToTemplates where MigrationStatusID = 1 and Iconum = @iconum)
 														begin 
 														 select convert(bit,1)
 														end else 
