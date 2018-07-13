@@ -98,7 +98,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId) {
 			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplate(iconum, TemplateName, DocumentId);
+			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
 			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
@@ -132,7 +132,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					#region Using SqlConnection
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
-						cmd.CommandTimeout = 30;
+						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
@@ -1724,6 +1724,7 @@ SELECT *
 			String q2 = string.Format(query2, inclause);
 			String q3 = string.Format(query3, inclause);
 			String finalquery = q1 + q2 + q3;
+			SendEmail("DataRoost Bulk StaticHierarchy Delete - DeleteStaticHierarchy", q3);
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
@@ -1738,7 +1739,50 @@ SELECT *
 			return response;
 		}
 
-		public ScarResult CleanupStaticHierarchy(List<int> StaticHierarchyIds) {
+		public ScarResult CleanupStaticHierarchy(int iconum, string tableType) {
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
+			string query = @"
+
+declare @SHIDS TABLE(StaticHierarchyID int)
+
+INSERT @SHIDS(StaticHierarchyID)
+select sh.ID
+from DocumentSeries ds
+join TableType tt on ds.ID = tt.DocumentSeriesID
+JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesID = ds.ID
+JOIN StaticHierarchy sh on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
+where companyid = @Iconum
+AND tt.Description = @TableType
+AND NOT EXISTS(select CompanyFinancialTermId FROM TableCell tc
+				join DimensionToCell dtc on tc.id = dtc.TableCellID
+				WHERE tc.CompanyFinancialTermID = sh.CompanyFinancialTermID)
+
+delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
+delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
+DELETE FROM StaticHierarchySecurity WHERE StaticHierarchyId in (SELECT StaticHierarchyID FROM @SHIDS);
+DELETE FROM StaticHierarchy WHERE Id in (SELECT StaticHierarchyID FROM @SHIDS);
+SELECT StaticHierarchyID FROM @SHIDS
+";
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
+					cmd.Parameters.AddWithValue("@TableType", tableType);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							sb.AppendLine(reader.GetInt32(0).AsInt32().ToString() + ",");
+						}
+					}
+				}
+			}
+			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
+			return response;
+		}
+
+
+		public ScarResult CleanupStaticHierarchyOld(List<int> StaticHierarchyIds) {
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			var inclause = string.Join(",", StaticHierarchyIds);
@@ -1877,6 +1921,7 @@ SELECT id From @AllStaticHierarchy
 
 			String q1 = string.Format(deletequery, id);
 			String q2 = string.Format(insertquery, id, newCusip);
+			SendEmail("DataRoost Bulk StaticHierarchy Delete - UpdateStaticHierarchyCusip", id.ToString());
 			ScarResult response = new ScarResult();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(q1, conn)) {
@@ -4382,7 +4427,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
 								elem["obj"]["CellPeriodType"].AsString(),
-								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+								elem["obj"]["PeriodTypeID"].AsSafeString(),
 								elem["obj"]["CellPeriodCount"].AsString(),
 								elem["obj"]["PeriodLength"].AsValue(),
 								elem["obj"]["CellDay"].AsString(),
@@ -4396,7 +4441,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["CurrencyCode"].AsSafeString(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -4437,7 +4482,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								merging_ids.AppendLine(string.Format(",({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23})", elem["obj"]["ID"].AsValue(),
 								elem["obj"]["Offset"].AsString(),
 								elem["obj"]["CellPeriodType"].AsString(),
-								elem["obj"]["PeriodTypeID"].AsString().Length > 0 ? elem["obj"]["PeriodTypeID"].AsString() : elem["obj"]["PeriodTypeID"].AsValue(),
+							elem["obj"]["PeriodTypeID"].AsSafeString(),
 								elem["obj"]["CellPeriodCount"].AsString(),
 								elem["obj"]["PeriodLength"].AsValue(),
 								elem["obj"]["CellDay"].AsString(),
@@ -4451,7 +4496,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-								elem["obj"]["CurrencyCode"].AsString(),
+							elem["obj"]["CurrencyCode"].AsSafeString(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -4939,6 +4984,7 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				string result = "";
 				if (deleted_ids.Count > 0) {
 					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
+					SendEmail("DataRoost Bulk StaticHierarchy Delete - JsonToSQLStaticHierarchy", result);
 				} else {
 					result = sb.ToString();
 				}
@@ -5188,7 +5234,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
-			updateInJson = updateInJson.Replace("&quot;", "\\\"").Replace("\\", "\\\\");
+			updateInJson = updateInJson.Replace("\\", "\\\\").Replace("&quotx;", "\\\"");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -5728,13 +5774,16 @@ and tt.description = @TableType
 			}
 		}
 
-		public ScarResult GetTimeSliceByTemplate(string TemplateName, Guid DocumentId) {
+		public ScarResult GetTimeSliceByTemplate(string companyId, string TemplateName, Guid DocumentId) {
 
 			string SQL_query = @"
 DECLARE @DocumentSeriesId int;
 select top 1 @DocumentSeriesId = d.DocumentSeriesID
 	FROM Document d WITH (NOLOCK)
-	where d.DAMDocumentId = @DocumentID;
+join DocumentSeries ds with(nolock)
+  on d.DocumentSeriesID = ds.ID
+	where d.DAMDocumentId = @DocumentID
+  and ds.companyId = @companyId;
 
 ;WITH cte_timeslice(DamDocumentID, TimeSliceId, NumberofCell, CurrencyCount, CurrencyCode, ArComponent, PeriodLength)
 AS
@@ -5823,6 +5872,8 @@ from #tmptimeslices ts
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					cmd.Parameters.AddWithValue("@TypeTable", TemplateName);
+					cmd.Parameters.AddWithValue("@companyId", companyId);
+					
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						var ordinals = new
 						{
@@ -7917,6 +7968,16 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 
 	}
 	public static class JValueExtension {
+		public static string AsSafeString(this JToken jValue) {
+			string jString = jValue.ToString();
+			string result = "''";
+			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase) || jString.Length < 1) {
+				result = "NULL";
+			} else {
+				result = "'" + jString.Replace("'", "''").Replace("\\\\", "\\") + "'";
+			}
+			return result;
+		}
 		public static string AsString(this JToken jValue) {
 			string jString = jValue.ToString();
 			string result = "''";

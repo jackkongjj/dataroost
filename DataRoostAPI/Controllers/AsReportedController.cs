@@ -479,16 +479,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("staticHierarchy/cleanup")]
+		[Route("staticHierarchy/cleanup/{TemplateName}")]
 		[HttpDelete]
-		public ScarResult CleanupStaticHierarchyWithId(string CompanyId, ScarStringListInput input) {
+		public ScarResult CleanupStaticHierarchyWithId(string CompanyId, string TemplateName, ScarStringListInput input) {
 			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
-					return null;
 
-				return helper.CleanupStaticHierarchy(input.StaticHierarchyIDs);
+				return helper.CleanupStaticHierarchy(iconum, TemplateName);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;
@@ -1243,7 +1242,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTimeSliceByTemplate(TemplateName, DocumentId);
+				return helper.GetTimeSliceByTemplate(CompanyId,TemplateName, DocumentId);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;
