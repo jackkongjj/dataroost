@@ -1354,7 +1354,6 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
 			string text_query = @"
 DECLARE @newDocumentTableId int;
-SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
 BEGIN TRY
 	BEGIN TRAN
 
@@ -2370,7 +2369,6 @@ SELECT *
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
 
 			string query = @"
-SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
 BEGIN TRY
 	BEGIN TRAN
 DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy WITH (NOLOCK) where id = @TargetSHID)
@@ -5484,7 +5482,6 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 
 		public ScarResult DeleteDocumentTableID(string dtid) {
 			string SQL_Delete = @"
-SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
 BEGIN TRY
 	BEGIN TRAN
 			delete from DimensionToCell where TableDimensionID in
@@ -6962,7 +6959,6 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 
 		public ScarResult SwapValue(string firstCellId, string secondCellId) {
 			const string query = @"
-SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
 BEGIN TRY
 	BEGIN TRAN
 		DECLARE @docId uniqueidentifier 
