@@ -1724,7 +1724,9 @@ SELECT *
 			String q2 = string.Format(query2, inclause);
 			String q3 = string.Format(query3, inclause);
 			String finalquery = q1 + q2 + q3;
-			SendEmail("DataRoost Bulk StaticHierarchy Delete - DeleteStaticHierarchy", q3);
+			if (StaticHierarchyIds.Count > 5) {
+				SendEmail("DataRoost Bulk StaticHierarchy Delete - DeleteStaticHierarchy", q3);
+			}
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
@@ -1921,7 +1923,7 @@ SELECT id From @AllStaticHierarchy
 
 			String q1 = string.Format(deletequery, id);
 			String q2 = string.Format(insertquery, id, newCusip);
-			SendEmail("DataRoost Bulk StaticHierarchy Delete - UpdateStaticHierarchyCusip", id.ToString());
+			//SendEmail("DataRoost Bulk StaticHierarchy Delete - UpdateStaticHierarchyCusip", id.ToString());
 			ScarResult response = new ScarResult();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(q1, conn)) {
@@ -5070,7 +5072,9 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				string result = "";
 				if (deleted_ids.Count > 0) {
 					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-					SendEmail("DataRoost Bulk StaticHierarchy Delete - JsonToSQLStaticHierarchy", result);
+					if (deleted_ids.Count > 5) {
+						SendEmail("DataRoost Bulk StaticHierarchy Delete - JsonToSQLStaticHierarchy", result);
+					}
 				} else {
 					result = sb.ToString();
 				}
