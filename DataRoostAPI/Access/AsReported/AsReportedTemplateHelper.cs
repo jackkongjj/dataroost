@@ -1724,7 +1724,9 @@ SELECT *
 			String q2 = string.Format(query2, inclause);
 			String q3 = string.Format(query3, inclause);
 			String finalquery = q1 + q2 + q3;
-			SendEmail("DataRoost Bulk StaticHierarchy Delete - DeleteStaticHierarchy", q3);
+			if (StaticHierarchyIds.Count > 5) {
+				SendEmail("DataRoost Bulk StaticHierarchy Delete - DeleteStaticHierarchy", q3);
+			}
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
@@ -1921,7 +1923,7 @@ SELECT id From @AllStaticHierarchy
 
 			String q1 = string.Format(deletequery, id);
 			String q2 = string.Format(insertquery, id, newCusip);
-			SendEmail("DataRoost Bulk StaticHierarchy Delete - UpdateStaticHierarchyCusip", id.ToString());
+			//SendEmail("DataRoost Bulk StaticHierarchy Delete - UpdateStaticHierarchyCusip", id.ToString());
 			ScarResult response = new ScarResult();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(q1, conn)) {
@@ -4470,7 +4472,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["CurrencyCode"].AsCurrencyCode(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -4497,7 +4499,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-								elem["obj"]["CurrencyCode"].AsSafeString(),
+								elem["obj"]["CurrencyCode"].AsCurrencyCode(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -4525,7 +4527,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-								elem["obj"]["CurrencyCode"].AsString(),
+								elem["obj"]["CurrencyCode"].AsCurrencyCode(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -4552,7 +4554,7 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 								elem["obj"]["ScalingFactorID"].AsString(),
 								elem["obj"]["AsReportedScalingFactor"].AsString(),
 								elem["obj"]["Currency"].AsString(),
-							elem["obj"]["CurrencyCode"].AsSafeString(),
+							elem["obj"]["CurrencyCode"].AsCurrencyCode(),
 								elem["obj"]["Cusip"].AsString(),
 								"0",
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
@@ -5070,7 +5072,9 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				string result = "";
 				if (deleted_ids.Count > 0) {
 					result = string.Format(delete_sql, string.Join(",", deleted_ids)) + sb.ToString();
-					SendEmail("DataRoost Bulk StaticHierarchy Delete - JsonToSQLStaticHierarchy", result);
+					if (deleted_ids.Count > 5) {
+						SendEmail("DataRoost Bulk StaticHierarchy Delete - JsonToSQLStaticHierarchy", result);
+					}
 				} else {
 					result = sb.ToString();
 				}
@@ -5345,6 +5349,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+			sb.AppendLine("BEGIN TRY");
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER, Info INTEGER)");
 
@@ -5374,6 +5379,10 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
 				sb.AppendLine();
 				sb.AppendLine(string.Format("IF (@totalInsert + @totalUpdate = ({0} + {1})) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				sb.AppendLine("END TRY");
+				sb.AppendLine("BEGIN CATCH");
+				sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
+				sb.AppendLine("END CATCH");
 				result.ReturnValue["DebugMessage"] += sb.ToString();
 
 				//				return result;
@@ -5423,6 +5432,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+			sb.AppendLine("BEGIN TRY");
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)");
 
@@ -5444,6 +5454,10 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
 				sb.AppendLine();
 				sb.AppendLine(string.Format("IF (@totalInsert = {0} and @totalUpdate = {1}) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				sb.AppendLine("END TRY");
+				sb.AppendLine("BEGIN CATCH");
+				sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
+				sb.AppendLine("END CATCH");
 				result.ReturnValue["DebugMessage"] += sb.ToString();
 
 				//				return result;
@@ -5609,6 +5623,7 @@ where dtc.TableCellID = @id
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+			sb.AppendLine("BEGIN TRY");
 			sb.AppendLine("BEGIN TRAN");
 			sb.AppendLine("DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER, Info INTEGER)");
 
@@ -5624,6 +5639,10 @@ where dtc.TableCellID = @id
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
 				sb.AppendLine();
 				sb.AppendLine(string.Format("IF (@totalInsert = {0} and @totalUpdate = {1}) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				sb.AppendLine("END TRY");
+				sb.AppendLine("BEGIN CATCH");
+				sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
+				sb.AppendLine("END CATCH");
 				result.ReturnValue["DebugMessage"] += sb.ToString();
 
 				//				return result;
@@ -8116,6 +8135,16 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				result = "NULL";
 			} else if (string.Equals(jString, "true", StringComparison.InvariantCultureIgnoreCase)) {
 				result = "1";
+			}
+			return result;
+		}
+		public static string AsCurrencyCode(this JToken jValue) {
+			string jString = jValue.ToString();
+			string result = "NULL";
+			if (string.Equals(jString, "null", StringComparison.InvariantCultureIgnoreCase) || string.IsNullOrWhiteSpace(jString)) {
+				result = "NULL";
+			} else {
+				result = "'" + jString.Replace("'", "''").Replace("\\\\", "\\") + "'";
 			}
 			return result;
 		}
