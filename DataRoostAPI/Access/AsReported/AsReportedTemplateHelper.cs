@@ -5928,7 +5928,7 @@ AS
 		LEFT JOIN ARTimeSliceDerivationComponents artsdc WITH(NOLOCK) ON artsdc.DocumentTimeSliceID = dts.id
 	WHERE tt.description = @TypeTable
 	and ds.id = @DocumentSeriesId and tt.DocumentSeriesID = @DocumentSeriesId
-	group by d.damdocumentid, dts.id 
+	group by d.damdocumentid, dts.id ,tc.PeriodLength
 )
 SELECT ts.*, dts.*, d.DocumentDate, d.ReportTypeID, d.PublicationDateTime
 	INTO #nonempty
