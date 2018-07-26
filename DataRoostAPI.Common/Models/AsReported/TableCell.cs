@@ -29,6 +29,8 @@ namespace DataRoostAPI.Common.Models.AsReported {
 				string tintOffSet) {
 
 			const string sqltxt = @"
+SET TRANSACTION ISOLATION LEVEL SNAPSHOT;
+
 declare @tableCellId int = null
 
 select @tableCellId= id from tablecell where documentid = @DocumentId and offset = @Offset;
