@@ -22,7 +22,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 	        const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
-            const string pantheonQuery = @"SELECT 
+            const string pantheonQuery = @"
+select cusip,SecPermId,Value,Date,ItemName,STDCode,iconum,rank  from (
+SELECT 
                         t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank
 	                FROM (
 		                SELECT 
@@ -41,7 +43,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 								on p.CUSIP = stds.SecurityID and p.iconum = ds.CompanyID and p.Iconum > 0
 			            WHERE stds.SecurityId is not null and std.STDCode =  @stdCode AND ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d1.ExportFlag = 1
 	                ) t2
-                    ORDER BY t2.SecPermId, t2.rank
+                    --ORDER BY t2.SecPermId, t2.rank
 union 
 
 SELECT 
@@ -59,12 +61,12 @@ SELECT
 							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
 							join (Select distinct cusip, PermId, h.iconum from PpiIconumMapHistory h join #CompanyIds i on h.iconum = i.iconum) p
 								on p.CUSIP = stds.SecurityID and p.iconum = ds.CompanyID and p.Iconum > 0
-				            left joinSuperCore.MigrateToTemplates mts with (nolock) on mts.iconum = i.iconum
+				            left join SuperCore.MigrateToTemplates mts with (nolock) on mts.iconum = i.iconum
 			            WHERE ( mts.MigrationstatusId is null or mts.MigrationstatusId != 1) and   std.STDCode =  @stdCode AND ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d.ExportFlag = 1
 	                ) t2
-                    ORDER BY t2.SecPermId, t2.rank
+                    --ORDER BY t2.SecPermId, t2.rank
 
-
+)a order by a.SecPermId,a.rank
 ";
 
             // CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
