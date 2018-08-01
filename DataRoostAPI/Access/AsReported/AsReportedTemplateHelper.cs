@@ -1759,6 +1759,7 @@ AND tt.Description = @TableType
 AND NOT EXISTS(select CompanyFinancialTermId FROM TableCell tc
 				join DimensionToCell dtc on tc.id = dtc.TableCellID
 				WHERE tc.CompanyFinancialTermID = sh.CompanyFinancialTermID)
+AND NOT EXISTS(select top 1 Parentid from StaticHierarchy shchild where ParentID = sh.id)
 
 delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
 delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
