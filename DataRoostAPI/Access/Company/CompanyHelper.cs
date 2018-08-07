@@ -344,8 +344,15 @@ ORDER BY ChangeDate DESC";
 				}
 			}
 
-            // Voyager data is PPI based
-            if (voyagerIconums.Count > 0) {
+
+			var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => !y.ShareClassData.Any())).Select(y => y.Key).ToList();
+			if (superfastMissingDataIconums.Any()) {
+				var toBeChangedToVoyager = Whitelisted103_Iconums(superfastMissingDataIconums);
+				voyagerIconums.AddRange(toBeChangedToVoyager);
+			}
+
+			// Voyager data is PPI based
+			if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
 				Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
 					voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate, since);
@@ -404,8 +411,14 @@ ORDER BY ChangeDate DESC";
                 }
             }
 
-            // Voyager data is PPI based
-            if (voyagerIconums.Count > 0) {
+						var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => !y.ShareClassData.Any())).Select(y => y.Key).ToList();
+						if (superfastMissingDataIconums.Any()) {
+							var toBeChangedToVoyager = Whitelisted103_Iconums(superfastMissingDataIconums);
+							voyagerIconums.AddRange(toBeChangedToVoyager);
+						}
+
+						// Voyager data is PPI based
+						if (voyagerIconums.Count > 0) {
                 VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
                 Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
                     voyagerShares.GetAllFpeShareDataForStdCode(voyagerIconums, stdCode, reportDate, since);
@@ -697,6 +710,24 @@ join (
 				}
 			}
 			return result;
+		}
+
+		public List<int> Whitelisted103_Iconums(List<int> iconums) {
+			var result = new List<int>();
+			string query = @"SELECT Iconum FROM CompanyListCompanies WITH (NOLOCK) 
+												WHERE Companylistid=103 AND Iconum IN (@Iconums)";			
+			using (SqlConnection conn = new SqlConnection(_damConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@Iconums", String.Join(",", iconums));
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							result.Add(sdr.GetInt32(0));
+						}
+					}
+				}
+			}
+			return result;			
 		}
 	}
 
