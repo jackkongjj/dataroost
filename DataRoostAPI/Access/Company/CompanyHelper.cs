@@ -344,12 +344,8 @@ ORDER BY ChangeDate DESC";
 				}
 			}
 
-
-			var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => !y.ShareClassData.Any())).Select(y => y.Key).ToList();
-			if (superfastMissingDataIconums.Any()) {
-				var toBeChangedToVoyager = Whitelisted103_Iconums(superfastMissingDataIconums);
-				voyagerIconums.AddRange(toBeChangedToVoyager);
-			}
+			var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();
+			voyagerIconums.AddRange(superfastMissingDataIconums);
 
 			// Voyager data is PPI based
 			if (voyagerIconums.Count > 0) {
@@ -411,14 +407,11 @@ ORDER BY ChangeDate DESC";
                 }
             }
 
-						var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => !y.ShareClassData.Any())).Select(y => y.Key).ToList();
-						if (superfastMissingDataIconums.Any()) {
-							var toBeChangedToVoyager = Whitelisted103_Iconums(superfastMissingDataIconums);
-							voyagerIconums.AddRange(toBeChangedToVoyager);
-						}
+						var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();
+						voyagerIconums.AddRange(superfastMissingDataIconums);
 
 						// Voyager data is PPI based
-						if (voyagerIconums.Count > 0) {
+			if (voyagerIconums.Count > 0) {
                 VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
                 Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
                     voyagerShares.GetAllFpeShareDataForStdCode(voyagerIconums, stdCode, reportDate, since);
