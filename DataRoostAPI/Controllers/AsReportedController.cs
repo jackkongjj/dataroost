@@ -24,7 +24,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				message.From = mailFrom;
 				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
 				var leo = new MailAddress("lchang@factset.com", "Lun Jiang");
+				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
 				message.To.Add(ljiang);
+				message.To.Add(adam);
 				//message.To.Add(leo);
 				message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
