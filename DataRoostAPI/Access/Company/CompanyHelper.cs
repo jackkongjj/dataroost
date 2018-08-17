@@ -344,8 +344,8 @@ ORDER BY ChangeDate DESC";
 				}
 			}
 
-			var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();
-			voyagerIconums.AddRange(superfastMissingDataIconums);
+			var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();			
+			voyagerIconums.AddRange(superfastMissingDataIconums.Except(voyagerIconums));
 
 			// Voyager data is PPI based
 			if (voyagerIconums.Count > 0) {
@@ -408,7 +408,7 @@ ORDER BY ChangeDate DESC";
             }
 
 						var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();
-						voyagerIconums.AddRange(superfastMissingDataIconums);
+						voyagerIconums.AddRange(superfastMissingDataIconums.Except(voyagerIconums));
 
 						// Voyager data is PPI based
 			if (voyagerIconums.Count > 0) {
