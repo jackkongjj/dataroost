@@ -2,45 +2,111 @@
 <html lang="en-US">
 <link rel="stylesheet" type="text/css" href="app.css">
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 <body>
 
 <div ng-app="SCARApp" ng-controller="SCARController">
-    <button ng-click="stitchItem()">Stitch</button>
-    <button ng-click="unstitchItem()">UnStitch</button>
-	<button ng-click="flipsign()">Flip Sign</button>
+<fieldset>
+  <legend>
+  Input Form
+  </legend>
+  <input id="searchIconum" placeholder="Search Iconum">
+  <input id ="searchTemplate" placeholder="NG-IS"><button ng-click="submit()">Submit</button>
+  <br/>
+    Current Iconum: 
+    <span>{{currIconum}}</span> <br/>
+	Current Template:
+	<span>{{currTemplate}}</span> <br/> <br/>
+  </fieldset>
+  <br><br>
+  
 
+  <br><br>
+  
   <table>
       <tr>
-          <td></td>
-          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'shortDate' }}<br>{{ z.PeriodType }}</td>
+		<td colspan="2">
+		  <fieldset>
+		  <legend>
+		  Product View
+		  </legend>
+			<button ng-click="showAnnual()">Annual</button>
+			<button ng-click="showAnnual()">Quarter</button>
+			<button ng-click="showAnnual()">All</button>
+		  </fieldset>
+		  <fieldset>
+		  <legend>
+		  Filter
+		  </legend>
+			<button ng-click="showAnnual()">Org</button>
+			<button ng-click="showAnnual()">Recap</button>
+			<button ng-click="showAnnual()">FYE</button>
+		  </fieldset>
+		</td>
+		
+		  <td align="right">
+		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
+		  </td>
+          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'shortDate' }}<br>{{ z.PeriodType }}<br>
+			{{ z.PublicationDate | date: 'shortDate' }}<br>{{ z.IsRecap }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
+			<br>&nbsp;<br>{{$index + 1}}<br>
+		  </td>
       </tr>
+	      <tr>
+    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" value="false">Reverse Data Representation</td>
+    <td colspan="999">All figures in millions except per share items. </td>
+    </tr>
     <tr ng-repeat="x in staticHierarchies">
-      <td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}</td>
-        <td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
-            <div ng-if="y.ARDErrorTypeId != null" id="rectangle"></div>
-            {{ y.displayValue | number }}
-            <div ng-if="y.MTMWErrorTypeId != null" class="mtmwPass"><strong>&#8800;</strong></div>
-            <div ng-if="y.MTMWValidationFlag == true" class="mtmwFail"><strong>&#8800;</strong></div>
-        </td>
+		<td colspan="3" ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+		</td>
+	 
+		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
+			<div ng-if="y.ARDErrorTypeId != null" id="rectangle"></div>
+			{{ y.displayValue | number }}
+			<div ng-if="y.MTMWErrorTypeId != null" class="mtmwPass"><strong>&#8800;</strong></div>
+			<div ng-if="y.MTMWValidationFlag == true" class="mtmwFail"><strong>&#8800;</strong></div>
+		</td>
     </tr>
   </table>
+
+	
   <br/>
-    Selected Rows: 
-    <span>{{selectedRows}}</span> <br/>
-	Selected Cells:
-	<span>{{selectedCells}}</span>
+  
+
+
+  	<!--  
+     <button ng-click="stitchItem()">Stitch</button>
+    <button ng-click="unstitchItem()">UnStitch</button>
+	<button ng-click="flipsign()">Flip Sign</button> -->
+	
 </div>
 
 
 <script>
   var app = angular.module('SCARApp', []);
   app.controller('SCARController', function($scope, $http) {
-    $http.get("http://localhost:61581/api/v1/companies/36468/efforts/asreported/templates/IS/E6059509-1F34-DE11-9566-0019BB2A8F9C")
-            .then(function (response) {$scope.staticHierarchies = response.data.StaticHierarchies;
+    $http.get("http://localhost:61581/api/v1/companies/28029/efforts/asreported/productview/NG-IS")
+            .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;});
 
       $scope.getNumber = function(num) {
           return new Array(num);
+      };
+	  $scope.selectedRows = [];
+	  $scope.selectedCells = [];
+	  $scope.currIconum = 28029;
+	  $scope.currTemplate = 'NG-IS';
+	  $scope.submit = function () {
+		var currIconum = $( "#searchIconum" ).val();
+	    $scope.currIconum = currIconum;
+		var currTemplate = $( "#searchTemplate" ).val();
+		if (currTemplate.length > 0)
+		{
+			$scope.currTemplate = currTemplate;
+		}
+		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate)
+            .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
+            $scope.timeSlices = response.data.TimeSlices;});
       };
       $scope.stitchItem = function () {
           if ($scope.selectedRows.length > 1) {
@@ -90,8 +156,7 @@
 			  $scope.selectedCells = [];
           }
       };
-      $scope.selectedRows = [];
-	  $scope.selectedCells = [];
+
       $scope.rowClick = function(staticHierarchy) {
 
 

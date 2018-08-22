@@ -258,6 +258,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("productview/{TemplateName}")]
+		[HttpGet]
+		public ScarResult GetProductTemplate(string CompanyId, string TemplateName) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetProductViewInScarResult(iconum, TemplateName);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+				return null;
+			}
+		}
+
 		[Route("templates/{TemplateName}/{DocumentId}/copyhierarchy")]
 		[HttpPost]
 		public ScarResult CopyDocumentHierarchy(string CompanyId, string TemplateName, Guid DocumentId, StringInput input) {
