@@ -30,17 +30,19 @@
 		  <legend>
 		  Product View
 		  </legend>
-			<button ng-click="showAnnual()">Annual</button>
-			<button ng-click="showAnnual()">Quarter</button>
-			<button ng-click="showAnnual()">All</button>
+			<button ng-click="showAnnual()">ANNUAL</button>
+			<button ng-click="showAnnual()">QTR</button>
+			<button ng-click="showAnnual()">ALL</button>
 		  </fieldset>
 		  <fieldset>
 		  <legend>
 		  Filter
 		  </legend>
-			<button ng-click="showAnnual()">Org</button>
-			<button ng-click="showAnnual()">Recap</button>
-			<button ng-click="showAnnual()">FYE</button>
+			<button ng-click="showAnnual()">ORG</button>
+			<button ng-click="showAnnual()">RECAP</button>
+			
+			<select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"> 
+			</select>
 		  </fieldset>
 		</td>
 		
@@ -85,7 +87,8 @@
 <script>
   var app = angular.module('SCARApp', []);
   app.controller('SCARController', function($scope, $http) {
-    $http.get("http://localhost:61581/api/v1/companies/28029/efforts/asreported/productview/NG-IS")
+    $http.get("http://localhost:61581/api/v1/companies/28029/efforts/asreported/productview/NG-IS", 
+		{params: {"reverseRepresentation": "T", "filterPeriod":"QTR", "filterRecap":"RECAP", "filterYear" :"2017"}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;});
 
@@ -94,6 +97,8 @@
       };
 	  $scope.selectedRows = [];
 	  $scope.selectedCells = [];
+	  $scope.selectedYear = "YEARS";
+	  $scope.yearlist = [ "YEARS", "2017", "2016"];
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.submit = function () {
@@ -104,10 +109,20 @@
 		{
 			$scope.currTemplate = currTemplate;
 		}
+		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+		{"StringData": {"reverseRepresentation": "T", "filterPeriod":"QTR", "filterRecap":"RECAP", "filterYear" :"2017"}})
+            .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
+            $scope.timeSlices = response.data.TimeSlices;});
+      };
+	  
+	  $scope.updateYear = function () {
+		var currYear = $scope.selectedYear;
+		alert(currYear);
 		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate)
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;});
       };
+	  
       $scope.stitchItem = function () {
           if ($scope.selectedRows.length > 1) {
               var targetRow = $scope.selectedRows[0];

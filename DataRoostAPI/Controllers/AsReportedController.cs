@@ -260,12 +260,30 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
-		public ScarResult GetProductTemplate(string CompanyId, string TemplateName) {
+		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "", string filterPeriod = "", string filterRecap = "", string filterYear="") {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
 					return null;
-
+				//string reverseRepresentation = "F";
+				//string filterPeriod = "ANNUAL";
+				//string filterRecap = "ORG";
+				//string filterYear = "YEARS";
+				//if (param != null && param.StringData != null && param.StringData.Count < 1) {
+				//	var dict = param.StringData;
+				//	if (dict.ContainsKey("reverseRepresentation")) {
+				//		reverseRepresentation = dict["reverseRepresentation"];
+				//	}
+				//	if (dict.ContainsKey("filterPeriod")) {
+				//		filterPeriod = dict["filterPeriod"];
+				//	}
+				//	if (dict.ContainsKey("filterRecap")) {
+				//		filterRecap = dict["filterRecap"];
+				//	}
+				//	if (dict.ContainsKey("filterYear")) {
+				//		filterYear = dict["filterYear"];
+				//	}
+				//}
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetProductViewInScarResult(iconum, TemplateName);
@@ -1432,7 +1450,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public class StringInput {
 			public string StringData { get; set; }
 		}
-
+		public class StringDictionary {
+			public Dictionary<string, string> StringData { get; set; }
+		}
 
 		[Route("documents/{damdocumentId}")]
 		[HttpPut]

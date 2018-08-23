@@ -691,9 +691,11 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							DamDocumentId = row[21].AsGuid(),
 							PeriodNoteID = row[22].AsByteNullable()
 						};
-
+						DateTime lastValidDatetime = DateTime.Now;
+						if (!slice.IsRecap || slice.TimeSlicePeriodEndDate == lastValidDatetime) {
+							continue;
+						}
 						TimeSlices.Add(slice);
-
 						Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
 						if (!TimeSliceMap.ContainsKey(tup)) {
 							TimeSliceMap.Add(tup, new List<int>());
