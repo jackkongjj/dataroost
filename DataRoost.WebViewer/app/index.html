@@ -31,15 +31,15 @@
 		  Product View
 		  </legend>
 			<button ng-click="showAnnual()">ANNUAL</button>
-			<button ng-click="showAnnual()">QTR</button>
-			<button ng-click="showAnnual()">ALL</button>
+			<button ng-click="showQtr()">QTR</button>
+			<button ng-click="showAll()">ALL</button>
 		  </fieldset>
 		  <fieldset>
 		  <legend>
 		  Filter
 		  </legend>
-			<button ng-click="showAnnual()">ORG</button>
-			<button ng-click="showAnnual()">RECAP</button>
+			<button ng-click="showOrg()">ORG</button>
+			<button ng-click="showRecap()">RECAP</button>
 			
 			<select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"> 
 			</select>
@@ -49,13 +49,13 @@
 		  <td align="right">
 		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
 		  </td>
-          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'shortDate' }}<br>{{ z.PeriodType }}<br>
-			{{ z.PublicationDate | date: 'shortDate' }}<br>{{ z.IsRecap }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
+          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
+			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
 			<br>&nbsp;<br>{{$index + 1}}<br>
 		  </td>
       </tr>
 	      <tr>
-    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" value="false">Reverse Data Representation</td>
+    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" ng-model="reverseRepresentation" ng-change="updateReverseRepresentation()">Reverse Data Representation</td>
     <td colspan="999">All figures in millions except per share items. </td>
     </tr>
     <tr ng-repeat="x in staticHierarchies">
@@ -63,10 +63,7 @@
 		</td>
 	 
 		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
-			<div ng-if="y.ARDErrorTypeId != null" id="rectangle"></div>
 			{{ y.displayValue | number }}
-			<div ng-if="y.MTMWErrorTypeId != null" class="mtmwPass"><strong>&#8800;</strong></div>
-			<div ng-if="y.MTMWValidationFlag == true" class="mtmwFail"><strong>&#8800;</strong></div>
 		</td>
     </tr>
   </table>
@@ -87,20 +84,19 @@
 <script>
   var app = angular.module('SCARApp', []);
   app.controller('SCARController', function($scope, $http) {
-    $http.get("http://localhost:61581/api/v1/companies/28029/efforts/asreported/productview/NG-IS", 
-		{params: {"reverseRepresentation": "T", "filterPeriod":"QTR", "filterRecap":"RECAP", "filterYear" :"2017"}})
-            .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
-            $scope.timeSlices = response.data.TimeSlices;});
-
-      $scope.getNumber = function(num) {
-          return new Array(num);
-      };
+	  refresh();
+	  
 	  $scope.selectedRows = [];
 	  $scope.selectedCells = [];
-	  $scope.selectedYear = "YEARS";
-	  $scope.yearlist = [ "YEARS", "2017", "2016"];
+
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
+	  $scope.reverseRepresentation = "false";
+	  $scope.filterPeriod = "ANNUAL";
+	  $scope.filterRecap = "ORG";
+	  $scope.selectedYear = "YEARS";
+	  $scope.yearlist = [ "YEARS", "2017", "2016"];
+	  
 	  $scope.submit = function () {
 		var currIconum = $( "#searchIconum" ).val();
 	    $scope.currIconum = currIconum;
@@ -117,65 +113,41 @@
 	  
 	  $scope.updateYear = function () {
 		var currYear = $scope.selectedYear;
-		alert(currYear);
-		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate)
+		refresh();
+      };
+	  
+	  $scope.showAnnual = function () {
+		$scope.filterPeriod = "ANNUAL";
+		refresh();
+      };
+	  $scope.showQtr = function () {
+		$scope.filterPeriod = "QTR";
+		refresh();
+      };
+	  $scope.showAll = function () {
+		$scope.filterPeriod = "ALL";
+		refresh();
+      };
+	  $scope.showOrg = function () {
+		$scope.filterRecap = "ORG";
+		refresh();
+      };
+	  $scope.showRecap = function () {
+		$scope.filterRecap = "RECAP";
+		refresh();
+      };
+	  $scope.updateReverseRepresentation = function () {
+		refresh();
+      };
+	  function refresh() {
+	  		
+              $http.get("http://localhost:61581/api/v1/companies/28029/efforts/asreported/productview/NG-IS", 
+		{params: {"reverseRepresentation": "T", "filterPeriod":"QTR", "filterRecap":"RECAP", "filterYear" :"2017"}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;});
       };
 	  
-      $scope.stitchItem = function () {
-          if ($scope.selectedRows.length > 1) {
-              var targetRow = $scope.selectedRows[0];
-              $scope.selectedRows.splice(0, 1);
-
-              var tempArray = $scope.selectedRows.slice();
-              //252876
-              $http.post("http://localhost:61581/api/v1/companies/36468/efforts/asreported/templates/IS/stitch/E6059509-1F34-DE11-9566-0019BB2A8F9C/",
-                      {"TargetStaticHierarchyID": targetRow, "StitchingStaticHierarchyIDs": $scope.selectedRows})
-                      .then(function (response) {
-                          insertStitchData($scope.staticHierarchies, $scope.timeSlices, response.data, tempArray, $scope);
-                      });
-
-              $scope.selectedRows = [];
-			  $scope.selectedCells = [];
-          }
-      };
-      $scope.unstitchItem = function () {
-          if($scope.selectedRows.length == 1) {
-              var targetRow = $scope.selectedRows[0];
-              $http.post("http://localhost:61581/api/v1/companies/36468/efforts/asreported/templates/IS/unstitch/E6059509-1F34-DE11-9566-0019BB2A8F9C/",
-                      {"TargetStaticHierarchyID": targetRow})
-                      .then(function (response) {
-                          insertUnStitchData($scope.staticHierarchies, $scope.timeSlices, targetRow, response.data, $scope);
-                      });
-
-              $scope.selectedRows = [];
-			  $scope.selectedCells = [];
-          }
-      };
-      $scope.flipsign = function () {
-          if($scope.selectedCells.length >= 1) {
-              var targetCell = $scope.selectedCells[0];
-				for (var i = 0; i < $scope.selectedCells.length; i++) {
-					$scope.selectedCells[i].clicked = false;
-				}
-			  var oldurl = "http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/229550945/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/"
-			  var url = "http://localhost:61581/api/v1/companies/36468/efforts/asreported/cells/" + targetCell + "/flipsign/E6059509-1F34-DE11-9566-0019BB2A8F9C/"
-              $http.post(url,
-                      {"TargetStaticHierarchyID": targetCell})
-                      .then(function (response) {
-                          insertScarData($scope.staticHierarchies, $scope.timeSlices, 0, targetCell, response.data, $scope);
-                      });
-
-              $scope.selectedRows = [];
-			  $scope.selectedCells = [];
-          }
-      };
-
       $scope.rowClick = function(staticHierarchy) {
-
-
-
           if($scope.selectedRows.indexOf(staticHierarchy.id) > -1)
               $scope.selectedRows.splice( $scope.selectedRows.indexOf(staticHierarchy.id), 1 );
           else
@@ -206,44 +178,6 @@
           $scope.$digest();
       }
   });
-
-    function insertScarData(staticHierarchies, timeSlices, rowId, cellId, update, $scope) {
-      <!-- if (rowId > 0) {    -->
-		  <!-- for (var s = 0; s < staticHierarchies.length; s++) { -->
-			  <!-- var mtmw = update.parentMTMWChanges[staticHierarchies[s].id]; -->
-			  <!-- if (typeof mtmw != 'undefined') { -->
-				  <!-- for(var t = 0; t < timeSlices.length; t++){ -->
-					  <!-- var ts = mtmw[timeSlices[t].Id]; -->
-					  <!-- if(typeof ts != 'undefined'){ -->
-						  <!-- staticHierarchies[s].cells[t].MTMWValidationFlag = ts; -->
-					  <!-- } -->
-				  <!-- } -->
-			  <!-- } -->
-		  <!-- } -->
-	  <!-- } -->
-	  <!-- if (cellId > 0) -->
-	  <!-- { -->
-		  <!-- for (var s = 0; s < staticHierarchies.length; s++) { -->
-				  <!-- for(var t = 0; t < timeSlices.length; t++){ -->
-					 <!-- if (staticHierarchies[s].cells[t]._id == cellId) -->
-					 <!-- { -->
-						<!-- staticHierarchies[s].cells[t].displayValue *= -1; -->
-					 <!-- } -->
-				<!-- } -->
-			<!-- } -->
-	  <!-- } -->
-	  for (var i = 0; i < update.changedCells.length; i++) {
-		  for (var s = 0; s < staticHierarchies.length; s++) {
-				  for(var t = 0; t < timeSlices.length; t++){
-					 if (staticHierarchies[s].cells[t]._id == update.changedCells[i]._id)
-					 {
-						staticHierarchies[s].cells[t] = update.changedCells[i];
-					 }
-				}
-			}
-	  }
-	  $scope.$digest();
-  }
   
   function insertUnStitchData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
       var shix = 0;
