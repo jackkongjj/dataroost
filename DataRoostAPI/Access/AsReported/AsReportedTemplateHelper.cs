@@ -476,15 +476,15 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return temp;
 		}
 
-		public ScarResult GetProductViewInScarResult(int iconum, string TemplateName) {
+		public ScarResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName);
+			AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
 		}
 
-		public AsReportedTemplate GetProductView(int iconum, string TemplateName) {
+		public AsReportedTemplate GetProductView(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -493,7 +493,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			AsReportedTemplate temp = new AsReportedTemplate();
 			try {
 				temp.Message = "Start." + DateTime.UtcNow.ToString();
-				string query_sproc = @"SCARGetProductViewAnnual";
+				string query_sproc = @"SCARGetProductView";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -509,6 +509,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						cmd.Parameters.AddWithValue("@reverseRepresentation", reverseRepresentation != "false" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
+						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "RECAP" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@filterYear", filterYear);
 						conn.Open();
 						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
 						//using (DataTable dt = new DataTable()) {
@@ -648,6 +652,9 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
 
 								if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
+									if (currSh.UnitTypeId == 2) {
+										cell.ScalingFactorValue *= 100000;
+									}
 									currSh.Cells.Add(cell);
 								} else {
 									throw new Exception();

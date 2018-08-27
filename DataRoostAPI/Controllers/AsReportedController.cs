@@ -260,7 +260,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
-		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "F", string filterPeriod = "ANNUAL", string filterRecap = "ORG", string filterYear = "YEARS") {
+		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ANNUAL", string filterRecap = "ORG", string filterYear = "YEARS") {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
@@ -286,7 +286,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				//}
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetProductViewInScarResult(iconum, TemplateName);
+				return helper.GetProductViewInScarResult(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 			} catch (Exception ex) {
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
 				return null;
