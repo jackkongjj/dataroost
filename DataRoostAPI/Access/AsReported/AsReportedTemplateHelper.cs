@@ -527,6 +527,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				}
 				#region In-Memory Processing
 				temp.Message += "Filled." + DateTime.UtcNow.ToString();
+				#region StaticHierarchy
 				var shTable = dataSet.Tables[0];
 				if (shTable != null) {
 					temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
@@ -562,6 +563,9 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						}
 					}
 				}
+				#endregion
+
+				#region Table Cells
 				var cellTable = dataSet.Tables[1];
 				temp.Message += "Cells." + DateTime.UtcNow.ToString();
 				temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString();
@@ -664,6 +668,9 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					}
 					#endregion
 				}
+				#endregion
+
+				#region TimeSlices
 				var timesliceTable = dataSet.Tables[2];
 				temp.Message += "TimeSlice." + DateTime.UtcNow.ToString();
 				temp.TimeSlices = new List<TimeSlice>();
@@ -698,10 +705,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							DamDocumentId = row[21].AsGuid(),
 							PeriodNoteID = row[22].AsByteNullable()
 						};
-						DateTime lastValidDatetime = DateTime.Now;
-						if (!slice.IsRecap || slice.TimeSlicePeriodEndDate == lastValidDatetime) {
-							continue;
-						}
+						//DateTime lastValidDatetime = DateTime.Now;
+						//if (!slice.IsRecap || slice.TimeSlicePeriodEndDate == lastValidDatetime) {
+						//	continue;
+						//}
 						TimeSlices.Add(slice);
 						Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
 						if (!TimeSliceMap.ContainsKey(tup)) {
@@ -720,6 +727,9 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					}
 					#endregion
 				}
+				#endregion
+
+				#region IsSummary
 				var issummaryTable = dataSet.Tables[3];
 				temp.Message += "IsSummary." + DateTime.UtcNow.ToString();
 				if (issummaryTable != null) {
@@ -736,8 +746,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						IsSummaryLookup[TimeSliceID].Add(row[1].AsString());
 					}
 				}
+				#endregion
 
 				temp.Message += "Calculate.";
+				#region Calculating virtual cells
 				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
 
 					if (!sh.ParentID.HasValue) {
@@ -762,36 +774,6 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
 								tc.VirtualValueNumeric = calcChildSum;
 							}
-
-
-							//bool whatever = false;
-							//decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
-
-							//List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
-
-							//if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
-							//) {
-							//	tc.LikePeriodValidationFlag = true;
-							//	tc.StaticHierarchyID = sh.Id;
-							//	tc.DocumentTimeSliceID = ts.Id;
-							//}
-
-							//bool ChildrenSumEqual = false;
-							//if (!tc.ValueNumeric.HasValue || !hasValidChild)
-							//	ChildrenSumEqual = true;
-							//else {
-							//	decimal diff = cellValue - calcChildSum;
-							//	diff = Math.Abs(diff);
-
-							//	if (tc.ScalingFactorValue == 1.0)
-							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
-							//	else
-							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
-							//}
-
-							//tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
-							//		!ChildrenSumEqual &&
-							//				!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
 
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
@@ -850,6 +832,12 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						}
 					}
 				}
+				#endregion
+
+				List<String> preferences = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
+	 //		 IEnumerable<String> orderedData = data.OrderBy(
+	 //item => preferences.IndexOf(item));
+				temp.StaticHierarchies = StaticHierarchies.OrderBy(s => preferences.IndexOf(s.StaticHierarchyMetaType)).Where(x => !string.IsNullOrWhiteSpace(x.StaticHierarchyMetaType)).ToList();
 				temp.Message += "Finished.";
 				#endregion
 			} catch (Exception ex) {

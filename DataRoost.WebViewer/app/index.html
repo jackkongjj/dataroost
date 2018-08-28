@@ -59,9 +59,10 @@
     <td colspan="999">All figures in millions except per share items. </td>
     </tr>
     <tr ng-repeat="x in staticHierarchies">
-		<td colspan="3" ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+		<td>{{ x.staticHierarchyMetaType }}</td>
+		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
 		</td>
-	 
+	 <td></td>
 		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
 			{{ formatNumber(y.displayValue) | number }}
 		</td>
@@ -98,9 +99,9 @@
 	  refresh();
 		  
 	  $scope.submit = function () {
-		var currIconum = $( "#searchIconum" ).val();
+		var currIconum = $( "#searchIconum" ).val().trim();
 	    $scope.currIconum = currIconum;
-		var currTemplate = $( "#searchTemplate" ).val();
+		var currTemplate = $( "#searchTemplate" ).val().trim();
 		if (currTemplate.length > 0)
 		{
 			$scope.currTemplate = currTemplate;
