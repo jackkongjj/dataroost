@@ -534,9 +534,6 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				#region In-Memory Processing
 				temp.Message += "Filled." + DateTime.UtcNow.ToString();
 				#region StaticHierarchy
-				int virtualRowId = -1000;
-				int currentVirtualRow = -1000;
-				Dictionary<String, int> SHVirtualRows = new Dictionary<string, int>();
 				var shTable = dataSet.Tables[0];
 				if (shTable != null) {
 					temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
@@ -561,24 +558,6 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						shs.Cells = new List<SCARAPITableCell>();
 						StaticHierarchies.Add(shs);
 
-						if (!string.IsNullOrEmpty(shs.StaticHierarchyMetaType)) {
-							if (!SHVirtualRows.ContainsKey(shs.StaticHierarchyMetaType)) {
-								if (HierarchyMetaDescription.ContainsKey(shs.StaticHierarchyMetaType)) {
-									SHVirtualRows[shs.StaticHierarchyMetaType] = --virtualRowId;
-									StaticHierarchy vshs = new StaticHierarchy
-									{
-										Id = virtualRowId,
-										Description = HierarchyMetaDescription[shs.StaticHierarchyMetaType]
-									};
-									vshs.StaticHierarchyMetaType = shs.StaticHierarchyMetaType;
-									vshs.Cells = new List<SCARAPITableCell>();
-									StaticHierarchies.Add(vshs);
-								}
-							} else {
-								currentVirtualRow = SHVirtualRows[shs.StaticHierarchyMetaType];
-							}
-
-						}
 						SHLookup.Add(shs.Id, shs);
 						if (!SHChildLookup.ContainsKey(shs.Id))
 							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
@@ -779,7 +758,6 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				temp.Message += "Calculate.";
 				#region Calculating virtual cells
 				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
-					if (sh.Id < -1000) continue;
 					if (!sh.ParentID.HasValue) {
 						sh.Level = 0;
 					}
@@ -861,17 +839,33 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					}
 				}
 				#endregion
-				for (int i = 0; i < HierarchyMetaOrderPreference.Count; i++) {
-					var t = HierarchyMetaOrderPreference[i];
-				}
-
 				temp.StaticHierarchies = StaticHierarchies.OrderBy(s => HierarchyMetaOrderPreference.IndexOf(s.StaticHierarchyMetaType)).ThenBy(x => x.Id).Where(x => !string.IsNullOrWhiteSpace(x.StaticHierarchyMetaType)).ToList();
-				foreach (var sh in temp.StaticHierarchies) {
-					if (sh.Id > 0) {
-						sh.StaticHierarchyMetaType = null;
+				List<LineItem> lines = new List<LineItem>();
+				foreach (var sl in temp.StaticHierarchies) {
+					if (HierarchyMetaEndlines.IndexOf(sl.StaticHierarchyMetaType) >= 0) {
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						if (li == null) {
+							li = new LineItem();
+							li.MetaType = sl.StaticHierarchyMetaType;
+							lines.Add(li);
+						}
+						li.StaticHierarchies.Add(sl);
+					} else {
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						if (li == null) {
+							li = new MiddleLineItem();
+							li.MetaType = sl.StaticHierarchyMetaType;
+							lines.Add(li);
+						}
+						li.StaticHierarchies.Add(sl);
 					}
 				}
 				temp.Message += "Finished.";
+				List<StaticHierarchy> newStaticHierarchies = new List<StaticHierarchy>();
+				foreach (var li in lines) {
+					newStaticHierarchies.AddRange(li.Convert());
+				}
+				temp.StaticHierarchies = newStaticHierarchies;
 				#endregion
 			} catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
@@ -882,17 +876,30 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			public List<StaticHierarchy> StaticHierarchies = new List<StaticHierarchy>();
 			public string MetaType = "";
 			public virtual List<StaticHierarchy> Convert() {
-				List<StaticHierarchy> newShs = new List<StaticHierarchy>();
-				return newShs;
+				return StaticHierarchies;
+				//List<StaticHierarchy> newShs = new List<StaticHierarchy>();
+				//return newShs;
 			}
 		}
 
 		public class MiddleLineItem : LineItem {
 			public override List<StaticHierarchy> Convert() {
 				List<StaticHierarchy> newShs = new List<StaticHierarchy>();
+				StaticHierarchy shs = new StaticHierarchy
+						{
+							Id = -1000,
+							StaticHierarchyMetaType = MetaType
+						};
+				shs.Description = HierarchyMetaDescription[MetaType];
+				newShs.Add(shs);
+				foreach (var s in StaticHierarchies) {
+					s.StaticHierarchyMetaType = "";
+					newShs.Add(s);
+				}
 				return newShs;
 			}
 		}
+		static List<String> HierarchyMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
 		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>()
 		{
