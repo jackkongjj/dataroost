@@ -891,14 +891,41 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							StaticHierarchyMetaType = MetaType
 						};
 				shs.Description = HierarchyMetaDescription[MetaType];
+				shs.Cells = new List<SCARAPITableCell>();
 				newShs.Add(shs);
+				bool isFirst = true;
 				foreach (var s in StaticHierarchies) {
 					s.StaticHierarchyMetaType = "";
 					newShs.Add(s);
+					for (int i = 0; i < s.Cells.Count; i++ ) {
+						if (isFirst) {
+							var newCell = new SCARAPITableCell()
+							{
+								ID = 0,
+								ScalingFactorValue = 1.0,
+								IsIncomePositive = true,
+								VirtualValueNumeric = null
+							};
+							if (s.Cells[i].DisplayValue.HasValue) {
+								newCell.VirtualValueNumeric = s.Cells[i].DisplayValue;
+							}
+							shs.Cells.Add(newCell);
+						} else {
+							if (s.Cells[i].DisplayValue.HasValue) {
+								if (shs.Cells[i].VirtualValueNumeric == null) {
+									shs.Cells[i].VirtualValueNumeric = s.Cells[i].DisplayValue;
+								} else {
+									shs.Cells[i].VirtualValueNumeric += s.Cells[i].DisplayValue;
+								}
+							}
+						}
+					}
+					isFirst = false;
 				}
 				return newShs;
 			}
 		}
+
 		static List<String> HierarchyMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
 		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>()

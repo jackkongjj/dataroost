@@ -60,7 +60,8 @@
     </tr>
     <tr ng-repeat="x in staticHierarchies">
 		<td>{{ x.staticHierarchyMetaType }}</td>
-		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span><span ng-if="x.id < 0" ><font size="1">&#9698;</font>&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+
 		</td>
 	 <td></td>
 		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
@@ -97,7 +98,10 @@
 	  $scope.yearlist = [ "YEARS", "2017", "2016"];
 	  
 	  refresh();
-		  
+	  
+	        $scope.getNumber = function(num) {
+          return new Array(num);
+      };
 	  $scope.submit = function () {
 		var currIconum = $( "#searchIconum" ).val().trim();
 	    $scope.currIconum = currIconum;
