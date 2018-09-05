@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="en-US">
-<link rel="stylesheet" type="text/css" href="app.css">
-<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<link rel="stylesheet" href="./bower_components/angular-ui-grid/ui-grid.css" />    
+<script src="bower_components/angular/angular.js"></script>
+<script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+<script src="./bower_components/angular-ui-grid/ui-grid.js"></script>
+<link rel="stylesheet" type="text/css" href="app.css">    
 <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 <body>
 
@@ -20,7 +23,15 @@
   </fieldset>
   <br><br>
   
+  <div  id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning class ="grid"></div>
 
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
   <br><br>
   
   <table>
@@ -60,8 +71,7 @@
     </tr>
     <tr ng-repeat="x in staticHierarchies">
 		<td>{{ x.staticHierarchyMetaType }}</td>
-		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span><span ng-if="x.id < 0" ><font size="1">&#9698;</font>&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
-
+		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
 		</td>
 	 <td></td>
 		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
@@ -84,24 +94,22 @@
 
 
 <script>
-  var app = angular.module('SCARApp', []);
-  app.controller('SCARController', function($scope, $http) {	  
+  var app = angular.module('SCARApp',['ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning']);
+  app.controller('SCARController', function($scope, $http,uiGridConstants) {	  
 	  $scope.selectedRows = [];
 	  $scope.selectedCells = [];
-
+      $scope.columnDefs = [];
+      $scope.data = [];
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
 	  $scope.filterPeriod = "ANNUAL";
 	  $scope.filterRecap = "RECAP";
 	  $scope.selectedYear = "YEARS";
-	  $scope.yearlist = [ "YEARS", "2017", "2016"];
-	  
-	  refresh();
-	  
-	        $scope.getNumber = function(num) {
-          return new Array(num);
-      };
+      $scope.yearlist = [ "YEARS", "2017", "2016"];
+      
+      refresh();
+      
 	  $scope.submit = function () {
 		var currIconum = $( "#searchIconum" ).val().trim();
 	    $scope.currIconum = currIconum;
@@ -113,14 +121,25 @@
 		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
 		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
-            $scope.timeSlices = response.data.TimeSlices;});
-      };
-	  
-	  $scope.updateYear = function () {
+            $scope.timeSlices = response.data.TimeSlices;
+            refresh();});
+        };
+                    
+      $scope.updateYear = function () {
 		var currYear = $scope.selectedYear;
 		refresh();
       };
 	  
+    $scope.gridOptions = { 
+        columnDefs: $scope.columnDefs, 
+        data: $scope.data,
+        enablePinning: true,
+        showTreeExpandNoChildren: false,
+        enableHorizontalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
+        enableVerticalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
+        onRegisterApi: function(gridApi) 
+        { $scope.gridApi = gridApi;} 
+      };  
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
 		refresh();
@@ -144,13 +163,87 @@
 	  $scope.updateReverseRepresentation = function () {
 		refresh();
       };
+  
 	  
-	  
-	  function refresh() {
+	  function refresh() {	  		
+        $scope.data.length = 0;            //clearing out the array
+        $scope.columnDefs.length = 0;      //clearing out the array      
         $http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
 		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
-            $scope.timeSlices = response.data.TimeSlices;});
+            $scope.timeSlices = response.data.TimeSlices;
+            $scope.columnDefs.push(
+                
+                {
+                    name: "staticHierarchyMetaType",
+                    width:100,
+                    pinnedLeft: true,
+                    displayName: "",
+                    headerCellTemplate:"<div></div>",
+                    cellClass : 'metaType'
+                },
+                {
+                    name: "Description",
+                    width: 700,
+                    pinnedLeft: true,
+                    cellClass: function(grid,row) {
+                            if (row.entity.id == -1000)
+                                return 'virtualParent'
+                            else if (row.treeLevel > 0)
+                                return 'child'
+                            else
+                                return 'parent'
+                        },
+                    headerCellTemplate:    '<div style="text-align: right">Period End Date</div></br>' + 
+                                           '<div style="text-align: right">Time Series</div></br>' +
+                                           '<div style="text-align: right">Publication Date</div></br>' +
+                                           '<div style="text-align: right">Account Type</div></br>' +
+                                           '<div style="text-align: right">Form Type</div></br>' +
+                                           '<div style="text-align: right">Period Length</div></br>' +
+                                           '<div style="text-align: right">Currency Type</div></br>'
+                });
+                for(var ts in $scope.timeSlices){
+                    $scope.columnDefs.push({
+                        name: $scope.timeSlices[ts].Id,
+                        width: 125,
+                        cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
+                            if (grid.getCellValue(row,col) >= 0)
+                                return 'positive'
+                            else
+                                return 'negative'
+                        },
+                        headerCellTemplate : '<div style="text-align: center">{{"' + $scope.timeSlices[ts].TimeSlicePeriodEndDate  + '"| date:"dd-MMM-yyyy"}}</div></br>' +
+                                             '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PeriodType +'" == "XX" ? "AR" : "'+ $scope.timeSlices[ts].PeriodType +'"}}</div></br>' +
+                                             '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PublicationDate + '"| date:"MMM-yyyy"}}</div></br>' +
+                                             '<div style="text-align: center">{{' + $scope.timeSlices[ts].IsRecap + ' ? "RECAP" : "ORIGINAL"}}</div></br>' +
+                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].ReportType +'</div></br>' +
+                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].Duration +'</div></br>' +
+                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].AccountingStandard +'</div></br>',
+                                            }); 
+                }
+
+                for(var sh in $scope.staticHierarchies){
+                    var row = [];
+                    row["id"] = $scope.staticHierarchies[sh].id;
+                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription;
+                    row["staticHierarchyMetaType"] = $scope.staticHierarchies[sh].staticHierarchyMetaType;
+                    row["parentId"] = $scope.staticHierarchies[sh].parentId;
+                    if(!$scope.staticHierarchies[sh].staticHierarchyMetaType == "")
+                        row["$$treeLevel"] = 0;
+                    else
+                        row["$$treeLevel"] = $scope.staticHierarchies[sh].level;
+                    for(var ts in $scope.timeSlices){
+                        if($scope.staticHierarchies[sh].id == -1000)
+                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].virtualValueNumeric/100000;
+                        else
+                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].displayValue/100000;
+                    }
+                    $scope.data.push(row);
+                }
+                $scope.gridApi.core.refresh();
+            });
+            
+    
       };
 	  
 	  $scope.formatNumber = function(num){
@@ -216,7 +309,7 @@
       }
       $scope.$digest();
   }
-
+  
   function insertStitchData(staticHierarchies, timeSlices, update, deleteRows, $scope) {
       var shix = 0;
       for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
@@ -250,8 +343,8 @@
               }
           }
       }
-  }
-</script>
+  }  
+ </script>
 
 </body>
 </html>
