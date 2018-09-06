@@ -100,6 +100,11 @@ td.headerCell{
 .virtualParent{
   color: purple;
 }
+
+.note{
+  font-weight: normal;
+}
+
 #rectangle{
   width:5px;
   height:15px;
