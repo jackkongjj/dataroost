@@ -103,11 +103,11 @@
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
-	  $scope.filterPeriod = "ANNUAL";
+	  $scope.filterPeriod = "ALL";
 	  $scope.filterRecap = "RECAP";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
-      
+      queryString();
       refresh();
       
 	  $scope.submit = function () {
@@ -164,8 +164,22 @@
 		refresh();
       };
   
+	  function queryString()
+	  {
+		var urlParams = new URLSearchParams(window.location.search);
+		var iconum = urlParams.get('iconum');
+		if (iconum)
+		{
+			$scope.currIconum  = iconum;
+			var templateName = urlParams.get('templateName');
+			if (templateName)
+			{
+				$scope.currTemplate = templateName;
+			}
+		}
+	  };
 	  
-	  function refresh() {	  		
+	  function refresh() {	  	
         $scope.data.length = 0;            //clearing out the array
         $scope.columnDefs.length = 0;      //clearing out the array      
         $http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
