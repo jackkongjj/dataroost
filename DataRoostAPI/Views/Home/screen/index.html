@@ -146,15 +146,24 @@
 	  $scope.updateReverseRepresentation = function () {
 		refresh();
       };
-	  
+	  	  
+	  function urlParam(name){
+    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+    if (results==null){
+       return null;
+    }
+    else{
+       return decodeURI(results[1]) || 0;
+    }
+}
 	  function queryString()
 	  {
-		var urlParams = new URLSearchParams(window.location.search);
-		var iconum = urlParams.get('iconum');
+		//var urlParams = new URLSearchParams(window.location.search);
+		var iconum =  urlParam('iconum');  
 		if (iconum)
 		{
 			$scope.currIconum  = iconum;
-			var templateName = urlParams.get('templateName');
+			var templateName =  urlParam('templateName'); 
 			if (templateName)
 			{
 				$scope.currTemplate = templateName;
@@ -168,7 +177,8 @@
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;});
       };
-	  
+
+
 	  $scope.formatNumber = function(num){
 		  if (typeof num != 'number') return num;
           var numOut = num/100000;
