@@ -18,6 +18,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		private readonly string _sfConnectionString;
 
+		static AsReportedTemplateHelper() {
+			foreach (KeyValuePair<string, string> kvp in HierarchyMetaDescription) {
+				HierarchyMetaOrderPreference.Add(kvp.Key);
+			}
+		}
+
 		public AsReportedTemplateHelper(string sfConnectionString) {
 			this._sfConnectionString = sfConnectionString;
 		}
@@ -476,6 +482,607 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return temp;
 		}
 
+		public ScarResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+			ScarResult newFormat = new ScarResult();
+			AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
+			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
+			newFormat.TimeSlices = oldFormat.TimeSlices;
+			return newFormat;
+		}
+
+		public AsReportedTemplate GetProductView(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+			var sw = System.Diagnostics.Stopwatch.StartNew();
+
+			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
+			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
+
+			AsReportedTemplate temp = new AsReportedTemplate();
+			try {
+				temp.Message = "Start." + DateTime.UtcNow.ToString();
+				string query_sproc = @"SCARGetProductView";
+				temp.StaticHierarchies = new List<StaticHierarchy>();
+				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
+				Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
+				Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
+				List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
+				Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
+				DataSet dataSet = new DataSet();
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					#region Using SqlConnection
+					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
+						cmd.CommandType = System.Data.CommandType.StoredProcedure;
+						cmd.CommandTimeout = 120;
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						cmd.Parameters.AddWithValue("@reverseRepresentation", reverseRepresentation != "false" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
+						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "RECAP" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@filterYear", filterYear);
+						conn.Open();
+						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
+						//using (DataTable dt = new DataTable()) {
+						//	dt.Load(reader);
+						//	Console.WriteLine(dt.Rows.Count);
+						//}
+						SqlDataAdapter da = new SqlDataAdapter(cmd);
+						da.Fill(dataSet);
+						conn.Close();
+					}
+					#endregion
+				}
+				#region In-Memory Processing
+				temp.Message += "Filled." + DateTime.UtcNow.ToString();
+				#region StaticHierarchy
+				var shTable = dataSet.Tables[0];
+				if (shTable != null) {
+					temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
+					foreach (DataRow row in shTable.Rows) {
+						StaticHierarchy shs = new StaticHierarchy
+						{
+							Id = row[0].AsInt32(),
+							CompanyFinancialTermId = row[1].AsInt32(),
+							AdjustedOrder = row[2].AsInt32(),
+							TableTypeId = row[3].AsInt32(),
+							Description = row[4].AsString()
+						};
+						shs.HierarchyTypeId = row[5].AsString()[0];
+						shs.SeparatorFlag = row[6].AsBoolean();
+						shs.StaticHierarchyMetaId = row[7].AsInt32();
+						shs.UnitTypeId = row[8].AsInt32();
+						shs.IsIncomePositive = row[9].AsBoolean();
+						shs.ChildrenExpandDown = row[10].AsBoolean();
+						shs.ParentID = row[11].AsInt32Nullable();
+						shs.StaticHierarchyMetaType = row[12].AsString();
+						shs.TableTypeDescription = row[13].ToString();
+						shs.Cells = new List<SCARAPITableCell>();
+						StaticHierarchies.Add(shs);
+
+						SHLookup.Add(shs.Id, shs);
+						if (!SHChildLookup.ContainsKey(shs.Id))
+							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
+
+						if (shs.ParentID != null) {
+							if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
+								SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
+
+							SHChildLookup[shs.ParentID.Value].Add(shs);
+						}
+					}
+				}
+				#endregion
+
+				#region Table Cells
+				var cellTable = dataSet.Tables[1];
+				temp.Message += "Cells." + DateTime.UtcNow.ToString();
+				temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString();
+				int shix = 0;
+				int adjustedOrder = 0;
+
+				if (cellTable != null) {
+					#region read CellsQuery
+					temp.Message += "Cell2." + DateTime.UtcNow.ToString();
+					foreach (DataRow row in cellTable.Rows) {
+						if (shix >= StaticHierarchies.Count())
+							break;
+						if (row[29].AsInt64() == 1) {
+							SCARAPITableCell cell;
+							if (row[0].AsInt32Nullable().HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = row[0].AsInt32(),
+									Offset = row[1].AsString(),
+									CellPeriodType = row[2].AsString(),
+									PeriodTypeID = row[3].AsString(),
+									CellPeriodCount = row[4].AsString(),
+									PeriodLength = row[5].AsInt32Nullable(),
+									CellDay = row[6].AsString(),
+									CellMonth = row[7].AsString(),
+									CellYear = row[8].AsString(),
+									CellDate = row[9].AsDateTimeNullable(),
+									Value = row[10].AsString(),
+									CompanyFinancialTermID = row[11].AsInt32Nullable(),
+									ValueNumeric = row[12].AsDecimalNullable(),
+									NormalizedNegativeIndicator = row[13].AsBoolean(),
+									ScalingFactorID = row[14].AsString(),
+									AsReportedScalingFactor = row[15].AsString(),
+									Currency = row[16].AsString(),
+									CurrencyCode = row[17].AsString(),
+									Cusip = row[18].AsString(),
+									ScarUpdated = row[19].AsBoolean(),
+									IsIncomePositive = row[20].AsBoolean(),
+									XBRLTag = row[21].AsString(),
+									UpdateStampUTC = row[22].AsDateTimeNullable(),
+									DocumentID = row[23].AsGuid(),
+									Label = row[24].AsString(),
+									ScalingFactorValue = row[25].AsDouble(),
+									ARDErrorTypeId = row[26].AsInt32Nullable(),
+									MTMWErrorTypeId = row[27].AsInt32Nullable()
+								};
+								adjustedOrder = row[28].AsInt32();
+							} else {
+								cell = new SCARAPITableCell();
+								adjustedOrder = row[28].AsInt32();
+								cell.CompanyFinancialTermID = row[34].AsInt32Nullable();
+							}
+							if (adjustedOrder < 0) {
+								var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
+								if (negSh == null) continue;
+								if (cell.ID == 0) {
+									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
+								}
+
+								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
+
+								if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId) {
+									negSh.Cells.Add(cell);
+								} else {
+									throw new Exception();
+								}
+
+							} else {
+								while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
+									shix++;
+									if (shix >= StaticHierarchies.Count())
+										break;
+								}
+								var currSh = StaticHierarchies.FirstOrDefault(x => x.AdjustedOrder == adjustedOrder && x.CompanyFinancialTermId == cell.CompanyFinancialTermID);
+								if (currSh == null) {
+									continue;
+								}
+								//while (adjustedOrder == StaticHierarchies[shix].AdjustedOrder && cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId) {
+								//	shix++;
+								//	if (shix >= StaticHierarchies.Count())
+								//		break;
+								//}
+								if (shix >= StaticHierarchies.Count())
+									break;
+								if (cell.ID == 0) {
+									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
+								}
+								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
+
+								if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
+									if (currSh.UnitTypeId == 2) {
+										cell.ScalingFactorValue *= 100000;
+									}
+									currSh.Cells.Add(cell);
+								} else {
+									throw new Exception();
+								}
+							}
+						}
+					}
+					#endregion
+				}
+				#endregion
+
+				#region TimeSlices
+				var timesliceTable = dataSet.Tables[2];
+				temp.Message += "TimeSlice." + DateTime.UtcNow.ToString();
+				temp.TimeSlices = new List<TimeSlice>();
+				List<TimeSlice> TimeSlices = temp.TimeSlices;
+				if (timesliceTable != null) {
+					temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString();
+					#region Read TimeSlice
+					foreach (DataRow row in timesliceTable.Rows) {
+						TimeSlice slice = new TimeSlice
+						{
+							Id = row[0].AsInt32(),
+							DocumentId = row[1].AsGuid(),
+							DocumentSeriesId = row[2].AsInt32(),
+							TimeSlicePeriodEndDate = row[3].AsDateTime(),
+							ReportingPeriodEndDate = row[4].AsDateTime(),
+							FiscalDistance = row[5].AsInt32(),
+							Duration = row[6].AsInt32(),
+							PeriodType = row[7].AsString(),
+							AcquisitionFlag = row[8].AsString(),
+							AccountingStandard = row[9].AsString(),
+							ConsolidatedFlag = row[10].AsString(),
+							IsProForma = row[11].AsBoolean(),
+							IsRecap = row[12].AsBoolean(),
+							CompanyFiscalYear = row[13].AsDecimal(),
+							ReportType = row[14].AsString(),
+							IsAmended = row[15].AsBoolean(),
+							IsRestated = row[16].AsBoolean(),
+							IsAutoCalc = row[17].AsBoolean(),
+							ManualOrgSet = row[18].AsBoolean(),
+							TableTypeID = row[19].AsInt32(),
+							PublicationDate = row[20].AsDateTime(),
+							DamDocumentId = row[21].AsGuid(),
+							PeriodNoteID = row[22].AsByteNullable()
+						};
+						//DateTime lastValidDatetime = DateTime.Now;
+						//if (!slice.IsRecap || slice.TimeSlicePeriodEndDate == lastValidDatetime) {
+						//	continue;
+						//}
+						TimeSlices.Add(slice);
+						Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
+						if (!TimeSliceMap.ContainsKey(tup)) {
+							TimeSliceMap.Add(tup, new List<int>());
+						}
+
+						TimeSliceMap[tup].Add(TimeSlices.Count - 1);
+
+						foreach (StaticHierarchy sh in temp.StaticHierarchies) {
+							try {
+								CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+							} catch { }
+						}
+
+
+					}
+					#endregion
+				}
+				#endregion
+
+				#region IsSummary
+				var issummaryTable = dataSet.Tables[3];
+				temp.Message += "IsSummary." + DateTime.UtcNow.ToString();
+				if (issummaryTable != null) {
+					temp.Message += "IsSummary2." + DateTime.UtcNow.ToString();
+					foreach (DataRow row in issummaryTable.Rows) {
+						int TimeSliceID = row[0].AsInt32();
+						if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
+							TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
+						}
+						if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
+							IsSummaryLookup.Add(TimeSliceID, new List<string>());
+						}
+
+						IsSummaryLookup[TimeSliceID].Add(row[1].AsString());
+					}
+				}
+				#endregion
+
+				temp.Message += "Calculate.";
+				#region Calculating virtual cells
+				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
+					if (!sh.ParentID.HasValue) {
+						sh.Level = 0;
+					}
+					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
+						ch.Level = sh.Level + 1;
+					}
+					for (int i = 0; i < sh.Cells.Count; i++) {
+						try {
+							TimeSlice ts = temp.TimeSlices[i];
+
+							SCARAPITableCell tc = sh.Cells[i];
+							if (ts.Cells == null) {
+								ts.Cells = new List<SCARAPITableCell>();
+							}
+							ts.Cells.Add(tc);
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+
+							bool hasValidChild = false;
+							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
+							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
+								tc.VirtualValueNumeric = calcChildSum;
+							}
+
+						} catch (Exception ex) {
+							Console.WriteLine(ex.Message);
+							break;
+						}
+					}
+					for (int i = 0; i < sh.Cells.Count; i++) {
+						try {
+							TimeSlice ts = temp.TimeSlices[i];
+
+							SCARAPITableCell tc = sh.Cells[i];
+							if (ts.Cells == null) {
+								ts.Cells = new List<SCARAPITableCell>();
+							}
+							ts.Cells.Add(tc);
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+
+							bool hasValidChild = false;
+							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
+							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
+								tc.VirtualValueNumeric = calcChildSum;
+							}
+
+							bool whatever = false;
+							decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
+
+							List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
+
+							if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
+							) {
+								tc.LikePeriodValidationFlag = true;
+								tc.StaticHierarchyID = sh.Id;
+								tc.DocumentTimeSliceID = ts.Id;
+							}
+
+							bool ChildrenSumEqual = false;
+							if (!tc.ValueNumeric.HasValue || !hasValidChild)
+								ChildrenSumEqual = true;
+							else {
+								decimal diff = cellValue - calcChildSum;
+								diff = Math.Abs(diff);
+
+								if (tc.ScalingFactorValue == 1.0)
+									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
+								else
+									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+							}
+
+							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
+									!ChildrenSumEqual &&
+											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
+
+						} catch (Exception ex) {
+							Console.WriteLine(ex.Message);
+							break;
+						}
+					}
+				}
+				#endregion
+				temp.StaticHierarchies = StaticHierarchies.OrderBy(s => HierarchyMetaOrderPreference.IndexOf(s.StaticHierarchyMetaType)).ThenBy(x => x.Id).Where(x => !string.IsNullOrWhiteSpace(x.StaticHierarchyMetaType)).ToList();
+				List<LineItem> lines = new List<LineItem>();
+				foreach (var sl in temp.StaticHierarchies) {
+					if (HierarchyMetaEndlines.IndexOf(sl.StaticHierarchyMetaType) >= 0) {
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						if (li == null) {
+							li = new LineItem();
+							li.MetaType = sl.StaticHierarchyMetaType;
+							lines.Add(li);
+						}
+						li.StaticHierarchies.Add(sl);
+					} else {
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						if (li == null) {
+							li = new MiddleLineItem();
+							li.MetaType = sl.StaticHierarchyMetaType;
+							lines.Add(li);
+						}
+						li.StaticHierarchies.Add(sl);
+					}
+				}
+				temp.Message += "Finished.";
+				List<StaticHierarchy> newStaticHierarchies = new List<StaticHierarchy>();
+				foreach (var li in lines) {
+					newStaticHierarchies.AddRange(li.Convert());
+				}
+				temp.StaticHierarchies = newStaticHierarchies;
+				#endregion
+			} catch (Exception ex) {
+				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
+			}
+			return temp;
+		}
+		public class LineItem {
+			public List<StaticHierarchy> StaticHierarchies = new List<StaticHierarchy>();
+			public string MetaType = "";
+			public virtual List<StaticHierarchy> Convert() {
+				return StaticHierarchies;
+				//List<StaticHierarchy> newShs = new List<StaticHierarchy>();
+				//return newShs;
+			}
+		}
+
+		public class MiddleLineItem : LineItem {
+			public override List<StaticHierarchy> Convert() {
+				List<StaticHierarchy> newShs = new List<StaticHierarchy>();
+				StaticHierarchy shs = new StaticHierarchy
+						{
+							Id = -1000,
+							StaticHierarchyMetaType = MetaType
+						};
+				shs.Description = HierarchyMetaDescription[MetaType];
+				shs.Cells = new List<SCARAPITableCell>();
+				newShs.Add(shs);
+				bool isFirst = true;
+				foreach (var s in StaticHierarchies) {
+					s.StaticHierarchyMetaType = "";
+					newShs.Add(s);
+					for (int i = 0; i < s.Cells.Count; i++ ) {
+						if (isFirst) {
+							var newCell = new SCARAPITableCell()
+							{
+								ID = 0,
+								ScalingFactorValue = 1.0,
+								IsIncomePositive = true,
+								VirtualValueNumeric = null
+							};
+							if (s.Cells[i].DisplayValue.HasValue) {
+								newCell.VirtualValueNumeric = s.Cells[i].DisplayValue;
+							}
+							shs.Cells.Add(newCell);
+						} else {
+							if (s.Cells[i].DisplayValue.HasValue) {
+								if (shs.Cells[i].VirtualValueNumeric == null) {
+									shs.Cells[i].VirtualValueNumeric = s.Cells[i].DisplayValue;
+								} else {
+									shs.Cells[i].VirtualValueNumeric += s.Cells[i].DisplayValue;
+								}
+							}
+						}
+					}
+					isFirst = false;
+				}
+				return newShs;
+			}
+		}
+
+		static List<String> HierarchyMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
+		static List<String> HierarchyMetaOrderPreference = new List<String>();
+		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>()
+		{
+			{"RV","Total Revenues / Interest Income"},
+{"NG-RVDEFR","Deferred revenue adjustment"},
+{"NG-RVOTH","Other adjustments"},
+{"NG-RV","Revenue"},
+{"GP","Gross Profit"},
+{"NG-GPACQ","Acquisition related expense"},
+{"NG-GPRES","Restructuring charges"},
+{"NG-GPLEG","Legal/litigation expense"},
+{"NG-GPPEN","Pension settlement charges"},
+{"NG-GPSTK","Stock option expense"},
+{"NG-GPGLD","Gain/loss on extinguishment of debt"},
+{"NG-GPAIA","Amortization of intangible assets"},
+{"NG-GPAIM","Asset impairments"},
+{"NG-GPGIM","Goodwill impairment"},
+{"NG-GPGLA","Gain/loss on asset sale"},
+{"NG-GPIRD","Acquired in-process research & development"},
+{"NG-GPDISC","Discontinued operations"},
+{"NG-GPCURR","Currency related gain/loss"},
+{"NG-GPOTH","Other adjustments"},
+{"NG-GPTAX","Tax related gain/loss"},
+{"NG-GPTAXEF","Non-GAAP tax effect"},
+{"NG-GP","Gross Profit"},
+{"OP","Income Statement: Operating Profit"},
+{"NG-OP","Operating Profit"},
+{"EBITDA","EBITDA"},
+{"NG-EBITDAACQ","Acquisition related expense"},
+{"NG-EBITDARES","Restructuring charges"},
+{"NG-EBITDALEG","Legal/litigation expense"},
+{"NG-EBITDAPEN","Pension settlement charges"},
+{"NG-EBITDASTK","Stock option expense"},
+{"NG-EBITDAGLD","Gain/loss on extinguishment of debt"},
+{"NG-EBITDAAIA","Amortization of intangible assets"},
+{"NG-EBITDAAIM","Asset impairments"},
+{"NG-EBITDAGIM","Goodwill impairment"},
+{"NG-EBITDAGLA","Gain/loss on asset sale"},
+{"NG-EBITDAIRD","Acquired in-process research & development"},
+{"NG-EBITDADISC","Discontinued operations"},
+{"NG-EBITDACURR","Currency related gain/loss"},
+{"NG-EBITDAOTH","Other adjustments"},
+{"NG-EBITDATAX","Tax related gain/loss"},
+{"NG-EBITDATAXEF","Non-GAAP tax effect"},
+{"NG-EBITDA","EBITDA"},
+{"EBIT"," EBIT"},
+{"NG-EBITACQ","Acquisition related expense"},
+{"NG-EBITRES","Restructuring charges"},
+{"NG-EBITLEG","Legal/litigation expense"},
+{"NG-EBITPEN","Pension settlement charges"},
+{"NG-EBITSTK","Stock option expense"},
+{"NG-EBITGLD","Gain/loss on extinguishment of debt"},
+{"NG-EBITAIA","Amortization of intangible assets"},
+{"NG-EBITAIM","Asset impairments"},
+{"NG-EBITGIM","Goodwill impairment"},
+{"NG-EBITGLA","Gain/loss on asset sale"},
+{"NG-EBITIRD","Acquired in-process research & development"},
+{"NG-EBITDISC","Discontinued operations"},
+{"NG-EBITCURR","Currency related gain/loss"},
+{"NG-EBITOTH","Other adjustments"},
+{"NG-EBITTAX","Tax related gain/loss"},
+{"NG-EBITTAXEF","Non-GAAP tax effect"},
+{"NG-EBIT","EBIT"},
+{"PBT","Profit Before Tax"},
+{"NG-PBTACQ","Acquisition related expense"},
+{"NG-PBTRES","Restructuring charges"},
+{"NG-PBTLEG","Legal/litigation expense"},
+{"NG-PBTPEN","Pension settlement charges"},
+{"NG-PBTSTK","Stock option expense"},
+{"NG-PBTGLD","Gain/loss on extinguishment of debt"},
+{"NG-PBTAIA","Amortization of intangible assets"},
+{"NG-PBTAIM","Asset impairments"},
+{"NG-PBTGIM","Goodwill impairment"},
+{"NG-PBTGLA","Gain/loss on asset sale"},
+{"NG-PBTIRD","Acquired in-process research & development"},
+{"NG-PBTDISC","Discontinued operations"},
+{"NG-PBTCURR","Currency related gain/loss"},
+{"NG-PBTOTH","Other adjustments"},
+{"NG-PBTTAX","Tax related gain/loss"},
+{"NG-PBTTAXEF","Non-GAAP tax effect"},
+{"NG-PBT","Profit Before Tax"},
+{"NI","Net Income"},
+{"NG-NIACQ","Acquisition related expense"},
+{"NG-NIRES","Restructuring charges"},
+{"NG-NILEG","Legal/litigation expense"},
+{"NG-NIPEN","Pension settlement charges"},
+{"NG-NISTK","Stock option expense"},
+{"NG-NIGLD","Gain/loss on extinguishment of debt"},
+{"NG-NIAIA","Amortization of intangible assets"},
+{"NG-NIAIM","Asset impairments"},
+{"NG-NIGIM","Goodwill impairment"},
+{"NG-NIGLA","Gain/loss on asset sale"},
+{"NG-NIIRD","Acquired in-process research & development"},
+{"NG-NIDISC","Discontinued operations"},
+{"NG-NICURR","Currency related gain/loss"},
+{"NG-NIOTH","Other adjustments"},
+{"NG-NITAX","Tax related gain/loss"},
+{"NG-NITAXEF","Non-GAAP tax effect"},
+{"NG-NI","Net Income"},
+{"BEPS","Earnings Per Share - Basic"},
+{"NG-BEPSACQ","Acquisition related expense"},
+{"NG-BEPSRES","Restructuring charges"},
+{"NG-BEPSLEG","Legal/litigation expense"},
+{"NG-BEPSPEN","Pension settlement charges"},
+{"NG-BEPSSTK","Stock option expense"},
+{"NG-BEPSGLD","Gain/loss on extinguishment of debt"},
+{"NG-BEPSAIA","Amortization of intangible assets"},
+{"NG-BEPSAIM","Asset impairments"},
+{"NG-BEPSGIM","Goodwill impairment"},
+{"NG-BEPSGLA","Gain/loss on asset sale"},
+{"NG-BEPSIRD","Acquired in-process research & development"},
+{"NG-BEPSDISC","Discontinued operations"},
+{"NG-BEPSCURR","Currency related gain/loss"},
+{"NG-BEPSOTH","Other adjustments"},
+{"NG-BEPSTAX","Tax related gain/loss"},
+{"NG-BEPSTAXEF","Non-GAAP tax effect"},
+{"NG-BEPS","Earnings Per Share - Basic"},
+{"DEPS","Earnings Per Share - Diluted"},
+{"NG-DEPSACQ","Acquisition related expense"},
+{"NG-DEPSRES","Restructuring charges"},
+{"NG-DEPSLEG","Legal/litigation expense"},
+{"NG-DEPSPEN","Pension settlement charges"},
+{"NG-DEPSSTK","Stock option expense"},
+{"NG-DEPSGLD","Gain/loss on extinguishment of debt"},
+{"NG-DEPSAIA","Amortization of intangible assets"},
+{"NG-DEPSAIM","Asset impairments"},
+{"NG-DEPSGIM","Goodwill impairment"},
+{"NG-DEPSGLA","Gain/loss on asset sale"},
+{"NG-DEPSIRD","Acquired in-process research & development"},
+{"NG-DEPSDISC","Discontinued operations"},
+{"NG-DEPSCURR","Currency related gain/loss"},
+{"NG-DEPSOTH","Other adjustments"},
+{"NG-DEPSTAX","Tax related gain/loss"},
+{"NG-DEPSTAXEF","Non-GAAP tax effect"},
+{"NG-DEPS","Earnings Per Share - Diluted"},
+{"NG-AFCACQ","Acquisition related expense"},
+{"NG-AFCRES","Restructuring charges"},
+{"NG-AFCLEG","Legal/litigation expense"},
+{"NG-AFCPEN","Pension settlement charges"},
+{"NG-AFCSTK","Stock option expense"},
+{"NG-AFCGLD","Gain/loss on extinguishment of debt"},
+{"NG-AFCAIA","Amortization of intangible assets"},
+{"NG-AFCAIM","Asset impairments"},
+{"NG-AFCGIM","Goodwill impairment"},
+{"NG-AFCGLA","Gain/loss on asset sale"},
+{"NG-AFCIRD","Acquired in-process research & development"},
+{"NG-AFCDISC","Discontinued operations"},
+{"NG-AFCTAX","Non-GAAP tax effect"},
+{"NG-AFCOTH","Other adjustments"},
+{"NG-FC","Free Cashflow"},
+{"NG-AFC","Adjusted Free Cashflow"}
+//{"", "Standard"},
+//{"FN","Foot Note Item"},
+//{"SD","Supplemental Disclosure"},
+//{"X","Delete - Do not send to product"}
+		};
 		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			#region Old Queries
