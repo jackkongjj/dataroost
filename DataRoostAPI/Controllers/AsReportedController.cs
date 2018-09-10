@@ -260,33 +260,30 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
-		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ANNUAL", string filterRecap = "ORG", string filterYear = "YEARS") {
+		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
 					return null;
-				//string reverseRepresentation = "F";
-				//string filterPeriod = "ANNUAL";
-				//string filterRecap = "ORG";
-				//string filterYear = "YEARS";
-				//if (param != null && param.StringData != null && param.StringData.Count < 1) {
-				//	var dict = param.StringData;
-				//	if (dict.ContainsKey("reverseRepresentation")) {
-				//		reverseRepresentation = dict["reverseRepresentation"];
-				//	}
-				//	if (dict.ContainsKey("filterPeriod")) {
-				//		filterPeriod = dict["filterPeriod"];
-				//	}
-				//	if (dict.ContainsKey("filterRecap")) {
-				//		filterRecap = dict["filterRecap"];
-				//	}
-				//	if (dict.ContainsKey("filterYear")) {
-				//		filterYear = dict["filterYear"];
-				//	}
-				//}
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetProductViewInScarResult(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+				return null;
+			}
+		}
+
+		[Route("productview/{TemplateName}/years")]
+		[HttpGet]
+		public string GetProductTemplateYearList(string CompanyId, string TemplateName) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetProductTemplateYearList(iconum, TemplateName);
 			} catch (Exception ex) {
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
 				return null;

@@ -482,6 +482,42 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return temp;
 		}
 
+		public string GetProductTemplateYearList(int iconum, string TemplateName) {
+			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
+			string TimeSliceQuery =
+	@"SELECT DISTINCT CONVERT(varchar, dts.CompanyFiscalYear)
+ FROM DocumentSeries ds WITH (NOLOCK) 
+ 	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+ 	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+ 	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+ 	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+ 	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
+ 	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
+ 	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
+ 	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
+ WHERE ds.CompanyID = @iconum
+ AND tt.Description = @templateName
+ AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  order by CONVERT(varchar, dts.CompanyFiscalYear) desc
+
+ ";
+			try {
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						conn.Open();
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							while (reader.Read()) {
+								sb.Append("," + reader.GetStringSafe(0));
+							}
+						}
+					}
+				}
+			} catch {
+			}
+			return sb.ToString();
+		}
+
 		public ScarResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			ScarResult newFormat = new ScarResult();
 			AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);

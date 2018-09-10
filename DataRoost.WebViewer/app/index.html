@@ -104,10 +104,11 @@
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
 	  $scope.filterPeriod = "ALL";
-	  $scope.filterRecap = "RECAP";
+	  $scope.filterRecap = "ALL";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
       queryString();
+	  updateYearList();
       refresh();
       
 	  $scope.submit = function () {
@@ -150,6 +151,8 @@
       };
 	  $scope.showAll = function () {
 		$scope.filterPeriod = "ALL";
+		$scope.filterRecap = "ALL";
+		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showOrg = function () {
@@ -163,7 +166,12 @@
 	  $scope.updateReverseRepresentation = function () {
 		refresh();
       };
-  
+	  
+	  function updateYearList()
+	  {
+	  		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
+            .then(function (response) {      $scope.yearlist = response.data.split(",");});
+	  }
 	  function queryString()
 	  {
 		var urlParams = new URLSearchParams(window.location.search);
