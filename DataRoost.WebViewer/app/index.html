@@ -1,7 +1,16 @@
 <!DOCTYPE html>
 <html lang="en-US">
-<link rel="stylesheet" href="./bower_components/angular-ui-grid/ui-grid.css" />    
+<link rel="stylesheet" href="bower_components/angular-material/angular-material.css">
+<link rel="stylesheet" href="./bower_components/angular-ui-grid/ui-grid.css"/>    
 <script src="bower_components/angular/angular.js"></script>
+<script src="csv.js"></script>
+<script src="vfs_fonts.js"></script>
+<script src="bower_components/angular-aria/angular-aria.js"></script>
+<script src="bower_components/angular-animate/angular-animate.js"></script>
+<script src="bower_components/angular-messages/angular-messages.js"></script>
+<script src="bower_components/angular-material/angular-material.min.js"></script>
+<script src="bower_components/lodash/dist/lodash.min.js"></script>
+<script src="bower_components/jszip/dist/jszip.min.js"></script>
 <script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
 <script src="./bower_components/angular-ui-grid/ui-grid.js"></script>
 <link rel="stylesheet" type="text/css" href="app.css">    
@@ -9,22 +18,36 @@
 <body>
 
 <div ng-app="SCARApp" ng-controller="SCARController">
-<fieldset>
-  <legend>
-  Input Form
-  </legend>
-  <input id="searchIconum" placeholder="Search Iconum">
-  <input id ="searchTemplate" placeholder="NG-IS"><button ng-click="submit()">Submit</button>
-  <br/>
-    Current Iconum: 
-    <span>{{currIconum}}</span> <br/>
-	Current Template:
-	<span>{{currTemplate}}</span> <br/> <br/>
-  </fieldset>
-  <br><br>
-  
-  <div  id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning class ="grid"></div>
-
+ 
+ <div class = "gridFull">
+    <div class="Buttons"> 
+        <fieldset class="fieldset-auto-width">
+        <legend>
+        Product View
+        </legend>
+        <!-- <label> -->
+        <md-radio-group ng-model="filterPeriod" ng-change="callRefresh()" layout="row">
+            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+            <md-radio-button value="QTR">QTR</md-radio-button>
+            <md-radio-button value="ALL">ALL</md-radio-button>
+        </md-radio-group>
+        </fieldset>
+        <br>
+        <fieldset class="fieldset-auto-width">
+        <legend>
+        Filter
+        </legend>
+        <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
+                <md-radio-button value="ORG">ORG</md-radio-button>
+                <md-radio-button value="RECAP">RECAP</md-radio-button>
+        </md-radio-group>
+        <br>
+        <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"></select>
+        <md-switch ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
+        </fieldset>
+    </div>
+    <div  id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter class ="grid"></div>
+</div>
   <br><br>
   <br><br>
   <br><br>
@@ -41,9 +64,18 @@
 		  <legend>
 		  Product View
 		  </legend>
-			<button ng-click="showAnnual()">ANNUAL</button>
-			<button ng-click="showQtr()">QTR</button>
-			<button ng-click="showAll()">ALL</button>
+            <label>
+                <input type="radio" ng-model="filterPeriod" value="ANNUAL" ng-change='showAnnual()'>
+                ANNUAL
+            </label>
+            <label>
+                <input type="radio" ng-model="filterPeriod" value="QTR" ng-change='showQtr()'>
+                QTR
+            </label>
+            <label>
+                <input type="radio" ng-model="filterPeriod" value="ALL" ng-change='showAll()'>
+                ALL
+            </label>
 		  </fieldset>
 		  <fieldset>
 		  <legend>
@@ -94,7 +126,7 @@
 
 
 <script>
-  var app = angular.module('SCARApp',['ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning']);
+  var app = angular.module('SCARApp',['ngMaterial','ngMessages','ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning','ui.grid.selection','ui.grid.exporter']);
   app.controller('SCARController', function($scope, $http,uiGridConstants) {	  
 	  $scope.selectedRows = [];
 	  $scope.selectedCells = [];
@@ -136,6 +168,14 @@
         data: $scope.data,
         enablePinning: true,
         showTreeExpandNoChildren: false,
+        enableGridMenu: true,
+        gridMenuShowHideColumns: false,
+        enableSelectAll: true,
+        exporterMenuExcel: false,
+        exporterMenuPdf: false,
+        exporterMenuAllData: false,
+        exportCsvFilename: 'ThisOne.csv',
+        exporterCsvLinkElement: angular.element(document.querySelectorAll(".custom-csv-link-location")),
         enableHorizontalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         enableVerticalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         onRegisterApi: function(gridApi) 
@@ -186,8 +226,12 @@
 			}
 		}
 	  };
-	  
-	  function refresh() {	  	
+	   	
+      $scope.callRefresh = function () {
+          refresh();
+      };
+
+	  function refresh() {	  		
         $scope.data.length = 0;            //clearing out the array
         $scope.columnDefs.length = 0;      //clearing out the array      
         $http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
@@ -206,7 +250,7 @@
                 },
                 {
                     name: "Description",
-                    width: 700,
+                    width: 600,
                     pinnedLeft: true,
                     cellClass: function(grid,row) {
                             if (row.entity.id == -1000)
@@ -222,12 +266,13 @@
                                            '<div style="text-align: right">Account Type</div></br>' +
                                            '<div style="text-align: right">Form Type</div></br>' +
                                            '<div style="text-align: right">Period Length</div></br>' +
-                                           '<div style="text-align: right">Currency Type<br/><span class="note">All figures in millions except share items</span></div>'
+                                           '<div style="text-align: right">Currency Type<br/><span class="note">All figures in millions except per share items</span></div>'
                 });
                 for(var ts in $scope.timeSlices){
                     $scope.columnDefs.push({
                         name: $scope.timeSlices[ts].Id,
                         width: 125,
+                        cellFilter: 'number',
                         cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
                             if (grid.getCellValue(row,col) >= 0)
                                 return 'positive'

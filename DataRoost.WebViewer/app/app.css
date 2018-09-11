@@ -105,6 +105,20 @@ td.headerCell{
   font-weight: normal;
 }
 
+.fieldset-auto-width{
+  display: inline-block;
+}
+.gridFull{
+  margin-top: 10px;
+  position: relative;
+  width:100%;
+}
+.Buttons{
+  position: absolute;
+  left: 160px;
+  top: 10px;
+  z-index: 10;
+}
 #rectangle{
   width:5px;
   height:15px;
