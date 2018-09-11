@@ -700,7 +700,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 								if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
 									if (currSh.UnitTypeId == 2) {
-										cell.ScalingFactorValue *= 100000;
+										cell.ScalingFactorValue *= 1000000;
 									}
 									currSh.Cells.Add(cell);
 								} else {
