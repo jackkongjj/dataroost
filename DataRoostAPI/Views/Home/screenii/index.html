@@ -137,7 +137,7 @@
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
 	  $scope.filterPeriod = "ALL";
-	  $scope.filterRecap = "ALL";
+	  $scope.filterRecap = "RECAP";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
 	  $scope.serverPath = "http://dataroost-ffvwebstga01.prod.factset.com:9990/api/v1/companies/";
@@ -186,19 +186,19 @@
       };  
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
-		$scope.filterRecap = "ALL";
+		$scope.filterRecap = "RECAP";
 		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showQtr = function () {
 		$scope.filterPeriod = "QTR";
-		$scope.filterRecap = "ALL";
+		$scope.filterRecap = "RECAP";
 		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showAll = function () {
 		$scope.filterPeriod = "ALL";
-		$scope.filterRecap = "ALL";
+		$scope.filterRecap = "RECAP";
 		$scope.selectedYear = "YEARS";
 		refresh();
       };

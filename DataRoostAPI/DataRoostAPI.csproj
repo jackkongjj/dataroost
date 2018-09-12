@@ -449,6 +449,9 @@
     <Content Include="Scripts\knockout-3.3.0.debug.js" />
     <Content Include="Scripts\knockout-3.3.0.js" />
     <Content Include="Scripts\modernizr-2.8.3.js" />
+    <Content Include="Views\Home\screenii\app.css" />
+    <Content Include="Views\Home\screenii\app.js" />
+    <Content Include="Views\Home\screenii\index.html" />
     <Content Include="Views\Home\screen\app.css" />
     <Content Include="Views\Home\screen\app.js" />
     <Content Include="Views\Home\screen\index.html" />
