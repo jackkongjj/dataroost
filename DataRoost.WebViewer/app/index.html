@@ -139,6 +139,8 @@
 	  $scope.filterRecap = "ALL";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
+	  $scope.serverPath = "http://localhost:61581/api/v1/companies/";
+	  
       queryString();
 	  updateYearList();
       refresh();
@@ -151,7 +153,7 @@
 		{
 			$scope.currTemplate = currTemplate;
 		}
-		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
 		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;
@@ -209,7 +211,7 @@
 	  
 	  function updateYearList()
 	  {
-	  		$http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
+	  		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
             .then(function (response) {      $scope.yearlist = response.data.split(",");});
 	  }
 	  function queryString()
@@ -234,7 +236,7 @@
 	  function refresh() {	  		
         $scope.data.length = 0;            //clearing out the array
         $scope.columnDefs.length = 0;      //clearing out the array      
-        $http.get("http://localhost:61581/api/v1/companies/" + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+        $http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
 		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;
