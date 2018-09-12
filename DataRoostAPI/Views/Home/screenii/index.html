@@ -15,117 +15,6 @@
 <script src="./bower_components/angular-ui-grid/ui-grid.js"></script>
 <link rel="stylesheet" type="text/css" href="app.css">    
 <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
-<body>
-
-<div ng-app="SCARApp" ng-controller="SCARController">
- 
- <div class = "gridFull">
-    <div class="Buttons"> 
-        <fieldset class="fieldset-auto-width">
-        <legend>
-        Product View
-        </legend>
-        <!-- <label> -->
-        <md-radio-group ng-model="filterPeriod" ng-change="callRefresh()" layout="row">
-            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
-            <md-radio-button value="QTR">QTR</md-radio-button>
-            <md-radio-button value="ALL">ALL</md-radio-button>
-        </md-radio-group>
-        </fieldset>
-        <br>
-        <fieldset class="fieldset-auto-width">
-        <legend>
-        Filter
-        </legend>
-        <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
-                <md-radio-button value="ORG">ORG</md-radio-button>
-                <md-radio-button value="RECAP">RECAP</md-radio-button>
-        </md-radio-group>
-        <br>
-        <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"></select>
-        <md-switch ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
-        </fieldset>
-    </div>
-    <div  id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter class ="grid"></div>
-</div>
-  	<!--  
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  
-  <table>
-      <tr>
-		<td colspan="2">
-		  <fieldset>
-		  <legend>
-		  Product View
-		  </legend>
-            <label>
-                <input type="radio" ng-model="filterPeriod" value="ANNUAL" ng-change='showAnnual()'>
-                ANNUAL
-            </label>
-            <label>
-                <input type="radio" ng-model="filterPeriod" value="QTR" ng-change='showQtr()'>
-                QTR
-            </label>
-            <label>
-                <input type="radio" ng-model="filterPeriod" value="ALL" ng-change='showAll()'>
-                ALL
-            </label>
-		  </fieldset>
-		  <fieldset>
-		  <legend>
-		  Filter
-		  </legend>
-			<button ng-click="showOrg()">ORG</button>
-			<button ng-click="showRecap()">RECAP</button>
-			
-			<select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"> 
-			</select>
-		  </fieldset>
-		</td>
-		
-		  <td align="right">
-		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
-		  </td>
-          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
-			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
-			<br>&nbsp;<br>{{$index + 1}}<br>
-		  </td>
-      </tr>
-	      <tr>
-    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" ng-model="reverseRepresentation" ng-change="updateReverseRepresentation()">Reverse Data Representation</td>
-    <td colspan="999">All figures in millions except per share items. </td>
-    </tr>
-    <tr ng-repeat="x in staticHierarchies">
-		<td>{{ x.staticHierarchyMetaType }}</td>
-		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
-		</td>
-	 <td></td>
-		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
-			{{ formatNumber(y.displayValue) | number }}
-		</td>
-    </tr>
-  </table>
-
-	
-  <br/>
-  
-
-
-
-     <button ng-click="stitchItem()">Stitch</button>
-    <button ng-click="unstitchItem()">UnStitch</button>
-	<button ng-click="flipsign()">Flip Sign</button> -->
-	
-</div>
-
-
 <script>
   var app = angular.module('SCARApp',['ngMaterial','ngMessages','ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning','ui.grid.selection','ui.grid.exporter']);
   app.controller('SCARController', function($scope, $http,uiGridConstants) {	  
@@ -215,7 +104,15 @@
 	  $scope.updateReverseRepresentation = function () {
 		refresh();
       };
-	  
+	  	  function urlParam(name){
+    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+    if (results==null){
+       return null;
+    }
+    else{
+       return decodeURI(results[1]) || 0;
+    }
+}
 	  function updateYearList()
 	  {
 	  		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
@@ -223,12 +120,12 @@
 	  }
 	  function queryString()
 	  {
-		var urlParams = new URLSearchParams(window.location.search);
-		var iconum = urlParams.get('iconum');
+		//var urlParams = new URLSearchParams(window.location.search);
+		var iconum =  urlParam('iconum');  
 		if (iconum)
 		{
 			$scope.currIconum  = iconum;
-			var templateName = urlParams.get('templateName');
+			var templateName =  urlParam('templateName'); 
 			if (templateName)
 			{
 				$scope.currTemplate = templateName;
@@ -421,6 +318,118 @@
       }
   }  
  </script>
+
+<body>
+
+<div ng-app="SCARApp" ng-controller="SCARController">
+ 
+ <div class = "gridFull">
+    <div class="Buttons"> 
+        <fieldset class="fieldset-auto-width">
+        <legend>
+        Product View
+        </legend>
+        <!-- <label> -->
+        <md-radio-group ng-model="filterPeriod" ng-change="callRefresh()" layout="row">
+            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+            <md-radio-button value="QTR">QTR</md-radio-button>
+            <md-radio-button value="ALL">ALL</md-radio-button>
+        </md-radio-group>
+        </fieldset>
+        <br>
+        <fieldset class="fieldset-auto-width">
+        <legend>
+        Filter
+        </legend>
+        <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
+                <md-radio-button value="ORG">ORG</md-radio-button>
+                <md-radio-button value="RECAP">RECAP</md-radio-button>
+        </md-radio-group>
+        <br>
+        <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"></select>
+        <md-switch ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
+        </fieldset>
+    </div>
+    <div  id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter class ="grid"></div>
+</div>
+  	<!--  
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  <br><br>
+  
+  <table>
+      <tr>
+		<td colspan="2">
+		  <fieldset>
+		  <legend>
+		  Product View
+		  </legend>
+            <label>
+                <input type="radio" ng-model="filterPeriod" value="ANNUAL" ng-change='showAnnual()'>
+                ANNUAL
+            </label>
+            <label>
+                <input type="radio" ng-model="filterPeriod" value="QTR" ng-change='showQtr()'>
+                QTR
+            </label>
+            <label>
+                <input type="radio" ng-model="filterPeriod" value="ALL" ng-change='showAll()'>
+                ALL
+            </label>
+		  </fieldset>
+		  <fieldset>
+		  <legend>
+		  Filter
+		  </legend>
+			<button ng-click="showOrg()">ORG</button>
+			<button ng-click="showRecap()">RECAP</button>
+			
+			<select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"> 
+			</select>
+		  </fieldset>
+		</td>
+		
+		  <td align="right">
+		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
+		  </td>
+          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
+			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
+			<br>&nbsp;<br>{{$index + 1}}<br>
+		  </td>
+      </tr>
+	      <tr>
+    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" ng-model="reverseRepresentation" ng-change="updateReverseRepresentation()">Reverse Data Representation</td>
+    <td colspan="999">All figures in millions except per share items. </td>
+    </tr>
+    <tr ng-repeat="x in staticHierarchies">
+		<td>{{ x.staticHierarchyMetaType }}</td>
+		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+		</td>
+	 <td></td>
+		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
+			{{ formatNumber(y.displayValue) | number }}
+		</td>
+    </tr>
+  </table>
+
+	
+  <br/>
+  
+
+
+
+     <button ng-click="stitchItem()">Stitch</button>
+    <button ng-click="unstitchItem()">UnStitch</button>
+	<button ng-click="flipsign()">Flip Sign</button> -->
+	
+</div>
+
+
 
 </body>
 </html>
