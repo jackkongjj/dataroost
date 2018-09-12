@@ -535,7 +535,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			AsReportedTemplate temp = new AsReportedTemplate();
 			try {
 				temp.Message = "Start." + DateTime.UtcNow.ToString();
-				string query_sproc = @"SCARGetProductView";
+				string query_sproc = @"SCARGetProductViewDistinctGrouping";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -553,7 +553,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@reverseRepresentation", reverseRepresentation != "false" ? 1 : 0);
 						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
-						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "RECAP" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "ORG" ? 0 : 1);
 						cmd.Parameters.AddWithValue("@filterYear", filterYear);
 						conn.Open();
 						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
