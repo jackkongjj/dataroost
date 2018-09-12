@@ -126,10 +126,14 @@
 	  
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
+		$scope.filterRecap = "ALL";
+		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showQtr = function () {
 		$scope.filterPeriod = "QTR";
+		$scope.filterRecap = "ALL";
+		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showAll = function () {
@@ -140,10 +144,12 @@
       };
 	  $scope.showOrg = function () {
 		$scope.filterRecap = "ORG";
+		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showRecap = function () {
 		$scope.filterRecap = "RECAP";
+		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.updateReverseRepresentation = function () {
