@@ -300,7 +300,7 @@
                 for(var sh in $scope.staticHierarchies){
                     var row = [];
                     row["id"] = $scope.staticHierarchies[sh].id;
-                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription;
+                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription.replace("&nbsp;&nbsp;", "     ");
                     row["staticHierarchyMetaType"] = $scope.staticHierarchies[sh].staticHierarchyMetaType;
                     row["parentId"] = $scope.staticHierarchies[sh].parentId;
                     if(!$scope.staticHierarchies[sh].staticHierarchyMetaType == "")
