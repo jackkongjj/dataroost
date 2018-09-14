@@ -482,6 +482,42 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return temp;
 		}
 
+		public string GetProductTemplateYearList(int iconum, string TemplateName) {
+			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
+			string TimeSliceQuery =
+	@"SELECT DISTINCT CONVERT(varchar, dts.CompanyFiscalYear)
+ FROM DocumentSeries ds WITH (NOLOCK) 
+ 	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+ 	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
+ 	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
+ 	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
+ 	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
+ 	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
+ 	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
+ 	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
+ WHERE ds.CompanyID = @iconum
+ AND tt.Description = @templateName
+ AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  order by CONVERT(varchar, dts.CompanyFiscalYear) desc
+
+ ";
+			try {
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						conn.Open();
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							while (reader.Read()) {
+								sb.Append("," + reader.GetStringSafe(0));
+							}
+						}
+					}
+				}
+			} catch {
+			}
+			return sb.ToString();
+		}
+
 		public ScarResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			ScarResult newFormat = new ScarResult();
 			AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
@@ -499,7 +535,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			AsReportedTemplate temp = new AsReportedTemplate();
 			try {
 				temp.Message = "Start." + DateTime.UtcNow.ToString();
-				string query_sproc = @"SCARGetProductView";
+				string query_sproc = @"SCARGetProductViewDistinctGrouping";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -517,7 +553,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@reverseRepresentation", reverseRepresentation != "false" ? 1 : 0);
 						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
-						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "RECAP" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "ORG" ? 0 : 1);
 						cmd.Parameters.AddWithValue("@filterYear", filterYear);
 						conn.Open();
 						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
@@ -664,7 +700,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 								if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
 									if (currSh.UnitTypeId == 2) {
-										cell.ScalingFactorValue *= 100000;
+										cell.ScalingFactorValue *= 1000000;
 									}
 									currSh.Cells.Add(cell);
 								} else {
@@ -850,6 +886,14 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							lines.Add(li);
 						}
 						li.StaticHierarchies.Add(sl);
+					} else if (HierarchyMetaStartlines.IndexOf(sl.StaticHierarchyMetaType) >= 0) {
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						if (li == null) {
+							li = new StartLineItem();
+							li.MetaType = sl.StaticHierarchyMetaType;
+							lines.Add(li);
+						}
+						li.StaticHierarchies.Add(sl);
 					} else {
 						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
 						if (li == null) {
@@ -881,7 +925,17 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				//return newShs;
 			}
 		}
-
+		public class StartLineItem : LineItem {
+			public override List<StaticHierarchy> Convert() {
+				List<StaticHierarchy> newShs = new List<StaticHierarchy>();
+				var sh = StaticHierarchies.FirstOrDefault();
+				if (sh != null) {
+					sh.Description = sh.Description.Insert(sh.Description.LastIndexOf(']') + 1, HtmlIndent);
+					newShs.Add(sh);
+				}
+				return newShs;
+			}
+		}
 		public class MiddleLineItem : LineItem {
 			public override List<StaticHierarchy> Convert() {
 				List<StaticHierarchy> newShs = new List<StaticHierarchy>();
@@ -890,12 +944,13 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							Id = -1000,
 							StaticHierarchyMetaType = MetaType
 						};
-				shs.Description = HierarchyMetaDescription[MetaType];
+				shs.Description = HtmlIndent + HierarchyMetaDescription[MetaType];
 				shs.Cells = new List<SCARAPITableCell>();
 				newShs.Add(shs);
 				bool isFirst = true;
 				foreach (var s in StaticHierarchies) {
 					s.StaticHierarchyMetaType = "";
+					s.Description = s.Description.Insert(s.Description.LastIndexOf(']') + 1, HtmlIndent);
 					newShs.Add(s);
 					for (int i = 0; i < s.Cells.Count; i++ ) {
 						if (isFirst) {
@@ -925,8 +980,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				return newShs;
 			}
 		}
-
-		static List<String> HierarchyMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
+		static string HtmlIndent = "&nbsp;&nbsp;";
+		static List<String> HierarchyMetaStartlines = new List<String> { "RV", "GP", "OP", "EBITDA", "EBIT", "PBT", "NI", "BEPS", "DEPS"};
+		static List<String> HierarchyMetaEndlines = new List<String> { "NG-RV", "NG-GP", "NG-OP", "NG-EBITDA", "NG-EBIT", "NG-PBT", "NG-NI", "NG-BEPS", "NG-DEPS" };
+		static List<String> HierarchyStartMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
 		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>()
 		{
