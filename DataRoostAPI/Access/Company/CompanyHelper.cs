@@ -346,12 +346,14 @@ ORDER BY ChangeDate DESC";
 					if (companyShareClassData.ContainsKey(iconum)) {
 						List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
 						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+							if (shareClass.ShareClassData == null)
+								shareClass.ShareClassData = new List<ShareClassDataItem>();
 							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
 								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;
-								if (voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate) > supercoreReportDate)
+								var voyagerReportDate = voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate);
+								if (voyagerReportDate > supercoreReportDate)
 									shareClass.ShareClassData = voyagerSecurityItems[shareClass.PPI];
-							} else if (shareClass.ShareClassData == null)
-								shareClass.ShareClassData = new List<ShareClassDataItem>();
+							}
 						}
 					}
 				}
