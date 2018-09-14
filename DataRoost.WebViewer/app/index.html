@@ -21,16 +21,17 @@
  
  <div class = "gridFull">
     <div class="Buttons"> 
-        <fieldset class="fieldset-auto-width">
-        <legend>
-        Product View
-        </legend>
-        <!-- <label> -->
-        <md-radio-group ng-model="filterPeriod" ng-change="callRefresh()" layout="row">
-            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
-            <md-radio-button value="QTR">QTR</md-radio-button>
-            <md-radio-button value="ALL">ALL</md-radio-button>
-        </md-radio-group>
+        <fieldset>
+        <legend>Product View</legend>
+        <md-content>
+            <section layout ="row" layout-align="center center" layout-wrap>
+                <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
+                    <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+                    <md-radio-button value="QTR">QTR</md-radio-button>
+                </md-radio-group>
+                <md-button ng-click='showAll()'>ALL</md-button>
+            </section>
+        </md-content>
         </fieldset>
         <br>
         <fieldset class="fieldset-auto-width">
@@ -234,7 +235,13 @@
 			}
 		}
 	  };
-	   	
+
+      $scope.viewRefresh = function () {
+          if($scope.filterPeriod == 'ALL')
+                $scope.filterRecap = 'ALL'
+          refresh();
+      };
+
       $scope.callRefresh = function () {
           refresh();
       };
@@ -280,6 +287,7 @@
                     $scope.columnDefs.push({
                         name: $scope.timeSlices[ts].Id,
                         width: 125,
+                        displayName: $scope.formatHeader(ts),
                         cellFilter: 'number',
                         cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
                             if (grid.getCellValue(row,col) >= 0)
@@ -321,6 +329,21 @@
     
       };
 	  
+      $scope.formatHeader = function(ts){
+            var header = $scope.timeSlices[ts].TimeSlicePeriodEndDate + ' | ';
+            if($scope.timeSlices[ts].PeriodType == 'XX')
+                header += 'AR | ';
+            else
+                header += $scope.timeSlices[ts].PeriodType+' | ';
+            header += $scope.timeSlices[ts].PublicationDate+' | ';
+            if($scope.timeSlices[ts].IsRecap)
+                header += 'RECAP | '
+            else
+                header += 'ORIGINAL | '
+            header +=  $scope.timeSlices[ts].ReportType +' | '+$scope.timeSlices[ts].Duration+ ' | '+ $scope.timeSlices[ts].AccountingStandard;
+            return header;
+      };
+
 	  $scope.formatNumber = function(num){
 		  if (typeof num != 'number') return num;
           var numOut = num/1000000;

@@ -26,7 +26,7 @@
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
 	  $scope.filterPeriod = "ALL";
-	  $scope.filterRecap = "RECAP";
+	  $scope.filterRecap = "ALL";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
 	  $scope.serverPath = "http://dataroost-ffvwebstga01.prod.factset.com:9990/api/v1/companies/";
@@ -55,8 +55,8 @@
 		refresh();
       };
 	  
-    $scope.gridOptions = { 
-        columnDefs: $scope.columnDefs, 
+    $scope.gridOptions={
+        columnDefs:$scope.columnDefs,
         data: $scope.data,
         enablePinning: true,
         showTreeExpandNoChildren: false,
@@ -71,7 +71,7 @@
         enableHorizontalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         enableVerticalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         onRegisterApi: function(gridApi) 
-        { $scope.gridApi = gridApi;} 
+        { $scope.gridApi = gridApi;}
       };  
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
@@ -133,6 +133,11 @@
 		}
 	  };
 	   	
+      $scope.viewRefresh = function () {
+          if($scope.filterPeriod == 'ALL')
+                $scope.filterRecap == 'ALL'
+          refresh();
+      };
       $scope.callRefresh = function () {
           refresh();
       };
@@ -178,6 +183,7 @@
                     $scope.columnDefs.push({
                         name: $scope.timeSlices[ts].Id,
                         width: 125,
+                        displayName: $scope.formatHeader(ts),
                         cellFilter: 'number',
                         cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
                             if (grid.getCellValue(row,col) >= 0)
@@ -198,7 +204,7 @@
                 for(var sh in $scope.staticHierarchies){
                     var row = [];
                     row["id"] = $scope.staticHierarchies[sh].id;
-                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription.replace("&nbsp;&nbsp;", "     ");
+                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription.replace("&nbsp;&nbsp;", "ï¿½    ");
                     row["staticHierarchyMetaType"] = $scope.staticHierarchies[sh].staticHierarchyMetaType;
                     row["parentId"] = $scope.staticHierarchies[sh].parentId;
                     if(!$scope.staticHierarchies[sh].staticHierarchyMetaType == "")
@@ -217,6 +223,20 @@
             });
             
     
+      };
+      $scope.formatHeader = function(ts){
+            var header = $scope.timeSlices[ts].TimeSlicePeriodEndDate + ' | ';
+            if($scope.timeSlices[ts].PeriodType == 'XX')
+                header += 'AR | ';
+            else
+                header += $scope.timeSlices[ts].PeriodType+' | ';
+            header += $scope.timeSlices[ts].PublicationDate+' | ';
+            if($scope.timeSlices[ts].IsRecap)
+                header += 'RECAP | '
+            else
+                header += 'ORIGINAL | '
+            header +=  $scope.timeSlices[ts].ReportType +' | '+$scope.timeSlices[ts].Duration+ ' | '+ $scope.timeSlices[ts].AccountingStandard;
+            return header;
       };
 	  
 	  $scope.formatNumber = function(num){
@@ -325,16 +345,19 @@
  
  <div class = "gridFull">
     <div class="Buttons"> 
-        <fieldset class="fieldset-auto-width">
-        <legend>
-        Product View
-        </legend>
+        <fieldset>
+        <legend>Product View</legend>
         <!-- <label> -->
-        <md-radio-group ng-model="filterPeriod" ng-change="callRefresh()" layout="row">
-            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
-            <md-radio-button value="QTR">QTR</md-radio-button>
-            <md-radio-button value="ALL">ALL</md-radio-button>
-        </md-radio-group>
+        <md-content>   
+            <section layout ="row" layout-align="center center" layout-wrap>
+                <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
+                    <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+                    <md-radio-button value="QTR">QTR</md-radio-button>
+                    <md-radio-button value="ALL">ALL</md-radio-button>
+                </md-radio-group>
+            <md-button ng-click='showAll()'>ALL</md-button>
+        </section>
+        </md-content>
         </fieldset>
         <br>
         <fieldset class="fieldset-auto-width">
