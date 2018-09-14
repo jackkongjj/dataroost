@@ -332,9 +332,6 @@ ORDER BY ChangeDate DESC";
 				}
 			}
 
-			//var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();			
-			//voyagerIconums.AddRange(superfastMissingDataIconums.Except(voyagerIconums));
-
 			// Voyager data is PPI based
 			if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
@@ -349,9 +346,8 @@ ORDER BY ChangeDate DESC";
 							if (shareClass.ShareClassData == null)
 								shareClass.ShareClassData = new List<ShareClassDataItem>();
 							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
-								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;
-								var voyagerReportDate = voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate);
-								if (voyagerReportDate > supercoreReportDate)
+								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;								
+								if (voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate) > supercoreReportDate)
 									shareClass.ShareClassData = voyagerSecurityItems[shareClass.PPI];
 							}
 						}
@@ -397,10 +393,7 @@ ORDER BY ChangeDate DESC";
 					}
 				}
 			}
-
-			//var superfastMissingDataIconums = companyShareClassData.Where(x => x.Value.Any(y => y.ShareClassData == null || !y.ShareClassData.Any())).Select(y => y.Key).ToList();
-			//voyagerIconums.AddRange(superfastMissingDataIconums.Except(voyagerIconums));
-
+						
 			// Voyager data is PPI based
 			if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
@@ -411,14 +404,14 @@ ORDER BY ChangeDate DESC";
 					Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
 					if (companyShareClassData.ContainsKey(iconum)) {
 						List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-							List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+						foreach (ShareClassDataDTO shareClass in shareClassDataList) {							
+							if (shareClass.ShareClassData == null)
+								shareClass.ShareClassData = new List<ShareClassDataItem>();
 							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
 								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;
 								if (voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate) > supercoreReportDate)
 									shareClass.ShareClassData = voyagerSecurityItems[shareClass.PPI];
-							} else if (shareClass.ShareClassData == null)
-								shareClass.ShareClassData = new List<ShareClassDataItem>();
+							} 
 						}
 					}
 				}
