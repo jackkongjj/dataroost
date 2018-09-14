@@ -90,7 +90,16 @@ td.headerCell{
 }
 
 .child{
-  padding-left:10px;
+  padding-left:40px;
+  font-weight: normal;
+}
+
+.startline{
+  padding-left:20px;
+}
+
+.endline{
+  padding-left:20px;
   font-weight: normal;
 }
 

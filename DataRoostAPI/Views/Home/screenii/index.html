@@ -34,7 +34,11 @@
       queryString();
 	  updateYearList();
       refresh();
-      
+	  
+	  
+      $scope.getNumber = function(num) {
+          return new Array(num);
+      };
 	  $scope.submit = function () {
 		var currIconum = $( "#searchIconum" ).val().trim();
 	    $scope.currIconum = currIconum;
@@ -165,10 +169,12 @@
                     pinnedLeft: true,
                     cellClass: function(grid,row) {
                             if (row.entity.id == -1000)
-                                return 'virtualParent'
-                            else if (row.treeLevel > 0)
-                                return 'child'
-                            else
+                                return 'virtualParent startline';
+                            if (row.entity.level > 1)
+                                return 'child';
+							else if (row.entity.level == 1)
+                                return 'startline';
+                            else if (row.entity.level == 0)
                                 return 'parent'
                         },
                     headerCellTemplate:    '<div style="text-align: right">Period End Date</div></br>' + 
@@ -204,13 +210,14 @@
                 for(var sh in $scope.staticHierarchies){
                     var row = [];
                     row["id"] = $scope.staticHierarchies[sh].id;
-                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription.replace("&nbsp;&nbsp;", "�    ");
+                    row["Description"] = $scope.staticHierarchies[sh].normalizedDescription;
                     row["staticHierarchyMetaType"] = $scope.staticHierarchies[sh].staticHierarchyMetaType;
                     row["parentId"] = $scope.staticHierarchies[sh].parentId;
                     if(!$scope.staticHierarchies[sh].staticHierarchyMetaType == "")
                         row["$$treeLevel"] = 0;
                     else
                         row["$$treeLevel"] = $scope.staticHierarchies[sh].level;
+					row["level"] = $scope.staticHierarchies[sh].level;
                     for(var ts in $scope.timeSlices){
                         if($scope.staticHierarchies[sh].id == -1000)
                             row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].virtualValueNumeric/100000;

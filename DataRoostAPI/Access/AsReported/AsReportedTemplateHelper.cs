@@ -894,7 +894,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							lines.Add(li);
 						}
 						li.StaticHierarchies.Add(sl);
-					} else {
+					} else if (HierarchyMetaDescription.ContainsKey(sl.StaticHierarchyMetaType)) {
 						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
 						if (li == null) {
 							li = new MiddleLineItem();
@@ -920,9 +920,14 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			public List<StaticHierarchy> StaticHierarchies = new List<StaticHierarchy>();
 			public string MetaType = "";
 			public virtual List<StaticHierarchy> Convert() {
-				return StaticHierarchies;
-				//List<StaticHierarchy> newShs = new List<StaticHierarchy>();
-				//return newShs;
+				List<StaticHierarchy> newShs = new List<StaticHierarchy>();
+				var sh = StaticHierarchies.FirstOrDefault();
+				if (sh != null) {
+					sh.Description = sh.Description.Insert(sh.Description.LastIndexOf(']') + 1, HtmlIndent);
+					sh.Level = 0;
+					newShs.Add(sh);
+				}
+				return newShs;
 			}
 		}
 		public class StartLineItem : LineItem {
@@ -931,6 +936,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				var sh = StaticHierarchies.FirstOrDefault();
 				if (sh != null) {
 					sh.Description = sh.Description.Insert(sh.Description.LastIndexOf(']') + 1, HtmlIndent);
+					sh.Level = 1;
 					newShs.Add(sh);
 				}
 				return newShs;
@@ -946,11 +952,13 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						};
 				shs.Description = HtmlIndent + HierarchyMetaDescription[MetaType];
 				shs.Cells = new List<SCARAPITableCell>();
+				shs.Level = 1;
 				newShs.Add(shs);
 				bool isFirst = true;
 				foreach (var s in StaticHierarchies) {
 					s.StaticHierarchyMetaType = "";
 					s.Description = s.Description.Insert(s.Description.LastIndexOf(']') + 1, HtmlIndent);
+					s.Level = 2;
 					newShs.Add(s);
 					for (int i = 0; i < s.Cells.Count; i++ ) {
 						if (isFirst) {
@@ -980,7 +988,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				return newShs;
 			}
 		}
-		static string HtmlIndent = "&nbsp;&nbsp;";
+		static string HtmlIndent = "";
 		static List<String> HierarchyMetaStartlines = new List<String> { "RV", "GP", "OP", "EBITDA", "EBIT", "PBT", "NI", "BEPS", "DEPS"};
 		static List<String> HierarchyMetaEndlines = new List<String> { "NG-RV", "NG-GP", "NG-OP", "NG-EBITDA", "NG-EBIT", "NG-PBT", "NG-NI", "NG-BEPS", "NG-DEPS" };
 		static List<String> HierarchyStartMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
