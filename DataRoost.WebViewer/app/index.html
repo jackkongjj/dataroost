@@ -94,7 +94,7 @@
 		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
 		  </td>
           <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
-			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
+			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.ConsolidatedFlag }}<br>{{ z.AccountingStandard }}
 			<br>&nbsp;<br>{{$index + 1}}<br>
 		  </td>
       </tr>
@@ -309,7 +309,7 @@
                                              '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PublicationDate + '"| date:"MMM-yyyy"}}</div></br>' +
                                              '<div style="text-align: center">{{' + $scope.timeSlices[ts].IsRecap + ' ? "RECAP" : "ORIGINAL"}}</div></br>' +
                                              '<div style="text-align: center">'+ $scope.timeSlices[ts].ReportType +'</div></br>' +
-                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].Duration +'</div></br>' +
+                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].ConsolidatedFlag +'</div></br>' +
                                              '<div style="text-align: center">'+ $scope.timeSlices[ts].AccountingStandard +'</div></br>',
                                             }); 
                 }

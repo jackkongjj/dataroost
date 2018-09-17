@@ -910,12 +910,84 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					newStaticHierarchies.AddRange(li.Convert());
 				}
 				temp.StaticHierarchies = newStaticHierarchies;
+				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
+				foreach (var ts in temp.TimeSlices)
+				{
+					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
+				}
+				temp.TimeSlices = newTimeSlices;
 				#endregion
 			} catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
 			}
 			return temp;
 		}
+		private TimeSlice TransformProductViewTimeSlice(TimeSlice c)
+		{
+				var tablecells = c.Cells.Where(t => t.ID != 0);
+				if (tablecells != null && tablecells.Count() > 1 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() > 1) {
+					IEnumerable<int?> periodlengths = tablecells.Select(tb => tb.PeriodLength).Distinct();
+					int count = 0;
+					int result = 0;
+					foreach (int? p in periodlengths) {
+						var tc_count = tablecells.Where(tt => tt.PeriodLength == p).Count();
+						if (tc_count > count) {
+							if (p == null || !p.HasValue) {
+								result = 0;
+							} else {
+								result = p.Value;
+							}
+							count = tc_count;
+						}
+					}
+
+					string periodType = tablecells.Where(tt => tt.PeriodLength == result).Select(x => x.PeriodTypeID).FirstOrDefault();
+					char PeriodType = periodType == null ? (char)0 : periodType.FirstOrDefault();
+					int ARDuration = result;
+					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
+
+				} else if (tablecells != null && tablecells.Count() > 0 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() == 1) {
+					int ARDuration = 1;
+					char PeriodType = ' ';
+					var tablecell = tablecells.FirstOrDefault();
+
+					if (tablecell != null && tablecell.PeriodLength.HasValue)
+						ARDuration = tablecell.PeriodLength.Value;
+
+					if (tablecell != null)
+						PeriodType = tablecell.PeriodTypeID.FirstOrDefault();
+					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
+				}
+				return c;
+		}
+
+		private string ConvertDuration(int result, char type, string InterimType) {
+			switch (type) {
+				case 'M': return result + " Mos";
+				case 'W': return result + " Wks";
+				case 'Y': return result + " Yrs";
+				case 'D': return result + " Days";
+				case 'Q': return result + " Qus";
+				case 'P': return "PIT";
+			}
+			//case for Auto calced columns
+			switch (InterimType) {
+				case "Q4":
+				case "Q3":
+				case "Q2":
+				case "Q1":
+					return "3 Mos";
+				case "Q9":
+					return "9 Mos";
+				case "Q6":
+					return "6 Mos";
+				case "XX":
+					return "1 Yrs";
+			}
+
+			return "";
+		}
+
 		public class LineItem {
 			public List<StaticHierarchy> StaticHierarchies = new List<StaticHierarchy>();
 			public string MetaType = "";
