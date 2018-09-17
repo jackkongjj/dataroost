@@ -185,7 +185,11 @@
         enableHorizontalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         enableVerticalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         onRegisterApi: function(gridApi) 
-        { $scope.gridApi = gridApi;} 
+        { $scope.gridApi = gridApi;
+          $scope.gridApi.grid.registerDataChangeCallback(function() {
+              $scope.gridApi.treeBase.expandAllRows();
+          })
+        }
       };  
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
