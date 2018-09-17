@@ -327,9 +327,9 @@
 					row["level"] = $scope.staticHierarchies[sh].level;
                     for(var ts in $scope.timeSlices){
                         if($scope.staticHierarchies[sh].id == -1000)
-                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].virtualValueNumeric/100000;
+                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].virtualValueNumeric/1000000;
                         else
-                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].displayValue/100000;
+                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].displayValue/1000000;
                     }
                     $scope.data.push(row);
                 }
