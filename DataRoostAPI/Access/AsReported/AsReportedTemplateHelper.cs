@@ -922,8 +922,19 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			}
 			return temp;
 		}
+		private string TransformProductViewCurrency(IEnumerable<SCARAPITableCell> tablecells) {
+			string currency = "";
+			var firstTableCellWithCurrency = tablecells.Where(t => !string.IsNullOrEmpty(t.CurrencyCode)).FirstOrDefault();
+			if (firstTableCellWithCurrency != null) {
+				if (tablecells.Count(x => x.CurrencyCode != firstTableCellWithCurrency.CurrencyCode) == 0) {
+					currency = firstTableCellWithCurrency.CurrencyCode;
+				}
+			}
+			return currency;
+		}
 		private TimeSlice TransformProductViewTimeSlice(TimeSlice c)
 		{
+			try {
 				var tablecells = c.Cells.Where(t => t.ID != 0);
 				if (tablecells != null && tablecells.Count() > 1 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() > 1) {
 					IEnumerable<int?> periodlengths = tablecells.Select(tb => tb.PeriodLength).Distinct();
@@ -941,6 +952,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						}
 					}
 
+					c.AccountingStandard = TransformProductViewCurrency(tablecells);
 					string periodType = tablecells.Where(tt => tt.PeriodLength == result).Select(x => x.PeriodTypeID).FirstOrDefault();
 					char PeriodType = periodType == null ? (char)0 : periodType.FirstOrDefault();
 					int ARDuration = result;
@@ -949,15 +961,16 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				} else if (tablecells != null && tablecells.Count() > 0 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() == 1) {
 					int ARDuration = 1;
 					char PeriodType = ' ';
+					c.AccountingStandard = TransformProductViewCurrency(tablecells);
 					var tablecell = tablecells.FirstOrDefault();
-
 					if (tablecell != null && tablecell.PeriodLength.HasValue)
 						ARDuration = tablecell.PeriodLength.Value;
-
 					if (tablecell != null)
 						PeriodType = tablecell.PeriodTypeID.FirstOrDefault();
 					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
 				}
+			} catch {
+			}
 				return c;
 		}
 
