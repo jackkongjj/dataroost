@@ -194,13 +194,15 @@
                         name: $scope.timeSlices[ts].Id,
                         width: 125,
                         displayName: $scope.formatHeader(ts),
-                        cellFilter: 'number',
+                        cellFilter: 'hyphenOrNumber',
                         cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
                             if (grid.getCellValue(row,col) >= 0)
                                 return 'positive'
-                            else
+                            else if (grid.getCellValue(row,col) <= 0)
                                 return 'negative'
-                        },
+                            else
+                                return 'blank'
+                            },
                         headerCellTemplate : '<div style="text-align: center">{{"' + $scope.timeSlices[ts].TimeSlicePeriodEndDate  + '"| date:"dd-MMM-yyyy"}}</div></br>' +
                                              '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PeriodType +'" == "XX" ? "AR" : "'+ $scope.timeSlices[ts].PeriodType +'"}}</div></br>' +
                                              '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PublicationDate + '"| date:"MMM-yyyy"}}</div></br>' +
@@ -223,10 +225,14 @@
                         row["$$treeLevel"] = $scope.staticHierarchies[sh].level;
 					row["level"] = $scope.staticHierarchies[sh].level;
                     for(var ts in $scope.timeSlices){
-                        if($scope.staticHierarchies[sh].id == -1000)
-                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].virtualValueNumeric/1000000;
-                        else
-                            row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].displayValue/1000000;
+                        if($scope.staticHierarchies[sh].id == -1000){
+                            if($scope.staticHierarchies[sh].cells[ts].virtualValueNumeric != null)
+                                row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].virtualValueNumeric/1000000;
+                        }
+                        else{
+                            if($scope.staticHierarchies[sh].cells[ts].displayValue != null)
+                                row[$scope.timeSlices[ts].Id] = $scope.staticHierarchies[sh].cells[ts].displayValue/1000000;
+                        }
                     }
                     $scope.data.push(row);
                 }
@@ -287,6 +293,16 @@
           $scope.$digest();
       }
   });
+  
+  app.filter('hyphenOrNumber',function($filter){
+      return function (value){
+          var numberFilter = $filter('number');
+          if (angular.isUndefined(value))
+            return '-';
+          else
+           return numberFilter(value,2);
+      }
+  })
   
   function insertUnStitchData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
       var shix = 0;

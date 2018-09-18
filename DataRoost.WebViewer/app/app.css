@@ -63,7 +63,7 @@ td.headerCell{
 }
 
 .grid{
- height: 750px;
+ height: 98vh;
  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 
@@ -77,6 +77,9 @@ td.headerCell{
   text-align: right;
 }
 
+.blank{
+  text-align: right;
+}
 .ui-grid-cell{
   padding: 2px 2px 2px 2px;
   /* text-align: right; */

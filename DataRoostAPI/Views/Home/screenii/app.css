@@ -77,6 +77,10 @@ td.headerCell{
   text-align: right;
 }
 
+.blank{
+  text-align: right;
+}
+
 .ui-grid-cell{
   padding: 2px 2px 2px 2px;
   /* text-align: right; */
