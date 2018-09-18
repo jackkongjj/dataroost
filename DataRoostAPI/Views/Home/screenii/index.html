@@ -22,6 +22,7 @@
 	  $scope.selectedCells = [];
       $scope.columnDefs = [];
       $scope.data = [];
+	  $scope.currCompanyName = "Screen II";
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
@@ -123,6 +124,10 @@
 }
 	  function updateYearList()
 	  {
+	  	  	$http.get($scope.serverPath + $scope.currIconum) // get company name
+            .then(function (response) {      $scope.currCompanyName = response.data[0].name;});
+			
+			
 	  		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
             .then(function (response) {      $scope.yearlist = response.data.split(",");});
 	  }
@@ -372,6 +377,7 @@
  
  <div class = "gridFull">
     <div class="Buttons"> 
+	<span style="color:blue;font-weight:bold">{{ currCompanyName }}</span>
         <fieldset>
         <legend>Product View</legend>
         <!-- <label> -->
