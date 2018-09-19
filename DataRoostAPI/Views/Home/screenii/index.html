@@ -16,13 +16,14 @@
 <link rel="stylesheet" type="text/css" href="app.css">    
 <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 <script>
-  var app = angular.module('SCARApp',['ngMaterial','ngMessages','ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning','ui.grid.selection','ui.grid.exporter']);
+  var app = angular.module('SCARApp',['ngMaterial','ngMessages','ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning','ui.grid.selection','ui.grid.exporter','ui.grid.autoResize']);
   app.controller('SCARController', function($scope, $http,uiGridConstants) {	  
 	  $scope.selectedRows = [];
 	  $scope.selectedCells = [];
       $scope.columnDefs = [];
       $scope.data = [];
-	  $scope.currCompanyName = "Screen II";
+      $scope.currCompanyName = "";
+      $scope.Priority = null;
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
@@ -30,14 +31,14 @@
 	  $scope.filterRecap = "ALL";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
-	  $scope.serverPath = "http://dataroost-ffvwebstga01.prod.factset.com:9990/api/v1/companies/";
+	  $scope.serverPath = "http://localhost:61581/api/v1/companies/";
 	  
       queryString();
 	  updateYearList();
       refresh();
-	  
-	  
-      $scope.getNumber = function(num) {
+      
+
+	  $scope.getNumber = function(num) {
           return new Array(num);
       };
 	  $scope.submit = function () {
@@ -76,21 +77,17 @@
         enableHorizontalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         enableVerticalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         onRegisterApi: function(gridApi) 
-        { $scope.gridApi = gridApi;
-          $scope.gridApi.grid.registerDataChangeCallback(function() {
-              $scope.gridApi.treeBase.expandAllRows();
-          })
-        }
+        { $scope.gridApi = gridApi;}
       };  
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
-		$scope.filterRecap = "RECAP";
+		$scope.filterRecap = "ALL";
 		$scope.selectedYear = "YEARS";
 		refresh();
       };
 	  $scope.showQtr = function () {
 		$scope.filterPeriod = "QTR";
-		$scope.filterRecap = "RECAP";
+		$scope.filterRecap = "ALL";
 		$scope.selectedYear = "YEARS";
 		refresh();
       };
@@ -113,7 +110,7 @@
 	  $scope.updateReverseRepresentation = function () {
 		refresh();
       };
-	  	  function urlParam(name){
+      function urlParam(name){
     var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
     if (results==null){
        return null;
@@ -125,30 +122,31 @@
 	  function updateYearList()
 	  {
 	  	  	$http.get($scope.serverPath + $scope.currIconum) // get company name
-            .then(function (response) {      $scope.currCompanyName = response.data[0].name;});
-			
-			
+            .then(function (response) {      $scope.currCompanyName = response.data[0].name;
+                                             $scope.Priority = response.data[0].companyPriority});
+
+
 	  		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
             .then(function (response) {      $scope.yearlist = response.data.split(",");});
 	  }
 	  function queryString()
 	  {
 		//var urlParams = new URLSearchParams(window.location.search);
-		var iconum =  urlParam('iconum');  
+		var iconum =  urlParam('iconum');
 		if (iconum)
 		{
 			$scope.currIconum  = iconum;
-			var templateName =  urlParam('templateName'); 
+			var templateName =  urlParam('templateName');
 			if (templateName)
 			{
 				$scope.currTemplate = templateName;
 			}
 		}
 	  };
-	   	
+
       $scope.viewRefresh = function () {
           if($scope.filterPeriod == 'ALL')
-                $scope.filterRecap == 'ALL'
+                $scope.filterRecap = 'ALL'
           refresh();
       };
       $scope.callRefresh = function () {
@@ -186,35 +184,35 @@
                             else if (row.entity.level == 0)
                                 return 'parent'
                         },
-                    headerCellTemplate:    '<div style="text-align: right">Period End Date</div></br>' + 
-                                           '<div style="text-align: right">Time Series</div></br>' +
-                                           '<div style="text-align: right">Publication Date</div></br>' +
-                                           '<div style="text-align: right">Account Type</div></br>' +
-                                           '<div style="text-align: right">Form Type</div></br>' +
-                                           '<div style="text-align: right">Period Length</div></br>' +
-                                           '<div style="text-align: right">Currency Type<br/><span class="note">All figures in millions except per share items</span></div>'
+                    headerCellTemplate:    '<div class="columnHeader">Period End Date</div>' + 
+                                           '<div class="columnHeader">Time Series</div>' +
+                                           '<div class="columnHeader">Publication Date</div>' +
+                                           '<div class="columnHeader">Account Type</div>' +
+                                           '<div class="columnHeader">Form Type</div>' +
+                                           '<div class="columnHeader">Period Length</div>' +
+                                           '<div class="columnHeader">Currency Type<br/><span class="note">All figures in millions except per share items</span></div>'
                 });
                 for(var ts in $scope.timeSlices){
                     $scope.columnDefs.push({
                         name: $scope.timeSlices[ts].Id,
                         width: 125,
                         displayName: $scope.formatHeader(ts),
-                        cellFilter: 'hyphenOrNumber',
+                        cellFilter: 'hyphenOrNumber',                        
                         cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
-                            if (grid.getCellValue(row,col) >= 0)
-                                return 'positive'
-                            else if (grid.getCellValue(row,col) <= 0)
-                                return 'negative'
-                            else
-                                return 'blank'
-                            },
-                        headerCellTemplate : '<div style="text-align: center">{{"' + $scope.timeSlices[ts].TimeSlicePeriodEndDate  + '"| date:"dd-MMM-yyyy"}}</div></br>' +
-                                             '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PeriodType +'" == "XX" ? "AR" : "'+ $scope.timeSlices[ts].PeriodType +'"}}</div></br>' +
-                                             '<div style="text-align: center">{{"' + $scope.timeSlices[ts].PublicationDate + '"| date:"MMM-yyyy"}}</div></br>' +
-                                             '<div style="text-align: center">{{' + $scope.timeSlices[ts].IsRecap + ' ? "RECAP" : "ORIGINAL"}}</div></br>' +
-                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].ReportType +'</div></br>' +
-                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].ConsolidatedFlag +'</div></br>' +
-                                             '<div style="text-align: center">'+ $scope.timeSlices[ts].AccountingStandard +'</div></br>',
+                                        if (grid.getCellValue(row,col) >= 0)
+                                            return 'positive'
+                                        else if (grid.getCellValue(row,col) <= 0)
+                                            return 'negative'
+                                        else
+                                            return 'blank'
+                                    },
+                        headerCellTemplate : '<div class="columnItems">{{"' + $scope.timeSlices[ts].TimeSlicePeriodEndDate  + '"| date:"dd-MMM-yyyy"}}</div> ' +
+                                             '<div class="columnItems">{{"' + $scope.timeSlices[ts].PeriodType +'" == "XX" ? "AR" : "'+ $scope.timeSlices[ts].PeriodType +'"}}</div> ' +
+                                             '<div class="columnItems">{{"' + $scope.timeSlices[ts].PublicationDate + '"| date:"MMM-yyyy"}}</div> ' +
+                                             '<div class="columnItems">{{' + $scope.timeSlices[ts].IsRecap + ' ? "RECAP" : "ORIGINAL"}}</div> ' +
+                                             '<div class="columnItems">'+ $scope.timeSlices[ts].ReportType +'</div> ' +
+                                             '<div class="columnItems">'+ $scope.timeSlices[ts].ConsolidatedFlag +'</div> ' +
+                                             '<div class="columnItems">'+ $scope.timeSlices[ts].AccountingStandard +'</div> </br>',
                                             }); 
                 }
 
@@ -245,7 +243,7 @@
             });
             
     
-      };
+      };              
       $scope.formatHeader = function(ts){
             var header = $scope.timeSlices[ts].TimeSlicePeriodEndDate + ' | ';
             if($scope.timeSlices[ts].PeriodType == 'XX')
@@ -260,7 +258,7 @@
             header +=  $scope.timeSlices[ts].ReportType +' | '+$scope.timeSlices[ts].Duration+ ' | '+ $scope.timeSlices[ts].AccountingStandard;
             return header;
       };
-	  
+
 	  $scope.formatNumber = function(num){
 		  if (typeof num != 'number') return num;
           var numOut = num/1000000;
@@ -298,7 +296,7 @@
           $scope.$digest();
       }
   });
-  
+
   app.filter('hyphenOrNumber',function($filter){
       return function (value){
           var numberFilter = $filter('number');
@@ -308,7 +306,7 @@
            return numberFilter(value,2);
       }
   })
-  
+
   function insertUnStitchData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
       var shix = 0;
       for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
@@ -367,47 +365,55 @@
                   }
               }
           }
-      }
-  }  
+      }      
+  }
  </script>
 
 <body>
 
 <div ng-app="SCARApp" ng-controller="SCARController">
- 
- <div class = "gridFull">
-    <div class="Buttons"> 
-	<span style="color:blue;font-weight:bold">{{ currCompanyName }}</span>
-        <fieldset>
-        <legend>Product View</legend>
-        <!-- <label> -->
-        <md-content>   
-            <section layout ="row" layout-align="center center" layout-wrap>
-                <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
-                    <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
-                    <md-radio-button value="QTR">QTR</md-radio-button>
-                </md-radio-group>
-            <md-button ng-click='showAll()'>ALL</md-button>
-        </section>
-        </md-content>
-        </fieldset>
-        <br>
-        <fieldset class="fieldset-auto-width">
-        <legend>
-        Filter
-        </legend>
-        <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
-                <md-radio-button value="ORG">ORG</md-radio-button>
-                <md-radio-button value="RECAP">RECAP</md-radio-button>
-        </md-radio-group>
-        <br>
-        <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"></select>
-        <md-switch ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
-        </fieldset>
+    <ul class = 'header'>
+        <li> <a>NonGAAP SCREEN II</a></li>
+        <li> <a>Company Name</a> : {{currCompanyName}}</li>
+        <li> <a>Priority</a> : {{Priority}}</li>
+    </ul>   
+    <div class = "gridFull">
+        <div class="Buttons"> 
+            <fieldset>
+            <legend>Product View</legend>
+            <md-content>
+                <section class ="viewButtons" layout ="row" layout-align="center center" layout-wrap>
+                    <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
+                        <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+                        <md-radio-button value="QTR">QTR</md-radio-button>
+                    </md-radio-group>
+                    <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : ''" ng-click='showAll()'>ALL</md-button>
+                </section>
+            </md-content>
+            </fieldset>
+            <br>
+            <fieldset class="fieldset-auto-width">
+            <legend>
+            Filter
+            </legend>
+            <div class = "filter">
+                <div class = "filterElement">
+                    <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
+                            <md-radio-button value="ORG">ORG</md-radio-button>
+                            <md-radio-button value="RECAP">RECAP</md-radio-button>
+                            <md-radio-button value="ALL">DEFAULT</md-radio-button>
+                    </md-radio-group>
+                </div>
+                <div class = "filterElement">
+                    <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"></select>
+                </div>
+            </div>
+            </fieldset>
+            <md-switch class = "reverseRepresentation" ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
+        </div>
+        <div id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter ui-grid-auto-resize class ="grid"></div>
     </div>
-    <div  id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter class ="grid"></div>
-</div>
-  	<!--  
+<!--  
   <br><br>
   <br><br>
   <br><br>
