@@ -909,12 +909,12 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
 				IEnumerable<TimeSlice> orderedTimeSlice = null;
 				if (string.Equals(reverseRepresentation, "true", StringComparison.InvariantCultureIgnoreCase)) {
-					orderedTimeSlice = temp.TimeSlices.OrderByDescending(x => x.TimeSlicePeriodEndDate);
+					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate).ThenBy(y => y.PublicationDate);
 					foreach (var sh in temp.StaticHierarchies) {
 						sh.Cells.Reverse();
 					}
 				} else {
-					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate);
+					orderedTimeSlice = temp.TimeSlices;
 				}
 				foreach (var ts in orderedTimeSlice) {
 					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
