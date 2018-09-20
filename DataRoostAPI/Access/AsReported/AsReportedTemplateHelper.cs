@@ -552,7 +552,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
-						cmd.Parameters.AddWithValue("@reverseRepresentation", reverseRepresentation != "false" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@reverseRepresentation", 0);
 						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
 						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "ORG" ? 0 : 1);
 						cmd.Parameters.AddWithValue("@filterYear", filterYear);
@@ -906,16 +906,27 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					}
 				}
 				temp.Message += "Finished.";
+				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
+				IEnumerable<TimeSlice> orderedTimeSlice = null;
+				if (string.Equals(reverseRepresentation, "true", StringComparison.InvariantCultureIgnoreCase)) {
+					orderedTimeSlice = temp.TimeSlices.OrderByDescending(x => x.TimeSlicePeriodEndDate);
+					foreach (var sh in temp.StaticHierarchies) {
+						sh.Cells.Reverse();
+					}
+				} else {
+					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate);
+				}
+				foreach (var ts in orderedTimeSlice) {
+					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
+				}
+				temp.TimeSlices = newTimeSlices;
+
 				List<StaticHierarchy> newStaticHierarchies = new List<StaticHierarchy>();
 				foreach (var li in lines) {
 					newStaticHierarchies.AddRange(li.Convert());
 				}
 				temp.StaticHierarchies = newStaticHierarchies;
-				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
-				foreach (var ts in temp.TimeSlices) {
-					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
-				}
-				temp.TimeSlices = newTimeSlices;
+
 				#endregion
 			} catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
