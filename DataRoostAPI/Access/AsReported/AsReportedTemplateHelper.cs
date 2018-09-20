@@ -485,7 +485,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 		public string GetProductTemplateYearList(int iconum, string TemplateName) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
 			string TimeSliceQuery =
-	@"SELECT DISTINCT CONVERT(varchar, dts.CompanyFiscalYear)
+	@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
  FROM DocumentSeries ds WITH (NOLOCK) 
  	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
  	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
@@ -497,7 +497,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
  	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
  WHERE ds.CompanyID = @iconum
  AND tt.Description = @templateName
- AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  order by CONVERT(varchar, dts.CompanyFiscalYear) desc
+ AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  
+order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
  ";
 			try {
