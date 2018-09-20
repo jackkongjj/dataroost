@@ -24,6 +24,10 @@
       $scope.data = [];
       $scope.currCompanyName = "";
       $scope.Priority = null;
+      $scope.Industry = null;
+      $scope.FYEMonth = null;
+      $scope.userName = null;
+      $scope.userID = null;      
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
@@ -31,8 +35,9 @@
 	  $scope.filterRecap = "ALL";
 	  $scope.selectedYear = "YEARS";
       $scope.yearlist = [ "YEARS", "2017", "2016"];
-	  $scope.serverPath = "http://localhost:61581/api/v1/companies/";
-	  
+	  $scope.serverPath = "http://dataroost-ffvwebstga01.prod.factset.com:9990/api/v1/companies/";
+      $scope.getUserDataServicePath = "http://dredgewebservice-winwebstga02.prod.factset.com:9987/";
+
       queryString();
 	  updateYearList();
       refresh();
@@ -123,8 +128,16 @@
 	  {
 	  	  	$http.get($scope.serverPath + $scope.currIconum) // get company name
             .then(function (response) {      $scope.currCompanyName = response.data[0].name;
-                                             $scope.Priority = response.data[0].companyPriority});
-
+                                             $scope.Priority = response.data[0].companyPriority;
+                                             $scope.Industry = response.data[0].industry;
+                                             $scope.FYEMonth = response.data[0].fisicalYearEndMonth;
+                                             });
+            
+            $http.get($scope.getUserDataServicePath +"user")
+            .then(function (response){      $scope.userName = response.data[0].Username;
+                                            $scope.userID = response.data[0].Id;
+                                     }
+                 );
 
 	  		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
             .then(function (response) {      $scope.yearlist = response.data.split(",");});
@@ -190,7 +203,7 @@
                                            '<div class="columnHeader">Account Type</div>' +
                                            '<div class="columnHeader">Form Type</div>' +
                                            '<div class="columnHeader">Period Length</div>' +
-                                           '<div class="columnHeader">Currency Type<br/><span class="note">All figures in millions except per share items</span></div>'
+                                           '<div class="columnHeader">Currency Type<br/></div>'
                 });
                 for(var ts in $scope.timeSlices){
                     $scope.columnDefs.push({
@@ -212,7 +225,7 @@
                                              '<div class="columnItems">{{' + $scope.timeSlices[ts].IsRecap + ' ? "RECAP" : "ORIGINAL"}}</div> ' +
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].ReportType +'</div> ' +
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].ConsolidatedFlag +'</div> ' +
-                                             '<div class="columnItems">'+ $scope.timeSlices[ts].AccountingStandard +'</div> </br>',
+                                             '<div class="columnItems">'+ $scope.timeSlices[ts].AccountingStandard +'</div>',
                                             }); 
                 }
 
@@ -225,7 +238,7 @@
                     if(!$scope.staticHierarchies[sh].staticHierarchyMetaType == "")
                         row["$$treeLevel"] = 0;
                     else
-                        row["$$treeLevel"] = $scope.staticHierarchies[sh].level;
+                        row["$$treeLevel"] = 1;
 					row["level"] = $scope.staticHierarchies[sh].level;
                     for(var ts in $scope.timeSlices){
                         if($scope.staticHierarchies[sh].id == -1000){
@@ -376,20 +389,26 @@
         <li> <a>NonGAAP SCREEN II</a></li>
         <li> <a>Company Name</a> : {{currCompanyName}}</li>
         <li> <a>Priority</a> : {{Priority}}</li>
+        <li> <a>Industry</a> : {{Industry}}</li>
+        <li> <a>FYE Month</a> : {{FYEMonth}}</li>   
     </ul>   
     <div class = "gridFull">
         <div class="Buttons"> 
-            <fieldset>
-            <legend>Product View</legend>
-            <md-content>
-                <section class ="viewButtons" layout ="row" layout-align="center center" layout-wrap>
-                    <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
-                        <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
-                        <md-radio-button value="QTR">QTR</md-radio-button>
-                    </md-radio-group>
-                    <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : ''" ng-click='showAll()'>ALL</md-button>
-                </section>
-            </md-content>
+            <fieldset class="productview">
+                <legend>
+                    Product View
+                </legend>
+                <div class = "product">
+                    <div class = "productElement">        
+                        <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
+                            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+                            <md-radio-button value="QTR">QTR</md-radio-button>
+                        </md-radio-group>
+                    </div>
+                    <div class = "productElement">    
+                        <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : 'allButton'" ng-click='showAll()'>ALL</md-button>
+                    </div>
+                </div>
             </fieldset>
             <br>
             <fieldset class="fieldset-auto-width">
@@ -405,13 +424,16 @@
                     </md-radio-group>
                 </div>
                 <div class = "filterElement">
-                    <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"></select>
+                    <md-select class="select" ng-model='selectedYear' ng-change="updateYear()">
+                        <md-option ng-repeat = "c in yearlist" ng-value = "c">{{c}}</md-option>
+                    </md-select>
                 </div>
             </div>
             </fieldset>
             <md-switch class = "reverseRepresentation" ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
         </div>
         <div id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter ui-grid-auto-resize class ="grid"></div>
+        <div class="note">*All figures in millions except per share items</div>
     </div>
 <!--  
   <br><br>

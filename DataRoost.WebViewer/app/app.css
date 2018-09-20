@@ -63,7 +63,7 @@ td.headerCell{
 }
 
 .grid{
- height: 92vh;
+ height: 90vh;
  font-family: Arial, Helvetica, sans-serif;
  font-size: 13px;
 }
@@ -114,7 +114,9 @@ td.headerCell{
 }
 
 .note{
+  padding-top: 5px;
   font-weight: normal;
+  font-style: italic;
 }
 
 .columnHeader{
@@ -129,6 +131,8 @@ td.headerCell{
   margin-top:3px;
 }
 .viewButtons{
+  height: 100%;
+  width: 100%;
   background-color: #F3F3F3;
 }
 .fieldset-auto-width{
@@ -150,6 +154,10 @@ td.headerCell{
 .allSelected{
   background-color: #44BED8;
   color: white;
+  margin: 0px;
+}
+.allButton{
+  margin:0px;
 }
 
 .header {
@@ -173,9 +181,23 @@ td.headerCell{
   width: 100%;
 }
 .filterElement{
+  padding-left: 10px;
   display: inline-block;
 }
 
+.select{
+  margin:0px;
+}
+.product{
+  width: 100%;
+}
+.productElement{
+  padding-left: 10px;
+  display: inline-block;
+}
+.productview{
+  margin-bottom: 10px; 
+}
 md-radio-button.md-default-theme .md-on, md-radio-button .md-on {
   background-color: #44BED8;
 }
