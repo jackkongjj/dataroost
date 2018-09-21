@@ -59,11 +59,6 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }
 
-        [JsonProperty("industry")]
-        public string Industry { get; set; }
-
-        [JsonProperty("fisicalYearEndMonth")]
-        public string FisicalYearEndMonth { get; set; }
     }
 
 }

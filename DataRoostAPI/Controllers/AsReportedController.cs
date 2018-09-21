@@ -274,7 +274,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("productview/{TemplateName}/years")]
+        [Route("productview/{TemplateName}/meta")]
+        [HttpGet]
+        public object GetMeta(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS")
+        {
+            try
+            {
+                int iconum = PermId.PermId2Iconum(CompanyId);
+                if (CompanyId == null)
+                    return null;
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.GetMetaData(iconum);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+                return null;
+            }
+        }
+
+        [Route("productview/{TemplateName}/years")]
 		[HttpGet]
 		public string GetProductTemplateYearList(string CompanyId, string TemplateName) {
 			try {

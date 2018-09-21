@@ -11,6 +11,7 @@ using System.Net.Mail;
 using DataRoostAPI.Common.Models.AsReported;
 using FactSet.Data.SqlClient;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
@@ -481,6 +482,41 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			}
 			return temp;
 		}
+
+        public class MetaData {
+            [JsonProperty("industry")]
+            public string industry { get; set; }
+            [JsonProperty("fisicalYearEndMonth")]
+            public string fisicalYearEndMonth { get; set; }
+        }
+
+        public MetaData GetMetaData(int iconum) {
+            MetaData metaData = new MetaData();
+            const string industryQuery = @"select ig.Description,m.description from companyIndustry ci
+                                    join industryDetail id on ci.IndustryDetailID = id.ID
+                                    join IndustryGroup ig on id.IndustryGroupID = ig.ID
+                                    join CompanyMeta cm on cm.Iconum = ci.Iconum
+                                    join Months m on cm.FYEMonth = m.ID
+                                    where ci.Iconum = @iconum";
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(industryQuery, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@iconum", iconum);
+
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        if (sdr.Read())
+                        {
+                            metaData.industry = sdr.GetStringSafe(0);
+                            metaData.fisicalYearEndMonth = sdr.GetStringSafe(1);
+                        }
+                    }
+                }
+            }
+            return metaData;
+        }
 
 		public string GetProductTemplateYearList(int iconum, string TemplateName) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");

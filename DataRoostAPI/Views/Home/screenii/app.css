@@ -177,6 +177,19 @@ td.headerCell{
   font-weight: bold;
 }
 
+.userName{
+  position: absolute;
+  top:20px;
+  right: 35px;
+}
+.userPic {
+  border-radius: 50%;
+  height: 45px;
+  width: 45px;
+  position: absolute;
+  top: 7px;
+  right: 20px;
+}
 .filter{
   width: 100%;
 }

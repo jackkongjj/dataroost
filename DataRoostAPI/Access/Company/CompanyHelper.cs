@@ -64,32 +64,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				}
 			}
 
-            const string industryQuery = @"select ig.Description,m.description from companyIndustry ci
-                                    join industryDetail id on ci.IndustryDetailID = id.ID
-                                    join IndustryGroup ig on id.IndustryGroupID = ig.ID
-                                    join CompanyMeta cm on cm.Iconum = ci.Iconum
-                                    join Months m on cm.FYEMonth = m.ID
-                                    where ci.Iconum = @iconum";
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(industryQuery, conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@iconum", iconum);
-
-                    using (SqlDataReader sdr = cmd.ExecuteReader())
-                    {
-                        if (sdr.Read())
-                        {
-                            company.Industry = sdr.GetStringSafe(0);
-                            company.FisicalYearEndMonth = sdr.GetStringSafe(1);
-                        }
-                    }
-                }
-            }
-
-
-
             const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
                 FROM ppiiconummap p
 	                LEFT JOIN Countries c ON c.iso_country = p.IsoCountry
