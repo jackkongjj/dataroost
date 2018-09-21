@@ -828,10 +828,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
 		[HttpPost]
-		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId, StringInput input) {
+		public ScarResult AddLikePeriodValidationNote(string id, Guid DocumentId, StringInput input) {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
-					return AddLikePeriodValidationNote(id, DocumentId);
+					return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddLikePeriodValidationNote(id, DocumentId, input.StringData);

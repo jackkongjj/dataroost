@@ -521,7 +521,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 		public string GetProductTemplateYearList(int iconum, string TemplateName) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
 			string TimeSliceQuery =
-	@"SELECT DISTINCT CONVERT(varchar, dts.CompanyFiscalYear)
+	@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
  FROM DocumentSeries ds WITH (NOLOCK) 
  	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
  	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
@@ -533,7 +533,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
  	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
  WHERE ds.CompanyID = @iconum
  AND tt.Description = @templateName
- AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  order by CONVERT(varchar, dts.CompanyFiscalYear) desc
+ AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  
+order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
  ";
 			try {
@@ -587,7 +588,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
-						cmd.Parameters.AddWithValue("@reverseRepresentation", reverseRepresentation != "false" ? 1 : 0);
+						cmd.Parameters.AddWithValue("@reverseRepresentation", 0);
 						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
 						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "ORG" ? 0 : 1);
 						cmd.Parameters.AddWithValue("@filterYear", filterYear);
@@ -941,17 +942,27 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					}
 				}
 				temp.Message += "Finished.";
+				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
+				IEnumerable<TimeSlice> orderedTimeSlice = null;
+				if (string.Equals(reverseRepresentation, "true", StringComparison.InvariantCultureIgnoreCase)) {
+					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate).ThenBy(y => y.PublicationDate);
+					foreach (var sh in temp.StaticHierarchies) {
+						sh.Cells.Reverse();
+					}
+				} else {
+					orderedTimeSlice = temp.TimeSlices;
+				}
+				foreach (var ts in orderedTimeSlice) {
+					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
+				}
+				temp.TimeSlices = newTimeSlices;
+
 				List<StaticHierarchy> newStaticHierarchies = new List<StaticHierarchy>();
 				foreach (var li in lines) {
 					newStaticHierarchies.AddRange(li.Convert());
 				}
 				temp.StaticHierarchies = newStaticHierarchies;
-				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
-				foreach (var ts in temp.TimeSlices)
-				{
-					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
-				}
-				temp.TimeSlices = newTimeSlices;
+
 				#endregion
 			} catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
@@ -968,8 +979,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			}
 			return currency;
 		}
-		private TimeSlice TransformProductViewTimeSlice(TimeSlice c)
-		{
+		private TimeSlice TransformProductViewTimeSlice(TimeSlice c) {
 			try {
 				var tablecells = c.Cells.Where(t => t.ID != 0);
 				if (tablecells != null && tablecells.Count() > 1 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() > 1) {
@@ -1007,7 +1017,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				}
 			} catch {
 			}
-				return c;
+			return c;
 		}
 
 		private string ConvertDuration(int result, char type, string InterimType) {
@@ -1081,7 +1091,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					s.Description = s.Description.Insert(s.Description.LastIndexOf(']') + 1, HtmlIndent);
 					s.Level = 2;
 					newShs.Add(s);
-					for (int i = 0; i < s.Cells.Count; i++ ) {
+					for (int i = 0; i < s.Cells.Count; i++) {
 						if (isFirst) {
 							var newCell = new SCARAPITableCell()
 							{
@@ -1110,7 +1120,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			}
 		}
 		static string HtmlIndent = "";
-		static List<String> HierarchyMetaStartlines = new List<String> { "RV", "GP", "OP", "EBITDA", "EBIT", "PBT", "NI", "BEPS", "DEPS"};
+		static List<String> HierarchyMetaStartlines = new List<String> { "RV", "GP", "OP", "EBITDA", "EBIT", "PBT", "NI", "BEPS", "DEPS" };
 		static List<String> HierarchyMetaEndlines = new List<String> { "NG-RV", "NG-GP", "NG-OP", "NG-EBITDA", "NG-EBIT", "NG-PBT", "NG-NI", "NG-BEPS", "NG-DEPS" };
 		static List<String> HierarchyStartMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
@@ -4873,7 +4883,8 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 
 ";
 			private JArray _jarray;
-			public JsonToSQLCompanyFinancialTerm(JToken jToken) : base("") {
+			public JsonToSQLCompanyFinancialTerm(JToken jToken)
+				: base("") {
 				if (jToken == null) {
 					_jarray = null;
 				} else {
@@ -5384,7 +5395,7 @@ DELETE DimensionToCell
 FROM @TempDTS tdts
 JOIN DimensionToCell dts ON tdts.TableDimensionID = dts.TableDimensionID AND tdts.TableCellID = dts.TableCellID; 
 				";
-						
+
 			string merge_sql = @"
 DECLARE @DimensionToCell TABLE(TableDimensionID int, TableCellID int)
 
@@ -5455,7 +5466,7 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 				string result = "";
 				if (is_deleting) {
 					result += string.Format(delete_sql, deleting_ids.ToString());
-				} 
+				}
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
@@ -6795,7 +6806,7 @@ from #tmptimeslices ts
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					cmd.Parameters.AddWithValue("@TypeTable", TemplateName);
 					cmd.Parameters.AddWithValue("@companyId", companyId);
-					
+
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						var ordinals = new
 						{
@@ -8277,6 +8288,225 @@ END
 			return AddMakeTheMathWorkNote(CellId, DocumentId);
 		}
 
+		public List<SCARAPITableCell> GetLPVChangeCells(string CellId, Guid DocumentId) {
+
+			const string SQL_CellIDs = @"
+select A.ID from Tablecell A WITH(NOLOCK), tableCell B WITH(NOLOCK)
+where B.ID = @cellid and A.CellYear = B.CellYear and A.CellMonth = B.CellMonth and A.CellDay = B.CellDay 
+and A.CompanyFinancialTermID = B.CompanyFinancialTermID
+";
+
+			const string SQL_CellCFTID = @"
+select A.CompanyFinancialTermId from Tablecell A WITH(NOLOCK)
+where A.ID = @cellid 
+";
+
+
+			const string SQL_ValidateCells = @"
+DECLARE @DocumentSeriesId INT
+SELECT TOP 1 @DocumentSeriesId = DocumentSeriesID
+FROM Document WITH(NOLOCK) WHERE ID =  @DocumentID
+
+
+DECLARE @TargetSH int;
+
+SELECT top 1 @TargetSH = sh.id
+  FROM  StaticHierarchy sh WITH (NOLOCK)
+  JOIN [TableCell] tc WITH (NOLOCK) on sh.CompanyFinancialTermId = tc.CompanyFinancialTermId
+  where tc.id = @cellid
+
+DECLARE @CellsForLPV CellList
+DECLARE @CellsForMTMW CellList
+
+INSERT @CellsForLPV
+SELECT distinct sh.ID, tc.DocumentTimeSliceID
+FROM StaticHierarchy sh WITH (NOLOCK)
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
+
+INSERT @CellsForMTMW
+SELECT distinct sh.ID, tc.DocumentTimeSliceID
+FROM StaticHierarchy sh WITH (NOLOCK)
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID
+WHERE sh.ID = @TargetSH and tc.TableCellid = @cellID
+
+DECLARE @ParentCells TABLE(StaticHierarchyID int, DocumentTimeSliceID int, TablecellID int)
+
+;WITH cte_sh(StaticHierarchyID, CompanyFinancialTermID, ParentID, DocumentTimeSliceID, TableCellID, IsRoot, RootStaticHierarchyID, RootDocumentTimeSliceID)
+AS
+(
+       SELECT sh.ID, sh.CompanyFinancialTermID, sh.ParentID, c.DocumentTimeSliceID, tc.TableCellID, 1, c.StaticHierarchyID, c.DocumentTimeSliceID
+       FROM @CellsForLPV c
+       JOIN StaticHierarchy sh WITH (NOLOCK) ON sh.ID = c.StaticHierarchyID
+       LEFT JOIN vw_SCARDocumentTimeSliceTableCell2 tc WITH (NOLOCK) on c.DocumentTimeSliceID = tc.DocumentTimeSliceID AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+       UNION ALL
+       SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
+       FROM cte_sh cte
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
+                                  AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
+       WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
+)
+INSERT @ParentCells
+select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where IsRoot = 0
+
+
+INSERT @CellsForLPV
+Select StaticHierarchyID, DocumentTimeSliceID 
+FROM @ParentCells
+WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+
+INSERT @CellsForLPV
+EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
+
+INSERT @CellsForMTMW
+Select StaticHierarchyID, DocumentTimeSliceID 
+FROM @ParentCells
+WHERE TableCellID is not null
+
+DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
+DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+
+DELETE FROM MTMWErrorTypeTableCell 
+WHERE TableCellid in(
+select tc.TableCellID from
+@CellsForMTMW e 
+JOIN StaticHierarchy sh on e.StaticHierarchyid = sh.id
+JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.DocumentTimeSliceId AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
+)
+
+
+INSERT INTO @SHCellsMTMW
+EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
+
+INSERT INTO @SHCellsLPV
+EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
+
+INSERT @SHCellsError 
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+from @SHCellsLPV lpv
+FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
+
+
+;WITH cte_level(SHRootID, SHID, level)
+AS
+(
+	SELECT @TargetSH, @TargetSH, 0
+	UNION ALL
+	SELECT cte.SHRootID, shp.ID, cte.level+1
+	FROM cte_level cte
+	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+)
+--SELECT MAX(level)
+--FROM cte_level
+--GROUP BY SHRootID
+
+SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, ISNULL(tc.CompanyFinancialTermID, sh.CompanyFinancialTermId), ISNULL(tc.ValueNumeric, dbo.GetTableCellDisplayValue(lpv.StaticHierarchyID, lpv.DocumentTimeSliceID)), tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+				tc.XBRLTag, 
+				tc.DocumentId, tc.Label, sf.Value,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.TableCellId = aetc.TableCellId),
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
+				lpv.LPVFail, lpv.MTMWFail,
+				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
+				sh.id as 'StaticHierarchyId'
+FROM StaticHierarchy sh WITH (NOLOCK)
+JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
+JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
+LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
+JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
+LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
+WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) and sh.CompanyFinancialTermId = @CFTID
+ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
+";
+			//List<int> IDs = new List<int>();
+			int cftid = 0;
+			List<SCARAPITableCell> ret = new List<SCARAPITableCell>();
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(SQL_CellCFTID, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+					cmd.Parameters.AddWithValue("@cellid", CellId);
+
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							cftid = reader.GetInt32(0);
+						}
+					}
+				}
+
+				using (SqlCommand cmd = new SqlCommand(SQL_ValidateCells, conn)) {
+					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
+					cmd.Parameters.AddWithValue("@cellid", CellId);
+					cmd.Parameters.AddWithValue("@CFTID", cftid);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						int adjustedOrder = 0;
+						while (reader.Read()) {
+							SCARAPITableCell cell;
+							if (reader.GetNullable<int>(1).HasValue) {
+								if (reader.GetNullable<int>(1).Value > 0) {
+									cell = new SCARAPITableCell
+									{
+										ID = reader.GetInt32(1),
+										Offset = reader.GetStringSafe(2),
+										CellPeriodType = reader.GetStringSafe(3),
+										PeriodTypeID = reader.GetStringSafe(4),
+										CellPeriodCount = reader.GetStringSafe(5),
+										PeriodLength = reader.GetNullable<int>(6),
+										CellDay = reader.GetStringSafe(7),
+										CellMonth = reader.GetStringSafe(8),
+										CellYear = reader.GetStringSafe(9),
+										CellDate = reader.GetNullable<DateTime>(10),
+										Value = reader.GetStringSafe(11),
+										CompanyFinancialTermID = reader.GetNullable<int>(12),
+										ValueNumeric = reader.GetNullable<decimal>(13),
+										NormalizedNegativeIndicator = reader.GetBoolean(14),
+										ScalingFactorID = reader.GetStringSafe(15),
+										AsReportedScalingFactor = reader.GetStringSafe(16),
+										Currency = reader.GetStringSafe(17),
+										CurrencyCode = reader.GetStringSafe(18),
+										Cusip = reader.GetStringSafe(19)
+									};
+									cell.ScarUpdated = reader.GetBoolean(20);
+									cell.IsIncomePositive = reader.GetBoolean(21);
+									cell.XBRLTag = reader.GetStringSafe(22);
+									cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
+									cell.Label = reader.GetStringSafe(24);
+									cell.ScalingFactorValue = reader.GetDouble(25);
+									cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+									cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+									cell.MTMWValidationFlag = reader.GetBoolean(29);
+									adjustedOrder = reader.GetInt32(31);
+								} else {
+									cell = new SCARAPITableCell
+									{
+										ID = reader.GetInt32(1),
+										CompanyFinancialTermID = reader.GetNullable<int>(12),
+										VirtualValueNumeric = reader.GetNullable<decimal>(13),
+									};
+									cell.ARDErrorTypeId = reader.GetNullable<int>(26);
+									cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
+									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
+									cell.MTMWValidationFlag = reader.GetBoolean(29);
+									cell.DocumentTimeSliceID = reader.GetInt32(30);
+									adjustedOrder = reader.GetInt32(31);
+									cell.StaticHierarchyID = reader.GetInt32(36);
+								}
+								ret.Add(cell);
+							} else {
+								continue;
+							}
+						}
+					}
+				}
+			}
+			return ret;
+		}
+
 		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId) {
 			TableCellResult result = new TableCellResult();
 			result.cells = new List<SCARAPITableCell>();
@@ -8290,7 +8520,7 @@ END
 			return result;
 		}
 
-		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId, string newValue) {
+		public ScarResult AddLikePeriodValidationNote(string CellId, Guid DocumentId, string newValue) {
 			string query = @"
 
 
@@ -8330,7 +8560,12 @@ END
 					cmd.ExecuteNonQuery();
 				}
 			}
-			return AddLikePeriodValidationNote(CellId, DocumentId);
+
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
+			result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
+			return result;
 		}
 
 		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
@@ -8843,7 +9078,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 
 			string url = ConfigurationManager.AppSettings["ARDValidationURL"];
 			//string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/Full/92C6C824-0F9A-4A5C-BC62-000095729E1B";
-            url = url + DocumentID.ToString(); ;
+			url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.ContentType = "application/json";
 			request.Timeout = 120000;
@@ -8943,7 +9178,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			return result;
 		}
 	}
-		public static class ObjectExtension {
+	public static class ObjectExtension {
 		public static string AsString(this object o) {
 			if (Convert.IsDBNull(o)) {
 				return null;
@@ -9042,7 +9277,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			DateTime result;
 			if (!DateTime.TryParse(jString, out result)) {
 				result = DateTime.MinValue;
-			} 
+			}
 			return result;
 		}
 		public static DateTime? AsDateTimeNullable(this object o) {
