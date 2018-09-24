@@ -428,6 +428,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							TimeSlice ts = temp.TimeSlices[i];
 
 							SCARAPITableCell tc = sh.Cells[i];
+
 							if (ts.Cells == null) {
 								ts.Cells = new List<SCARAPITableCell>();
 							}
@@ -483,40 +484,36 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return temp;
 		}
 
-        public class MetaData {
-            [JsonProperty("industry")]
-            public string industry { get; set; }
-            [JsonProperty("fisicalYearEndMonth")]
-            public string fisicalYearEndMonth { get; set; }
-        }
+		public class MetaData {
+			[JsonProperty("industry")]
+			public string industry { get; set; }
+			[JsonProperty("fisicalYearEndMonth")]
+			public string fisicalYearEndMonth { get; set; }
+		}
 
-        public MetaData GetMetaData(int iconum) {
-            MetaData metaData = new MetaData();
-            const string industryQuery = @"select ig.Description,m.description from companyIndustry ci
+		public MetaData GetMetaData(int iconum) {
+			MetaData metaData = new MetaData();
+			const string industryQuery = @"select ig.Description,m.description from companyIndustry ci
                                     join industryDetail id on ci.IndustryDetailID = id.ID
                                     join IndustryGroup ig on id.IndustryGroupID = ig.ID
                                     join CompanyMeta cm on cm.Iconum = ci.Iconum
                                     join Months m on cm.FYEMonth = m.ID
                                     where ci.Iconum = @iconum";
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(industryQuery, conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@iconum", iconum);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(industryQuery, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@iconum", iconum);
 
-                    using (SqlDataReader sdr = cmd.ExecuteReader())
-                    {
-                        if (sdr.Read())
-                        {
-                            metaData.industry = sdr.GetStringSafe(0);
-                            metaData.fisicalYearEndMonth = sdr.GetStringSafe(1);
-                        }
-                    }
-                }
-            }
-            return metaData;
-        }
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							metaData.industry = sdr.GetStringSafe(0);
+							metaData.fisicalYearEndMonth = sdr.GetStringSafe(1);
+						}
+					}
+				}
+			}
+			return metaData;
+		}
 
 		public string GetProductTemplateYearList(int iconum, string TemplateName) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
@@ -1838,7 +1835,7 @@ WHERE  CompanyID = @Iconum";
 			if (cell.ValueNumeric.HasValue) {
 				//hasChildren = true;
 				if (!cell.VirtualValueNumeric.HasValue)
-					return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
+					return (cell.IsIncomePositive ? 1 : -1) * (cell.ValueNumeric.Value * (int)cell.ScalingFactorValue);
 			} else if (cell.ID == 0 && cell.VirtualValueNumeric.HasValue) {
 				//hasChildren = true;
 				return cell.VirtualValueNumeric.Value;

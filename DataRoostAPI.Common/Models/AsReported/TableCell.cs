@@ -157,6 +157,20 @@ end
 			}
 		}
 
+		public static decimal getDecimal(decimal value, double ScalingFactorValue, Boolean ispositive) {
+			decimal factor = Decimal.Parse("" + ScalingFactorValue);
+			int m = 1;
+			if ((value > 0 && !ispositive) || (value < 0 && ispositive))
+				m = -1;
+			decimal t1 = Math.Abs(value);
+			decimal test = Decimal.Parse("" + Math.Abs(value));
+			decimal tmp = Decimal.Parse("" + Math.Abs(value)) * factor;
+			if (m < 0) {
+				tmp = -tmp;
+			}
+			return tmp;
+		}
+
 		public string getNormalizedScalingFactorId(string scaling) {
 			if (scaling.ToLower().Contains("trillion"))
 				return "R";
@@ -357,7 +371,7 @@ end
 			{
 				if (ValueNumeric.HasValue) {
 					if (!VirtualValueNumeric.HasValue)
-						return ValueNumeric.Value * (IsIncomePositive ? 1 : -1) * (decimal)ScalingFactorValue;
+						return TableCell.getDecimal(ValueNumeric.Value, ScalingFactorValue, IsIncomePositive);
 				} else {
 					if (ID == 0 && VirtualValueNumeric.HasValue) {
 						return VirtualValueNumeric.Value;
