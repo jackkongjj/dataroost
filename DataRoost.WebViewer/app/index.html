@@ -328,6 +328,7 @@
                                            '<div class="columnHeader">Publication Date</div>' +
                                            '<div class="columnHeader">Account Type</div>' +
                                            '<div class="columnHeader">Form Type</div>' +
+										   '<div class="columnHeader">Report Status</div>' +
                                            '<div class="columnHeader">Period Length</div>' +
                                            '<div class="columnHeader">Currency Type</div>'
                 });
@@ -349,9 +350,10 @@
                                              '<div class="columnItems">{{"' + $scope.timeSlices[ts].PeriodType +'" == "XX" ? "AR" : "'+ $scope.timeSlices[ts].PeriodType +'"}}</div> ' +
                                              '<div class="columnItems">{{"' + $scope.timeSlices[ts].PublicationDate + '"| date:"MMM-yyyy"}}</div> ' +
                                              '<div class="columnItems">{{' + $scope.timeSlices[ts].IsRecap + ' ? "RECAP" : "ORIGINAL"}}</div> ' +
+											 '<div class="columnItems">'+ $scope.timeSlices[ts].AccountingStandard +'</div> ' +
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].ReportType +'</div> ' +
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].ConsolidatedFlag +'</div> ' +
-                                             '<div class="columnItems">'+ $scope.timeSlices[ts].AccountingStandard +'</div>',
+                                             '<div class="columnItems">'+ $scope.timeSlices[ts].Currency +'</div>',
                                             }); 
                 }
 

@@ -767,12 +767,12 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							Duration = row[6].AsInt32(),
 							PeriodType = row[7].AsString(),
 							AcquisitionFlag = row[8].AsString(),
-							AccountingStandard = row[9].AsString(),
+							Currency = row[9].AsString(),
 							ConsolidatedFlag = row[10].AsString(),
 							IsProForma = row[11].AsBoolean(),
 							IsRecap = row[12].AsBoolean(),
 							CompanyFiscalYear = row[13].AsDecimal(),
-							ReportType = row[14].AsString(),
+							ReportType = row[14].AsFormType(),
 							IsAmended = row[15].AsBoolean(),
 							IsRestated = row[16].AsBoolean(),
 							IsAutoCalc = row[17].AsBoolean(),
@@ -780,7 +780,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							TableTypeID = row[19].AsInt32(),
 							PublicationDate = row[20].AsDateTime(),
 							DamDocumentId = row[21].AsGuid(),
-							PeriodNoteID = row[22].AsByteNullable()
+							PeriodNoteID = row[22].AsByteNullable(),
+							AccountingStandard = row[25].AsString()
 						};
 						//DateTime lastValidDatetime = DateTime.Now;
 						//if (!slice.IsRecap || slice.TimeSlicePeriodEndDate == lastValidDatetime) {
@@ -995,7 +996,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						}
 					}
 
-					c.AccountingStandard = TransformProductViewCurrency(tablecells);
+					c.Currency = TransformProductViewCurrency(tablecells);
 					string periodType = tablecells.Where(tt => tt.PeriodLength == result).Select(x => x.PeriodTypeID).FirstOrDefault();
 					char PeriodType = periodType == null ? (char)0 : periodType.FirstOrDefault();
 					int ARDuration = result;
@@ -1004,7 +1005,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 				} else if (tablecells != null && tablecells.Count() > 0 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() == 1) {
 					int ARDuration = 1;
 					char PeriodType = ' ';
-					c.AccountingStandard = TransformProductViewCurrency(tablecells);
+					c.Currency = TransformProductViewCurrency(tablecells);
 					var tablecell = tablecells.FirstOrDefault();
 					if (tablecell != null && tablecell.PeriodLength.HasValue)
 						ARDuration = tablecell.PeriodLength.Value;
@@ -9312,6 +9313,18 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 				result = null;
 			} else {
 				result = temp;
+			}
+			return result;
+		}
+		public static string AsFormType(this object o) {
+			if (Convert.IsDBNull(o)) {
+				return null;
+			}
+			string jString = o.ToString();
+			string result = jString;
+			switch (result.ToUpper()) {
+				case "F": result = "Final"; break;
+				case "P": result = "Prelim"; break;
 			}
 			return result;
 		}
