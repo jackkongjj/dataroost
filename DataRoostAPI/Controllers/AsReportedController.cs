@@ -1220,16 +1220,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("tdp/{id}")]
+		[Route("tdp/{id}/{tabletype}")]
 		[HttpDelete]
-		public ScarResult DeleteTDP(string id) {
+		public ScarResult DeleteTDP(String CompanyId, string id, string tabletype) {
 			try {
 				ScarResult result = new ScarResult();
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 
-				result = helper.DeleteDocumentTableID(id);
+				result = helper.DeleteDocumentTableID(CompanyId, id, tabletype);
 				return result;
 			} catch (Exception ex) {
 				LogError(ex);

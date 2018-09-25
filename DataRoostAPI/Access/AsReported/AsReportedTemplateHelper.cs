@@ -6296,14 +6296,39 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 			return result;
 		}
 
-		public ScarResult DeleteDocumentTableID(string dtid) {
+		public ScarResult DeleteDocumentTableID(string CompanyId, string dtid, string tabletype) {
 			string SQL_Delete = @"
 BEGIN TRY
 	BEGIN TRAN
+      DECLARE @TempTableCell TABLE(Id int);
+			declare @SHIDS TABLE(StaticHierarchyID int);
+      insert into @TempTableCell select distinct tablecellid from DimensionToCell (nolock) where TableDimensionID in
+			(select id from TableDimension (nolock) where DocumentTableID = @id);
+
 			delete from DimensionToCell where TableDimensionID in
-			(select id from TableDimension where DocumentTableID = @id);
+			(select id from TableDimension (nolock) where DocumentTableID = @id);
 			delete from tabledimension where DocumentTableID = @id;
 			delete from documenttable where id = @id;
+      delete from tablecell where id in (select Id from @TempTableCell);
+
+      INSERT @SHIDS(StaticHierarchyID)
+select sh.ID
+from DocumentSeries ds (nolock) 
+join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID
+JOIN CompanyFinancialTerm cft (nolock) ON cft.DocumentSeriesID = ds.ID
+JOIN StaticHierarchy sh (nolock) on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
+where companyid = @CompanyId
+AND tt.Description = @tabletype
+AND NOT EXISTS(select CompanyFinancialTermId
+				FROM [dbo].[TableCell] tc (nolock)
+				WHERE tc.CompanyFinancialTermID = sh.CompanyFinancialTermID)
+AND NOT EXISTS(select top 1 Parentid from StaticHierarchy shchild (nolock)  where ParentID = sh.id)
+
+delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
+delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
+DELETE FROM StaticHierarchySecurity WHERE StaticHierarchyId in (SELECT StaticHierarchyID FROM @SHIDS);
+DELETE FROM StaticHierarchy WHERE Id in (SELECT StaticHierarchyID FROM @SHIDS);
+--SELECT StaticHierarchyID FROM @SHIDS
 		COMMIT 
 		select 1
 END TRY
@@ -6318,6 +6343,8 @@ END CATCH
 				using (SqlCommand cmd = new SqlCommand(SQL_Delete, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@id", dtid);
+					cmd.Parameters.AddWithValue("@CompanyId", CompanyId);
+					cmd.Parameters.AddWithValue("@tabletype", tabletype);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
 						int success = reader.GetInt32(0);
