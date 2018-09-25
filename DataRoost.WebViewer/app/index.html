@@ -251,7 +251,7 @@
 	  {
 	  	  	$http.get($scope.serverPath + $scope.currIconum) // get company name
             .then(function (response) {      $scope.currCompanyName = response.data[0].name;
-                                             $scope.Priority = response.data[0].companyPriority;
+                                             $scope.Priority = response.data[0].absolutePriority;
                                       });
                                       $http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/meta")
             .then(function (response){       $scope.Industry = response.data.industry;
