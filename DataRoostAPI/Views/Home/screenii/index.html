@@ -1,23 +1,24 @@
 <!DOCTYPE html>
 <html lang="en-US">
-<link rel="stylesheet" href="bower_components/angular-material/angular-material.css">
-<link rel="stylesheet" href="./bower_components/angular-ui-grid/ui-grid.css"/>    
-<script src="bower_components/angular/angular.js"></script>
-<script src="csv.js"></script>
-<script src="vfs_fonts.js"></script>
-<script src="bower_components/angular-aria/angular-aria.js"></script>
-<script src="bower_components/angular-animate/angular-animate.js"></script>
-<script src="bower_components/angular-messages/angular-messages.js"></script>
-<script src="bower_components/angular-material/angular-material.min.js"></script>
-<script src="bower_components/lodash/dist/lodash.min.js"></script>
-<script src="bower_components/jszip/dist/jszip.min.js"></script>
-<script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
-<script src="./bower_components/angular-ui-grid/ui-grid.js"></script>
-<link rel="stylesheet" type="text/css" href="app.css">    
-<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
-<script>
-  var app = angular.module('SCARApp',['ngMaterial','ngMessages','ui.router','ui.grid','ui.grid.treeView','ui.grid.pinning','ui.grid.selection','ui.grid.exporter','ui.grid.autoResize']);
-  app.controller('SCARController', function($scope, $http,uiGridConstants) {	  
+<head>
+    <link rel="stylesheet" href="bower_components/angular-material/angular-material.css">
+    <link rel="stylesheet" href="./bower_components/angular-ui-grid/ui-grid.css" />
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="csv.js"></script>
+    <script src="vfs_fonts.js"></script>
+    <script src="bower_components/angular-aria/angular-aria.js"></script>
+    <script src="bower_components/angular-animate/angular-animate.js"></script>
+    <script src="bower_components/angular-messages/angular-messages.js"></script>
+    <script src="bower_components/angular-material/angular-material.min.js"></script>
+    <script src="bower_components/lodash/dist/lodash.min.js"></script>
+    <script src="bower_components/jszip/dist/jszip.min.js"></script>
+    <!-- <script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script> -->
+    <script src="./bower_components/angular-ui-grid/ui-grid.js"></script>
+    <link rel="stylesheet" type="text/css" href="app.css">
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script>
+  var app = angular.module('SCARApp',['ngMaterial','ngMessages', 'ui.grid','ui.grid.treeView','ui.grid.pinning','ui.grid.selection','ui.grid.exporter','ui.grid.autoResize']);
+  app.controller('SCARController', function($scope, $http,uiGridConstants) {
 	  $scope.selectedRows = [];
 	  $scope.selectedCells = [];
       $scope.columnDefs = [];
@@ -27,7 +28,7 @@
       $scope.Industry = null;
       $scope.FYEMonth = null;
       $scope.userName = null;
-      $scope.userID = null;      
+      $scope.userID = null;
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
@@ -41,7 +42,7 @@
       queryString();
 	  updateYearList();
       refresh();
-      
+
 
 	  $scope.getNumber = function(num) {
           return new Array(num);
@@ -54,18 +55,18 @@
 		{
 			$scope.currTemplate = currTemplate;
 		}
-		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate,
 		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;
             refresh();});
         };
-                    
+
       $scope.updateYear = function () {
 		var currYear = $scope.selectedYear;
 		refresh();
       };
-	  
+
     $scope.gridOptions={
         columnDefs:$scope.columnDefs,
         data: $scope.data,
@@ -81,9 +82,9 @@
         exporterCsvLinkElement: angular.element(document.querySelectorAll(".custom-csv-link-location")),
         enableHorizontalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
         enableVerticalScrollbar: uiGridConstants.scrollbars.WHEN_NEEDED,
-        onRegisterApi: function(gridApi) 
+        onRegisterApi: function(gridApi)
         { $scope.gridApi = gridApi;}
-      };  
+      };
 	  $scope.showAnnual = function () {
 		$scope.filterPeriod = "ANNUAL";
 		$scope.filterRecap = "ALL";
@@ -134,7 +135,7 @@ function updateYearList()
             .then(function (response){       $scope.Industry = response.data.industry;
                                              $scope.FYEMonth = response.data.fisicalYearEndMonth;
                                              });
-   
+
             $http.get($scope.getUserDataServicePath +"user",{withCredentials:true})
             .then(function (response){      $scope.userName = (response.data.FirstName + " " + response.data.LastName);
                                             $scope.userID = response.data.Id;
@@ -168,15 +169,15 @@ function updateYearList()
           refresh();
       };
 
-	  function refresh() {	  		
+	  function refresh() {
         $scope.data.length = 0;            //clearing out the array
-        $scope.columnDefs.length = 0;      //clearing out the array      
-        $http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+        $scope.columnDefs.length = 0;      //clearing out the array
+        $http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate,
 		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
             .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
             $scope.timeSlices = response.data.TimeSlices;
             $scope.columnDefs.push(
-                
+
                 {
                     name: "staticHierarchyMetaType",
                     width:100,
@@ -199,7 +200,7 @@ function updateYearList()
                             else if (row.entity.level == 0)
                                 return 'parent'
                         },
-                    headerCellTemplate:    '<div class="columnHeader">Period End Date</div>' + 
+                    headerCellTemplate:    '<div class="columnHeader">Period End Date</div>' +
                                            '<div class="columnHeader">Time Series</div>' +
                                            '<div class="columnHeader">Publication Date</div>' +
                                            '<div class="columnHeader">Account Type</div>' +
@@ -212,7 +213,7 @@ function updateYearList()
                         name: $scope.timeSlices[ts].Id,
                         width: 125,
                         displayName: $scope.formatHeader(ts),
-                        cellFilter: 'hyphenOrNumber',                        
+                        cellFilter: 'hyphenOrNumber',
                         cellClass: function(grid,row,col,rowRendererIndex,colRenderedIndex) {
                                         if (grid.getCellValue(row,col) >= 0)
                                             return 'positive'
@@ -228,7 +229,7 @@ function updateYearList()
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].ReportType +'</div> ' +
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].ConsolidatedFlag +'</div> ' +
                                              '<div class="columnItems">'+ $scope.timeSlices[ts].AccountingStandard +'</div>',
-                                            }); 
+                                            });
                 }
 
                 for(var sh in $scope.staticHierarchies){
@@ -256,9 +257,9 @@ function updateYearList()
                 }
                 $scope.gridApi.core.refresh();
             });
-            
-    
-      };              
+
+
+      };
       $scope.formatHeader = function(ts){
             var header = $scope.timeSlices[ts].TimeSlicePeriodEndDate + ' | ';
             if($scope.timeSlices[ts].PeriodType == 'XX')
@@ -279,7 +280,7 @@ function updateYearList()
           var numOut = num/1000000;
           return numOut;
     };
-	
+
       $scope.rowClick = function(staticHierarchy) {
           if($scope.selectedRows.indexOf(staticHierarchy.id) > -1)
               $scope.selectedRows.splice( $scope.selectedRows.indexOf(staticHierarchy.id), 1 );
@@ -293,7 +294,7 @@ function updateYearList()
 
           $scope.$digest();
       }
-	  
+
 	  $scope.cellClick = function(cell) {
 	      if($scope.selectedCells.indexOf(cell._id) > -1)
               $scope.selectedCells.splice( $scope.selectedCells.indexOf(cell._id), 1 );
@@ -301,8 +302,8 @@ function updateYearList()
 		  {
 			$scope.selectedCells.push(cell._id);
 		  }
-              
-			  
+
+
           if(cell.clicked == null || !cell.clicked)
               cell.clicked = true;
           else
@@ -347,7 +348,7 @@ function updateYearList()
       }
       $scope.$digest();
   }
-  
+
   function insertStitchData(staticHierarchies, timeSlices, update, deleteRows, $scope) {
       var shix = 0;
       for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
@@ -380,140 +381,140 @@ function updateYearList()
                   }
               }
           }
-      }      
+      }
   }
- </script>
-
+    </script>
+</head>
 <body>
-
-<div ng-app="SCARApp" ng-controller="SCARController">
-    <ul class = 'header'>
-        <li> <a>NonGAAP SCREEN II</a></li>
-        <li> <a>Company Name</a> : {{currCompanyName}}</li>
-        <li> <a>Priority</a> : {{Priority}}</li>
-        <li> <a>Industry</a> : {{Industry}}</li>
-        <li> <a>FYE Month</a> : {{FYEMonth}}</li>
-        <li class = "userName">{{userName}}</li>
-        <li> <a> <img data-ng-src = "http://is.factset.com/Services/EmployeeImage.ashx?EmployeeId={{userID}}" class="userPic"> </a></li>   
-    </ul>   
-    <div class = "gridFull">
-        <div class="Buttons"> 
-            <fieldset class="productview">
-                <legend>
-                    Product View
-                </legend>
-                <div class = "product">
-                    <div class = "productElement">        
-                        <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
-                            <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
-                            <md-radio-button value="QTR">QTR</md-radio-button>
-                        </md-radio-group>
+    <base href="/" />
+    <div ng-app="SCARApp" ng-controller="SCARController">
+        <ul class='header'>
+            <li> <a>NonGAAP SCREEN II</a></li>
+            <li> <a>Company Name</a> : {{currCompanyName}}</li>
+            <li> <a>Priority</a> : {{Priority}}</li>
+            <li> <a>Industry</a> : {{Industry}}</li>
+            <li> <a>FYE Month</a> : {{FYEMonth}}</li>
+            <li class="userName">{{userName}}</li>
+            <li> <a> <img data-ng-src="http://is.factset.com/Services/EmployeeImage.ashx?EmployeeId={{userID}}" class="userPic"> </a></li>
+        </ul>
+        <div class="gridFull">
+            <div class="Buttons">
+                <fieldset class="productview">
+                    <legend>
+                        Product View
+                    </legend>
+                    <div class="product">
+                        <div class="productElement">
+                            <md-radio-group ng-model="filterPeriod" ng-change="viewRefresh()" layout="row">
+                                <md-radio-button value="ANNUAL">ANNUAL</md-radio-button>
+                                <md-radio-button value="QTR">QTR</md-radio-button>
+                            </md-radio-group>
+                        </div>
+                        <div class="productElement">
+                            <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : 'allButton'" ng-click='showAll()'>ALL</md-button>
+                        </div>
                     </div>
-                    <div class = "productElement">    
-                        <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : 'allButton'" ng-click='showAll()'>ALL</md-button>
+                </fieldset>
+                <fieldset class="fieldset-auto-width">
+                    <legend>
+                        Filter
+                    </legend>
+                    <div class="filter">
+                        <div class="filterElement">
+                            <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
+                                <md-radio-button value="ORG">ORG</md-radio-button>
+                                <md-radio-button value="RECAP">RECAP</md-radio-button>
+                                <md-radio-button value="ALL">DEFAULT</md-radio-button>
+                            </md-radio-group>
+                        </div>
+                        <div class="filterElement">
+                            <md-select class="select" ng-model='selectedYear' ng-change="updateYear()">
+                                <md-option ng-repeat="c in yearlist" ng-value="c">{{c}}</md-option>
+                            </md-select>
+                        </div>
                     </div>
-                </div>
-            </fieldset>
-            <fieldset class="fieldset-auto-width">
-            <legend>
-            Filter
-            </legend>
-            <div class = "filter">
-                <div class = "filterElement">
-                    <md-radio-group ng-model="filterRecap" ng-change="callRefresh()" layout="row">
-                            <md-radio-button value="ORG">ORG</md-radio-button>
-                            <md-radio-button value="RECAP">RECAP</md-radio-button>
-                            <md-radio-button value="ALL">DEFAULT</md-radio-button>
-                    </md-radio-group>
-                </div>
-                <div class = "filterElement">
-                    <md-select class="select" ng-model='selectedYear' ng-change="updateYear()">
-                        <md-option ng-repeat = "c in yearlist" ng-value = "c">{{c}}</md-option>
-                    </md-select>
-                </div>
+                </fieldset>
+                <md-switch class="reverseRepresentation" ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
             </div>
-            </fieldset>
-            <md-switch class = "reverseRepresentation" ng-model="reverseRepresentation" ng-true-vaule='true' ng-false-value='false' ng-change='callRefresh()'>Reverse Data Representation</md-switch>
+            <div id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter ui-grid-auto-resize class="grid"></div>
+            <div class="note">*All figures in millions except per share items</div>
         </div>
-        <div id="grid1" ui-grid="gridOptions" ui-grid-tree-view ui-grid-pinning ui-grid-exporter ui-grid-auto-resize class ="grid"></div>
-        <div class="note">*All figures in millions except per share items</div>
+        <!--
+          <br><br>
+          <br><br>
+          <br><br>
+          <br><br>
+          <br><br>
+          <br><br>
+          <br><br>
+          <br><br>
+
+          <table>
+              <tr>
+                <td colspan="2">
+                  <fieldset>
+                  <legend>
+                  Product View
+                  </legend>
+                    <label>
+                        <input type="radio" ng-model="filterPeriod" value="ANNUAL" ng-change='showAnnual()'>
+                        ANNUAL
+                    </label>
+                    <label>
+                        <input type="radio" ng-model="filterPeriod" value="QTR" ng-change='showQtr()'>
+                        QTR
+                    </label>
+                    <label>
+                        <input type="radio" ng-model="filterPeriod" value="ALL" ng-change='showAll()'>
+                        ALL
+                    </label>
+                  </fieldset>
+                  <fieldset>
+                  <legend>
+                  Filter
+                  </legend>
+                    <button ng-click="showOrg()">ORG</button>
+                    <button ng-click="showRecap()">RECAP</button>
+
+                    <select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()">
+                    </select>
+                  </fieldset>
+                </td>
+
+                  <td align="right">
+                  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
+                  </td>
+                  <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
+                    {{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
+                    <br>&nbsp;<br>{{$index + 1}}<br>
+                  </td>
+              </tr>
+                  <tr>
+            <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" ng-model="reverseRepresentation" ng-change="updateReverseRepresentation()">Reverse Data Representation</td>
+            <td colspan="999">All figures in millions except per share items. </td>
+            </tr>
+            <tr ng-repeat="x in staticHierarchies">
+                <td>{{ x.staticHierarchyMetaType }}</td>
+                <td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+                </td>
+             <td></td>
+                <td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
+                    {{ formatNumber(y.displayValue) | number }}
+                </td>
+            </tr>
+          </table>
+
+
+          <br/>
+
+
+
+
+             <button ng-click="stitchItem()">Stitch</button>
+            <button ng-click="unstitchItem()">UnStitch</button>
+            <button ng-click="flipsign()">Flip Sign</button> -->
+
     </div>
-<!--  
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  <br><br>
-  
-  <table>
-      <tr>
-		<td colspan="2">
-		  <fieldset>
-		  <legend>
-		  Product View
-		  </legend>
-            <label>
-                <input type="radio" ng-model="filterPeriod" value="ANNUAL" ng-change='showAnnual()'>
-                ANNUAL
-            </label>
-            <label>
-                <input type="radio" ng-model="filterPeriod" value="QTR" ng-change='showQtr()'>
-                QTR
-            </label>
-            <label>
-                <input type="radio" ng-model="filterPeriod" value="ALL" ng-change='showAll()'>
-                ALL
-            </label>
-		  </fieldset>
-		  <fieldset>
-		  <legend>
-		  Filter
-		  </legend>
-			<button ng-click="showOrg()">ORG</button>
-			<button ng-click="showRecap()">RECAP</button>
-			
-			<select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"> 
-			</select>
-		  </fieldset>
-		</td>
-		
-		  <td align="right">
-		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
-		  </td>
-          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
-			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
-			<br>&nbsp;<br>{{$index + 1}}<br>
-		  </td>
-      </tr>
-	      <tr>
-    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" ng-model="reverseRepresentation" ng-change="updateReverseRepresentation()">Reverse Data Representation</td>
-    <td colspan="999">All figures in millions except per share items. </td>
-    </tr>
-    <tr ng-repeat="x in staticHierarchies">
-		<td>{{ x.staticHierarchyMetaType }}</td>
-		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
-		</td>
-	 <td></td>
-		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
-			{{ formatNumber(y.displayValue) | number }}
-		</td>
-    </tr>
-  </table>
-
-	
-  <br/>
-  
-
-
-
-     <button ng-click="stitchItem()">Stitch</button>
-    <button ng-click="unstitchItem()">UnStitch</button>
-	<button ng-click="flipsign()">Flip Sign</button> -->
-	
-</div>
 
 
 
