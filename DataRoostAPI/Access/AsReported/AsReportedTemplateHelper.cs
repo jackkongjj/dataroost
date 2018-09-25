@@ -5795,7 +5795,7 @@ WHEN NOT MATCHED THEN
 ,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown) VALUES
 	  (
 src.CompanyFinancialTermId 
-,CASE src.AdjustedOrder WHEN -1 THEN -101 ELSE src.MaxAdjustedOrder+1 END
+,CASE src.AdjustedOrder WHEN -1 THEN -101 ELSE src.AdjustedOrder END
 ,src.TableTypeId 
 ,src.Description 
 ,src.HierarchyTypeId 
