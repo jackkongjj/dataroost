@@ -29,6 +29,7 @@
       $scope.FYEMonth = null;
       $scope.userName = null;
       $scope.userID = null;
+	  $scope.btnAllDisabled = false;
 	  $scope.currIconum = 28029;
 	  $scope.currTemplate = 'NG-IS';
 	  $scope.reverseRepresentation = "false";
@@ -98,6 +99,7 @@
 		refresh();
       };
 	  $scope.showAll = function () {
+		$scope.btnAllDisabled = true;
 		$scope.filterPeriod = "ALL";
 		$scope.filterRecap = "ALL";
 		$scope.selectedYear = "YEARS";
@@ -256,6 +258,7 @@ function updateYearList()
                     $scope.data.push(row);
                 }
                 $scope.gridApi.core.refresh();
+				$scope.btnAllDisabled = false;
             });
 
 
@@ -411,7 +414,7 @@ function updateYearList()
                             </md-radio-group>
                         </div>
                         <div class="productElement">
-                            <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : 'allButton'" ng-click='showAll()'>ALL</md-button>
+                            <md-button ng-class="filterPeriod == 'ALL' ? 'allSelected' : 'allButton'" ng-click='showAll()' ng-disabled="btnAllDisabled">ALL</md-button>
                         </div>
                     </div>
                 </fieldset>
