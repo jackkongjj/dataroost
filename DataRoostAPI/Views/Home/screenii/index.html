@@ -127,12 +127,10 @@
 }
 function updateYearList()
 	  {
-	  	  	$http.get($scope.serverPath + $scope.currIconum) // get company name
-            .then(function (response) {      $scope.currCompanyName = response.data[0].name;
-                                             $scope.Priority = response.data[0].companyPriority;
-                                      });
-                                      $http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/meta")
-            .then(function (response){       $scope.Industry = response.data.industry;
+	  	  	$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported") // get company name
+            .then(function (response) {      $scope.currCompanyName = response.data.name;
+                                             $scope.Priority = response.data.companyPriority;
+											 $scope.Industry = response.data.industry;
                                              $scope.FYEMonth = response.data.fisicalYearEndMonth;
                                              });
 

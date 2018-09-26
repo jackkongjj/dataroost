@@ -43,6 +43,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			SendEmail("DataRoost Exception", msg + extra);
 		}
 
+		[Route("")]
+		[HttpGet]
+		public object GetCompany(string CompanyId) {
+			if (string.IsNullOrEmpty(CompanyId)) {
+				return null;
+			}
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetCompany(iconum);
+		}
+
+
 		[Route("documents/{documentId}")]
 		[HttpGet]
 		public AsReportedDocument GetDocument(string CompanyId, string documentId) {

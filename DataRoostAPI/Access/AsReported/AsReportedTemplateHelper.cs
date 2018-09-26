@@ -28,6 +28,106 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		public AsReportedTemplateHelper(string sfConnectionString) {
 			this._sfConnectionString = sfConnectionString;
 		}
+
+		public object GetCompany(int companyId) {
+			int ID;
+			int Iconum;
+			string Priority = "1";
+			string Industry = "";
+			string CompanyName = null;
+			string FiscalYearEndMonth = "";
+
+			const string sql = @"
+select DocumentSeriesID, ds.CompanyId, f.priority_oper, ig.Description, filer.Company, m.Description
+	from Document d (nolock) 
+	Join DocumentSeries ds (nolock) on d.DocumentSeriesId = ds.Id
+	join filermst filer (nolock) on ds.CompanyId = filer.Iconum
+	join CompanyIndustry ci (nolock) on ds.CompanyId = ci.Iconum
+	join IndustryDetail id (nolock) on ci.IndustryDetailId = id.Id
+	join IndustryGroup ig (nolock) on id.IndustryGroupId = ig.Id
+	join FDS_TRI_PPI_map f (nolock) on d.PPI = f.PPI_oper
+	join CompanyMeta cm (nolock) on ds.CompanyID = cm.Iconum
+	join Months m (nolock) on cm.FYEMonth = m.ID
+where ds.companyid = @companyId
+";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+				using (SqlCommand cmd = new SqlCommand(sql, conn)) {
+					cmd.Parameters.AddWithValue("@companyId", companyId);
+					conn.Open();
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							ID = sdr.GetInt32(0);
+							Iconum = sdr.GetInt32(1);
+							Priority = sdr.GetStringSafe(2);
+							Industry = sdr.GetStringSafe(3);
+							CompanyName = sdr.GetStringSafe(4);
+							FiscalYearEndMonth = sdr.GetStringSafe(5);
+						}
+					}
+				}
+
+				if (CompanyName == null) {
+					String sql1 = @"
+select DocumentSeriesID, ds.CompanyId, ig.Description, filer.Company, m.Description
+	from Document d (nolock) 
+	Join DocumentSeries ds (nolock) on d.DocumentSeriesId = ds.Id
+	join filermst filer (nolock) on ds.CompanyId = filer.Iconum
+	join CompanyIndustry ci (nolock) on ds.CompanyId = ci.Iconum
+	join IndustryDetail id (nolock) on ci.IndustryDetailId = id.Id
+	join IndustryGroup ig (nolock) on id.IndustryGroupId = ig.Id
+	join CompanyMeta cm (nolock) on ds.CompanyID = cm.Iconum
+	join Months m (nolock) on cm.FYEMonth = m.ID
+where ds.companyid = @companyId
+";
+
+					using (SqlCommand cmd = new SqlCommand(sql1, conn)) {
+						cmd.Parameters.AddWithValue("@companyId", companyId);
+						//conn.Open();
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							if (sdr.Read()) {
+								ID = sdr.GetInt32(0);
+								Iconum = sdr.GetInt32(1);
+								Priority = "";
+								Industry = sdr.GetStringSafe(2);
+								CompanyName = sdr.GetStringSafe(3);
+								FiscalYearEndMonth = sdr.GetStringSafe(4);
+							}
+						}
+					}
+
+				}
+				if (CompanyName == null) {
+					String sql2 = @"
+select DocumentSeriesID, ds.CompanyId, f.priority_oper, '', filer.Company, m.Description
+	from Document d (nolock) 
+	Join DocumentSeries ds (nolock) on d.DocumentSeriesId = ds.Id
+	join filermst filer (nolock) on ds.CompanyId = filer.Iconum
+	join FDS_TRI_PPI_map f (nolock) on d.PPI = f.PPI_oper
+	join CompanyMeta cm (nolock) on ds.CompanyID = cm.Iconum
+	join Months m (nolock) on cm.FYEMonth = m.ID
+where d.companyId = @companyId
+";
+
+					using (SqlCommand cmd = new SqlCommand(sql2, conn)) {
+						cmd.Parameters.AddWithValue("@companyId", companyId);
+						//conn.Open();
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							if (sdr.Read()) {
+								ID = sdr.GetInt32(0);
+								Iconum = sdr.GetInt32(1);
+								Priority = "";
+								Industry = sdr.GetStringSafe(2);
+								CompanyName = sdr.GetStringSafe(3);
+								FiscalYearEndMonth = sdr.GetStringSafe(4);
+							}
+						}
+					}
+				}
+			}
+			return new { companyPriority = Priority, name = CompanyName, industry = Industry, fisicalYearEndMonth = FiscalYearEndMonth };
+		}
+
 		#region SQL
 		private string SQL_GetCellQuery =
 																@"
