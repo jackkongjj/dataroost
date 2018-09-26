@@ -9424,7 +9424,7 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			string result = jString;
 			switch (result.ToUpper()) {
 				case "F": result = "Final"; break;
-				case "P": result = "Prelim"; break;
+				default: result = "Prelim"; break;
 			}
 			return result;
 		}
