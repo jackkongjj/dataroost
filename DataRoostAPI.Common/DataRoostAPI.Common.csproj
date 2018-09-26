@@ -148,6 +148,7 @@
     <Compile Include="Models\KPI\KpiTimeSeriesDTO.cs" />
     <Compile Include="Models\AsReported\TableCellResult.cs" />
     <Compile Include="Models\AsReported\ScarResult.cs" />
+    <Compile Include="Models\AsReported\ScarProductViewResult.cs" />
     <Compile Include="Models\Segment\SegmentTimeSeriesDTO.cs" />
     <Compile Include="Models\SfVoy\SfVoyTimeSeries.cs" />
     <Compile Include="Models\ShareClassDataDTO.cs" />

@@ -274,7 +274,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
-		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
+		public ScarProductViewResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)

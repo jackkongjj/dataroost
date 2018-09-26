@@ -652,17 +652,19 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return sb.ToString();
 		}
 
-		public ScarResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
-			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
-			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
-			newFormat.TimeSlices = oldFormat.TimeSlices;
-			return newFormat;
+		public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+			return GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
+
+			//ScarProductViewResult newFormat = new ScarProductViewResult();
+			//AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
+			//newFormat.StaticHierarchies = oldFormat.StaticHierarchies.ToArray();
+			//newFormat.TimeSlices = oldFormat.TimeSlices.ToArray();
+			//return newFormat;
 		}
 
-		public AsReportedTemplate GetProductView(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+		public ScarProductViewResult GetProductView(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
-
+			ScarProductViewResult result = new ScarProductViewResult();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
@@ -1047,8 +1049,10 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					foreach (var sh in temp.StaticHierarchies) {
 						sh.Cells.Reverse();
 					}
+					result.TimeSlices = orderedTimeSlice.OrderBy(x => x.TimeSlicePeriodEndDate).ThenBy(y => y.PublicationDate).ToArray();
 				} else {
 					orderedTimeSlice = temp.TimeSlices;
+					result.TimeSlices = orderedTimeSlice.OrderByDescending(x => x.TimeSlicePeriodEndDate).ThenByDescending(y => y.PublicationDate).ToArray();
 				}
 				foreach (var ts in orderedTimeSlice) {
 					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
@@ -1060,12 +1064,12 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					newStaticHierarchies.AddRange(li.Convert());
 				}
 				temp.StaticHierarchies = newStaticHierarchies;
-
+				result.StaticHierarchies = newStaticHierarchies.ToArray();
 				#endregion
 			} catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
 			}
-			return temp;
+			return result;
 		}
 		private string TransformProductViewCurrency(IEnumerable<SCARAPITableCell> tablecells) {
 			string currency = "";
