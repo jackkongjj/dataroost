@@ -1106,6 +1106,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					char PeriodType = periodType == null ? (char)0 : periodType.FirstOrDefault();
 					int ARDuration = result;
 					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
+					c.IsRecap = c.IsRecap && !c.ManualOrgSet;
 
 				} else if (tablecells != null && tablecells.Count() > 0 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() == 1) {
 					int ARDuration = 1;
@@ -1117,6 +1118,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					if (tablecell != null)
 						PeriodType = tablecell.PeriodTypeID.FirstOrDefault();
 					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
+					c.IsRecap = c.IsRecap && !c.ManualOrgSet;
 				}
 			} catch {
 			}
