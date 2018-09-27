@@ -630,7 +630,6 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
  	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
  WHERE ds.CompanyID = @iconum
  AND tt.Description = @templateName
- AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  
 order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
  ";
