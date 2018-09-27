@@ -1044,15 +1044,16 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 				temp.Message += "Finished.";
 				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
 				IEnumerable<TimeSlice> orderedTimeSlice = null;
+				
 				if (string.Equals(reverseRepresentation, "true", StringComparison.InvariantCultureIgnoreCase)) {
-					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate).ThenBy(y => y.PublicationDate);
+					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate).ThenByDescending(s => ProductViewOrderPreference.IndexOf(s.PeriodType)).ThenBy(y => y.PublicationDate);
 					foreach (var sh in temp.StaticHierarchies) {
 						sh.Cells.Reverse();
 					}
-					result.TimeSlices = orderedTimeSlice.OrderBy(x => x.TimeSlicePeriodEndDate).ThenBy(y => y.PublicationDate).ToArray();
+					result.TimeSlices = orderedTimeSlice.OrderBy(x => x.TimeSlicePeriodEndDate).ThenByDescending(s => ProductViewOrderPreference.IndexOf(s.PeriodType)).ThenBy(y => y.PublicationDate).ToArray();
 				} else {
 					orderedTimeSlice = temp.TimeSlices;
-					result.TimeSlices = orderedTimeSlice.OrderByDescending(x => x.TimeSlicePeriodEndDate).ThenByDescending(y => y.PublicationDate).ToArray();
+					result.TimeSlices = orderedTimeSlice.OrderByDescending(x => x.TimeSlicePeriodEndDate).ThenBy(s => ProductViewOrderPreference.IndexOf(s.PeriodType)).ThenByDescending(y => y.PublicationDate).ToArray();
 				}
 				foreach (var ts in orderedTimeSlice) {
 					newTimeSlices.Add(TransformProductViewTimeSlice(ts));
@@ -1226,6 +1227,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		static List<String> HierarchyMetaEndlines = new List<String> { "NG-RV", "NG-GP", "NG-OP", "NG-EBITDA", "NG-EBIT", "NG-PBT", "NG-NI", "NG-BEPS", "NG-DEPS" };
 		static List<String> HierarchyStartMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
+		static List<String> ProductViewOrderPreference = new List<String>() { "XX", "IF", "T3", "I2", "Q4", "Q9", "Q3", "Q8", "T2", "I1", "Q6", "Q2", "T1", "Q1", "--", "QX", };
 		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>()
 		{
 			{"RV","Total Revenues / Interest Income"},
@@ -9427,8 +9429,8 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			string jString = o.ToString();
 			string result = jString;
 			switch (result.ToUpper()) {
-				case "F": result = "Final"; break;
-				default: result = "Prelim"; break;
+				case "P": result = "Prelim"; break;
+				default: result = "Final"; break;
 			}
 			return result;
 		}
