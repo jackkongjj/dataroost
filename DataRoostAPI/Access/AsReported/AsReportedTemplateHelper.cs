@@ -7979,7 +7979,7 @@ END CATCH
 
 
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
-			string query = @"SCARStitchRows";
+			string query = @"SCARStitchRows_Lun";
 
 			DataTable dt = new DataTable();
 			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
@@ -7991,7 +7991,8 @@ END CATCH
 			{
 				CellToDTS = new Dictionary<SCARAPITableCell, int>(),
 				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
-				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
+				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>(),
+				ChangedCells = new List<SCARAPITableCell>()
 			};
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -8007,61 +8008,8 @@ END CATCH
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
 						sdr.NextResult();
-
-						res.ParentCellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
-						{
-							StaticHierarchyID = r.GetInt32(0),
-							DocumentTimeSliceID = r.GetInt32(1),
-							TableCellID = r.GetInt32(2),
-							ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
-							IsIncomePositive = r.GetBoolean(4),
-							ScalingFactorValue = r.GetDouble(5),
-							RootStaticHierarchyID = r.GetInt32(6),
-							RootDocumentTimeSliceID = r.GetInt32(7)
-						}
-						).ToList();
-
-						sdr.NextResult();
-						List<CellMTMWComponent> comps = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
-						{
-							StaticHierarchyID = r.GetInt32(0),
-							DocumentTimeSliceID = r.GetInt32(1),
-							TableCellID = r.GetInt32(2),
-							ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
-							IsIncomePositive = r.GetBoolean(4),
-							ScalingFactorValue = r.GetDouble(5),
-							RootStaticHierarchyID = r.GetInt32(6),
-							RootDocumentTimeSliceID = r.GetInt32(7)
-						}
-							).ToList();
-						foreach (CellMTMWComponent comp in comps) {
-							if (!res.DTSToMTMWComponent.ContainsKey(comp.DocumentTimeSliceID))
-								res.DTSToMTMWComponent.Add(comp.DocumentTimeSliceID, new List<CellMTMWComponent>());
-							res.DTSToMTMWComponent[comp.DocumentTimeSliceID].Add(comp);
-						}
-						sdr.NextResult();
 						sdr.Read();
 						int level = sdr.GetInt32(0);
-						sdr.NextResult();
-						sdr.Read();
-						StaticHierarchy document = new StaticHierarchy
-						{
-							Id = sdr.GetInt32(0),
-							CompanyFinancialTermId = sdr.GetInt32(1),
-							AdjustedOrder = sdr.GetInt32(2),
-							TableTypeId = sdr.GetInt32(3),
-							Description = sdr.GetStringSafe(4),
-							HierarchyTypeId = sdr.GetStringSafe(5)[0],
-							SeparatorFlag = sdr.GetBoolean(6),
-							StaticHierarchyMetaId = sdr.GetInt32(7),
-							UnitTypeId = sdr.GetInt32(8),
-							IsIncomePositive = sdr.GetBoolean(9),
-							ChildrenExpandDown = sdr.GetBoolean(10),
-							ParentID = sdr.GetNullable<int>(11),
-							Cells = new List<SCARAPITableCell>(),
-							Level = level
-						};
-						res.StaticHierarchy = document;
 						sdr.NextResult();
 						while (sdr.Read()) {
 							SCARAPITableCell cell;
@@ -8101,8 +8049,8 @@ END CATCH
 							} else {
 								cell = new SCARAPITableCell();
 							}
-							document.Cells.Add(cell);
-
+							//document.Cells.Add(cell);
+							res.ChangedCells.Add(cell);
 							res.CellToDTS.Add(cell, sdr.GetInt32(29));
 						}
 					}
