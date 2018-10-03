@@ -43,6 +43,20 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			SendEmail("DataRoost Exception", msg + extra);
 		}
 
+		[Route("")]
+		[HttpGet]
+		public object GetCompany(string CompanyId) {
+			if (string.IsNullOrEmpty(CompanyId)) {
+				return null;
+			}
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+
+			int iconum = PermId.PermId2Iconum(CompanyId);
+			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+			return helper.GetCompany(iconum);
+		}
+
+
 		[Route("documents/{documentId}")]
 		[HttpGet]
 		public AsReportedDocument GetDocument(string CompanyId, string documentId) {
@@ -260,7 +274,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
-		public ScarResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
+		public ScarProductViewResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
@@ -274,7 +288,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("productview/{TemplateName}/years")]
+        [Route("productview/{TemplateName}/meta")]
+        [HttpGet]
+        public object GetMeta(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS")
+        {
+            try
+            {
+                int iconum = PermId.PermId2Iconum(CompanyId);
+                if (CompanyId == null)
+                    return null;
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.GetMetaData(iconum);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+                return null;
+            }
+        }
+
+        [Route("productview/{TemplateName}/years")]
 		[HttpGet]
 		public string GetProductTemplateYearList(string CompanyId, string TemplateName) {
 			try {
@@ -808,10 +842,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("cells/{id}/addLikePeriod/{DocumentId}/")]
 		[HttpPost]
-		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId, StringInput input) {
+		public ScarResult AddLikePeriodValidationNote(string id, Guid DocumentId, StringInput input) {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
-					return AddLikePeriodValidationNote(id, DocumentId);
+					return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddLikePeriodValidationNote(id, DocumentId, input.StringData);
@@ -1200,16 +1234,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("tdp/{id}")]
+		[Route("tdp/{id}/{tabletype}")]
 		[HttpDelete]
-		public ScarResult DeleteTDP(string id) {
+		public ScarResult DeleteTDP(String CompanyId, string id, string tabletype) {
 			try {
 				ScarResult result = new ScarResult();
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 
-				result = helper.DeleteDocumentTableID(id);
+				result = helper.DeleteDocumentTableID(CompanyId, id, tabletype);
 				return result;
 			} catch (Exception ex) {
 				LogError(ex);
