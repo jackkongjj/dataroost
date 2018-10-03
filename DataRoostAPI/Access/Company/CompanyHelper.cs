@@ -370,7 +370,7 @@ ORDER BY ChangeDate DESC";
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
 
-			List<int> voyagerIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.Voyager().Name).Select(kvp => kvp.Key).ToList();
+			List<int> voyagerIconums = companyEfforts.Keys.ToList();
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
 
 			// Supercore data is SecPermId based
