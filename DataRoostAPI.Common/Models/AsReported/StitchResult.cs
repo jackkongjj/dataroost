@@ -22,10 +22,16 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("staticHierarchy")]
 		public StaticHierarchy StaticHierarchy { get; set; }
 
+		[JsonProperty("changedCells")]
+		public List<SCARAPITableCell> ChangedCells { get; set; }
+
 		[JsonIgnore]
 		public Dictionary<int, List<CellMTMWComponent>> DTSToMTMWComponent { get; set; }
 		[JsonIgnore]
-        public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
+    public Dictionary<SCARAPITableCell, int> CellToDTS { get; set; }
+
+		[JsonProperty("returnValue")]
+		public Dictionary<string, string> ReturnValue { get; set; }
 
 	}
 
