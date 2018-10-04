@@ -372,6 +372,7 @@ ORDER BY ChangeDate DESC";
 
 			List<int> voyagerIconums = companyEfforts.Keys.ToList();
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
+			HashSet<string> mergeChecker = new HashSet<string>();
 
 			// Supercore data is SecPermId based
 			if (superfastIconums.Count > 0) {
@@ -386,9 +387,15 @@ ORDER BY ChangeDate DESC";
 						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
 							List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 							if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
-								securityItemList = superfastSecurityItems[shareClass.PermId];
+								foreach(var item in superfastSecurityItems[shareClass.PermId]) {
+									var key = String.Format("{0}:{1}:{2}:{3}:{4}", iconum, shareClass.PermId ?? "", shareClass.PPI ?? "", item.ReportDate, item.ItemId);
+									if (!mergeChecker.Contains(key)) {
+										securityItemList.Add(item);
+										mergeChecker.Add(key);
+									}
+								}								
 							}
-							shareClass.ShareClassData = securityItemList;
+							shareClass.ShareClassData = securityItemList;														
 						}
 					}
 				}
@@ -407,15 +414,19 @@ ORDER BY ChangeDate DESC";
 						foreach (ShareClassDataDTO shareClass in shareClassDataList) {							
 							if (shareClass.ShareClassData == null)
 								shareClass.ShareClassData = new List<ShareClassDataItem>();
-							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
-								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;
-								if (voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate) > supercoreReportDate)
-									shareClass.ShareClassData = voyagerSecurityItems[shareClass.PPI];
+							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {								
+								foreach (var item in voyagerSecurityItems[shareClass.PPI]) {
+									var key = String.Format("{0}:{1}:{2}:{3}:{4}", iconum, shareClass.PermId, shareClass.PPI, item.ReportDate, item.ItemId);
+									if (!mergeChecker.Contains(key)) {
+										shareClass.ShareClassData.Add(item);
+										mergeChecker.Add(key);
+									}
+								}
 							} 
 						}
 					}
 				}
-			}
+			}			
 
 			return companyShareClassData;
 		}
