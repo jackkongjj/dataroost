@@ -15,5 +15,11 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("staticHierarchies")]
 		public List<StaticHierarchy> StaticHierarchies { get; set; }
 
+		[JsonProperty("changedCells")]
+		public List<SCARAPITableCell> ChangedCells { get; set; }
+
+		[JsonProperty("returnValue")]
+		public Dictionary<string, string> ReturnValue { get; set; }
+
 	}
 }
