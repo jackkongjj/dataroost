@@ -8216,6 +8216,8 @@ END CATCH
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
 									cell.MTMWValidationFlag = reader.GetBoolean(29);
 									//adjustedOrder = reader.GetInt32(31);
+									cell.DocumentTimeSliceID = reader.GetInt32(30);
+									cell.StaticHierarchyID = reader.GetInt32(36);
 								} else {
 									cell = new SCARAPITableCell
 									{
