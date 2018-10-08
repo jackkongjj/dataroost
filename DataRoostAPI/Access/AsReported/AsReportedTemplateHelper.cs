@@ -1043,7 +1043,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 				temp.Message += "Finished.";
 				List<TimeSlice> newTimeSlices = new List<TimeSlice>();
 				IEnumerable<TimeSlice> orderedTimeSlice = null;
-				
+
 				if (string.Equals(reverseRepresentation, "true", StringComparison.InvariantCultureIgnoreCase)) {
 					orderedTimeSlice = temp.TimeSlices.OrderBy(x => x.TimeSlicePeriodEndDate).ThenByDescending(s => ProductViewOrderPreference.IndexOf(s.PeriodType)).ThenBy(y => y.PublicationDate);
 					foreach (var sh in temp.StaticHierarchies) {
@@ -2653,6 +2653,9 @@ SELECT *
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			string query = @"
+
+DECLARE @TableTypeId INT = (select tt.ID from DocumentSeries ds (nolock) join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID where companyid = @Iconum AND tt.Description = @tableType)
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId;
 
 declare @SHIDS TABLE(StaticHierarchyID int)
 
