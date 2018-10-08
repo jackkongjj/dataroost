@@ -156,3 +156,8 @@ $RECYCLE.BIN/
 .DS_Store
 /DataRoostAPI/logs
 /.vs/config
+/.vs/DataRoost/v15/Server/sqlite3/storage.ide-wal
+/.vs/DataRoost/v15/Server/sqlite3/storage.ide-shm
+/.vs/DataRoost/v15/Server/sqlite3/storage.ide
+/.vs/DataRoost/v15/Server/sqlite3/db.lock
+/.vs/DataRoost/v15/Server/sqlite3
