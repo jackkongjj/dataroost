@@ -276,12 +276,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public ScarProductViewResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
+
+				return GetProductTemplate(CompanyId, TemplateName,  new Guid("00000000-0000-0000-0000-000000000000"), reverseRepresentation, filterPeriod, filterRecap, filterYear);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+				return null;
+			}
+		}
+
+		[Route("productview/{TemplateName}/{DamDocumentID}")]
+		[HttpGet]
+		public ScarProductViewResult GetProductTemplate(string CompanyId, string TemplateName, Guid DamDocumentID, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
+			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
 					return null;
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetProductViewInScarResult(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
+				return helper.GetProductViewInScarResult(iconum, TemplateName, DamDocumentID, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 			} catch (Exception ex) {
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
 				return null;
@@ -308,16 +320,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
-        [Route("productview/{TemplateName}/years")]
+    [Route("productview/{TemplateName}/years")]
 		[HttpGet]
 		public string GetProductTemplateYearList(string CompanyId, string TemplateName) {
+			try {
+				return GetProductTemplateYearList(CompanyId, TemplateName, new Guid("00000000-0000-0000-0000-000000000000"));
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+				return null;
+			}
+		}
+
+		[Route("productview/{TemplateName}/{DamDocumentID}/years")]
+		[HttpGet]
+		public string GetProductTemplateYearList(string CompanyId, string TemplateName, Guid DamDocumentID) {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
 					return null;
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetProductTemplateYearList(iconum, TemplateName);
+				return helper.GetProductTemplateYearList(iconum, TemplateName, DamDocumentID);
 			} catch (Exception ex) {
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
 				return null;

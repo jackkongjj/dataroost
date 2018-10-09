@@ -615,7 +615,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return metaData;
 		}
 
-		public string GetProductTemplateYearList(int iconum, string TemplateName) {
+		public string GetProductTemplateYearList(int iconum, string TemplateName, Guid DamDocumentID ) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
 			string TimeSliceQuery =
 	@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
@@ -630,6 +630,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
  	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
  WHERE ds.CompanyID = @iconum
  AND tt.Description = @templateName
+ AND (d.DamDocumentID = @DamDocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  
 order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
  ";
@@ -638,6 +639,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						cmd.Parameters.AddWithValue("@DamDocumentID", DamDocumentID);
 						conn.Open();
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							while (reader.Read()) {
@@ -651,8 +653,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return sb.ToString();
 		}
 
-		public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
-			return GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
+		public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+			return GetProductView(iconum, TemplateName, DamDocumentID, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 
 			//ScarProductViewResult newFormat = new ScarProductViewResult();
 			//AsReportedTemplate oldFormat = GetProductView(iconum, TemplateName, reverseRepresentation, filterPeriod, filterRecap, filterYear);
@@ -661,7 +663,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			//return newFormat;
 		}
 
-		public ScarProductViewResult GetProductView(int iconum, string TemplateName, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+		public ScarProductViewResult GetProductView(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			ScarProductViewResult result = new ScarProductViewResult();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -686,6 +688,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						cmd.CommandTimeout = 120;
 						cmd.Parameters.AddWithValue("@iconum", iconum);
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
+						cmd.Parameters.AddWithValue("@DamDocumentID", DamDocumentID);
 						cmd.Parameters.AddWithValue("@reverseRepresentation", 0);
 						cmd.Parameters.AddWithValue("@filterPeriod", filterPeriod);
 						cmd.Parameters.AddWithValue("@filterRecap", filterRecap == "ORG" ? 0 : 1);
