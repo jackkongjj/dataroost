@@ -277,7 +277,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarProductViewResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
 
-				return GetProductTemplate(CompanyId, TemplateName,  new Guid("00000000-0000-0000-0000-000000000000"), reverseRepresentation, filterPeriod, filterRecap, filterYear);
+				return GetProductTemplate(CompanyId, TemplateName, new Guid("00000000-0000-0000-0000-000000000000"), reverseRepresentation, filterPeriod, filterRecap, filterYear);
 			} catch (Exception ex) {
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
 				return null;
@@ -300,27 +300,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-        [Route("productview/{TemplateName}/meta")]
-        [HttpGet]
-        public object GetMeta(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS")
-        {
-            try
-            {
-                int iconum = PermId.PermId2Iconum(CompanyId);
-                if (CompanyId == null)
-                    return null;
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetMetaData(iconum);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
-                return null;
-            }
-        }
+		[Route("productview/{TemplateName}/meta")]
+		[HttpGet]
+		public object GetMeta(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (CompanyId == null)
+					return null;
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetMetaData(iconum);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+				return null;
+			}
+		}
 
-    [Route("productview/{TemplateName}/years")]
+		[Route("productview/{TemplateName}/years")]
 		[HttpGet]
 		public string GetProductTemplateYearList(string CompanyId, string TemplateName) {
 			try {
@@ -1333,7 +1329,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTimeSliceByTemplate(CompanyId,TemplateName, DocumentId);
+				return helper.GetTimeSliceByTemplate(CompanyId, TemplateName, DocumentId);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;
@@ -1692,7 +1688,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 		}
-				
+
 		private List<string> LPVMetaTypes = new List<string>() { "NI", "RV", "TA", "TL", "LE", "PS", "PE", "CC" };
 
 		[Route("documents/{damdocumentId}/mtmwandlpv2")]

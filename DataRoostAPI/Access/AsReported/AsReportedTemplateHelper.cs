@@ -615,7 +615,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			return metaData;
 		}
 
-		public string GetProductTemplateYearList(int iconum, string TemplateName, Guid DamDocumentID ) {
+		public string GetProductTemplateYearList(int iconum, string TemplateName, Guid DamDocumentID) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
 			string TimeSliceQuery =
 	@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
