@@ -64,7 +64,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 				}
 			}
 
-            const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
+			const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
                 FROM ppiiconummap p
 	                LEFT JOIN Countries c ON c.iso_country = p.IsoCountry
                 WHERE Iconum = @iconum
@@ -346,7 +346,7 @@ ORDER BY ChangeDate DESC";
 							if (shareClass.ShareClassData == null)
 								shareClass.ShareClassData = new List<ShareClassDataItem>();
 							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
-								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;								
+								var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;
 								if (voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate) > supercoreReportDate)
 									shareClass.ShareClassData = voyagerSecurityItems[shareClass.PPI];
 							}
@@ -387,20 +387,20 @@ ORDER BY ChangeDate DESC";
 						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
 							List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 							if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
-								foreach(var item in superfastSecurityItems[shareClass.PermId]) {
+								foreach (var item in superfastSecurityItems[shareClass.PermId]) {
 									var key = String.Format("{0}:{1}:{2}:{3}:{4}", iconum, shareClass.PermId ?? "", shareClass.PPI ?? "", item.ReportDate, item.ItemId);
 									if (!mergeChecker.Contains(key)) {
 										securityItemList.Add(item);
 										mergeChecker.Add(key);
 									}
-								}								
+								}
 							}
-							shareClass.ShareClassData = securityItemList;														
+							shareClass.ShareClassData = securityItemList;
 						}
 					}
 				}
 			}
-						
+
 			// Voyager data is PPI based
 			if (voyagerIconums.Count > 0) {
 				VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
@@ -411,10 +411,10 @@ ORDER BY ChangeDate DESC";
 					Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
 					if (companyShareClassData.ContainsKey(iconum)) {
 						List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-						foreach (ShareClassDataDTO shareClass in shareClassDataList) {							
+						foreach (ShareClassDataDTO shareClass in shareClassDataList) {
 							if (shareClass.ShareClassData == null)
 								shareClass.ShareClassData = new List<ShareClassDataItem>();
-							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {								
+							if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
 								foreach (var item in voyagerSecurityItems[shareClass.PPI]) {
 									var key = String.Format("{0}:{1}:{2}:{3}:{4}", iconum, shareClass.PermId, shareClass.PPI, item.ReportDate, item.ItemId);
 									if (!mergeChecker.Contains(key)) {
@@ -422,11 +422,11 @@ ORDER BY ChangeDate DESC";
 										mergeChecker.Add(key);
 									}
 								}
-							} 
+							}
 						}
 					}
 				}
-			}			
+			}
 
 			return companyShareClassData;
 		}
