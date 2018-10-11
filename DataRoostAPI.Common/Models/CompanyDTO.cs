@@ -59,6 +59,6 @@ namespace DataRoostAPI.Common.Models {
 		[JsonProperty("shareClasses")]
 		public IEnumerable<ShareClassDTO> ShareClasses { get; set; }
 
-	}
+    }
 
 }

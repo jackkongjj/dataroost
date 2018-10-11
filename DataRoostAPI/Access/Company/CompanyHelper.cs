@@ -22,9 +22,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		private readonly string _voyConnectionString;
 
 		public CompanyHelper(string sfConnectionString,
-		                     string voyConnectionString,
-		                     string lionConnectionString,
-		                     string damConnectionString) {
+												 string voyConnectionString,
+												 string lionConnectionString,
+												 string damConnectionString) {
 			_sfConnectionString = sfConnectionString;
 			_voyConnectionString = voyConnectionString;
 			_lionConnectionString = lionConnectionString;
@@ -33,9 +33,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		public CompanyDTO GetCompany(int iconum) {
 
-		    iconum = LookForStitchedIconum(iconum);
+			iconum = LookForStitchedIconum(iconum);
 
-            string query = @"SELECT f.Firm_Name, t.Descrip, c.name_long, c.name_short, c.iso_country
+			string query = @"SELECT f.Firm_Name, t.Descrip, c.name_long, c.name_short, c.iso_country
                                 FROM FilerMst f
 	                                LEFT JOIN FilerTypes t ON t.Code = f.Filer_Type
 	                                LEFT JOIN Countries c ON c.iso_country = f.ISO_Country
@@ -53,48 +53,44 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 							company.CompanyType = sdr.GetStringSafe(1);
 							company.CountryId = sdr.GetStringSafe(4);
 							company.Country = new CountryDTO
-							                  {
-								                  LongName = sdr.GetStringSafe(2),
-								                  ShortName = sdr.GetStringSafe(3),
-								                  Id = sdr.GetStringSafe(4),
-								                  Iso3 = sdr.GetStringSafe(4)
-							                  };
+							{
+								LongName = sdr.GetStringSafe(2),
+								ShortName = sdr.GetStringSafe(3),
+								Id = sdr.GetStringSafe(4),
+								Iso3 = sdr.GetStringSafe(4)
+							};
 						}
 					}
 				}
 			}
 
-		    const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
-                                FROM ppiiconummap p
-	                                LEFT JOIN Countries c ON c.iso_country = p.IsoCountry
-                                WHERE Iconum = @iconum
-                                ORDER BY isadr";
+			const string domicileCountryQuery = @"SELECT c.name_long, c.name_short, c.iso_country
+                FROM ppiiconummap p
+	                LEFT JOIN Countries c ON c.iso_country = p.IsoCountry
+                WHERE Iconum = @iconum
+                ORDER BY isadr";
 
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(domicileCountryQuery, conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@iconum", iconum);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(domicileCountryQuery, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@iconum", iconum);
 
-                    using (SqlDataReader sdr = cmd.ExecuteReader())
-                    {
-                        if (sdr.Read())
-                        {
-                            company.DomicileCountryId = sdr.GetStringSafe(2);
-                            company.DomicileCountry = new CountryDTO
-                            {
-                                LongName = sdr.GetStringSafe(0),
-                                ShortName = sdr.GetStringSafe(1),
-                                Id = sdr.GetStringSafe(2),
-                                Iso3 = sdr.GetStringSafe(2)
-                            };
-                        }
-                    }
-                }
-            }
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							company.DomicileCountryId = sdr.GetStringSafe(2);
+							company.DomicileCountry = new CountryDTO
+							{
+								LongName = sdr.GetStringSafe(0),
+								ShortName = sdr.GetStringSafe(1),
+								Id = sdr.GetStringSafe(2),
+								Iso3 = sdr.GetStringSafe(2)
+							};
+						}
+					}
+				}
+			}
 
-            company.ShareClasses = GetCompanyShareClasses(iconum);
+			company.ShareClasses = GetCompanyShareClasses(iconum);
 			company.Iconum = iconum;
 			company.EntitiyPermId = PermId.Iconum2PermId(iconum);
 			company.Id = company.EntitiyPermId;
@@ -102,7 +98,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			company.CollectionEffort = GetCompanyEffort(iconum);
 			company.AbsolutePriority = GetAbsolutePriority(iconum);
 			company.Priority = GetPriorityBucket(iconum);
-		    company.IsNationCode = GetIsNationCode(iconum);
+			company.IsNationCode = GetIsNationCode(iconum);
 
 			return company;
 		}
@@ -156,24 +152,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		private IEnumerable<ShareClassDTO> GetCompanyShareClasses(int iconum) {
 			Dictionary<int, List<ShareClassDataDTO>> shareClassDictionary = GetCompanyShareClasses(new List<int> { iconum });
-		    if (shareClassDictionary.Count() > 0) {
-		        return shareClassDictionary.Values.First();
-		    }
+			if (shareClassDictionary.Count() > 0) {
+				return shareClassDictionary.Values.First();
+			}
 
-		    return null;
+			return null;
 		}
 
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
 
-		    Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = ShareClasses(iconums);
-            List<int> missingIconums = new List<int>();
-		    foreach (int iconum in iconums) {
-		        if (!companyShareClasses.ContainsKey(iconum)) {
-		            missingIconums.Add(iconum);
-		        }
-		    }
+			Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = ShareClasses(iconums);
+			List<int> missingIconums = new List<int>();
+			foreach (int iconum in iconums) {
+				if (!companyShareClasses.ContainsKey(iconum)) {
+					missingIconums.Add(iconum);
+				}
+			}
 
-            foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
+			foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
 				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
 				IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
 				foreach (IGrouping<string, string> ppiGroup in groups) {
@@ -191,10 +187,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			return companyShareClasses;
 		}
 
-	    private Dictionary<int, List<ShareClassDataDTO>> ShareClasses(List<int> iconums) {
-            const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
+		private Dictionary<int, List<ShareClassDataDTO>> ShareClasses(List<int> iconums) {
+			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
 
-            const string query = @"SELECT p.Cusip,
+			const string query = @"SELECT p.Cusip,
                                         p.Iconum,
                                         p.Name,
                                         a.Description,
@@ -219,101 +215,93 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 									    LEFT JOIN secmas_sym_cusip_alias x ON x.Cusip = s.Cusip
 								    WHERE ico.Iconum IS NOT NULL";
 
-            Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
-            DataTable table = new DataTable();
-            table.Columns.Add("iconum", typeof(int));
-            foreach (int iconum in iconums)
-            {
-                table.Rows.Add(iconum);
-            }
+			Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = new Dictionary<int, List<ShareClassDataDTO>>();
+			DataTable table = new DataTable();
+			table.Columns.Add("iconum", typeof(int));
+			foreach (int iconum in iconums) {
+				table.Rows.Add(iconum);
+			}
 
-            // Create Global Temp Table
-            using (SqlConnection connection = new SqlConnection(_sfConnectionString))
-            {
-                connection.Open();
-                using (SqlCommand cmd = new SqlCommand(createTableQuery, connection))
-                {
-                    cmd.ExecuteNonQuery();
-                }
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
+					cmd.ExecuteNonQuery();
+				}
 
-                // Upload all iconums to Temp table
-                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null))
-                {
-                    bulkCopy.BatchSize = table.Rows.Count;
-                    bulkCopy.DestinationTableName = "#iconums";
-                    bulkCopy.WriteToServer(table);
-                }
+				// Upload all iconums to Temp table
+				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
+					bulkCopy.BatchSize = table.Rows.Count;
+					bulkCopy.DestinationTableName = "#iconums";
+					bulkCopy.WriteToServer(table);
+				}
 
-                using (SqlCommand cmd = new SqlCommand(query, connection))
-                {
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 
-                    using (SqlDataReader sdr = cmd.ExecuteReader())
-                    {
-                        while (sdr.Read())
-                        {
-                            int iconum = sdr.GetInt32(1);
-                            ShareClassDataDTO shareClass = new ShareClassDataDTO
-                            {
-                                Cusip = sdr.GetStringSafe(0),
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							int iconum = sdr.GetInt32(1);
+							ShareClassDataDTO shareClass = new ShareClassDataDTO
+							{
+								Cusip = sdr.GetStringSafe(0),
 
-                                Name = sdr.GetStringSafe(2),
-                                AssetClass = sdr.GetStringSafe(3),
-                                ListedOn = sdr.GetStringSafe(4),
-                                InceptionDate = sdr.GetNullable<DateTime>(5),
-                                TermDate = sdr.GetNullable<DateTime>(6),
+								Name = sdr.GetStringSafe(2),
+								AssetClass = sdr.GetStringSafe(3),
+								ListedOn = sdr.GetStringSafe(4),
+								InceptionDate = sdr.GetNullable<DateTime>(5),
+								TermDate = sdr.GetNullable<DateTime>(6),
 
-                                //CurrentPrice = sdr.GetDecimal(7),
-                                //CurrentSharesOutstanding = sdr.GetDecimal(8),
-                                TickerSymbol = sdr.GetStringSafe(9),
-                                Sedol = sdr.GetStringSafe(10),
-                                Isin = sdr.GetStringSafe(11),
+								//CurrentPrice = sdr.GetDecimal(7),
+								//CurrentSharesOutstanding = sdr.GetDecimal(8),
+								TickerSymbol = sdr.GetStringSafe(9),
+								Sedol = sdr.GetStringSafe(10),
+								Isin = sdr.GetStringSafe(11),
 
-                                //ToCusip = sdr.GetStringSafe(12),
-                                IssueType = sdr.GetStringSafe(13),
-                                PPI = sdr.GetStringSafe(14),
-                                Id = sdr.GetStringSafe(15),
-                                PermId = sdr.GetStringSafe(15)
-                            };
-                            if (!companyShareClasses.ContainsKey(iconum))
-                            {
-                                companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
-                            }
-                            companyShareClasses[iconum].Add(shareClass);
-                        }
-                    }
-                }
-            }
+								//ToCusip = sdr.GetStringSafe(12),
+								IssueType = sdr.GetStringSafe(13),
+								PPI = sdr.GetStringSafe(14),
+								Id = sdr.GetStringSafe(15),
+								PermId = sdr.GetStringSafe(15)
+							};
+							if (!companyShareClasses.ContainsKey(iconum)) {
+								companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
+							}
+							companyShareClasses[iconum].Add(shareClass);
+						}
+					}
+				}
+			}
 
-	        return companyShareClasses;
-	    }
+			return companyShareClasses;
+		}
 
-	    private int LookForStitchedIconum(int iconum) {
-            
-	        const string query = @"
+		private int LookForStitchedIconum(int iconum) {
+
+			const string query = @"
 SELECT h.iconum, m.iconum
 FROM PpiIconumMapHistory h (nolock)
 	JOIN PPiIconumMap m (nolock) ON h.PPI = m.PPI
 WHERE h.iconum = @iconum AND m.iconum > 0
 ORDER BY ChangeDate DESC";
 
-            int newIconum = iconum;
-            using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
-	            connection.Open();
+			int newIconum = iconum;
+			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+				connection.Open();
 
-	            using (SqlCommand cmd = new SqlCommand(query, connection)) {
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 
-	                using (SqlDataReader sdr = cmd.ExecuteReader()) {
-	                    while (sdr.Read()) {
-	                        int oldIconum = sdr.GetInt32(0);
-	                        newIconum = sdr.GetInt32(1);
-	                    }
-	                }
-	            }
-	        }
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							int oldIconum = sdr.GetInt32(0);
+							newIconum = sdr.GetInt32(1);
+						}
+					}
+				}
+			}
 
-            return newIconum;
-	    }
+			return newIconum;
+		}
 
 		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
 			DateTime startTime = DateTime.Now;
@@ -456,8 +444,7 @@ ORDER BY ChangeDate DESC";
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 				if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
 					securityItemList = superfastSecurityItems[shareClass.Cusip];
-				}
-				else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
+				} else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
 					securityItemList = voyagerSecurityItems[shareClass.PPI];
 				}
 				ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
@@ -475,18 +462,18 @@ ORDER BY ChangeDate DESC";
 			return effortDictionary[iconum];
 		}
 
-        public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
+		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
 
-            Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
+			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
 			DataTable table = new DataTable();
-			table.Columns.Add("iconum", typeof (int));
+			table.Columns.Add("iconum", typeof(int));
 			foreach (int iconum in companies) {
 				table.Rows.Add(iconum);
 				effortDictionary.Add(iconum, EffortDTO.Voyager());
 			}
 
 			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
-            const string query = @"
+			const string query = @"
 with ico as
 (
        select c.iconum, IsoCountry 
@@ -524,8 +511,8 @@ join (
        group by rulestopathid
 ) as reqList on matchList.RulesToPathId = reqList.RulesToPathId and matchList.matchcount = reqList.matchcount";
 
-            // Create Global Temp Table
-            using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
 				connection.Open();
 				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
 					cmd.ExecuteNonQuery();
@@ -542,7 +529,7 @@ join (
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							int iconum = reader.GetInt32(0);
-                            EffortDTO superfastEffort = EffortDTO.SuperCore();
+							EffortDTO superfastEffort = EffortDTO.SuperCore();
 							effortDictionary[iconum] = superfastEffort;
 						}
 					}
@@ -614,30 +601,27 @@ join (
 			return priorityDictionary;
 		}
 
-	    private bool GetIsNationCode(int iconum ) {
-            const string query = @"SELECT isnationcode FROM ppiiconummap WHERE iconum = @iconum";
+		private bool GetIsNationCode(int iconum) {
+			const string query = @"SELECT isnationcode FROM ppiiconummap WHERE iconum = @iconum";
 
-            // Create Global Temp Table
-            using (SqlConnection connection = new SqlConnection(_sfConnectionString))
-            {
-                connection.Open();
-                using (SqlCommand cmd = new SqlCommand(query, connection))
-                {
+			// Create Global Temp Table
+			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+				connection.Open();
+				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read()) {
-                            return reader.GetBoolean(0);
-                        }
-                    }
-                }
-            }
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							return reader.GetBoolean(0);
+						}
+					}
+				}
+			}
 
-	        return false;
-	    }
+			return false;
+		}
 
 
-        public int? GetPriorityBucket(int iconum) {
+		public int? GetPriorityBucket(int iconum) {
 			Dictionary<int, int?> companyPriority = GetPriorityBucket(new List<int> { iconum });
 			if (!companyPriority.ContainsKey(iconum)) {
 				throw new MissingIconumException(iconum);
@@ -662,7 +646,7 @@ join (
 																		JOIN #iconums i ON i.iconum = p.iconum
 																	WHERE RIGHT(p.ppi, 1) = '0') tmp
 																WHERE rank = 1";
-																	
+
 
 			// Create Global Temp Table
 			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
@@ -714,5 +698,4 @@ join (
 			return result;
 		}
 	}
-
 }

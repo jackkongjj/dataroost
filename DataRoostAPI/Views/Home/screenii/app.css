@@ -1,0 +1,235 @@
+/* app css stylesheet */
+
+.menu {
+  list-style: none;
+  border-bottom: 0.1em solid black;
+  margin-bottom: 2em;
+  padding: 0 0 0.5em;
+}
+
+.menu:before {
+  content: "[";
+}
+
+.menu:after {
+  content: "]";
+}
+
+.menu > li {
+  display: inline;
+}
+
+.menu > li + li:before {
+  content: "|";
+  padding-right: 0.3em;
+}
+
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+  white-space:nowrap;
+}
+
+td.valueCell{
+  text-align: right;
+}
+
+td.headerCell{
+  text-align: center;
+}
+
+.lpvfail{
+  background-color:coral;
+}
+
+.virtualCell{
+  color: blue;
+}
+
+.clicked{
+  border: 3px solid red;
+}
+
+.mtmwFail{
+  font-weight:bold;
+  color:red;
+  font-family:"Arial Black";
+}
+
+.mtmwPass{
+  font-weight:bold;
+  color:green;
+  font-family:"Arial Black";
+}
+
+.grid{
+ height: 90vh;
+ font-family: Arial, Helvetica, sans-serif;
+ font-size: 13px;
+}
+
+.positive{
+  color : #2f6ca8;
+  text-align: right;
+}
+
+.negative{
+  color:  rgb(252, 73, 73);
+  text-align: right;
+}
+
+.blank{
+  text-align: right;
+}
+.ui-grid-cell{
+  padding: 2px 2px 2px 2px;
+  /* text-align: right; */
+}
+.ui-grid-row:nth-child(even) .ui-grid-cell {
+  background-color: rgb(238, 245, 250);
+} 
+
+.metaType{
+  text-align: center;
+}
+
+.child{
+  padding-left:40px;
+  font-weight: normal;
+}
+
+.startline{
+  padding-left:20px;
+}
+
+.endline{
+  padding-left:20px;
+  font-weight: normal;
+}
+.parent{
+  font-weight: bold;
+}
+.virtualParent{
+  color: purple;
+}
+
+.note{
+  padding-top: 5px;
+  font-weight: normal;
+  font-style: italic;
+}
+
+.columnHeader{
+  text-align: right;
+  padding: 5px;
+}
+.columnItems{
+  text-align: center;
+  padding: 5px;
+}
+.reverseRepresentation{
+  margin-top:3px;
+}
+.viewButtons{
+  height: 100%;
+  width: 100%;
+  background-color: #F3F3F3;
+}
+.fieldset-auto-width{
+  display: inline-block;
+}
+.gridFull{
+  position: relative;
+  width:100%;
+}
+.Buttons{
+  position: absolute;
+  left: 160px;
+  top: 10px;
+  z-index: 10;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+.allSelected{
+  background-color: #44BED8;
+  color: white;
+  margin: 0px;
+}
+.allButton{
+  margin:0px;
+}
+
+.header {
+  background-color: #44BED8;
+  color: white;
+  padding:20px;
+  list-style-type: none;
+  margin: 0;
+  margin-bottom:2px;
+}
+.header li {
+  display: inline-block;
+  padding-left:40px;
+  padding-right: 40px;
+}
+.header li a{
+  font-weight: bold;
+}
+
+.userName{
+  position: absolute;
+  top:20px;
+  right: 35px;
+}
+.userPic {
+  border-radius: 50%;
+  height: 45px;
+  width: 45px;
+  position: absolute;
+  top: 7px;
+  right: 20px;
+}
+.filter{
+  width: 100%;
+}
+.filterElement{
+  padding-left: 10px;
+  display: inline-block;
+}
+
+.select{
+  margin:0px;
+}
+.product{
+  width: 100%;
+}
+.productElement{
+  padding-left: 10px;
+  display: inline-block;
+}
+.productview{
+  margin-bottom: 10px; 
+}
+md-radio-button.md-default-theme .md-on, md-radio-button .md-on {
+  background-color: #44BED8;
+}
+md-radio-button.md-default-theme.md-checked .md-off, md-radio-button.md-checked .md-off {
+  border-color: #44BED8;
+}
+
+md-switch.md-checked .md-bar {
+  background-color:  #44BED8; /* set selected bar color */
+}
+md-switch.md-checked .md-thumb {
+  background-color: rgb(255, 255, 255); /* selected switch color */
+}
+
+#rectangle{
+  width:5px;
+  height:15px;
+  background:orange;
+  float: left;
+  top: 2;
+  left: 2;
+}

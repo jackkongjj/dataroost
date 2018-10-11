@@ -958,7 +958,7 @@ and d.DocumentDate  between
 					cmd.Parameters.AddWithValue("@SplitAdjustmentDate", date);
 					cmd.ExecuteNonQuery();
 				}
-			} catch(Exception ex) {
+			} catch (Exception ex) {
 				return ex.Message;
 			}
 			return "";

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<link rel="stylesheet" type="text/css" href="app.css">
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+<body>
+
+<div ng-app="SCARApp" ng-controller="SCARController">
+<fieldset>
+  <legend>
+  Input Form
+  </legend>
+  <input id="searchIconum" placeholder="Search Iconum">
+  <input id ="searchTemplate" placeholder="NG-IS"><button ng-click="submit()">Submit</button>
+  <br/>
+    Current Iconum: 
+    <span>{{currIconum}}</span> <br/>
+	Current Template:
+	<span>{{currTemplate}}</span> <br/> <br/>
+  </fieldset>
+  <br><br>
+  
+
+  <br><br>
+  
+  <table>
+      <tr>
+		<td colspan="2">
+		  <fieldset>
+		  <legend>
+		  Product View
+		  </legend>
+			<button ng-click="showAnnual()">ANNUAL</button>
+			<button ng-click="showQtr()">QTR</button>
+			<button ng-click="showAll()">ALL</button>
+		  </fieldset>
+		  <fieldset>
+		  <legend>
+		  Filter
+		  </legend>
+			<button ng-click="showOrg()">ORG</button>
+			<button ng-click="showRecap()">RECAP</button>
+			
+			<select id="cmbFYE" ng-model='selectedYear' ng-options="c for c in yearlist" ng-change="updateYear()"> 
+			</select>
+		  </fieldset>
+		</td>
+		
+		  <td align="right">
+		  Period End Date:<br>Time Series:<br>Publication Date:<br>Account Type:<br>Form Type:<br>Report Status:<br>Period Length<br>Currency Type:<br>Period Note:<br>Account Calc Status:
+		  </td>
+          <td ng-repeat="z in timeSlices" class="headerCell">{{ z.TimeSlicePeriodEndDate | date: 'dd-MMM-yyyy' }}<br>{{ z.PeriodType == "XX" ? "AR" : z.PeriodType }}<br>
+			{{ z.PublicationDate | date: 'MMM-yyyy' }}<br>{{ z.IsRecap ? "RECAP" : "ORG" }}<br>{{ z.ReportType }}<br>Prelim<br>{{ z.Duration }}<br>{{ z.AccountingStandard }}
+			<br>&nbsp;<br>{{$index + 1}}<br>
+		  </td>
+      </tr>
+	      <tr>
+    <td colspan="3"><input type="checkbox" name="chkReverseDataRepresentation" ng-model="reverseRepresentation" ng-change="updateReverseRepresentation()">Reverse Data Representation</td>
+    <td colspan="999">All figures in millions except per share items. </td>
+    </tr>
+    <tr ng-repeat="x in staticHierarchies">
+		<td>{{ x.staticHierarchyMetaType }}</td>
+		<td ng-click="rowClick(x)" ng-class="{'clicked' : x.clicked}"><span ng-repeat="i in getNumber(x.level) track by $index">&nbsp;&nbsp;&nbsp;&nbsp;</span><span ng-if="x.id < 0" ><font size="1">&#9698;</font>&nbsp;&nbsp;</span>{{ x.normalizedDescription }}
+
+		</td>
+	 <td></td>
+		<td ng-click="cellClick(y)" ng-repeat="y in x.cells" class="valueCell" ng-class="{ 'lpvfail' : y.likePeriodValidationFlag, 'virtualCell' : y.virtualValueNumeric != null, 'clicked' : y.clicked }">
+			{{ formatNumber(y.displayValue) | number }}
+		</td>
+    </tr>
+  </table>
+
+	
+  <br/>
+  
+
+
+  	<!--  
+     <button ng-click="stitchItem()">Stitch</button>
+    <button ng-click="unstitchItem()">UnStitch</button>
+	<button ng-click="flipsign()">Flip Sign</button> -->
+	
+</div>
+
+
+<script>
+  var app = angular.module('SCARApp', []);
+  app.controller('SCARController', function($scope, $http) {	  
+	  $scope.selectedRows = [];
+	  $scope.selectedCells = [];
+
+	  $scope.currIconum = 28029;
+	  $scope.currTemplate = 'NG-IS';
+	  $scope.reverseRepresentation = "false";
+	  $scope.filterPeriod = "ALL";
+	  $scope.filterRecap = "ALL";
+	  $scope.selectedYear = "YEARS";
+	  $scope.yearlist = [ "YEARS", "2017", "2016"];
+	  $scope.serverPath = "http://dataroost-ffvwebstga01.prod.factset.com:9990/api/v1/companies/";
+	  
+	  queryString();
+	  updateYearList();
+	  refresh();
+	  
+	        $scope.getNumber = function(num) {
+          return new Array(num);
+      };
+	  $scope.submit = function () {
+		var currIconum = $( "#searchIconum" ).val().trim();
+	    $scope.currIconum = currIconum;
+		var currTemplate = $( "#searchTemplate" ).val().trim();
+		if (currTemplate.length > 0)
+		{
+			$scope.currTemplate = currTemplate;
+		}
+		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
+            .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
+            $scope.timeSlices = response.data.TimeSlices;});
+      };
+	  
+	  $scope.updateYear = function () {
+		var currYear = $scope.selectedYear;
+		refresh();
+      };
+	  
+	  $scope.showAnnual = function () {
+		$scope.filterPeriod = "ANNUAL";
+		$scope.filterRecap = "ALL";
+		$scope.selectedYear = "YEARS";
+		refresh();
+      };
+	  $scope.showQtr = function () {
+		$scope.filterPeriod = "QTR";
+		$scope.filterRecap = "ALL";
+		$scope.selectedYear = "YEARS";
+		refresh();
+      };
+	  $scope.showAll = function () {
+		$scope.filterPeriod = "ALL";
+		$scope.filterRecap = "ALL";
+		$scope.selectedYear = "YEARS";
+		refresh();
+      };
+	  $scope.showOrg = function () {
+		$scope.filterRecap = "ORG";
+		$scope.selectedYear = "YEARS";
+		refresh();
+      };
+	  $scope.showRecap = function () {
+		$scope.filterRecap = "RECAP";
+		$scope.selectedYear = "YEARS";
+		refresh();
+      };
+	  $scope.updateReverseRepresentation = function () {
+		refresh();
+      };
+	  	  
+	  function urlParam(name){
+    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+    if (results==null){
+       return null;
+    }
+    else{
+       return decodeURI(results[1]) || 0;
+    }
+}
+	  function updateYearList()
+	  {
+	  		$http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate + "/years")
+            .then(function (response) {      $scope.yearlist = response.data.split(",");});
+	  }
+	  
+	  function queryString()
+	  {
+		//var urlParams = new URLSearchParams(window.location.search);
+		var iconum =  urlParam('iconum');  
+		if (iconum)
+		{
+			$scope.currIconum  = iconum;
+			var templateName =  urlParam('templateName'); 
+			if (templateName)
+			{
+				$scope.currTemplate = templateName;
+			}
+		}
+	  };
+	  
+	  function refresh() {
+        $http.get($scope.serverPath + $scope.currIconum + "/efforts/asreported/productview/" + $scope.currTemplate, 
+		{params: {"reverseRepresentation": $scope.reverseRepresentation, "filterPeriod":$scope.filterPeriod , "filterRecap":$scope.filterRecap, "filterYear" :$scope.selectedYear}})
+            .then(function (response) {$scope.staticHierarchies = response.data.staticHierarchies;
+            $scope.timeSlices = response.data.TimeSlices;});
+      };
+
+
+	  $scope.formatNumber = function(num){
+		  if (typeof num != 'number') return num;
+          var numOut = num/1000000;
+          return numOut;
+    };
+	
+      $scope.rowClick = function(staticHierarchy) {
+          if($scope.selectedRows.indexOf(staticHierarchy.id) > -1)
+              $scope.selectedRows.splice( $scope.selectedRows.indexOf(staticHierarchy.id), 1 );
+          else
+              $scope.selectedRows.push(staticHierarchy.id);
+
+          if(staticHierarchy.clicked == null || !staticHierarchy.clicked)
+              staticHierarchy.clicked = true;
+          else
+              staticHierarchy.clicked = false;
+
+          $scope.$digest();
+      }
+	  
+	  $scope.cellClick = function(cell) {
+	      if($scope.selectedCells.indexOf(cell._id) > -1)
+              $scope.selectedCells.splice( $scope.selectedCells.indexOf(cell._id), 1 );
+          else
+		  {
+			$scope.selectedCells.push(cell._id);
+		  }
+              
+			  
+          if(cell.clicked == null || !cell.clicked)
+              cell.clicked = true;
+          else
+              cell.clicked = false;
+
+          $scope.$digest();
+      }
+  });
+  
+  function insertUnStitchData(staticHierarchies, timeSlices, unstitchRow, update, $scope) {
+      var shix = 0;
+      for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
+          while (staticHierarchies[shix].id != update.staticHierarchyAdjustedOrders[i].staticHierarchyID) {
+              shix++;
+
+              if (shix >= staticHierarchies.length) {
+                  return;
+              }
+
+              if(staticHierarchies[shix].id == unstitchRow){
+                  staticHierarchies.splice(shix, 1);
+
+                  for(var j = update.staticHierarchies.length-1; j >= 0; j--) {
+                      //$scope.$apply(function() {
+                                  staticHierarchies.splice(shix, 0, update.staticHierarchies[j]);
+                              //});
+                  }
+              }
+          }
+          staticHierarchies[shix].adjustedOrder = update.staticHierarchyAdjustedOrders[i].newAdjustedOrder;
+
+      }
+      $scope.$digest();
+  }
+
+  function insertStitchData(staticHierarchies, timeSlices, update, deleteRows, $scope) {
+      var shix = 0;
+      for (var i = 0; i < update.staticHierarchyAdjustedOrders.length; i++) {
+          while (staticHierarchies[shix].id != update.staticHierarchyAdjustedOrders[i].staticHierarchyID) {
+              shix++;
+
+              while (deleteRows.indexOf(staticHierarchies[shix].id) > -1) {
+                  staticHierarchies.splice(shix, 1);
+              }
+
+              if (shix >= staticHierarchies.length) {
+                  return;
+              }
+
+              if (staticHierarchies[shix].id == update.staticHierarchy.id) {
+                  staticHierarchies[shix] = update.staticHierarchy;
+              }
+          }
+          staticHierarchies[shix].adjustedOrder = update.staticHierarchyAdjustedOrders[i].newAdjustedOrder;
+
+      }
+
+      for (var s = 0; s < staticHierarchies.length; s++) {
+          var mtmw = update.parentMTMWChanges[staticHierarchies[s].id];
+          if (typeof mtmw != 'undefined') {
+              for(var t = 0; t < timeSlices.length; t++){
+                  var ts = mtmw[timeSlices[t].Id];
+                  if(typeof ts != 'undefined'){
+                      staticHierarchies[s].cells[t].MTMWValidationFlag = ts
+                  }
+              }
+          }
+      }
+  }
+</script>
+
+</body>
+</html>

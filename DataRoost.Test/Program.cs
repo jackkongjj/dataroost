@@ -75,13 +75,13 @@ namespace DataRoost.Test {
 
 			iconum = "21149";
 			ISfVoyDataAccess sfvoyDataAccess = DataRoostAccessFactory.GetSfVoyDataAccess(connectionString);
-			StandardizationType[] sfvoydataTypes = sfvoyDataAccess.GetDataTypes(iconum);
-			TemplateDTO[] sfVoytemplateDtos = sfvoyDataAccess.GetTemplateList(iconum, StandardizationType.SDB);
+			StandardizationType[] sfvoydataTypes = sfvoyDataAccess.GetDataTypes(iconum, "IS");
+			TemplateDTO[] sfVoytemplateDtos = sfvoyDataAccess.GetTemplateList(iconum, "IS", StandardizationType.SDB);
 			string sfVoyTempId = "RnxBfDE=";
-			TemplateDTO sfVoytemplate = sfvoyDataAccess.GetTemplate(iconum, StandardizationType.SDB, sfVoyTempId);
-			SfVoyTimeSeries[] sfVoyTSAll = sfvoyDataAccess.GetTimeseriesList(iconum, StandardizationType.SDB, sfVoytemplate.Id, 2011, 2011);
-			SfVoyTimeSeries[] syVoyTSAllValue = sfvoyDataAccess.GetTimeseriesListWithValue(iconum, StandardizationType.SDB, sfVoytemplate.Id, 2011);
-			SfVoyTimeSeries sfVoyDetail = sfvoyDataAccess.GetTimeseries(iconum, StandardizationType.SDB, sfVoytemplate.Id, sfVoyTSAll[5].Id);
+			TemplateDTO sfVoytemplate = sfvoyDataAccess.GetTemplate(iconum, "IS", StandardizationType.SDB, sfVoyTempId);
+			SfVoyTimeSeries[] sfVoyTSAll = sfvoyDataAccess.GetTimeseriesList(iconum, "IS", StandardizationType.SDB, sfVoytemplate.Id, 2011, 2011);
+			SfVoyTimeSeries[] syVoyTSAllValue = sfvoyDataAccess.GetTimeseriesListWithValue(iconum, "IS", StandardizationType.SDB, sfVoytemplate.Id, 2011);
+			SfVoyTimeSeries sfVoyDetail = sfvoyDataAccess.GetTimeseries(iconum, "IS", StandardizationType.SDB, sfVoytemplate.Id, sfVoyTSAll[5].Id);
 			
 
 			IStandardizedDataAccess superFastDataAccess = DataRoostAccessFactory.GetSuperFastDataAccess(connectionString);

@@ -73,9 +73,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			iconumList = iconumList.Distinct().ToList();
 
 			CompanyHelper helper = new CompanyHelper(sfConnectionString,
-				                                         voyConnectionString,
-				                                         lionConnectionString,
-				                                         damConnectionString);
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
 			return helper.GetCompaniesEfforts(iconumList);
 		}
 
@@ -97,7 +97,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																								 voyConnectionString,
 																								 lionConnectionString,
 																								 damConnectionString);
-			Dictionary<int, CompanyPriority> priorities = helper.GetCompanyPriority(new List<int> {iconum});
+			Dictionary<int, CompanyPriority> priorities = helper.GetCompanyPriority(new List<int> { iconum });
 			if (priorities.ContainsKey(iconum)) {
 				return priorities[iconum];
 			}
@@ -126,7 +126,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																								 damConnectionString);
 			return helper.GetCompanyPriority(iconumList);
 		}
-			
+
 		[Route("companies/{CompanyId}/efforts/")]
 		[HttpGet]
 		public EffortDTO[] QueryEfforts(string CompanyId) {
@@ -134,7 +134,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			return new EffortDTO[] { EffortDTO.Voyager(), EffortDTO.SuperCore(), EffortDTO.Kpi(), EffortDTO.Segments(), EffortDTO.AsReported() , new EffortDTO() { Name = "sfvoy_join" } };
+			return new EffortDTO[] { EffortDTO.Voyager(), EffortDTO.SuperCore(), EffortDTO.Kpi(), EffortDTO.Segments(), EffortDTO.AsReported(), new EffortDTO() { Name = "sfvoy_join" } };
 		}
 	}
 }
