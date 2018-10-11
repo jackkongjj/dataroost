@@ -8815,15 +8815,6 @@ DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, Child
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
 DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
 
-DELETE FROM MTMWErrorTypeTableCell 
-WHERE TableCellid in(
-select tc.TableCellID from
-@CellsForMTMW e 
-JOIN StaticHierarchy sh on e.StaticHierarchyid = sh.id
-JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.DocumentTimeSliceId AND sh.CompanyFinancialTermID = tc.CompanyFinancialTermID
-)
-
-
 INSERT INTO @SHCellsMTMW
 EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
 
