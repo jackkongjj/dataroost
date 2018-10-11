@@ -7063,7 +7063,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -7308,7 +7308,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -7534,7 +7534,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -7767,7 +7767,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
@@ -8801,7 +8801,7 @@ select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where Is
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
-WHERE TableCellID is null and DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
+WHERE DocumentTimeSliceID NOT IN (Select DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK))
 
 INSERT @CellsForLPV
 EXEC SCARGetTableCellLikePeriod_GetSibilingTableCells @CellsForLPV, @DocumentID
