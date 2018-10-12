@@ -133,7 +133,7 @@ SELECT
                         t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum
 	                FROM (
 		                SELECT 
-                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
+                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, i.iconum iconum,
 			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM #CompanyIds i (nolock)
 							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
