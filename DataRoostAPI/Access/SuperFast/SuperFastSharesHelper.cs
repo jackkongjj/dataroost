@@ -81,7 +81,7 @@ SELECT
 
 				// Fetch FPE data
 				using (SqlCommand cmd = new SqlCommand(pantheonQuery, connection)) {
-					cmd.CommandTimeout = 120;
+					cmd.CommandTimeout = 300;
 					cmd.Parameters.Add(new SqlParameter("@stdCode", SqlDbType.Char, 5) { Value = stdCode });
 					cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) { Value = searchDate });
 					cmd.Parameters.Add(new SqlParameter("@since", SqlDbType.DateTime2)
@@ -184,7 +184,7 @@ SELECT
 
 				// Fetch FPE data
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
-					cmd.CommandTimeout = 120;
+					cmd.CommandTimeout = 300;
 					cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) { Value = searchDate });
 					cmd.Parameters.Add(new SqlParameter("@since", SqlDbType.DateTime2)
 					{
