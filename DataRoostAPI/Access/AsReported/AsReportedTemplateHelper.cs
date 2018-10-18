@@ -1945,10 +1945,11 @@ WHERE  CompanyID = @Iconum";
 	Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> timeSlices) {
 			if (cell.ValueNumeric.HasValue) {
 				//hasChildren = true;
-				if (cell.ScalingFactorValue >= 1)
-					return (cell.IsIncomePositive ? 1 : -1) * (cell.ValueNumeric.Value * (int)cell.ScalingFactorValue);
-				else
-					return (cell.IsIncomePositive ? 1 : -1) * (cell.ValueNumeric.Value * (decimal)cell.ScalingFactorValue);
+				if (!cell.VirtualValueNumeric.HasValue)
+					if (cell.ScalingFactorValue >= 1)
+						return (cell.IsIncomePositive ? 1 : -1) * (cell.ValueNumeric.Value * (int)cell.ScalingFactorValue);
+					else
+						return (cell.IsIncomePositive ? 1 : -1) * (cell.ValueNumeric.Value * (decimal)cell.ScalingFactorValue);
 			} else if (cell.ID == 0 && cell.VirtualValueNumeric.HasValue) {
 				//hasChildren = true;
 				return cell.VirtualValueNumeric.Value;
