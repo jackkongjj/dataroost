@@ -1074,7 +1074,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			}
 			return result;
 		}
-		private string TransformProductViewCurrency(IEnumerable<SCARAPITableCell> tablecells) {
+		private string TransformProductViewCurrency(TimeSlice c) {
+			var tablecells = c.Cells.Where(t => t.ID != 0);
 			string currency = "";
 			var firstTableCellWithCurrency = tablecells.Where(t => !string.IsNullOrEmpty(t.CurrencyCode)).FirstOrDefault();
 			if (firstTableCellWithCurrency != null) {
@@ -1082,17 +1083,22 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					currency = firstTableCellWithCurrency.CurrencyCode;
 				}
 			}
+			if (string.IsNullOrEmpty(currency)) {
+				currency = "-";
+			}
 			return currency;
 		}
 		private TimeSlice TransformProductViewTimeSlice(TimeSlice c) {
 			try {
-				var tablecells = c.Cells.Where(t => t.ID != 0);
-				if (tablecells != null && tablecells.Count() > 1 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() > 1) {
+				var tablecells = c.Cells.Where(t => t.ID != 0 && t.DocumentTimeSliceID == c.Id);
+				int count = 0;
+				int result = 0;
+				if (tablecells != null && tablecells.Count() > 1) {// && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() > 1) {
 					IEnumerable<int?> periodlengths = tablecells.Select(tb => tb.PeriodLength).Distinct();
-					int count = 0;
-					int result = 0;
+					var orderedTablecells = c.Cells.Where(t => t.ID != 0).OrderByDescending(x => x.CellDate);
+
 					foreach (int? p in periodlengths) {
-						var tc_count = tablecells.Where(tt => tt.PeriodLength == p).Count();
+						var tc_count = orderedTablecells.Where(tt => tt.PeriodLength == p).Count();
 						if (tc_count > count) {
 							if (p == null || !p.HasValue) {
 								result = 0;
@@ -1103,25 +1109,27 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						}
 					}
 
-					c.Currency = TransformProductViewCurrency(tablecells);
-					string periodType = tablecells.Where(tt => tt.PeriodLength == result).Select(x => x.PeriodTypeID).FirstOrDefault();
-					char PeriodType = periodType == null ? (char)0 : periodType.FirstOrDefault();
-					int ARDuration = result;
-					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
-					c.IsRecap = c.IsRecap && !c.ManualOrgSet;
 
-				} else if (tablecells != null && tablecells.Count() > 0 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() == 1) {
-					int ARDuration = 1;
-					char PeriodType = ' ';
-					c.Currency = TransformProductViewCurrency(tablecells);
-					var tablecell = tablecells.FirstOrDefault();
-					if (tablecell != null && tablecell.PeriodLength.HasValue)
-						ARDuration = tablecell.PeriodLength.Value;
-					if (tablecell != null)
-						PeriodType = tablecell.PeriodTypeID.FirstOrDefault();
-					c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
-					c.IsRecap = c.IsRecap && !c.ManualOrgSet;
+
 				}
+				c.Currency = TransformProductViewCurrency(c);
+				string periodType = tablecells.Where(tt => tt.PeriodLength == result).Select(x => x.PeriodTypeID).FirstOrDefault();
+				char PeriodType = periodType == null ? (char)0 : periodType.FirstOrDefault();
+				int ARDuration = result;
+				c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
+				c.IsRecap = c.IsRecap && !c.ManualOrgSet;
+				//else if (tablecells != null && tablecells.Count() > 0 && tablecells.Select(tb => tb.PeriodLength).Distinct().Count() == 1) {
+				//	int ARDuration = 1;
+				//	char PeriodType = ' ';
+				//	c.Currency = TransformProductViewCurrency(tablecells);
+				//	var tablecell = tablecells.FirstOrDefault();
+				//	if (tablecell != null && tablecell.PeriodLength.HasValue)
+				//		ARDuration = tablecell.PeriodLength.Value;
+				//	if (tablecell != null)
+				//		PeriodType = tablecell.PeriodTypeID.FirstOrDefault();
+				//	c.ConsolidatedFlag = ConvertDuration(ARDuration, PeriodType, c.PeriodType);
+				//	c.IsRecap = c.IsRecap && !c.ManualOrgSet;
+				//}
 			} catch {
 			}
 			return c;
