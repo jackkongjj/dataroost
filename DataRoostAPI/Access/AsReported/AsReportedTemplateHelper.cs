@@ -786,12 +786,13 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									ScarUpdated = row[19].AsBoolean(),
 									IsIncomePositive = row[20].AsBoolean(),
 									XBRLTag = row[21].AsString(),
-									UpdateStampUTC = row[22].AsDateTimeNullable(),
+									UpdateStampUTC = null,
 									DocumentID = row[23].AsGuid(),
 									Label = row[24].AsString(),
 									ScalingFactorValue = row[25].AsDouble(),
 									ARDErrorTypeId = row[26].AsInt32Nullable(),
-									MTMWErrorTypeId = row[27].AsInt32Nullable()
+									MTMWErrorTypeId = row[27].AsInt32Nullable(),
+									DocumentTimeSliceID = row[22].AsInt32()
 								};
 								adjustedOrder = row[28].AsInt32();
 							} else {
