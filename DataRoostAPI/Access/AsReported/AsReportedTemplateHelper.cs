@@ -20,9 +20,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		private readonly string _sfConnectionString;
 
 		static AsReportedTemplateHelper() {
-			foreach (KeyValuePair<string, string> kvp in HierarchyMetaDescription) {
-				HierarchyMetaOrderPreference.Add(kvp.Key);
-			}
+
 		}
 
 		public AsReportedTemplateHelper(string sfConnectionString) {
@@ -662,8 +660,57 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			//newFormat.TimeSlices = oldFormat.TimeSlices.ToArray();
 			//return newFormat;
 		}
+		private bool IsHierarchyMetaTypesLoaded() {
+			bool isSuccessful = false;
+			try {
+				if (string.IsNullOrWhiteSpace(_sfConnectionString)) {
+					return isSuccessful;
+				}
+
+				if (HierarchyMetaDescription == null || HierarchyMetaDescription.Count == 0) {
+					string query =
+			@"SELECT [ID]
+      ,[Code]
+      ,ISNULL(ProductViewDescription, Description)
+      ,[ProductViewOrdering]
+      ,[StartLine]
+      ,[EndLine]
+  FROM HierarchyMetaTypes WHERE StartLine IS NOT NULL
+	ORDER BY ProductViewOrdering
+
+ ";
+					HierarchyMetaDescription = new Dictionary<string, string>();
+					HierarchyMetaOrderPreference = new List<string>();
+					HierarchyMetaStartlines = new List<string>();
+					HierarchyMetaEndlines = new List<string>();
+					using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+						using (SqlCommand cmd = new SqlCommand(query, conn)) {
+							conn.Open();
+							using (SqlDataReader reader = cmd.ExecuteReader()) {
+								while (reader.Read()) {
+									var code = reader.GetStringSafe(1);
+									HierarchyMetaDescription[code] = reader.GetStringSafe(2);
+									if (reader.GetBoolean(4)) { HierarchyMetaStartlines.Add(code); }
+									if (reader.GetBoolean(5)) { HierarchyMetaEndlines.Add(code); }
+								}
+							}
+						}
+					}
+					foreach (KeyValuePair<string, string> kvp in HierarchyMetaDescription) {
+						HierarchyMetaOrderPreference.Add(kvp.Key);
+					}
+					isSuccessful = true;
+				}
+			} catch {
+				isSuccessful = false;
+			}
+			return isSuccessful;
+		}
 
 		public ScarProductViewResult GetProductView(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+			if (!IsHierarchyMetaTypesLoaded()) {
+				return null;
+			}
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			ScarProductViewResult result = new ScarProductViewResult();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -1236,166 +1283,12 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			}
 		}
 		static string HtmlIndent = "";
-		static List<String> HierarchyMetaStartlines = new List<String> { "RV", "GP", "OP", "EBITDA", "EBIT", "PBT", "NI", "BEPS", "DEPS" };
-		static List<String> HierarchyMetaEndlines = new List<String> { "NG-RV", "NG-GP", "NG-OP", "NG-EBITDA", "NG-EBIT", "NG-PBT", "NG-NI", "NG-BEPS", "NG-DEPS" };
-		static List<String> HierarchyStartMetaEndlines = new List<String> { "RV", "NG-RV", "GP", "NG-GP", "OP", "NG-OP", "EBITDA", "NG-EBITDA", "EBIT", "NG-EBIT", "PBT", "NG-PBT", "NI", "NG-NI", "BEPS", "NG-BEPS", "DEPS", "NG-DEPS" };
+		static List<String> HierarchyMetaStartlines = new List<string>();
+		static List<String> HierarchyMetaEndlines = new List<string>();
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
 		static List<String> ProductViewOrderPreference = new List<String>() { "XX", "IF", "T3", "I2", "Q4", "Q9", "Q3", "Q8", "T2", "I1", "Q6", "Q2", "T1", "Q1", "--", "QX", };
-		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>()
-		{
-			{"RV","Total Revenues / Interest Income"},
-{"NG-RVDEFR","Deferred revenue adjustment"},
-{"NG-RVOTH","Other adjustments"},
-{"NG-RV","Revenue"},
-{"GP","Gross Profit"},
-{"NG-GPACQ","Acquisition related expense"},
-{"NG-GPRES","Restructuring charges"},
-{"NG-GPLEG","Legal/litigation expense"},
-{"NG-GPPEN","Pension settlement charges"},
-{"NG-GPSTK","Stock option expense"},
-{"NG-GPGLD","Gain/loss on extinguishment of debt"},
-{"NG-GPAIA","Amortization of intangible assets"},
-{"NG-GPAIM","Asset impairments"},
-{"NG-GPGIM","Goodwill impairment"},
-{"NG-GPGLA","Gain/loss on asset sale"},
-{"NG-GPIRD","Acquired in-process research & development"},
-{"NG-GPDISC","Discontinued operations"},
-{"NG-GPCURR","Currency related gain/loss"},
-{"NG-GPOTH","Other adjustments"},
-{"NG-GPTAX","Tax related gain/loss"},
-{"NG-GPTAXEF","Non-GAAP tax effect"},
-{"NG-GP","Gross Profit"},
-{"OP","Income Statement: Operating Profit"},
-{"NG-OP","Operating Profit"},
-{"EBITDA","EBITDA"},
-{"NG-EBITDAACQ","Acquisition related expense"},
-{"NG-EBITDARES","Restructuring charges"},
-{"NG-EBITDALEG","Legal/litigation expense"},
-{"NG-EBITDAPEN","Pension settlement charges"},
-{"NG-EBITDASTK","Stock option expense"},
-{"NG-EBITDAGLD","Gain/loss on extinguishment of debt"},
-{"NG-EBITDAAIA","Amortization of intangible assets"},
-{"NG-EBITDAAIM","Asset impairments"},
-{"NG-EBITDAGIM","Goodwill impairment"},
-{"NG-EBITDAGLA","Gain/loss on asset sale"},
-{"NG-EBITDAIRD","Acquired in-process research & development"},
-{"NG-EBITDADISC","Discontinued operations"},
-{"NG-EBITDACURR","Currency related gain/loss"},
-{"NG-EBITDAOTH","Other adjustments"},
-{"NG-EBITDATAX","Tax related gain/loss"},
-{"NG-EBITDATAXEF","Non-GAAP tax effect"},
-{"NG-EBITDA","EBITDA"},
-{"EBIT"," EBIT"},
-{"NG-EBITACQ","Acquisition related expense"},
-{"NG-EBITRES","Restructuring charges"},
-{"NG-EBITLEG","Legal/litigation expense"},
-{"NG-EBITPEN","Pension settlement charges"},
-{"NG-EBITSTK","Stock option expense"},
-{"NG-EBITGLD","Gain/loss on extinguishment of debt"},
-{"NG-EBITAIA","Amortization of intangible assets"},
-{"NG-EBITAIM","Asset impairments"},
-{"NG-EBITGIM","Goodwill impairment"},
-{"NG-EBITGLA","Gain/loss on asset sale"},
-{"NG-EBITIRD","Acquired in-process research & development"},
-{"NG-EBITDISC","Discontinued operations"},
-{"NG-EBITCURR","Currency related gain/loss"},
-{"NG-EBITOTH","Other adjustments"},
-{"NG-EBITTAX","Tax related gain/loss"},
-{"NG-EBITTAXEF","Non-GAAP tax effect"},
-{"NG-EBIT","EBIT"},
-{"PBT","Profit Before Tax"},
-{"NG-PBTACQ","Acquisition related expense"},
-{"NG-PBTRES","Restructuring charges"},
-{"NG-PBTLEG","Legal/litigation expense"},
-{"NG-PBTPEN","Pension settlement charges"},
-{"NG-PBTSTK","Stock option expense"},
-{"NG-PBTGLD","Gain/loss on extinguishment of debt"},
-{"NG-PBTAIA","Amortization of intangible assets"},
-{"NG-PBTAIM","Asset impairments"},
-{"NG-PBTGIM","Goodwill impairment"},
-{"NG-PBTGLA","Gain/loss on asset sale"},
-{"NG-PBTIRD","Acquired in-process research & development"},
-{"NG-PBTDISC","Discontinued operations"},
-{"NG-PBTCURR","Currency related gain/loss"},
-{"NG-PBTOTH","Other adjustments"},
-{"NG-PBTTAX","Tax related gain/loss"},
-{"NG-PBTTAXEF","Non-GAAP tax effect"},
-{"NG-PBT","Profit Before Tax"},
-{"NI","Net Income"},
-{"NG-NIACQ","Acquisition related expense"},
-{"NG-NIRES","Restructuring charges"},
-{"NG-NILEG","Legal/litigation expense"},
-{"NG-NIPEN","Pension settlement charges"},
-{"NG-NISTK","Stock option expense"},
-{"NG-NIGLD","Gain/loss on extinguishment of debt"},
-{"NG-NIAIA","Amortization of intangible assets"},
-{"NG-NIAIM","Asset impairments"},
-{"NG-NIGIM","Goodwill impairment"},
-{"NG-NIGLA","Gain/loss on asset sale"},
-{"NG-NIIRD","Acquired in-process research & development"},
-{"NG-NIDISC","Discontinued operations"},
-{"NG-NICURR","Currency related gain/loss"},
-{"NG-NIOTH","Other adjustments"},
-{"NG-NITAX","Tax related gain/loss"},
-{"NG-NITAXEF","Non-GAAP tax effect"},
-{"NG-NI","Net Income"},
-{"BEPS","Earnings Per Share - Basic"},
-{"NG-BEPSACQ","Acquisition related expense"},
-{"NG-BEPSRES","Restructuring charges"},
-{"NG-BEPSLEG","Legal/litigation expense"},
-{"NG-BEPSPEN","Pension settlement charges"},
-{"NG-BEPSSTK","Stock option expense"},
-{"NG-BEPSGLD","Gain/loss on extinguishment of debt"},
-{"NG-BEPSAIA","Amortization of intangible assets"},
-{"NG-BEPSAIM","Asset impairments"},
-{"NG-BEPSGIM","Goodwill impairment"},
-{"NG-BEPSGLA","Gain/loss on asset sale"},
-{"NG-BEPSIRD","Acquired in-process research & development"},
-{"NG-BEPSDISC","Discontinued operations"},
-{"NG-BEPSCURR","Currency related gain/loss"},
-{"NG-BEPSOTH","Other adjustments"},
-{"NG-BEPSTAX","Tax related gain/loss"},
-{"NG-BEPSTAXEF","Non-GAAP tax effect"},
-{"NG-BEPS","Earnings Per Share - Basic"},
-{"DEPS","Earnings Per Share - Diluted"},
-{"NG-DEPSACQ","Acquisition related expense"},
-{"NG-DEPSRES","Restructuring charges"},
-{"NG-DEPSLEG","Legal/litigation expense"},
-{"NG-DEPSPEN","Pension settlement charges"},
-{"NG-DEPSSTK","Stock option expense"},
-{"NG-DEPSGLD","Gain/loss on extinguishment of debt"},
-{"NG-DEPSAIA","Amortization of intangible assets"},
-{"NG-DEPSAIM","Asset impairments"},
-{"NG-DEPSGIM","Goodwill impairment"},
-{"NG-DEPSGLA","Gain/loss on asset sale"},
-{"NG-DEPSIRD","Acquired in-process research & development"},
-{"NG-DEPSDISC","Discontinued operations"},
-{"NG-DEPSCURR","Currency related gain/loss"},
-{"NG-DEPSOTH","Other adjustments"},
-{"NG-DEPSTAX","Tax related gain/loss"},
-{"NG-DEPSTAXEF","Non-GAAP tax effect"},
-{"NG-DEPS","Earnings Per Share - Diluted"},
-{"NG-AFCACQ","Acquisition related expense"},
-{"NG-AFCRES","Restructuring charges"},
-{"NG-AFCLEG","Legal/litigation expense"},
-{"NG-AFCPEN","Pension settlement charges"},
-{"NG-AFCSTK","Stock option expense"},
-{"NG-AFCGLD","Gain/loss on extinguishment of debt"},
-{"NG-AFCAIA","Amortization of intangible assets"},
-{"NG-AFCAIM","Asset impairments"},
-{"NG-AFCGIM","Goodwill impairment"},
-{"NG-AFCGLA","Gain/loss on asset sale"},
-{"NG-AFCIRD","Acquired in-process research & development"},
-{"NG-AFCDISC","Discontinued operations"},
-{"NG-AFCTAX","Non-GAAP tax effect"},
-{"NG-AFCOTH","Other adjustments"},
-{"NG-FC","Free Cashflow"},
-{"NG-AFC","Adjusted Free Cashflow"}
-//{"", "Standard"},
-//{"FN","Foot Note Item"},
-//{"SD","Supplemental Disclosure"},
-//{"X","Delete - Do not send to product"}
-		};
+		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>();
+
 		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			#region Old Queries
