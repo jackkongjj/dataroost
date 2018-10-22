@@ -699,8 +699,9 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					foreach (KeyValuePair<string, string> kvp in HierarchyMetaDescription) {
 						HierarchyMetaOrderPreference.Add(kvp.Key);
 					}
-					isSuccessful = true;
 				}
+				isSuccessful = true;
+
 			} catch {
 				isSuccessful = false;
 			}
