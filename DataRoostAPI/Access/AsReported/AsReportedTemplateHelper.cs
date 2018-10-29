@@ -847,6 +847,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								cell = new SCARAPITableCell();
 								adjustedOrder = row[28].AsInt32();
 								cell.CompanyFinancialTermID = row[34].AsInt32Nullable();
+								cell.DocumentTimeSliceID = row[22].AsInt32();
 							}
 							if (adjustedOrder < 0) {
 								var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
@@ -940,6 +941,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						//if (!slice.IsRecap || slice.TimeSlicePeriodEndDate == lastValidDatetime) {
 						//	continue;
 						//}
+						slice.Cells = new List<SCARAPITableCell>();
 						TimeSlices.Add(slice);
 						Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
 						if (!TimeSliceMap.ContainsKey(tup)) {
@@ -997,6 +999,10 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								ts.Cells = new List<SCARAPITableCell>();
 							}
 							ts.Cells.Add(tc);
+							var correctTs = temp.TimeSlices.FirstOrDefault(x => x.Id == tc.DocumentTimeSliceID);
+							if (correctTs != null && correctTs.Cells.FirstOrDefault(x => x.ID == tc.ID) == null) {
+								correctTs.Cells.Add(tc);
+							}
 							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
 							bool hasValidChild = false;
@@ -1019,6 +1025,10 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								ts.Cells = new List<SCARAPITableCell>();
 							}
 							ts.Cells.Add(tc);
+							var correctTs = temp.TimeSlices.FirstOrDefault(x => x.Id == tc.DocumentTimeSliceID);
+							if (correctTs != null && correctTs.Cells.FirstOrDefault(x => x.ID == tc.ID) == null) {
+								correctTs.Cells.Add(tc);
+							}
 							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
 							bool hasValidChild = false;
