@@ -133,7 +133,7 @@ SELECT
                         t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum
 	                FROM (
 		                SELECT 
-                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, p.iconum iconum,
+                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, i.iconum iconum,
 			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
 			            FROM #CompanyIds i (nolock)
 							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
@@ -144,7 +144,7 @@ SELECT
 							join supercore.STDTimeSliceDetail stds (nolock) on stds.TimeSliceID = ts.Id
 							join STDItem std (nolock) on stds.STDItemId = std.ID and std.SecurityFlag = 1
 							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
-							join secmas_sym_cusip_alias p (nolock) p.Cusip = stds.SecurityID
+							join secmas_sym_cusip_alias p (nolock) on p.Cusip = stds.SecurityID
 			            WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d1.ExportFlag = 1
 	                ) t2
 	               WHERE t2.rank = 1 and t2.SecPermId IS NOT NULL                    
