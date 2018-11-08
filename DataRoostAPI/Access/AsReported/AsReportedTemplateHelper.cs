@@ -3327,7 +3327,7 @@ END CATCH
 
 IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK) WHERE DocumentTimeSliceID = @id and TableType = @TableType)
 BEGIN
-	DELETE FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id
+	DELETE FROM DocumentTimeSliceTableTypeIsSummary WHERE DocumentTimeSliceID = @id and TableType = @TableType
 END
 ELSE
 BEGIN
