@@ -38,7 +38,7 @@ SELECT
 							join supercore.STDTimeSliceDetail stds (nolock) on stds.TimeSliceID = ts.Id
 							join STDItem std (nolock) on stds.STDItemId = std.ID and std.SecurityFlag = 1
 							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
-							join secmas_sym_cusip_alias p (nolock) p.Cusip = stds.SecurityID
+							join secmas_sym_cusip_alias p (nolock) on p.Cusip = stds.SecurityID
 									WHERE stds.SecurityId is not null and std.STDCode =  @stdCode AND ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d1.ExportFlag = 1
 	                ) t2
                     --ORDER BY t2.SecPermId, t2.rank
