@@ -64,7 +64,7 @@ where ds.companyid = @companyId
 						}
 					}
 				}
-
+                
 				if (CompanyName == null) {
 					String sql1 = @"
 select DocumentSeriesID, ds.CompanyId, ig.Description, filer.Company, m.Description
@@ -616,7 +616,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 		public string GetProductTemplateYearList(int iconum, string TemplateName, Guid DamDocumentID) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
 			string TimeSliceQuery =
-	@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
+    @"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
  FROM DocumentSeries ds WITH (NOLOCK) 
  	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
  	JOIN StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
@@ -626,11 +626,13 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
  	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
  	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
  	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
+    JOIN dbo.ARDocumentExportType et with (NOLOCK) on et.SFDocumentId = d.Id
+	LEFT JOIN ContentTypeTableType cttt with (NOLOCK) on cttt.TableTypeDescription = @templateName
  WHERE ds.CompanyID = @iconum
  AND tt.Description = @templateName
- AND (d.DamDocumentID = @DamDocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)  
+ AND (d.DamDocumentID = @DamDocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1 or 
+	cttt.TableTypeDescription !=null)
 order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
-
  ";
 			try {
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
@@ -646,7 +648,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						}
 					}
 				}
-			} catch {
+			} catch (Exception e) {
+                throw (e);
 			}
 			return sb.ToString();
 		}
@@ -7919,7 +7922,7 @@ END CATCH
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
-					cmd.CommandTimeout = 180;
+					cmd.CommandTimeout = 180; 
 					cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
 					cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
