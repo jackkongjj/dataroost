@@ -626,11 +626,11 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
  	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
  	JOIN DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
  	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
-    JOIN dbo.ARDocumentExportType et with (NOLOCK) on et.SFDocumentId = d.Id
+    LEFT JOIN dbo.ARDocumentExportType et with (NOLOCK) on et.SFDocumentId = d.Id
 	LEFT JOIN ContentTypeTableType cttt with (NOLOCK) on cttt.TableTypeDescription = @templateName
  WHERE ds.CompanyID = @iconum
  AND tt.Description = @templateName
- AND (d.DamDocumentID = @DamDocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1 or 
+ AND (d.DamDocumentID = @DamDocumentID OR et.ARExportTypeId = 2 OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1 or 
 	cttt.TableTypeDescription !=null)
 order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
  ";
