@@ -309,9 +309,10 @@ ORDER BY ChangeDate DESC";
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
 			
 			//Skipping Voyager check for US Companies, as those are already transitioned to Supercore
-			List<int> voyagerIconums = companyEfforts.Keys.Where(x => !companyShareClassData.ContainsKey(x) || 
-			!companyShareClassData[x].Any() ||
-			!companyShareClassData[x].First().PPI.StartsWith("C840%")).ToList();
+			List<int> voyagerIconums = companyEfforts.Where(x => x.Value.Name == EffortDTO.Voyager().Name ||
+			!companyShareClassData.ContainsKey(x.Key) || 
+			!companyShareClassData[x.Key].Any() ||
+			!companyShareClassData[x.Key].First().PPI.StartsWith("C840%")).Select(k => k.Key).ToList();
 
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
 
