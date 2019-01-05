@@ -307,8 +307,13 @@ ORDER BY ChangeDate DESC";
 			DateTime startTime = DateTime.Now;
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
 			Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
+			
+			//Skipping Voyager check for US Companies, as those are already transitioned to Supercore
+			List<int> voyagerIconums = companyEfforts.Where(x => x.Value.Name == EffortDTO.Voyager().Name ||
+			!companyShareClassData.ContainsKey(x.Key) || 
+			!companyShareClassData[x.Key].Any() ||
+			!companyShareClassData[x.Key].First().PPI.StartsWith("C840")).Select(k => k.Key).ToList();
 
-			List<int> voyagerIconums = companyEfforts.Keys.ToList();
 			List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
 
 			// Supercore data is SecPermId based
