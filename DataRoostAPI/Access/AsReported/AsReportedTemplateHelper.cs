@@ -777,7 +777,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						shs.ParentID = row[11].AsInt32Nullable();
 						shs.StaticHierarchyMetaType = row[12].AsString();
 						shs.TableTypeDescription = row[13].ToString();
-						shs.Cells = new List<SCARAPITableCell>();
+                        shs.Cells = new List<SCARAPITableCell>();
 						StaticHierarchies.Add(shs);
 
 						SHLookup.Add(shs.Id, shs);
@@ -1073,31 +1073,36 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					}
 				}
 				#endregion
-				temp.StaticHierarchies = StaticHierarchies.OrderBy(s => HierarchyMetaOrderPreference.IndexOf(s.StaticHierarchyMetaType)).ThenBy(x => x.Id).Where(x => !string.IsNullOrWhiteSpace(x.StaticHierarchyMetaType)).ToList();
+				temp.StaticHierarchies = StaticHierarchies.OrderBy(s => HierarchyMetaOrderPreference.IndexOf(s.StaticHierarchyMetaType)).ThenBy(x => x.AdjustedOrder).Where(x => !string.IsNullOrWhiteSpace(x.StaticHierarchyMetaType)).ToList();
 				List<LineItem> lines = new List<LineItem>();
-				foreach (var sl in temp.StaticHierarchies) {
+                var index = -1 ;
+                foreach (var sl in temp.StaticHierarchies) {
 					if (HierarchyMetaEndlines.IndexOf(sl.StaticHierarchyMetaType) >= 0) {
-						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType && x.StaticHierarchies[0].Id == sl.Id);
 						if (li == null) {
 							li = new LineItem();
 							li.MetaType = sl.StaticHierarchyMetaType;
-							lines.Add(li);
-						}
+                            index = lines.FindLastIndex(x => x.StaticHierarchies[0].ParentID == sl.Id);
+                            index = index != -1 ? index + 1 : lines.Count();
+                            lines.Insert(index, li);
+                        }
 						li.StaticHierarchies.Add(sl);
 					} else if (HierarchyMetaStartlines.IndexOf(sl.StaticHierarchyMetaType) >= 0) {
-						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType && x.StaticHierarchies[0].Id == sl.Id);
 						if (li == null) {
 							li = new StartLineItem();
 							li.MetaType = sl.StaticHierarchyMetaType;
-							lines.Add(li);
-						}
+                            lines.Insert(lines.Count(), li);
+                        }
 						li.StaticHierarchies.Add(sl);
 					} else if (HierarchyMetaDescription.ContainsKey(sl.StaticHierarchyMetaType)) {
-						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType);
+						var li = lines.FirstOrDefault(x => x.MetaType == sl.StaticHierarchyMetaType && x.StaticHierarchies[0].ParentID == sl.ParentID);
 						if (li == null) {
 							li = new MiddleLineItem();
 							li.MetaType = sl.StaticHierarchyMetaType;
-							lines.Add(li);
+                            index = lines.FindLastIndex(x => x.StaticHierarchies[0].ParentID == sl.ParentID);
+                            index = index != -1 ? index + 1 : lines.Count();
+                            lines.Insert(index, li);
 						}
 						li.StaticHierarchies.Add(sl);
 					}
