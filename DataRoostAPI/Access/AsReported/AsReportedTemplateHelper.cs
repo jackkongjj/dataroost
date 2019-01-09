@@ -5805,7 +5805,7 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 DELETE FROM dbo.StaticHierarchy where id in ({0});
 ";
 			string merge_sql = @"MERGE dbo.StaticHierarchy
-USING ( select {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} from dbo.StaticHierarchy where tabletypeID = {3} ) as src (Id,CompanyFinancialTermId,AdjustedOrder,TableTypeId
+USING ( select {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} ) as src (Id,CompanyFinancialTermId,AdjustedOrder,TableTypeId
 ,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown,ParentID)
 ON dbo.StaticHierarchy.Id = src.Id
 WHEN MATCHED THEN
