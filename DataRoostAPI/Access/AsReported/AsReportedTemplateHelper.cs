@@ -2969,7 +2969,7 @@ END
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@TargetSHID", id);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						reader.NextResult(); // skip select statement from CreateCFT
+						//reader.NextResult(); // skip select statement from CreateCFT
 						while (reader.Read()) {
 							StaticHierarchy sh = new StaticHierarchy
 							{
