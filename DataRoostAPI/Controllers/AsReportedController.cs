@@ -874,7 +874,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("cells/{id}")]
+    [Route("cells/{id}/addLikePeriod/{DocumentId}/nocheck")]
+    [HttpPost]
+    public ScarResult AddLikePeriodValidationNoteNoCheck(string id, Guid DocumentId, StringInput input)
+    {
+      try
+      {
+        if (input == null || string.IsNullOrEmpty(input.StringData))
+          return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
+        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+        return helper.AddLikePeriodValidationNoteNoCheck(id, DocumentId, input.StringData);
+      }
+      catch (Exception ex)
+      {
+        LogError(ex);
+        return null;
+      }
+    }
+
+    [Route("cells/{id}")]
 		[HttpGet]
 		public ScarResult GetTableCell(string id) {
 			try {

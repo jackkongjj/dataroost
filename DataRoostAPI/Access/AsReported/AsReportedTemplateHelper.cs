@@ -7908,7 +7908,7 @@ END CATCH
 		}
 
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
-			string query = @"SCARStitchRows";
+			string query = @"SCARStitchRows_Lun207";
 
 			DataTable dt = new DataTable();
 			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
@@ -8930,7 +8930,59 @@ END
 			return result;
 		}
 
-		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
+    public ScarResult AddLikePeriodValidationNoteNoCheck(string CellId, Guid DocumentId, string newValue)
+    {
+      string query = @"
+
+
+IF @newValue = 0
+BEGIN
+	DELETE FROM ARDErrorTypeTableCell WHERE TableCellId = @id  
+END
+ELSE
+BEGIN
+	MERGE INTO ARDErrorTypeTableCell ardtc
+	USING (VALUES (@id)) AS s(id) ON  ardtc.TableCellId = s.id
+	WHEN NOT MATCHED THEN
+			INSERT ([ARDErrorTypeId] ,[TableCellId])
+				VALUES (@newValue, @id )
+	WHEN MATCHED THEN
+		UPDATE SET [ARDErrorTypeId] = @newValue ;
+
+END
+
+
+
+";
+      using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+      {
+
+        using (SqlCommand cmd = new SqlCommand(query, conn))
+        {
+          conn.Open();
+          int newInt = -1;
+          bool isSuccess = false;
+          if (!string.IsNullOrEmpty(newValue))
+          {
+            isSuccess = Int32.TryParse(newValue, out newInt);
+          }
+          cmd.Parameters.AddWithValue("@id", CellId);
+          cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int)
+          {
+            Value = (!isSuccess ? DBNull.Value : (object)newInt)
+          });
+          cmd.ExecuteNonQuery();
+        }
+      }
+
+      ScarResult result = new ScarResult();
+      result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+      result.ChangedCells = new List<SCARAPITableCell>();
+      //result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
+      return result;
+    }
+
+    private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
 			return new SCARAPITableCell[0];
 		}
 		#endregion
