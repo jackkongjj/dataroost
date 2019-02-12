@@ -7908,7 +7908,7 @@ END CATCH
 		}
 
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
-			string query = @"SCARStitchRows_Lun207";
+			string query = @"SCARStitchRows";
 
 			DataTable dt = new DataTable();
 			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
