@@ -88,6 +88,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("IsSummary")]
 		public bool IsSummary { get; set; }
 
+		[JsonProperty("PeriodLength")]
+		public int PeriodLength { get; set; }
+
 		[JsonIgnore]
 		public List<SCARAPITableCell> Cells { get; set; }
 	}

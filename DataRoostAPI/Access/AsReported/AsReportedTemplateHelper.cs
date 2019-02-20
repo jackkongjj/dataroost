@@ -6883,7 +6883,7 @@ from #tmptimeslices ts
 							//TableType = reader.GetOrdinal(""),
 							CompanyFiscalYear = reader.GetOrdinal("CompanyFiscalYear"),
 							FiscalDistance = reader.GetOrdinal("FiscalDistance"),
-							PeriodLength = reader.GetOrdinal("Duration"),
+							Duration = reader.GetOrdinal("Duration"),
 							PeriodType = reader.GetOrdinal("PeriodType"),
 							Currency = reader.GetOrdinal("AccountingStandard"),
 							PeriodEndDate = reader.GetOrdinal("TimeSlicePeriodEndDate"),
@@ -6893,7 +6893,8 @@ from #tmptimeslices ts
 							CurrencyCode = reader.GetOrdinal("CurrencyCode"),
 							CurrencyCount = reader.GetOrdinal("CurrencyCount"),
 							ArComponent = reader.GetOrdinal("ArComponent"),
-							TableTypeID = reader.GetOrdinal("TableTypeID")
+							TableTypeID = reader.GetOrdinal("TableTypeID"),
+							PeriodLength = reader.GetOrdinal("PeriodLength")
 						};
 						while (reader.Read()) {
 							TimeSlice slice = new TimeSlice();
@@ -6910,7 +6911,7 @@ from #tmptimeslices ts
 							slice.PublicationDate = reader.GetDateTime(ordinals.PublicationDate);
 							slice.FiscalDistance = reader.GetInt32(ordinals.FiscalDistance);
 							slice.CompanyFiscalYear = reader.GetDecimal(ordinals.CompanyFiscalYear);
-							slice.Duration = reader.GetInt32(ordinals.PeriodLength);
+							slice.Duration = reader.GetInt32(ordinals.Duration);
 							slice.InterimType = reader.GetStringSafe(ordinals.PeriodType);
 							slice.ReportType = reader.GetStringSafe(ordinals.ReportType);
 							slice.IsAutoCalc = reader.GetBoolean(ordinals.AutocalcStatus);
@@ -6918,6 +6919,7 @@ from #tmptimeslices ts
 							slice.Currency = reader.GetInt32(ordinals.CurrencyCount) == 1 ? reader.GetStringSafe(ordinals.CurrencyCode) : null;
 							slice.AccountingStandard = reader.GetInt32(ordinals.ArComponent).ToString();
 							slice.TableTypeID = reader.GetInt32(ordinals.TableTypeID);
+							slice.PeriodLength = reader.GetInt32(ordinals.PeriodLength);
 							response.TimeSlices.Add(slice);
 						}
 					}
@@ -7908,7 +7910,7 @@ END CATCH
 		}
 
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
-			string query = @"SCARStitchRows_Lun207";
+			string query = @"SCARStitchRows";
 
 			DataTable dt = new DataTable();
 			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
@@ -8218,7 +8220,8 @@ END CATCH
 			UnStitchResult res = new UnStitchResult()
 			{
 				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
-				StaticHierarchies = new List<StaticHierarchy>()
+				StaticHierarchies = new List<StaticHierarchy>(),
+				ChangedCells = new List<SCARAPITableCell>()
 			};
 
 			Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
@@ -8342,6 +8345,7 @@ END CATCH
 					}
 				}
 			}
+
 
 
 			Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
@@ -8657,6 +8661,49 @@ END
 				}
 			}
 			return AddMakeTheMathWorkNote(CellId, DocumentId);
+		}
+
+		public List<int> GetSibilingTableCells(int Shid, List<int> dtsids) {
+			const string SQL_CellIDs = @"
+select dstc.TableCellId from DocumentTimeSliceTableCell as dstc (nolock)
+ join tablecell tc (nolock) on dstc.TableCellId = tc.ID
+ join StaticHierarchy s (nolock) on s.CompanyFinancialTermId = tc.CompanyFinancialTermID
+ where 
+ s.id = {0} and dstc.DocumentTimeSliceId in ({1})
+";
+
+			const string SQL = @"
+	select tc.id from tablecell tc with (nolock)
+join DocumentTimeSliceTableCell dtc with (NOLOCK) on dtc.TableCellId = tc.ID
+where dtc.DocumentTimeSliceId in (
+SELECT dtsSib.id from
+ DocumentTimeSlice dts  WITH (NOLOCK) 
+ JOIN DocumentTimeSlice dtsSib WITH (NOLOCK) ON 
+  dts.TimeSlicePeriodEndDate = dtsSib.TimeSlicePeriodEndDate 
+											AND dts.PeriodType = dtsSib.PeriodType 
+											AND dts.DocumentSeriesId = dtsSib.DocumentSeriesId
+											AND dts.TableTypeID = dtsSib.TableTypeID
+where dts.ID in({0})
+)
+and tc.CompanyFinancialTermID in
+(select CompanyFinancialTermID from StaticHierarchy where id = {1})
+
+";
+
+			String sql = string.Format(SQL, String.Join(",", dtsids), Shid);
+				List<int> ret = new List<int>();
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(sql, conn)) {
+						conn.Open();
+						using (SqlDataReader reader = cmd.ExecuteReader()) {
+							while (reader.Read()) {
+								int cellid = reader.GetInt32(0);
+								ret.Add(cellid);
+							}
+						}
+					}
+				}
+				return ret;
 		}
 
 		public List<SCARAPITableCell> GetLPVChangeCells(string CellId, Guid DocumentId) {

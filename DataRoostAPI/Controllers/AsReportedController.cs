@@ -1429,7 +1429,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+				List<int> cellids = helper.GetSibilingTableCells(unstitchInput.TargetStaticHierarchyID, unstitchInput.DocumentTimeSliceIDs);
+				UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+				Dictionary<int, SCARAPITableCell> map = new Dictionary<int, SCARAPITableCell>();
+				foreach (int cellid in cellids) {
+					List<SCARAPITableCell> list = helper.GetLPVChangeCells("" + cellid, DocumentId);
+					foreach (SCARAPITableCell cell in list) {
+						if (cell.ID > 0 && !map.ContainsKey(cell.ID)) {
+							map[cell.ID] = cell;
+							ret.ChangedCells.Add(cell);
+						}
+					}
+					//ret.ChangedCells.AddRange(helper.GetLPVChangeCells("" + cellid, DocumentId));
+				}
+				return ret;
+				//return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 			} catch (Exception ex) {
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
 				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, unstitchInput.TargetStaticHierarchyID, string.Join("|", unstitchInput.DocumentTimeSliceIDs)));
