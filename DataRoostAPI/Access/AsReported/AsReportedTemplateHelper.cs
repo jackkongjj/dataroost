@@ -1486,10 +1486,11 @@ WHERE  CompanyID = @Iconum";
 									Id = reader.GetInt32(0),
 									CompanyFinancialTermId = reader.GetInt32(1),
 									AdjustedOrder = reader.GetInt32(2),
-									TableTypeId = reader.GetInt32(3),
-									Description = reader.GetStringSafe(4)
+									TableTypeId = reader.GetInt32(3)
 								};
-								temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString();
+                temp.Message += "Description." + DateTime.UtcNow.ToString();
+                shs.Description = reader.GetStringSafe(4);
+                temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString();
 								shs.HierarchyTypeId = reader.GetStringSafe(5)[0];
 								shs.SeparatorFlag = reader.GetBoolean(6);
 								shs.StaticHierarchyMetaId = reader.GetInt32(7);
@@ -1689,10 +1690,10 @@ WHERE  CompanyID = @Iconum";
 					#endregion
 				}
 
-				temp.Message += "Calculate.";
-				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
-
-					if (!sh.ParentID.HasValue) {
+				temp.Message += "Calculate." + DateTime.UtcNow.ToString();
+        foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
+          temp.Message += "Calculate Sh." + DateTime.UtcNow.ToString();
+          if (!sh.ParentID.HasValue) {
 						sh.Level = 0;
 					}
 					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
@@ -1750,7 +1751,8 @@ WHERE  CompanyID = @Iconum";
 							break;
 						}
 					}
-					for (int i = 0; i < sh.Cells.Count; i++) {
+          temp.Message += "Calculate Sh Cells." + DateTime.UtcNow.ToString();
+          for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
 
@@ -1802,9 +1804,9 @@ WHERE  CompanyID = @Iconum";
 						}
 					}
 				}
-				temp.Message += "Finished.";
+				temp.Message += "Finished." + DateTime.UtcNow.ToString();
 
-			} catch (Exception ex) {
+      } catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
 			}
 			return temp;
