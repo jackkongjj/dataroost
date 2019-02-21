@@ -208,7 +208,17 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
 		}
-		public ScarResult GetTemplateInScarResultJune(int iconum, string TemplateName, Guid DocumentId) {
+    public ScarResult GetTemplateInScarResultDebug(int iconum, string TemplateName, Guid DocumentId)
+    {
+      ScarResult newFormat = new ScarResult();
+      AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
+      newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
+      newFormat.TimeSlices = oldFormat.TimeSlices;
+      newFormat.ReturnValue["Message"] = oldFormat.Message;
+      return newFormat;
+    }
+
+    public ScarResult GetTemplateInScarResultJune(int iconum, string TemplateName, Guid DocumentId) {
 			ScarResult newFormat = new ScarResult();
 			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
 			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
