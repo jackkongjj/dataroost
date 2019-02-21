@@ -7013,7 +7013,7 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
+EXEC SCARGetTableCellMTMWCalc @CellsForLPV
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
@@ -7258,7 +7258,7 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 )
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
+EXEC SCARGetTableCellMTMWCalc @CellsForLPV
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
@@ -7483,7 +7483,7 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 )
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
+EXEC SCARGetTableCellMTMWCalc @CellsForLPV
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
@@ -7716,7 +7716,7 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 )
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
+EXEC SCARGetTableCellMTMWCalc @CellsForLPV
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
@@ -8787,7 +8787,7 @@ DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFai
 DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForMTMW
+EXEC SCARGetTableCellMTMWCalc @CellsForLPV
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
