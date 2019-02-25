@@ -1453,8 +1453,8 @@ WHERE  CompanyID = @Iconum";
 
 			AsReportedTemplate temp = new AsReportedTemplate();
 			try {
-				temp.Message = "Start." + DateTime.UtcNow.ToString();
-				string query_sproc = @"SCARGetTemplate";
+				temp.Message = "Start." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+        string query_sproc = @"SCARGetTemplate";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -1472,62 +1472,62 @@ WHERE  CompanyID = @Iconum";
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 						conn.Open();
-						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
-						//using (DataTable dt = new DataTable()) {
-						//	dt.Load(reader);
-						//	Console.WriteLine(dt.Rows.Count);
-						//}
-						using (SqlDataReader reader = cmd.ExecuteReader()) {
-							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
-							while (reader.Read()) {
-								temp.Message += "Read." + DateTime.UtcNow.ToString();
-								StaticHierarchy shs = new StaticHierarchy
+						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+            //using (DataTable dt = new DataTable()) {
+            //	dt.Load(reader);
+            //	Console.WriteLine(dt.Rows.Count);
+            //}
+            using (SqlDataReader reader = cmd.ExecuteReader()) {
+							temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              while (reader.Read()) {
+								temp.Message += "Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                StaticHierarchy shs = new StaticHierarchy
 								{
 									Id = reader.GetInt32(0),
 									CompanyFinancialTermId = reader.GetInt32(1),
 									AdjustedOrder = reader.GetInt32(2),
 									TableTypeId = reader.GetInt32(3)
 								};
-                temp.Message += "Description." + DateTime.UtcNow.ToString();
-                shs.Description = reader.GetStringSafe(4);
-                temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString();
-								shs.HierarchyTypeId = reader.GetStringSafe(5)[0];
+                temp.Message += "Description." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                shs.Description = reader.GetString(4);
+                temp.Message += "HierarchyTypeId." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                shs.HierarchyTypeId = reader.GetStringSafe(5)[0];
 								shs.SeparatorFlag = reader.GetBoolean(6);
 								shs.StaticHierarchyMetaId = reader.GetInt32(7);
 								shs.UnitTypeId = reader.GetInt32(8);
-								temp.Message += "shsIsIncomePositive." + DateTime.UtcNow.ToString();
-								shs.IsIncomePositive = reader.GetBoolean(9);
+								temp.Message += "shsIsIncomePositive." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                shs.IsIncomePositive = reader.GetBoolean(9);
 								shs.ChildrenExpandDown = reader.GetBoolean(10);
 								shs.ParentID = reader.GetNullable<int>(11);
 								shs.StaticHierarchyMetaType = reader.GetStringSafe(12);
 								shs.TableTypeDescription = reader.GetStringSafe(13);
-								temp.Message += "shsCell." + DateTime.UtcNow.ToString();
-								shs.Cells = new List<SCARAPITableCell>();
-								temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString();
-								StaticHierarchies.Add(shs);
+								temp.Message += "shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                shs.Cells = new List<SCARAPITableCell>();
+								temp.Message += "Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                StaticHierarchies.Add(shs);
 								SHLookup.Add(shs.Id, shs);
-								temp.Message += "SHLookup." + DateTime.UtcNow.ToString();
-								if (!SHChildLookup.ContainsKey(shs.Id))
+								temp.Message += "SHLookup." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                if (!SHChildLookup.ContainsKey(shs.Id))
 									SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
 
 								if (shs.ParentID != null) {
-									temp.Message += "ParentID." + DateTime.UtcNow.ToString();
-									if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
+									temp.Message += "ParentID." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                  if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
 										SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
 
 									SHChildLookup[shs.ParentID.Value].Add(shs);
-									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString();
-								}
+									temp.Message += "ChildLookup." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+                }
 							}
-							temp.Message += "Cells." + DateTime.UtcNow.ToString();
-							reader.NextResult();
-							temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString();
-							int shix = 0;
+							temp.Message += "Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              reader.NextResult();
+							temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              int shix = 0;
 							int i = 0;
 							int adjustedOrder = 0;
 							#region read CellsQuery
-							temp.Message += "Cell2." + DateTime.UtcNow.ToString();
-							while (reader.Read()) {
+							temp.Message += "Cell2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              while (reader.Read()) {
 								if (shix >= StaticHierarchies.Count())
 									break;
 								if (reader.GetInt64(29) == 1) {
@@ -1618,10 +1618,10 @@ WHERE  CompanyID = @Iconum";
 								}
 							}
 							#endregion
-							temp.Message += "TimeSlice." + DateTime.UtcNow.ToString();
-							reader.NextResult();
-							temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString();
-							temp.TimeSlices = new List<TimeSlice>();
+							temp.Message += "TimeSlice." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              reader.NextResult();
+							temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              temp.TimeSlices = new List<TimeSlice>();
 							List<TimeSlice> TimeSlices = temp.TimeSlices;
 							#region Read TimeSlice
 
@@ -1673,8 +1673,8 @@ WHERE  CompanyID = @Iconum";
 							#endregion
 
 							reader.NextResult();
-							temp.Message += "IsSummary." + DateTime.UtcNow.ToString();
-							while (reader.Read()) {
+							temp.Message += "IsSummary." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+              while (reader.Read()) {
 								int TimeSliceID = reader.GetInt32(0);
 								if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
 									TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
@@ -1690,9 +1690,9 @@ WHERE  CompanyID = @Iconum";
 					#endregion
 				}
 
-				temp.Message += "Calculate." + DateTime.UtcNow.ToString();
+				temp.Message += "Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
         foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
-          temp.Message += "Calculate Sh." + DateTime.UtcNow.ToString();
+          temp.Message += "Calculate Sh." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
           if (!sh.ParentID.HasValue) {
 						sh.Level = 0;
 					}
@@ -1751,7 +1751,7 @@ WHERE  CompanyID = @Iconum";
 							break;
 						}
 					}
-          temp.Message += "Calculate Sh Cells." + DateTime.UtcNow.ToString();
+          temp.Message += "Calculate Sh Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
           for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
@@ -1804,7 +1804,7 @@ WHERE  CompanyID = @Iconum";
 						}
 					}
 				}
-				temp.Message += "Finished." + DateTime.UtcNow.ToString();
+				temp.Message += "Finished." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
 
       } catch (Exception ex) {
 				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
