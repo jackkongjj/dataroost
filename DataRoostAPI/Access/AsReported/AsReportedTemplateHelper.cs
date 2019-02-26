@@ -232,9 +232,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
 			AsReportedTemplate temp = new AsReportedTemplate();
-			try {
-				temp.Message = "Start." + DateTime.UtcNow.ToString();
-				string query_sproc = @"SCARGetTemplate";
+      System.Text.StringBuilder sb = new System.Text.StringBuilder();
+      try {
+        sb.AppendLine("Start." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        string query_sproc = @"SCARGetTemplate";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -252,64 +253,72 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						cmd.Parameters.AddWithValue("@templateName", TemplateName);
 						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 						conn.Open();
-						temp.Message += "ConnOpen." + DateTime.UtcNow.ToString();
-						//using (DataTable dt = new DataTable()) {
-						//	dt.Load(reader);
-						//	Console.WriteLine(dt.Rows.Count);
-						//}
-						SqlDataAdapter da = new SqlDataAdapter(cmd);
+            sb.AppendLine("ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            //using (DataTable dt = new DataTable()) {
+            //	dt.Load(reader);
+            //	Console.WriteLine(dt.Rows.Count);
+            //}
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
 						da.Fill(dataSet);
 						conn.Close();
 					}
 					#endregion
 				}
-				#region In-Memory Processing
-				temp.Message += "Filled." + DateTime.UtcNow.ToString();
-				var shTable = dataSet.Tables[0];
+        #region In-Memory Processing
+        sb.AppendLine("Filled." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        var shTable = dataSet.Tables[0];
 				if (shTable != null) {
-					temp.Message += "StaticHierarchy." + DateTime.UtcNow.ToString();
-					foreach (DataRow row in shTable.Rows) {
-						StaticHierarchy shs = new StaticHierarchy
+          sb.AppendLine("StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+          foreach (DataRow row in shTable.Rows) {
+            sb.AppendLine("Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            StaticHierarchy shs = new StaticHierarchy
 						{
 							Id = row[0].AsInt32(),
 							CompanyFinancialTermId = row[1].AsInt32(),
 							AdjustedOrder = row[2].AsInt32(),
-							TableTypeId = row[3].AsInt32(),
-							Description = row[4].AsString()
+							TableTypeId = row[3].AsInt32()
 						};
-						shs.HierarchyTypeId = row[5].AsString()[0];
+            sb.AppendLine("Description." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            shs.Description = row[4].AsString();
+            sb.AppendLine("HierarchyTypeId." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            shs.HierarchyTypeId = row[5].AsString()[0];
 						shs.SeparatorFlag = row[6].AsBoolean();
 						shs.StaticHierarchyMetaId = row[7].AsInt32();
 						shs.UnitTypeId = row[8].AsInt32();
-						shs.IsIncomePositive = row[9].AsBoolean();
+            sb.AppendLine("shsIsIncomePositive." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            shs.IsIncomePositive = row[9].AsBoolean();
 						shs.ChildrenExpandDown = row[10].AsBoolean();
 						shs.ParentID = row[11].AsInt32Nullable();
 						shs.StaticHierarchyMetaType = row[12].AsString();
 						shs.TableTypeDescription = row[13].ToString();
-						shs.Cells = new List<SCARAPITableCell>();
+            sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            shs.Cells = new List<SCARAPITableCell>();
 						StaticHierarchies.Add(shs);
 						SHLookup.Add(shs.Id, shs);
-						if (!SHChildLookup.ContainsKey(shs.Id))
+            sb.AppendLine("SHLookup." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            if (!SHChildLookup.ContainsKey(shs.Id))
 							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
 
 						if (shs.ParentID != null) {
-							if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
+              sb.AppendLine("ParentID." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+              if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
 								SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
 
 							SHChildLookup[shs.ParentID.Value].Add(shs);
-						}
+              sb.AppendLine("ChildLookup." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            }
 					}
 				}
-				var cellTable = dataSet.Tables[1];
-				temp.Message += "Cells." + DateTime.UtcNow.ToString();
-				temp.Message += "Cells Next Result." + DateTime.UtcNow.ToString();
-				int shix = 0;
+        sb.AppendLine("Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        var cellTable = dataSet.Tables[1];
+        sb.AppendLine("Cells Next Result." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        int shix = 0;
 				int adjustedOrder = 0;
 
 				if (cellTable != null) {
-					#region read CellsQuery
-					temp.Message += "Cell2." + DateTime.UtcNow.ToString();
-					foreach (DataRow row in cellTable.Rows) {
+          #region read CellsQuery
+          sb.AppendLine("Cell2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+          foreach (DataRow row in cellTable.Rows) {
 						if (shix >= StaticHierarchies.Count())
 							break;
 						if (row[29].AsInt64() == 1) {
@@ -400,13 +409,13 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					#endregion
 				}
 				var timesliceTable = dataSet.Tables[2];
-				temp.Message += "TimeSlice." + DateTime.UtcNow.ToString();
-				temp.TimeSlices = new List<TimeSlice>();
+        sb.AppendLine("TimeSlice." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
 				if (timesliceTable != null) {
-					temp.Message += "TimeSlice.2" + DateTime.UtcNow.ToString();
-					#region Read TimeSlice
-					foreach (DataRow row in timesliceTable.Rows) {
+          sb.AppendLine("TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+          #region Read TimeSlice
+          foreach (DataRow row in timesliceTable.Rows) {
 						TimeSlice slice = new TimeSlice
 						{
 							Id = row[0].AsInt32(),
@@ -454,10 +463,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					#endregion
 				}
 				var issummaryTable = dataSet.Tables[3];
-				temp.Message += "IsSummary." + DateTime.UtcNow.ToString();
-				if (issummaryTable != null) {
-					temp.Message += "IsSummary2." + DateTime.UtcNow.ToString();
-					foreach (DataRow row in issummaryTable.Rows) {
+        sb.AppendLine("IsSummary." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        if (issummaryTable != null) {
+          sb.AppendLine("IsSummary 2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+          foreach (DataRow row in issummaryTable.Rows) {
 						int TimeSliceID = row[0].AsInt32();
 						if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
 							TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
@@ -470,10 +479,10 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					}
 				}
 
-				temp.Message += "Calculate.";
-				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
-
-					if (!sh.ParentID.HasValue) {
+        sb.AppendLine("Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
+          sb.AppendLine("Calculate Sh." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+          if (!sh.ParentID.HasValue) {
 						sh.Level = 0;
 					}
 					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
@@ -531,7 +540,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							break;
 						}
 					}
-					for (int i = 0; i < sh.Cells.Count; i++) {
+          sb.AppendLine("Calculate Sh Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+          for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
 
@@ -584,11 +594,12 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 						}
 					}
 				}
-				temp.Message += "Finished.";
-				#endregion
-			} catch (Exception ex) {
-				throw new Exception(temp.Message + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
+        sb.AppendLine("Finished." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+        #endregion
+      } catch (Exception ex) {
+				throw new Exception(sb.ToString() + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
 			}
+      temp.Message = sb.ToString();
 			return temp;
 		}
 
@@ -1484,6 +1495,7 @@ WHERE  CompanyID = @Iconum";
             IAsyncResult result = cmd.BeginExecuteReader();
             while (!result.IsCompleted)
             {
+              sb.AppendLine("ThreadWait." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               System.Threading.Thread.Sleep(100);
             }
             using (SqlDataReader reader = cmd.EndExecuteReader(result)) {
