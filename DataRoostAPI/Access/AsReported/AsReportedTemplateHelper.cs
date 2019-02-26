@@ -1481,7 +1481,12 @@ WHERE  CompanyID = @Iconum";
             //	dt.Load(reader);
             //	Console.WriteLine(dt.Rows.Count);
             //}
-            using (SqlDataReader reader = cmd.ExecuteReader()) {
+            IAsyncResult result = cmd.BeginExecuteReader();
+            while (!result.IsCompleted)
+            {
+              System.Threading.Thread.Sleep(100);
+            }
+            using (SqlDataReader reader = cmd.EndExecuteReader(result)) {
               sb.AppendLine("StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               while (reader.Read()) {
                 sb.AppendLine("Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
