@@ -449,6 +449,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
         List<TimeSlice> TimeSlices = temp.TimeSlices;
         if (timesliceTable != null)
         {
+          int cellmapcount = 0;
           sb.AppendLine("TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
           #region Read TimeSlice
           foreach (DataRow row in timesliceTable.Rows)
@@ -488,17 +489,26 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
               TimeSliceMap.Add(tup, new List<int>());
             }
 
-            TimeSliceMap[tup].Add(TimeSlices.Count - 1);
+            int tsCount = TimeSlices.Count - 1;
+            TimeSliceMap[tup].Add(tsCount > 0 ? tsCount : 0);
+            sb.AppendLine("TimeSliceMap." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 
             foreach (StaticHierarchy sh in temp.StaticHierarchies)
             {
               try
               {
-                CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+                cellmapcount++;
+                if (tsCount > 0 && sh.Cells.Count > tsCount)
+                {
+                  CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[tsCount]);
+                }
               }
-              catch { }
+              catch (Exception ex)
+              {
+                sb.AppendLine("CellMapError." + ex.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+              }
             }
-
+            sb.AppendLine("TimeSliceMapDone." + cellmapcount.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 
           }
           #endregion
@@ -1727,6 +1737,7 @@ WHERE  CompanyID = @Iconum";
               #endregion
               sb.AppendLine("TimeSlice." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               reader.NextResult();
+              int cellmapcount = 0;
               sb.AppendLine("TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               temp.TimeSlices = new List<TimeSlice>();
               List<TimeSlice> TimeSlices = temp.TimeSlices;
@@ -1769,17 +1780,25 @@ WHERE  CompanyID = @Iconum";
                   TimeSliceMap.Add(tup, new List<int>());
                 }
 
-                TimeSliceMap[tup].Add(TimeSlices.Count - 1);
-
+                int tsCount = TimeSlices.Count - 1;
+                TimeSliceMap[tup].Add(tsCount > 0 ? tsCount : 0);
+                sb.AppendLine("TimeSliceMap." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
                 foreach (StaticHierarchy sh in temp.StaticHierarchies)
                 {
                   try
                   {
-                    CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
+                    cellmapcount++;
+                    if (tsCount > 0 && sh.Cells.Count > tsCount)
+                    {
+                      CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[tsCount]);
+                    }
                   }
-                  catch { }
+                  catch (Exception ex)
+                  {
+                    sb.AppendLine("CellMapError." + ex.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                  }
                 }
-
+                sb.AppendLine("TimeSliceMapDone." + cellmapcount.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 
               }
               #endregion
