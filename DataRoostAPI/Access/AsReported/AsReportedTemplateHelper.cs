@@ -1737,12 +1737,16 @@ WHERE  CompanyID = @Iconum";
 
                 int tsCount = TimeSlices.Count - 1;
                 TimeSliceMap[tup].Add(tsCount > 0 ? tsCount : 0);
+                if (TimeSlices.Count <= 0)
+                {
+                  continue;
+                }
                 sb.AppendLine("TimeSliceMap." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
                 foreach (StaticHierarchy sh in temp.StaticHierarchies) {
                   try
                   {
                     cellmapcount++;
-                    if (tsCount > 0 && sh.Cells.Count > tsCount)
+                    if (tsCount >= 0 && sh.Cells.Count > tsCount)
                     {
                       CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[tsCount]);
                     }
@@ -1750,6 +1754,7 @@ WHERE  CompanyID = @Iconum";
                   catch (Exception ex)
                   {
                     sb.AppendLine("CellMapError."  + ex.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                    //throw ex;
                   }
 								}
                 sb.AppendLine("TimeSliceMapDone." + cellmapcount.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
