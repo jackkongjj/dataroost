@@ -13,6 +13,7 @@ using FactSet.Data.SqlClient;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Net.NetworkInformation;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
@@ -1337,8 +1338,50 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		static List<String> HierarchyMetaOrderPreference = new List<String>();
 		static List<String> ProductViewOrderPreference = new List<String>() { "XX", "IF", "T3", "I2", "Q4", "Q9", "Q3", "Q8", "T2", "I1", "Q6", "Q2", "T1", "Q1", "--", "QX", };
 		static Dictionary<string, string> HierarchyMetaDescription = new Dictionary<string, string>();
+    public static double PingTimeAverage(string host, int echoNum)
+    {
+      long totalTime = 0;
+      int timeout = 120;
+      Ping pingSender = new Ping();
 
-		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
+      for (int i = 0; i < echoNum; i++)
+      {
+        PingReply reply = pingSender.Send(host, timeout);
+        if (reply.Status == IPStatus.Success)
+        {
+          totalTime += reply.RoundtripTime;
+        }
+      }
+      return totalTime / echoNum;
+    }
+    public static string PingMessage()
+    {
+      string result = "PingTime: ";
+      try
+      {
+        string hostname = "ffdamsql-staging.prod.factset.com";
+        string searchString = "Data Source=tcp:";
+        var connectString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        var startindex = connectString.IndexOf(searchString);
+        if (startindex <= 0)
+        {
+          searchString = "Data Source=";
+          startindex = connectString.IndexOf(searchString);
+        }
+        startindex += searchString.Length;
+        hostname = connectString.Substring(startindex);
+        var endIndex = hostname.IndexOf(";");
+        hostname = hostname.Substring(0, endIndex);
+        result += string.Format("{0} ms ", PingTimeAverage(hostname, 4));
+      }
+      catch
+      {
+        result += "error";
+      }
+      return result;
+    }
+
+    public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			#region Old Queries
 			string query =
@@ -1504,9 +1547,10 @@ WHERE  CompanyID = @Iconum";
             IAsyncResult result = cmd.BeginExecuteReader();
             while (!result.IsCompleted)
             {
-              sb.AppendLine("ThreadWait." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+              sb.AppendLine("ThreadWait." + PingMessage() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               System.Threading.Thread.Sleep(100);
             }
+            sb.AppendLine("ConnectionOpen." + conn.State.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
             using (SqlDataReader reader = cmd.EndExecuteReader(result)) {
               sb.AppendLine("StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               while (reader.Read()) {
@@ -1650,6 +1694,7 @@ WHERE  CompanyID = @Iconum";
               #endregion
               sb.AppendLine("TimeSlice." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               reader.NextResult();
+              int cellmapcount = 0;
               sb.AppendLine("TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
               temp.TimeSlices = new List<TimeSlice>();
 							List<TimeSlice> TimeSlices = temp.TimeSlices;
@@ -1690,16 +1735,26 @@ WHERE  CompanyID = @Iconum";
 									TimeSliceMap.Add(tup, new List<int>());
 								}
 
-								TimeSliceMap[tup].Add(TimeSlices.Count - 1);
-
-								foreach (StaticHierarchy sh in temp.StaticHierarchies) {
-									try {
-										CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
-									} catch { }
+                int tsCount = TimeSlices.Count - 1;
+                TimeSliceMap[tup].Add(tsCount > 0 ? tsCount : 0);
+                sb.AppendLine("TimeSliceMap." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                foreach (StaticHierarchy sh in temp.StaticHierarchies) {
+                  try
+                  {
+                    cellmapcount++;
+                    if (tsCount > 0 && sh.Cells.Count > tsCount)
+                    {
+                      CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[tsCount]);
+                    }
+                  }
+                  catch (Exception ex)
+                  {
+                    sb.AppendLine("CellMapError."  + ex.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                  }
 								}
+                sb.AppendLine("TimeSliceMapDone." + cellmapcount.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 
-
-							}
+              }
 							#endregion
 
 							reader.NextResult();
