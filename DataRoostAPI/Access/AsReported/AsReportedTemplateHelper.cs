@@ -259,9 +259,9 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
 						cmd.CommandTimeout = 120;
-						cmd.Parameters.AddWithValue("@iconum", iconum);
-						cmd.Parameters.AddWithValue("@templateName", TemplateName);
-						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+						cmd.Parameters.Add("@iconum", SqlDbType.Int).Value = iconum;
+						cmd.Parameters.Add("@templateName", SqlDbType.VarChar).Value =  TemplateName;
+						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = DocumentId;
 						conn.Open();
             sb.AppendLine("ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
             //using (DataTable dt = new DataTable()) {
