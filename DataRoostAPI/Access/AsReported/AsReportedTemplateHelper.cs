@@ -423,6 +423,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
         temp.TimeSlices = new List<TimeSlice>();
 				List<TimeSlice> TimeSlices = temp.TimeSlices;
 				if (timesliceTable != null) {
+          int cellmapcount = 0;
           sb.AppendLine("TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
           #region Read TimeSlice
           foreach (DataRow row in timesliceTable.Rows) {
@@ -460,18 +461,36 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 							TimeSliceMap.Add(tup, new List<int>());
 						}
 
-						TimeSliceMap[tup].Add(TimeSlices.Count - 1);
+            int tsCount = TimeSlices.Count - 1;
+            TimeSliceMap[tup].Add(tsCount > 0 ? tsCount : 0);
+            if (TimeSlices.Count <= 0)
+            {
+              continue;
+            }
+            sb.AppendLine("TimeSliceMap." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+            foreach (StaticHierarchy sh in temp.StaticHierarchies)
+            {
+              try
+              {
+                cellmapcount++;
+                if (tsCount >= 0 && sh.Cells.Count > tsCount)
+                {
+                  CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[tsCount]);
+                }
+              }
+              catch (Exception ex)
+              {
+                sb.AppendLine("CellMapError." + ex.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                //throw ex;
+              }
+            }
+            sb.AppendLine("TimeSliceMapDone." + cellmapcount.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 
-						foreach (StaticHierarchy sh in temp.StaticHierarchies) {
-							try {
-								CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[TimeSlices.Count - 1]);
-							} catch { }
-						}
 
 
-					}
-					#endregion
-				}
+          }
+          #endregion
+        }
 				var issummaryTable = dataSet.Tables[3];
         sb.AppendLine("IsSummary." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
         if (issummaryTable != null) {
