@@ -1554,10 +1554,10 @@ WHERE  CompanyID = @Iconum";
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
 						cmd.CommandTimeout = 120;
-						cmd.Parameters.AddWithValue("@iconum", iconum);
-						cmd.Parameters.AddWithValue("@templateName", TemplateName);
-						cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
-						conn.Open();
+            cmd.Parameters.Add("@iconum", SqlDbType.Int).Value = iconum;
+            cmd.Parameters.Add("@templateName", SqlDbType.VarChar).Value = TemplateName;
+            cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = DocumentId;
+            conn.Open();
             sb.AppendLine("ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
             //using (DataTable dt = new DataTable()) {
             //	dt.Load(reader);
