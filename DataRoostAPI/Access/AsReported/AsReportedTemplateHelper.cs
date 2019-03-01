@@ -215,7 +215,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
       AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
       newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
       newFormat.TimeSlices = oldFormat.TimeSlices;
-      newFormat.ReturnValue["Message"] = oldFormat.Message;
+      newFormat.ReturnValue["Message"] = oldFormat.Message + "GetTemplateInScarResultDebug Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
       return newFormat;
     }
     public ScarResult GetTemplateInScarResultDebugDataTable(int iconum, string TemplateName, Guid DocumentId)

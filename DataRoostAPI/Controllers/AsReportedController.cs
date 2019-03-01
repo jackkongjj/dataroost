@@ -241,6 +241,77 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+    public static void CopyTo(System.IO.Stream src, System.IO.Stream dest)
+    {
+      byte[] bytes = new byte[4096];
+
+      int cnt;
+
+      while ((cnt = src.Read(bytes, 0, bytes.Length)) != 0)
+      {
+        dest.Write(bytes, 0, cnt);
+      }
+    }
+
+    public static byte[] Zip(string str)
+    {
+      var bytes = System.Text.Encoding.UTF8.GetBytes(str);
+
+      using (var msi = new System.IO.MemoryStream(bytes))
+      using (var mso = new System.IO.MemoryStream())
+      {
+        using (var gs = new System.IO.Compression.GZipStream(mso, System.IO.Compression.CompressionMode.Compress))
+        {
+          //msi.CopyTo(gs);
+          CopyTo(msi, gs);
+        }
+
+        return mso.ToArray();
+      }
+    }
+    public static string Unzip(byte[] bytes)
+    {
+      using (var msi = new System.IO.MemoryStream(bytes))
+      using (var mso = new System.IO.MemoryStream())
+      {
+        using (var gs = new System.IO.Compression.GZipStream(msi, System.IO.Compression.CompressionMode.Decompress))
+        {
+          //gs.CopyTo(mso);
+          CopyTo(gs, mso);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(mso.ToArray());
+      }
+    }
+
+    [Route("templates/{TemplateName}/{DocumentId}/zipped")]
+    [HttpGet]
+    public HttpResponseMessage GetTemplateZipped(string CompanyId, string TemplateName, Guid DocumentId)
+    {
+      try
+      {
+        int iconum = PermId.PermId2Iconum(CompanyId);
+        if (TemplateName == null)
+          return null;
+
+        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+        var r = helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
+        var json = Newtonsoft.Json.JsonConvert.SerializeObject(r);
+        var zip = Zip(json);
+        HttpResponseMessage httpmsg = new HttpResponseMessage();
+        httpmsg.Content = new ByteArrayContent(zip);
+        httpmsg.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+
+        return httpmsg;
+      }
+      catch (Exception ex)
+      {
+        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+        return null;
+      }
+    }
+
     [Route("templates/{TemplateName}/{DocumentId}/debug")]
     [HttpGet]
     public ScarResult GetTemplateDebug(string CompanyId, string TemplateName, Guid DocumentId)
@@ -253,7 +324,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
         AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        return helper.GetTemplateInScarResultDebug(iconum, TemplateName, DocumentId);
+        var r = helper.GetTemplateInScarResultDebug(iconum, TemplateName, DocumentId);
+        r.ReturnValue["Message"] = r.ReturnValue["Message"] + "GetTemplateDebugController Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+        return r;
       }
       catch (Exception ex)
       {
