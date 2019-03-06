@@ -1545,6 +1545,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				List<int> cellids = helper.GetSibilingTableCells(unstitchInput.TargetStaticHierarchyID, unstitchInput.DocumentTimeSliceIDs);
 				UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+        return ret; // the client side should do whole refresh.
 				Dictionary<int, SCARAPITableCell> map = new Dictionary<int, SCARAPITableCell>();
 				foreach (int cellid in cellids) {
 					List<SCARAPITableCell> list = helper.GetLPVChangeCells("" + cellid, DocumentId);
