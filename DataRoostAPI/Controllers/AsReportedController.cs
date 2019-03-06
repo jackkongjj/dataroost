@@ -1545,7 +1545,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				List<int> cellids = helper.GetSibilingTableCells(unstitchInput.TargetStaticHierarchyID, unstitchInput.DocumentTimeSliceIDs);
 				UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
-        return ret; // the client side should do whole refresh.
 				Dictionary<int, SCARAPITableCell> map = new Dictionary<int, SCARAPITableCell>();
 				foreach (int cellid in cellids) {
 					List<SCARAPITableCell> list = helper.GetLPVChangeCells("" + cellid, DocumentId);
@@ -1566,7 +1565,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		public class StitchInput {
+    [Route("templates/{TemplateName}/unstitch/{DocumentId}/nocheck")]
+    [HttpPost]
+    public UnStitchResult PostUnStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput)
+    {
+      try
+      {
+        int iconum = PermId.PermId2Iconum(CompanyId);
+
+        if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
+          return null;
+
+        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+        UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+        return ret; // the client side should do whole refresh.
+        //return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+      }
+      catch (Exception ex)
+      {
+        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, unstitchInput.TargetStaticHierarchyID, string.Join("|", unstitchInput.DocumentTimeSliceIDs)));
+        return null;
+      }
+    }
+
+    public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
 		}
