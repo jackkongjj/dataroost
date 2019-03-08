@@ -8947,7 +8947,8 @@ JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
 LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinancialTermID = sh.CompanyFinancialTermID AND tc.DocumentTimeSliceID = dts.ID
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
 LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
-WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) and sh.CompanyFinancialTermId = @CFTID
+WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
+--and sh.CompanyFinancialTermId = @CFTID -- need to consider virtual parents
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
 ";
 			//List<int> IDs = new List<int>();
