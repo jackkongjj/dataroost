@@ -6966,7 +6966,7 @@ select
   ,ISNULL(n.ReportTypeID, d.ReportTypeID) as ReportTypeID
 	,ISNULL(n.TableTypeID, -1) as TableTypeID
 	,ISNULL(n.IsAutoCalc, 0) as IsAutoCalc
-  ,a.PeriodLength
+  ,ISNULL(a.PeriodLength, 0) as PeriodLength
 INTO #tmptimeslices
 from #alltimeslices  a
 JOIN Document d WITH(NOLOCK) on a.DAMDocumentId  = d.DAMDocumentId
