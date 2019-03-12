@@ -21,30 +21,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 				List<int> iconums, string stdCode, DateTime? reportDate, DateTime? since) {
 
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
-
-			const string pantheonQuery = @"
-select cusip,SecPermId,Value,Date,ItemName,STDCode,iconum,rank  from (
-SELECT 
-                        t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum, t2.rank
-	                FROM (
-		                SELECT 
-                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, i.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
-			            FROM #CompanyIds i (nolock)
-							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum                            
-							join supercore.documenttimeslice d (nolock) on d.DocumentSeriesID = ds.ID
-							join Document d1 on d1.DAMDocumentId = d.DamDocumentID and d.DocumentSeriesID = d1.documentseriesid
-							join supercore.TimeSlice ts (nolock) on ts.id = d.timesliceid and ts.EncoreFlag = 0
-							join supercore.STDTimeSliceDetail stds (nolock) on stds.TimeSliceID = ts.Id
-							join STDItem std (nolock) on stds.STDItemId = std.ID and std.SecurityFlag = 1
-							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
-							join secmas_sym_cusip_alias p (nolock) ON p.Cusip = stds.SecurityID
-									WHERE stds.SecurityId is not null and std.STDCode =  @stdCode AND ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d1.ExportFlag = 1
-	                ) t2
-                    --ORDER BY t2.SecPermId, t2.rank
-)a order by a.SecPermId,a.rank
-";
-
+			const string pantheonQuery = @"[Shares].[GetAllFpeShareDataForStdCode]";
 			// CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
 
 			var searchDate = DateTime.Now;
@@ -80,6 +57,7 @@ SELECT
 				// Fetch FPE data
 				using (SqlCommand cmd = new SqlCommand(pantheonQuery, connection)) {
 					cmd.CommandTimeout = 300;
+					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.Add(new SqlParameter("@stdCode", SqlDbType.Char, 5) { Value = stdCode });
 					cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) { Value = searchDate });
 					cmd.Parameters.Add(new SqlParameter("@since", SqlDbType.DateTime2)
@@ -128,28 +106,7 @@ SELECT
 			const string createTableQuery = @"CREATE TABLE #CompanyIds ( iconum INT NOT NULL PRIMARY KEY )";
 
 			// CQ 91901: Final reports (Annual & Interim) should have higher priority over Prelim reports
-			const string query =
-					@"SELECT 
-                        t2.Cusip, t2.SecPermId, t2.Value, t2.Date, t2.ItemName, t2.STDCode, t2.iconum
-	                FROM (
-		                SELECT 
-                            stds.SecurityID Cusip, p.PermId SecPermId, stds.Value, std.ItemName, std.STDCode, ts.TimeSliceDate Date, i.iconum iconum,
-			                row_number() over (partition by stds.STDItemID, p.PermId order by ts.TimeSliceDate desc, ts.ReportTypeID asc, ts.AutoCalcFlag ASC) as rank 
-			            FROM #CompanyIds i (nolock)
-							join DocumentSeries ds (nolock) on ds.CompanyID = i.iconum
-                            join SuperCore.MigrateToTemplates mts with (nolock) on mts.iconum = i.iconum and mts.MigrationstatusId = 1
-							join supercore.documenttimeslice d (nolock) on d.DocumentSeriesID = ds.ID
-							join Document d1 on d1.DAMDocumentId = d.DamDocumentID and d.DocumentSeriesID = d1.documentseriesid
-							join supercore.TimeSlice ts (nolock) on ts.id = d.timesliceid and ts.EncoreFlag = 0
-							join supercore.STDTimeSliceDetail stds (nolock) on stds.TimeSliceID = ts.Id
-							join STDItem std (nolock) on stds.STDItemId = std.ID and std.SecurityFlag = 1
-							join STDTemplateItem t (nolock) on t.STDItemID = std.ID and t.STDTemplateMasterCode = 'PSIT'
-							join secmas_sym_cusip_alias p (nolock) ON p.Cusip = stds.SecurityID
-			            WHERE ts.TimeSliceDate <= @searchDate AND (@since IS NULL OR ts.TimeSliceDate >= @since) and d1.ExportFlag = 1
-	                ) t2
-	               WHERE t2.rank = 1 and t2.SecPermId IS NOT NULL                    
-					";
-
+			const string query = "[Shares].[GetLatestCompanyFPEShareData]";
 			var searchDate = DateTime.Now;
 			if (reportDate != null) {
 				searchDate = (DateTime)reportDate;
@@ -182,6 +139,7 @@ SELECT
 				// Fetch FPE data
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
 					cmd.CommandTimeout = 300;
+					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) { Value = searchDate });
 					cmd.Parameters.Add(new SqlParameter("@since", SqlDbType.DateTime2)
 					{
