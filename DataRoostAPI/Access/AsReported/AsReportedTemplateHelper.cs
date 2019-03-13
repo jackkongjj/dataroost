@@ -8228,7 +8228,7 @@ END CATCH
           using (SqlDataReader sdr = cmd.ExecuteReader())
           {
             sdr.Read();
-            int level = sdr.GetInt32(0);
+
           }
         }
       }
@@ -8432,7 +8432,6 @@ END CATCH
           using (SqlDataReader sdr = cmd.ExecuteReader())
           {
             sdr.Read();
-            int level = sdr.GetInt32(0);
           }
 				}
 			}
