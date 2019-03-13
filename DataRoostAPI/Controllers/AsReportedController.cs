@@ -1578,7 +1578,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
         AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+        UnStitchResult ret = helper.UnstitchStaticHierarchyNoCheck(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
         return ret; // the client side should do whole refresh.
         //return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
       }
