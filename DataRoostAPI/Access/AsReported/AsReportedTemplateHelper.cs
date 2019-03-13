@@ -8194,141 +8194,49 @@ END CATCH
 
 			return res;
 		}
-		public StitchResult StitchStaticHierarchiesPartialRefresh(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
-			string query = @"SCARStitchRows_Lun";
 
-			DataTable dt = new DataTable();
-			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
-			foreach (int i in StitchingStaticHierarchyIDs) {
-				dt.Rows.Add(i);
-			}
+    public StitchResult StitchStaticHierarchiesNoCheck(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum)
+    {
+      string query = @"SCARStitchRowsNoCheck";
 
-			StitchResult res = new StitchResult()
-			{
-				CellToDTS = new Dictionary<SCARAPITableCell, int>(),
-				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
-				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>(),
-				ChangedCells = new List<SCARAPITableCell>()
-			};
+      DataTable dt = new DataTable();
+      dt.Columns.Add("StaticHierarchyID", typeof(Int32));
+      foreach (int i in StitchingStaticHierarchyIDs)
+      {
+        dt.Rows.Add(i);
+      }
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				conn.Open();
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					cmd.CommandType = System.Data.CommandType.StoredProcedure;
-					cmd.CommandTimeout = 180;
-					cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
-					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
-					cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
-					cmd.Parameters.AddWithValue("@Iconum", iconum);
+      StitchResult res = new StitchResult()
+      {
+        CellToDTS = new Dictionary<SCARAPITableCell, int>(),
+        StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
+        DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
+      };
 
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						res.StaticHierarchyAdjustedOrders = reader.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
-						reader.NextResult();
-						reader.Read();
-						int level = reader.GetInt32(0);
-						res.ReturnValue = new Dictionary<string, string>();
-						res.ReturnValue["AdjustedOrder"] = level.ToString();
-						reader.NextResult();
-						while (reader.Read()) {
-							SCARAPITableCell cell;
-							if (reader.GetNullable<int>(1).HasValue) {
-								if (reader.GetNullable<int>(1).Value > 0) {
-									cell = new SCARAPITableCell
-									{
-										ID = reader.GetInt32(1),
-										Offset = reader.GetStringSafe(2),
-										CellPeriodType = reader.GetStringSafe(3),
-										PeriodTypeID = reader.GetStringSafe(4),
-										CellPeriodCount = reader.GetStringSafe(5),
-										PeriodLength = reader.GetNullable<int>(6),
-										CellDay = reader.GetStringSafe(7),
-										CellMonth = reader.GetStringSafe(8),
-										CellYear = reader.GetStringSafe(9),
-										CellDate = reader.GetNullable<DateTime>(10),
-										Value = reader.GetStringSafe(11),
-										CompanyFinancialTermID = reader.GetNullable<int>(12),
-										ValueNumeric = reader.GetNullable<decimal>(13),
-										NormalizedNegativeIndicator = reader.GetBoolean(14),
-										ScalingFactorID = reader.GetStringSafe(15),
-										AsReportedScalingFactor = reader.GetStringSafe(16),
-										Currency = reader.GetStringSafe(17),
-										CurrencyCode = reader.GetStringSafe(18),
-										Cusip = reader.GetStringSafe(19)
-									};
-									cell.ScarUpdated = reader.GetBoolean(20);
-									cell.IsIncomePositive = reader.GetBoolean(21);
-									cell.XBRLTag = reader.GetStringSafe(22);
-									//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
-									cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
-									cell.Label = reader.GetStringSafe(24);
-									cell.ScalingFactorValue = reader.GetDouble(25);
-									cell.ARDErrorTypeId = reader.GetNullable<int>(26);
-									cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
-									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
-									cell.MTMWValidationFlag = reader.GetBoolean(29);
-									//adjustedOrder = reader.GetInt32(31);
-									cell.DocumentTimeSliceID = reader.GetInt32(30);
-									cell.StaticHierarchyID = reader.GetInt32(36);
-								} else {
-									cell = new SCARAPITableCell
-									{
-										ID = reader.GetInt32(1),
-										CompanyFinancialTermID = reader.GetNullable<int>(12),
-										VirtualValueNumeric = reader.GetNullable<decimal>(13),
-									};
-									cell.ARDErrorTypeId = reader.GetNullable<int>(26);
-									cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
-									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
-									cell.MTMWValidationFlag = reader.GetBoolean(29);
-									cell.DocumentTimeSliceID = reader.GetInt32(30);
-									//adjustedOrder = reader.GetInt32(31);
-									cell.StaticHierarchyID = reader.GetInt32(36);
-								}
-								//document.Cells.Add(cell);
-								res.ChangedCells.Add(cell);
-								//res.CellToDTS.Add(cell, reader.GetInt32(29));
-							}
-						}
-					}
-				}
-			}
-			foreach (SCARAPITableCell cell in res.ChangedCells) {
-				//decimal value = (cell.ValueNumeric.HasValue ? cell.ValueNumeric.Value : 0) * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
-				//decimal sum = 0;
-				//bool any = false;
-				//foreach (CellMTMWComponent c in res.DTSToMTMWComponent[res.CellToDTS[cell]]) {
-				//	if (c.StaticHierarchyID != res.StaticHierarchy.Id) {
-				//		any = true;
-				//		sum += c.ValueNumeric * ((decimal)(c.IsIncomePositive ? 1 : -1)) * ((decimal)c.ScalingFactorValue);
-				//	}
-				//}
-				//cell.MTMWValidationFlag = value != sum && any;
-			}
+      using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+      {
+        conn.Open();
+        using (SqlCommand cmd = new SqlCommand(query, conn))
+        {
+          cmd.CommandType = System.Data.CommandType.StoredProcedure;
+          cmd.CommandTimeout = 180;
+          cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
+          cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
+          cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
+          cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-			////TODO: Optimize
-			//Dictionary<int, Dictionary<int, bool>> ParentMTMW = new Dictionary<int, Dictionary<int, bool>>();
-			//foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c => c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID)) {
-			//	if (!ParentMTMW.ContainsKey(comp.StaticHierarchyID)) {
-			//		ParentMTMW.Add(comp.StaticHierarchyID, new Dictionary<int, bool>());
-			//	}
+          using (SqlDataReader sdr = cmd.ExecuteReader())
+          {
+            sdr.Read();
+            int level = sdr.GetInt32(0);
+          }
+        }
+      }
 
-			//	decimal val = comp.ValueNumeric * (comp.IsIncomePositive ? 1 : -1) * (decimal)comp.ScalingFactorValue;
-			//	bool any = false;
-			//	decimal sum = 0;
-			//	foreach (CellMTMWComponent subComp in res.ParentCellChangeComponents.Where(sc => sc.RootStaticHierarchyID == comp.RootStaticHierarchyID && sc.RootDocumentTimeSliceID == comp.RootDocumentTimeSliceID && !sc.Equals(comp))) {
-			//		if (!any) any = true;
 
-			//		sum += subComp.ValueNumeric * (subComp.IsIncomePositive ? 1 : -1) * (decimal)subComp.ScalingFactorValue;
-			//	}
-
-			//	ParentMTMW[comp.StaticHierarchyID].Add(comp.DocumentTimeSliceID, any && val != sum);
-			//}
-			//res.ParentMTMWChanges = ParentMTMW;
-
-			return res;
-		}
-
-		public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs) {
+      return res;
+    }
+    public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs) {
 
 			DataTable dt = new DataTable();
 			dt.Columns.Add("DocumentTimeSliceID", typeof(Int32));
