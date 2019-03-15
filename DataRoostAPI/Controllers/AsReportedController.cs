@@ -1544,7 +1544,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
         AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
+        return helper.StitchStaticHierarchiesNoCheck(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
       }
       catch (Exception ex)
       {
