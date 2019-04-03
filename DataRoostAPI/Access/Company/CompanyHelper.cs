@@ -531,6 +531,7 @@ join (
 				}
 
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
+                    cmd.CommandTimeout = 500;
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							int iconum = reader.GetInt32(0);
