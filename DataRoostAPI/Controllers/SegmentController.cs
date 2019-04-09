@@ -9,13 +9,14 @@ using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
 using CCS.Fundamentals.DataRoostAPI.Access.Segment;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.Segment;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/segments")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/segments")]
 	public class SegmentController : ApiController {
 		[Route("datatypes/")]
 		[HttpGet]

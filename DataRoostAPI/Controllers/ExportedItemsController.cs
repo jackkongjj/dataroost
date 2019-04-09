@@ -4,12 +4,13 @@ using System.Configuration;
 using System.Web.Http;
 
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/exportedItems")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/exportedItems")]
 	public class ExportedItemsController : ApiController {
 
 		[Route("{standardizationType}")]

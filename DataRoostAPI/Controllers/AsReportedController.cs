@@ -12,9 +12,12 @@ using System.Diagnostics;
 using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
+
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
 	public class AsReportedController : ApiController {
 		public static void SendEmail(string subject, string emailBody) {
 			try {
