@@ -162,7 +162,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplate(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -215,7 +215,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResultJune(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -232,7 +232,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -294,7 +294,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         if (TemplateName == null)
           return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
         AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
         var r = helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
         var json = Newtonsoft.Json.JsonConvert.SerializeObject(r);
@@ -322,7 +322,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         if (TemplateName == null)
           return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
         AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
         var r = helper.GetTemplateInScarResultDebug(iconum, TemplateName, DocumentId);
         r.ReturnValue["Message"] = r.ReturnValue["Message"] + "GetTemplateDebugController Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
@@ -345,7 +345,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         if (TemplateName == null)
           return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
         AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
         return helper.GetTemplateInScarResultDebugDataTable(iconum, TemplateName, DocumentId);
       }
@@ -377,7 +377,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateSkeleton(iconum, TemplateName);
 			} catch (Exception ex) {
