@@ -8172,190 +8172,174 @@ END CATCH
 			return res;
 		}
 
-    public StitchResult StitchStaticHierarchiesNoCheck(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum)
-    {
-      string query = @"SCARStitchRowsNoCheck";
+		public StitchResult StitchStaticHierarchiesNoCheck(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
+			string query = @"SCARStitchRowsNoCheck";
 
-      DataTable dt = new DataTable();
-      dt.Columns.Add("StaticHierarchyID", typeof(Int32));
-      foreach (int i in StitchingStaticHierarchyIDs)
-      {
-        dt.Rows.Add(i);
-      }
+			DataTable dt = new DataTable();
+			dt.Columns.Add("StaticHierarchyID", typeof(Int32));
+			foreach (int i in StitchingStaticHierarchyIDs) {
+				dt.Rows.Add(i);
+			}
 
-      StitchResult res = new StitchResult()
-      {
-        CellToDTS = new Dictionary<SCARAPITableCell, int>(),
-        StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
-        DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
-      };
+			StitchResult res = new StitchResult()
+			{
+				CellToDTS = new Dictionary<SCARAPITableCell, int>(),
+				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
+				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
+			};
 
-      using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-      {
-        conn.Open();
-        using (SqlCommand cmd = new SqlCommand(query, conn))
-        {
-          cmd.CommandType = System.Data.CommandType.StoredProcedure;
-          cmd.CommandTimeout = 180;
-          cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
-          cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
-          cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
-          cmd.Parameters.AddWithValue("@Iconum", iconum);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 180;
+					cmd.Parameters.AddWithValue("@TargetSH", TargetStaticHierarchyID);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
+					cmd.Parameters.AddWithValue("@StaticHierarchyList", dt);
+					cmd.Parameters.AddWithValue("@Iconum", iconum);
 
-          using (SqlDataReader sdr = cmd.ExecuteReader())
-          {
-            res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
-            sdr.NextResult();
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
+						sdr.NextResult();
 
-            res.ParentCellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
-            {
-              StaticHierarchyID = r.GetInt32(0),
-              DocumentTimeSliceID = r.GetInt32(1),
-              TableCellID = r.GetInt32(2),
-              ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
-              IsIncomePositive = r.GetBoolean(4),
-              ScalingFactorValue = r.GetDouble(5),
-              RootStaticHierarchyID = r.GetInt32(6),
-              RootDocumentTimeSliceID = r.GetInt32(7)
-            }
-            ).ToList();
+						res.ParentCellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+						{
+							StaticHierarchyID = r.GetInt32(0),
+							DocumentTimeSliceID = r.GetInt32(1),
+							TableCellID = r.GetInt32(2),
+							ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
+							IsIncomePositive = r.GetBoolean(4),
+							ScalingFactorValue = r.GetDouble(5),
+							RootStaticHierarchyID = r.GetInt32(6),
+							RootDocumentTimeSliceID = r.GetInt32(7)
+						}
+						).ToList();
 
-            sdr.NextResult();
-            List<CellMTMWComponent> comps = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
-            {
-              StaticHierarchyID = r.GetInt32(0),
-              DocumentTimeSliceID = r.GetInt32(1),
-              TableCellID = r.GetInt32(2),
-              ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
-              IsIncomePositive = r.GetBoolean(4),
-              ScalingFactorValue = r.GetDouble(5),
-              RootStaticHierarchyID = r.GetInt32(6),
-              RootDocumentTimeSliceID = r.GetInt32(7)
-            }
-              ).ToList();
-            foreach (CellMTMWComponent comp in comps)
-            {
-              if (!res.DTSToMTMWComponent.ContainsKey(comp.DocumentTimeSliceID))
-                res.DTSToMTMWComponent.Add(comp.DocumentTimeSliceID, new List<CellMTMWComponent>());
-              res.DTSToMTMWComponent[comp.DocumentTimeSliceID].Add(comp);
-            }
-            sdr.NextResult();
-            sdr.Read();
-            int level = sdr.GetInt32(0);
-            sdr.NextResult();
-            sdr.Read();
-            StaticHierarchy document = new StaticHierarchy
-            {
-              Id = sdr.GetInt32(0),
-              CompanyFinancialTermId = sdr.GetInt32(1),
-              AdjustedOrder = sdr.GetInt32(2),
-              TableTypeId = sdr.GetInt32(3),
-              Description = sdr.GetStringSafe(4),
-              HierarchyTypeId = sdr.GetStringSafe(5)[0],
-              SeparatorFlag = sdr.GetBoolean(6),
-              StaticHierarchyMetaId = sdr.GetInt32(7),
-              UnitTypeId = sdr.GetInt32(8),
-              IsIncomePositive = sdr.GetBoolean(9),
-              ChildrenExpandDown = sdr.GetBoolean(10),
-              ParentID = sdr.GetNullable<int>(11),
-              Cells = new List<SCARAPITableCell>(),
-              Level = level
-            };
-            res.StaticHierarchy = document;
-            sdr.NextResult();
-            while (sdr.Read())
-            {
-              SCARAPITableCell cell;
-              if (sdr.GetNullable<int>(0).HasValue)
-              {
-                cell = new SCARAPITableCell
-                {
-                  ID = sdr.GetInt32(0),
-                  Offset = sdr.GetStringSafe(1),
-                  CellPeriodType = sdr.GetStringSafe(2),
-                  PeriodTypeID = sdr.GetStringSafe(3),
-                  CellPeriodCount = sdr.GetStringSafe(4),
-                  PeriodLength = sdr.GetNullable<int>(5),
-                  CellDay = sdr.GetStringSafe(6),
-                  CellMonth = sdr.GetStringSafe(7),
-                  CellYear = sdr.GetStringSafe(8),
-                  CellDate = sdr.GetNullable<DateTime>(9),
-                  Value = sdr.GetStringSafe(10),
-                  CompanyFinancialTermID = sdr.GetNullable<int>(11),
-                  ValueNumeric = sdr.GetNullable<decimal>(12),
-                  NormalizedNegativeIndicator = sdr.GetBoolean(13),
-                  ScalingFactorID = sdr.GetStringSafe(14),
-                  AsReportedScalingFactor = sdr.GetStringSafe(15),
-                  Currency = sdr.GetStringSafe(16),
-                  CurrencyCode = sdr.GetStringSafe(17),
-                  Cusip = sdr.GetStringSafe(18),
-                  ScarUpdated = sdr.GetBoolean(19),
-                  IsIncomePositive = sdr.GetBoolean(20),
-                  XBRLTag = sdr.GetStringSafe(21),
-                  UpdateStampUTC = sdr.GetNullable<DateTime>(22),
-                  DocumentID = sdr.GetNullable<Guid>(23).HasValue ? sdr.GetGuid(23) : Guid.Empty,
-                  Label = sdr.GetStringSafe(24),
-                  ScalingFactorValue = sdr.GetDouble(25),
-                  ARDErrorTypeId = sdr.GetNullable<int>(26),
-                  MTMWErrorTypeId = sdr.GetNullable<int>(27),
-                  LikePeriodValidationFlag = sdr.GetBoolean(28)
-                };
-              }
-              else
-              {
-                cell = new SCARAPITableCell();
-              }
-              document.Cells.Add(cell);
+						sdr.NextResult();
+						List<CellMTMWComponent> comps = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+						{
+							StaticHierarchyID = r.GetInt32(0),
+							DocumentTimeSliceID = r.GetInt32(1),
+							TableCellID = r.GetInt32(2),
+							ValueNumeric = r.GetNullable<Decimal>(3).HasValue ? r.GetDecimal(3) : 0,
+							IsIncomePositive = r.GetBoolean(4),
+							ScalingFactorValue = r.GetDouble(5),
+							RootStaticHierarchyID = r.GetInt32(6),
+							RootDocumentTimeSliceID = r.GetInt32(7)
+						}
+							).ToList();
+						foreach (CellMTMWComponent comp in comps) {
+							if (!res.DTSToMTMWComponent.ContainsKey(comp.DocumentTimeSliceID))
+								res.DTSToMTMWComponent.Add(comp.DocumentTimeSliceID, new List<CellMTMWComponent>());
+							res.DTSToMTMWComponent[comp.DocumentTimeSliceID].Add(comp);
+						}
+						sdr.NextResult();
+						sdr.Read();
+						int level = sdr.GetInt32(0);
+						sdr.NextResult();
+						sdr.Read();
+						StaticHierarchy document = new StaticHierarchy
+						{
+							Id = sdr.GetInt32(0),
+							CompanyFinancialTermId = sdr.GetInt32(1),
+							AdjustedOrder = sdr.GetInt32(2),
+							TableTypeId = sdr.GetInt32(3),
+							Description = sdr.GetStringSafe(4),
+							HierarchyTypeId = sdr.GetStringSafe(5)[0],
+							SeparatorFlag = sdr.GetBoolean(6),
+							StaticHierarchyMetaId = sdr.GetInt32(7),
+							UnitTypeId = sdr.GetInt32(8),
+							IsIncomePositive = sdr.GetBoolean(9),
+							ChildrenExpandDown = sdr.GetBoolean(10),
+							ParentID = sdr.GetNullable<int>(11),
+							Cells = new List<SCARAPITableCell>(),
+							Level = level
+						};
+						res.StaticHierarchy = document;
+						sdr.NextResult();
+						while (sdr.Read()) {
+							SCARAPITableCell cell;
+							if (sdr.GetNullable<int>(0).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = sdr.GetInt32(0),
+									Offset = sdr.GetStringSafe(1),
+									CellPeriodType = sdr.GetStringSafe(2),
+									PeriodTypeID = sdr.GetStringSafe(3),
+									CellPeriodCount = sdr.GetStringSafe(4),
+									PeriodLength = sdr.GetNullable<int>(5),
+									CellDay = sdr.GetStringSafe(6),
+									CellMonth = sdr.GetStringSafe(7),
+									CellYear = sdr.GetStringSafe(8),
+									CellDate = sdr.GetNullable<DateTime>(9),
+									Value = sdr.GetStringSafe(10),
+									CompanyFinancialTermID = sdr.GetNullable<int>(11),
+									ValueNumeric = sdr.GetNullable<decimal>(12),
+									NormalizedNegativeIndicator = sdr.GetBoolean(13),
+									ScalingFactorID = sdr.GetStringSafe(14),
+									AsReportedScalingFactor = sdr.GetStringSafe(15),
+									Currency = sdr.GetStringSafe(16),
+									CurrencyCode = sdr.GetStringSafe(17),
+									Cusip = sdr.GetStringSafe(18),
+									ScarUpdated = sdr.GetBoolean(19),
+									IsIncomePositive = sdr.GetBoolean(20),
+									XBRLTag = sdr.GetStringSafe(21),
+									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
+									DocumentID = sdr.GetNullable<Guid>(23).HasValue ? sdr.GetGuid(23) : Guid.Empty,
+									Label = sdr.GetStringSafe(24),
+									ScalingFactorValue = sdr.GetDouble(25),
+									ARDErrorTypeId = sdr.GetNullable<int>(26),
+									MTMWErrorTypeId = sdr.GetNullable<int>(27),
+									LikePeriodValidationFlag = sdr.GetBoolean(28)
+								};
+							} else {
+								cell = new SCARAPITableCell();
+							}
+							document.Cells.Add(cell);
 
-              res.CellToDTS.Add(cell, sdr.GetInt32(29));
-            }
-          }
-        }
-      }
+							res.CellToDTS.Add(cell, sdr.GetInt32(29));
+						}
+					}
+				}
+			}
 
-      foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells)
-      {
-        decimal value = (cell.ValueNumeric.HasValue ? cell.ValueNumeric.Value : 0) * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
-        decimal sum = 0;
-        bool any = false;
-        foreach (CellMTMWComponent c in res.DTSToMTMWComponent[res.CellToDTS[cell]])
-        {
-          if (c.StaticHierarchyID != res.StaticHierarchy.Id)
-          {
-            any = true;
-            sum += c.ValueNumeric * ((decimal)(c.IsIncomePositive ? 1 : -1)) * ((decimal)c.ScalingFactorValue);
-          }
-        }
-        cell.MTMWValidationFlag = value != sum && any;
-      }
+			foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells) {
+				decimal value = (cell.ValueNumeric.HasValue ? cell.ValueNumeric.Value : 0) * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
+				decimal sum = 0;
+				bool any = false;
+				foreach (CellMTMWComponent c in res.DTSToMTMWComponent[res.CellToDTS[cell]]) {
+					if (c.StaticHierarchyID != res.StaticHierarchy.Id) {
+						any = true;
+						sum += c.ValueNumeric * ((decimal)(c.IsIncomePositive ? 1 : -1)) * ((decimal)c.ScalingFactorValue);
+					}
+				}
+				cell.MTMWValidationFlag = value != sum && any;
+			}
 
-      //TODO: Optimize
-      Dictionary<int, Dictionary<int, bool>> ParentMTMW = new Dictionary<int, Dictionary<int, bool>>();
-      foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c => c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID))
-      {
-        if (!ParentMTMW.ContainsKey(comp.StaticHierarchyID))
-        {
-          ParentMTMW.Add(comp.StaticHierarchyID, new Dictionary<int, bool>());
-        }
+			//TODO: Optimize
+			Dictionary<int, Dictionary<int, bool>> ParentMTMW = new Dictionary<int, Dictionary<int, bool>>();
+			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c => c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID)) {
+				if (!ParentMTMW.ContainsKey(comp.StaticHierarchyID)) {
+					ParentMTMW.Add(comp.StaticHierarchyID, new Dictionary<int, bool>());
+				}
 
-        decimal val = comp.ValueNumeric * (comp.IsIncomePositive ? 1 : -1) * (decimal)comp.ScalingFactorValue;
-        bool any = false;
-        decimal sum = 0;
-        foreach (CellMTMWComponent subComp in res.ParentCellChangeComponents.Where(sc => sc.RootStaticHierarchyID == comp.RootStaticHierarchyID && sc.RootDocumentTimeSliceID == comp.RootDocumentTimeSliceID && !sc.Equals(comp)))
-        {
-          if (!any) any = true;
+				decimal val = comp.ValueNumeric * (comp.IsIncomePositive ? 1 : -1) * (decimal)comp.ScalingFactorValue;
+				bool any = false;
+				decimal sum = 0;
+				foreach (CellMTMWComponent subComp in res.ParentCellChangeComponents.Where(sc => sc.RootStaticHierarchyID == comp.RootStaticHierarchyID && sc.RootDocumentTimeSliceID == comp.RootDocumentTimeSliceID && !sc.Equals(comp))) {
+					if (!any) any = true;
 
-          sum += subComp.ValueNumeric * (subComp.IsIncomePositive ? 1 : -1) * (decimal)subComp.ScalingFactorValue;
-        }
+					sum += subComp.ValueNumeric * (subComp.IsIncomePositive ? 1 : -1) * (decimal)subComp.ScalingFactorValue;
+				}
 
-        ParentMTMW[comp.StaticHierarchyID].Add(comp.DocumentTimeSliceID, any && val != sum);
-      }
-      res.ParentMTMWChanges = ParentMTMW;
+				ParentMTMW[comp.StaticHierarchyID].Add(comp.DocumentTimeSliceID, any && val != sum);
+			}
+			res.ParentMTMWChanges = ParentMTMW;
 
-      return res;
-    }
+			return res;
+		}
 
-    public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs) {
+		public UnStitchResult UnstitchStaticHierarchy(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs) {
 
 			DataTable dt = new DataTable();
 			dt.Columns.Add("DocumentTimeSliceID", typeof(Int32));
@@ -8517,188 +8501,171 @@ END CATCH
 			return res;
 		}
 
-    public UnStitchResult UnstitchStaticHierarchyNoCheck(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs)
-    {
+		public UnStitchResult UnstitchStaticHierarchyNoCheck(int StaticHierarchyID, Guid DocumentID, int Iconum, List<int> DocumentTimeSliceIDs) {
 
-      DataTable dt = new DataTable();
-      dt.Columns.Add("DocumentTimeSliceID", typeof(Int32));
-      foreach (int i in DocumentTimeSliceIDs)
-      {
-        dt.Rows.Add(i);
-      }
+			DataTable dt = new DataTable();
+			dt.Columns.Add("DocumentTimeSliceID", typeof(Int32));
+			foreach (int i in DocumentTimeSliceIDs) {
+				dt.Rows.Add(i);
+			}
 
-      UnStitchResult res = new UnStitchResult()
-      {
-        StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
-        StaticHierarchies = new List<StaticHierarchy>(),
-        ChangedCells = new List<SCARAPITableCell>()
-      };
+			UnStitchResult res = new UnStitchResult()
+			{
+				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
+				StaticHierarchies = new List<StaticHierarchy>(),
+				ChangedCells = new List<SCARAPITableCell>()
+			};
 
-      Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
-      List<CellMTMWComponent> CellChangeComponents;
-      Dictionary<int, int> SHLevels;
+			Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
+			List<CellMTMWComponent> CellChangeComponents;
+			Dictionary<int, int> SHLevels;
 
 
-      using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-      {
-        conn.Open();
-        using (SqlCommand cmd = new SqlCommand("SCARUnStitchRowsNoCheck", conn))
-        {
-          cmd.CommandType = System.Data.CommandType.StoredProcedure;
-          cmd.CommandTimeout = 120;
-          cmd.Parameters.AddWithValue("@TargetSH", StaticHierarchyID);
-          cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
-          cmd.Parameters.AddWithValue("@Iconum", Iconum);
-          cmd.Parameters.AddWithValue("@DocumentTimeSliceList", dt);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand("SCARUnStitchRowsNoCheck", conn)) {
+					cmd.CommandType = System.Data.CommandType.StoredProcedure;
+					cmd.CommandTimeout = 120;
+					cmd.Parameters.AddWithValue("@TargetSH", StaticHierarchyID);
+					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
+					cmd.Parameters.AddWithValue("@Iconum", Iconum);
+					cmd.Parameters.AddWithValue("@DocumentTimeSliceList", dt);
 
 
-          using (SqlDataReader sdr = cmd.ExecuteReader())
-          {
-            res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
-            sdr.NextResult();
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						res.StaticHierarchyAdjustedOrders = sdr.Cast<IDataRecord>().Select(r => new StaticHierarchyAdjustedOrder() { StaticHierarchyID = r.GetInt32(0), NewAdjustedOrder = r.GetInt32(1) }).ToList();
+						sdr.NextResult();
 
-            SHLevels = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToDictionary(k => k.Item1, v => v.Item2);
+						SHLevels = sdr.Cast<IDataRecord>().Select(r => new Tuple<int, int>(r.GetInt32(0), r.GetInt32(1))).ToDictionary(k => k.Item1, v => v.Item2);
 
-            sdr.NextResult();
+						sdr.NextResult();
 
-            while (sdr.Read())
-            {
-              StaticHierarchy document = new StaticHierarchy
-              {
-                Id = sdr.GetInt32(0),
-                CompanyFinancialTermId = sdr.GetInt32(1),
-                AdjustedOrder = sdr.GetInt32(2),
-                TableTypeId = sdr.GetInt32(3),
-                Description = sdr.GetStringSafe(4),
-                HierarchyTypeId = sdr.GetStringSafe(5)[0],
-                SeparatorFlag = sdr.GetBoolean(6),
-                StaticHierarchyMetaId = sdr.GetInt32(7),
-                UnitTypeId = sdr.GetInt32(8),
-                IsIncomePositive = sdr.GetBoolean(9),
-                ChildrenExpandDown = sdr.GetBoolean(10),
-                ParentID = sdr.GetNullable<int>(11),
-                Cells = new List<SCARAPITableCell>()
-              };
-              res.StaticHierarchies.Add(document);
-            }
+						while (sdr.Read()) {
+							StaticHierarchy document = new StaticHierarchy
+							{
+								Id = sdr.GetInt32(0),
+								CompanyFinancialTermId = sdr.GetInt32(1),
+								AdjustedOrder = sdr.GetInt32(2),
+								TableTypeId = sdr.GetInt32(3),
+								Description = sdr.GetStringSafe(4),
+								HierarchyTypeId = sdr.GetStringSafe(5)[0],
+								SeparatorFlag = sdr.GetBoolean(6),
+								StaticHierarchyMetaId = sdr.GetInt32(7),
+								UnitTypeId = sdr.GetInt32(8),
+								IsIncomePositive = sdr.GetBoolean(9),
+								ChildrenExpandDown = sdr.GetBoolean(10),
+								ParentID = sdr.GetNullable<int>(11),
+								Cells = new List<SCARAPITableCell>()
+							};
+							res.StaticHierarchies.Add(document);
+						}
 
-            sdr.NextResult();
+						sdr.NextResult();
 
-            int shix = 0;
-            int adjustedOrder = 0;
+						int shix = 0;
+						int adjustedOrder = 0;
 
-            while (sdr.Read())
-            {
-              SCARAPITableCell cell;
-              if (sdr.GetNullable<int>(0).HasValue)
-              {
-                cell = new SCARAPITableCell
-                {
-                  ID = sdr.GetInt32(0),
-                  Offset = sdr.GetStringSafe(1),
-                  CellPeriodType = sdr.GetStringSafe(2),
-                  PeriodTypeID = sdr.GetStringSafe(3),
-                  CellPeriodCount = sdr.GetStringSafe(4),
-                  PeriodLength = sdr.GetNullable<int>(5),
-                  CellDay = sdr.GetStringSafe(6),
-                  CellMonth = sdr.GetStringSafe(7),
-                  CellYear = sdr.GetStringSafe(8),
-                  CellDate = sdr.GetNullable<DateTime>(9),
-                  Value = sdr.GetStringSafe(10),
-                  CompanyFinancialTermID = sdr.GetNullable<int>(11),
-                  ValueNumeric = sdr.GetNullable<decimal>(12),
-                  NormalizedNegativeIndicator = sdr.GetBoolean(13),
-                  ScalingFactorID = sdr.GetStringSafe(14),
-                  AsReportedScalingFactor = sdr.GetStringSafe(15),
-                  Currency = sdr.GetStringSafe(16),
-                  CurrencyCode = sdr.GetStringSafe(17),
-                  Cusip = sdr.GetStringSafe(18),
-                  ScarUpdated = sdr.GetBoolean(19),
-                  IsIncomePositive = sdr.GetBoolean(20),
-                  XBRLTag = sdr.GetStringSafe(21),
-                  UpdateStampUTC = sdr.GetNullable<DateTime>(22),
-                  DocumentID = sdr.GetNullable<Guid>(23).HasValue ? sdr.GetGuid(23) : Guid.Empty,
-                  Label = sdr.GetStringSafe(24),
-                  ScalingFactorValue = sdr.GetDouble(25),
-                  ARDErrorTypeId = sdr.GetNullable<int>(26),
-                  MTMWErrorTypeId = sdr.GetNullable<int>(27),
-                  LikePeriodValidationFlag = sdr.GetBoolean(28)
-                };
+						while (sdr.Read()) {
+							SCARAPITableCell cell;
+							if (sdr.GetNullable<int>(0).HasValue) {
+								cell = new SCARAPITableCell
+								{
+									ID = sdr.GetInt32(0),
+									Offset = sdr.GetStringSafe(1),
+									CellPeriodType = sdr.GetStringSafe(2),
+									PeriodTypeID = sdr.GetStringSafe(3),
+									CellPeriodCount = sdr.GetStringSafe(4),
+									PeriodLength = sdr.GetNullable<int>(5),
+									CellDay = sdr.GetStringSafe(6),
+									CellMonth = sdr.GetStringSafe(7),
+									CellYear = sdr.GetStringSafe(8),
+									CellDate = sdr.GetNullable<DateTime>(9),
+									Value = sdr.GetStringSafe(10),
+									CompanyFinancialTermID = sdr.GetNullable<int>(11),
+									ValueNumeric = sdr.GetNullable<decimal>(12),
+									NormalizedNegativeIndicator = sdr.GetBoolean(13),
+									ScalingFactorID = sdr.GetStringSafe(14),
+									AsReportedScalingFactor = sdr.GetStringSafe(15),
+									Currency = sdr.GetStringSafe(16),
+									CurrencyCode = sdr.GetStringSafe(17),
+									Cusip = sdr.GetStringSafe(18),
+									ScarUpdated = sdr.GetBoolean(19),
+									IsIncomePositive = sdr.GetBoolean(20),
+									XBRLTag = sdr.GetStringSafe(21),
+									UpdateStampUTC = sdr.GetNullable<DateTime>(22),
+									DocumentID = sdr.GetNullable<Guid>(23).HasValue ? sdr.GetGuid(23) : Guid.Empty,
+									Label = sdr.GetStringSafe(24),
+									ScalingFactorValue = sdr.GetDouble(25),
+									ARDErrorTypeId = sdr.GetNullable<int>(26),
+									MTMWErrorTypeId = sdr.GetNullable<int>(27),
+									LikePeriodValidationFlag = sdr.GetBoolean(28)
+								};
 
-                adjustedOrder = sdr.GetInt32(29);
-              }
-              else
-              {
-                cell = new SCARAPITableCell();
-                adjustedOrder = sdr.GetInt32(29);
-              }
+								adjustedOrder = sdr.GetInt32(29);
+							} else {
+								cell = new SCARAPITableCell();
+								adjustedOrder = sdr.GetInt32(29);
+							}
 
-              while (adjustedOrder != res.StaticHierarchies[shix].AdjustedOrder)
-              {
-                shix++;
-              }
+							while (adjustedOrder != res.StaticHierarchies[shix].AdjustedOrder) {
+								shix++;
+							}
 
-              CellMap.Add(new Tuple<int, int>(res.StaticHierarchies[shix].Id, sdr.GetInt32(30)), cell);
+							CellMap.Add(new Tuple<int, int>(res.StaticHierarchies[shix].Id, sdr.GetInt32(30)), cell);
 
-              if (cell.ID == 0 || cell.CompanyFinancialTermID == res.StaticHierarchies[shix].CompanyFinancialTermId)
-              {
-                res.StaticHierarchies[shix].Cells.Add(cell);
-              }
-              else
-              {
-                throw new Exception();
-              }
-            }
+							if (cell.ID == 0 || cell.CompanyFinancialTermID == res.StaticHierarchies[shix].CompanyFinancialTermId) {
+								res.StaticHierarchies[shix].Cells.Add(cell);
+							} else {
+								throw new Exception();
+							}
+						}
 
-            sdr.NextResult();
+						sdr.NextResult();
 
-            CellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
-            {
-              StaticHierarchyID = r.GetInt32(0),
-              DocumentTimeSliceID = r.GetInt32(3),
-              TableCellID = r.GetInt32(4),
-              ValueNumeric = r.GetNullable<Decimal>(8).HasValue ? r.GetDecimal(8) : 0,
-              IsIncomePositive = r.GetBoolean(9),
-              ScalingFactorValue = r.GetDouble(10),
-              RootStaticHierarchyID = r.GetInt32(6),
-              RootDocumentTimeSliceID = r.GetInt32(7)
-            }
-            ).ToList();
-          }
-        }
-      }
+						CellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
+						{
+							StaticHierarchyID = r.GetInt32(0),
+							DocumentTimeSliceID = r.GetInt32(3),
+							TableCellID = r.GetInt32(4),
+							ValueNumeric = r.GetNullable<Decimal>(8).HasValue ? r.GetDecimal(8) : 0,
+							IsIncomePositive = r.GetBoolean(9),
+							ScalingFactorValue = r.GetDouble(10),
+							RootStaticHierarchyID = r.GetInt32(6),
+							RootDocumentTimeSliceID = r.GetInt32(7)
+						}
+						).ToList();
+					}
+				}
+			}
 
 
 
-      Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
+			Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
 
-      foreach (CellMTMWComponent comp in CellChangeComponents)
-      {
-        Tuple<int, int> tup = new Tuple<int, int>(comp.RootStaticHierarchyID, comp.RootDocumentTimeSliceID);
-        if (!CellValueMap.ContainsKey(tup))
-          CellValueMap.Add(tup, 0);
+			foreach (CellMTMWComponent comp in CellChangeComponents) {
+				Tuple<int, int> tup = new Tuple<int, int>(comp.RootStaticHierarchyID, comp.RootDocumentTimeSliceID);
+				if (!CellValueMap.ContainsKey(tup))
+					CellValueMap.Add(tup, 0);
 
-        CellValueMap[tup] += comp.ValueNumeric * ((decimal)comp.ScalingFactorValue) * (comp.IsIncomePositive ? 1 : -1);
-      }
+				CellValueMap[tup] += comp.ValueNumeric * ((decimal)comp.ScalingFactorValue) * (comp.IsIncomePositive ? 1 : -1);
+			}
 
-      foreach (Tuple<int, int> key in CellMap.Keys)
-      {
-        SCARAPITableCell cell = CellMap[key];
-        if (CellValueMap.ContainsKey(key))
-          cell.MTMWValidationFlag = (cell.ValueNumeric * (decimal)cell.ScalingFactorValue * (cell.IsIncomePositive ? 1 : -1)) != CellValueMap[key];
-      }
+			foreach (Tuple<int, int> key in CellMap.Keys) {
+				SCARAPITableCell cell = CellMap[key];
+				if (CellValueMap.ContainsKey(key))
+					cell.MTMWValidationFlag = (cell.ValueNumeric * (decimal)cell.ScalingFactorValue * (cell.IsIncomePositive ? 1 : -1)) != CellValueMap[key];
+			}
 
-      foreach (StaticHierarchy sh in res.StaticHierarchies)
-      {
-        sh.Level = SHLevels[sh.Id];
-      }
+			foreach (StaticHierarchy sh in res.StaticHierarchies) {
+				sh.Level = SHLevels[sh.Id];
+			}
 
-      return res;
-    }
+			return res;
+		}
 
 
-    #region Deprecated Methods
-    public SCARAPITableCell GetCell(string CellId) {
+		#region Deprecated Methods
+		public SCARAPITableCell GetCell(string CellId) {
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
 					conn.Open();

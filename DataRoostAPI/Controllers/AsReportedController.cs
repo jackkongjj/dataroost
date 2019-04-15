@@ -1507,31 +1507,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-    [Route("templates/{TemplateName}/stitch/{DocumentId}/nocheck")]
-    [HttpPost]
-    public StitchResult PostStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput)
-    {
-      try
-      {
-        int iconum = PermId.PermId2Iconum(CompanyId);
+		[Route("templates/{TemplateName}/stitch/{DocumentId}/nocheck")]
+		[HttpPost]
+		public StitchResult PostStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
 
-        if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
-          return null;
+				if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
+					return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        return helper.StitchStaticHierarchiesNoCheck(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
-      }
-      catch (Exception ex)
-      {
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, stitchInput.TargetStaticHierarchyID, string.Join("|", stitchInput.StitchingStaticHierarchyIDs)));
-        return null;
-      }
-    }
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.StitchStaticHierarchiesNoCheck(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, stitchInput.TargetStaticHierarchyID, string.Join("|", stitchInput.StitchingStaticHierarchyIDs)));
+				return null;
+			}
+		}
 
 
-    [Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
+		[Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
 		[HttpPost]
 		public UnStitchResult PostUnStitch(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput) {
 			try {
@@ -1575,7 +1571,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        UnStitchResult ret = helper.UnstitchStaticHierarchyNoCheck(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+				UnStitchResult ret = helper.UnstitchStaticHierarchyNoCheck(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 				return ret; // the client side should do whole refresh.
 				//return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 			} catch (Exception ex) {
