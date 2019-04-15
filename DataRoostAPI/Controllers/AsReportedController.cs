@@ -162,7 +162,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplate(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -215,7 +215,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResultJune(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -232,7 +232,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -241,121 +241,101 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-    public static void CopyTo(System.IO.Stream src, System.IO.Stream dest)
-    {
-      byte[] bytes = new byte[4096];
+		public static void CopyTo(System.IO.Stream src, System.IO.Stream dest) {
+			byte[] bytes = new byte[4096];
 
-      int cnt;
+			int cnt;
 
-      while ((cnt = src.Read(bytes, 0, bytes.Length)) != 0)
-      {
-        dest.Write(bytes, 0, cnt);
-      }
-    }
+			while ((cnt = src.Read(bytes, 0, bytes.Length)) != 0) {
+				dest.Write(bytes, 0, cnt);
+			}
+		}
 
-    public static byte[] Zip(string str)
-    {
-      var bytes = System.Text.Encoding.UTF8.GetBytes(str);
+		public static byte[] Zip(string str) {
+			var bytes = System.Text.Encoding.UTF8.GetBytes(str);
 
-      using (var msi = new System.IO.MemoryStream(bytes))
-      using (var mso = new System.IO.MemoryStream())
-      {
-        using (var gs = new System.IO.Compression.GZipStream(mso, System.IO.Compression.CompressionMode.Compress))
-        {
-          //msi.CopyTo(gs);
-          CopyTo(msi, gs);
-        }
+			using (var msi = new System.IO.MemoryStream(bytes))
+			using (var mso = new System.IO.MemoryStream()) {
+				using (var gs = new System.IO.Compression.GZipStream(mso, System.IO.Compression.CompressionMode.Compress)) {
+					//msi.CopyTo(gs);
+					CopyTo(msi, gs);
+				}
 
-        return mso.ToArray();
-      }
-    }
-    public static string Unzip(byte[] bytes)
-    {
-      using (var msi = new System.IO.MemoryStream(bytes))
-      using (var mso = new System.IO.MemoryStream())
-      {
-        using (var gs = new System.IO.Compression.GZipStream(msi, System.IO.Compression.CompressionMode.Decompress))
-        {
-          //gs.CopyTo(mso);
-          CopyTo(gs, mso);
-        }
+				return mso.ToArray();
+			}
+		}
+		public static string Unzip(byte[] bytes) {
+			using (var msi = new System.IO.MemoryStream(bytes))
+			using (var mso = new System.IO.MemoryStream()) {
+				using (var gs = new System.IO.Compression.GZipStream(msi, System.IO.Compression.CompressionMode.Decompress)) {
+					//gs.CopyTo(mso);
+					CopyTo(gs, mso);
+				}
 
-        return System.Text.Encoding.UTF8.GetString(mso.ToArray());
-      }
-    }
+				return System.Text.Encoding.UTF8.GetString(mso.ToArray());
+			}
+		}
 
-    [Route("templates/{TemplateName}/{DocumentId}/zipped")]
-    [HttpGet]
-    public HttpResponseMessage GetTemplateZipped(string CompanyId, string TemplateName, Guid DocumentId)
-    {
-      try
-      {
-        int iconum = PermId.PermId2Iconum(CompanyId);
-        if (TemplateName == null)
-          return null;
+		[Route("templates/{TemplateName}/{DocumentId}/zipped")]
+		[HttpGet]
+		public HttpResponseMessage GetTemplateZipped(string CompanyId, string TemplateName, Guid DocumentId) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        var r = helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
-        var json = Newtonsoft.Json.JsonConvert.SerializeObject(r);
-        var zip = Zip(json);
-        HttpResponseMessage httpmsg = new HttpResponseMessage();
-        httpmsg.Content = new ByteArrayContent(zip);
-        httpmsg.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				var r = helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
+				var json = Newtonsoft.Json.JsonConvert.SerializeObject(r);
+				var zip = Zip(json);
+				HttpResponseMessage httpmsg = new HttpResponseMessage();
+				httpmsg.Content = new ByteArrayContent(zip);
+				httpmsg.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
 
-        return httpmsg;
-      }
-      catch (Exception ex)
-      {
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-        return null;
-      }
-    }
+				return httpmsg;
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
 
-    [Route("templates/{TemplateName}/{DocumentId}/debug")]
-    [HttpGet]
-    public ScarResult GetTemplateDebug(string CompanyId, string TemplateName, Guid DocumentId)
-    {
-      try
-      {
-        int iconum = PermId.PermId2Iconum(CompanyId);
-        if (TemplateName == null)
-          return null;
+		[Route("templates/{TemplateName}/{DocumentId}/debug")]
+		[HttpGet]
+		public ScarResult GetTemplateDebug(string CompanyId, string TemplateName, Guid DocumentId) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        var r = helper.GetTemplateInScarResultDebug(iconum, TemplateName, DocumentId);
-        r.ReturnValue["Message"] = r.ReturnValue["Message"] + "GetTemplateDebugController Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
-        return r;
-      }
-      catch (Exception ex)
-      {
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-        return null;
-      }
-    }
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				var r = helper.GetTemplateInScarResultDebug(iconum, TemplateName, DocumentId);
+				r.ReturnValue["Message"] = r.ReturnValue["Message"] + "GetTemplateDebugController Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
+				return r;
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
 
-    [Route("templates/{TemplateName}/{DocumentId}/debugdatatable")]
-    [HttpGet]
-    public ScarResult GetTemplateDebugDataTable(string CompanyId, string TemplateName, Guid DocumentId)
-    {
-      try
-      {
-        int iconum = PermId.PermId2Iconum(CompanyId);
-        if (TemplateName == null)
-          return null;
+		[Route("templates/{TemplateName}/{DocumentId}/debugdatatable")]
+		[HttpGet]
+		public ScarResult GetTemplateDebugDataTable(string CompanyId, string TemplateName, Guid DocumentId) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        return helper.GetTemplateInScarResultDebugDataTable(iconum, TemplateName, DocumentId);
-      }
-      catch (Exception ex)
-      {
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-        return null;
-      }
-    }
-    [Route("templates/{TemplateName}/{DocumentId}")]
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetTemplateInScarResultDebugDataTable(iconum, TemplateName, DocumentId);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
+		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpPost]
 		public ScarResult PostTemplate(string CompanyId, string TemplateName, Guid DocumentId, StringInput data) {
 			try {
@@ -377,7 +357,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateSkeleton(iconum, TemplateName);
 			} catch (Exception ex) {
@@ -988,26 +968,22 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-    [Route("cells/{id}/addLikePeriod/{DocumentId}/nocheck")]
-    [HttpPost]
-    public ScarResult AddLikePeriodValidationNoteNoCheck(string id, Guid DocumentId, StringInput input)
-    {
-      try
-      {
-        if (input == null || string.IsNullOrEmpty(input.StringData))
-          return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        return helper.AddLikePeriodValidationNoteNoCheck(id, DocumentId, input.StringData);
-      }
-      catch (Exception ex)
-      {
-        LogError(ex);
-        return null;
-      }
-    }
+		[Route("cells/{id}/addLikePeriod/{DocumentId}/nocheck")]
+		[HttpPost]
+		public ScarResult AddLikePeriodValidationNoteNoCheck(string id, Guid DocumentId, StringInput input) {
+			try {
+				if (input == null || string.IsNullOrEmpty(input.StringData))
+					return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.AddLikePeriodValidationNoteNoCheck(id, DocumentId, input.StringData);
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
 
-    [Route("cells/{id}")]
+		[Route("cells/{id}")]
 		[HttpGet]
 		public ScarResult GetTableCell(string id) {
 			try {
@@ -1531,31 +1507,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-    [Route("templates/{TemplateName}/stitch/{DocumentId}/nocheck")]
-    [HttpPost]
-    public StitchResult PostStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput)
-    {
-      try
-      {
-        int iconum = PermId.PermId2Iconum(CompanyId);
+		[Route("templates/{TemplateName}/stitch/{DocumentId}/nocheck")]
+		[HttpPost]
+		public StitchResult PostStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, StitchInput stitchInput) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
 
-        if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
-          return null;
+				if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
+					return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        return helper.StitchStaticHierarchiesNoCheck(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
-      }
-      catch (Exception ex)
-      {
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, stitchInput.TargetStaticHierarchyID, string.Join("|", stitchInput.StitchingStaticHierarchyIDs)));
-        return null;
-      }
-    }
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.StitchStaticHierarchiesNoCheck(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, stitchInput.TargetStaticHierarchyID, string.Join("|", stitchInput.StitchingStaticHierarchyIDs)));
+				return null;
+			}
+		}
 
 
-    [Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
+		[Route("templates/{TemplateName}/unstitch/{DocumentId}/")]
 		[HttpPost]
 		public UnStitchResult PostUnStitch(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput) {
 			try {
@@ -1588,32 +1560,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-    [Route("templates/{TemplateName}/unstitch/{DocumentId}/nocheck")]
-    [HttpPost]
-    public UnStitchResult PostUnStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput)
-    {
-      try
-      {
-        int iconum = PermId.PermId2Iconum(CompanyId);
+		[Route("templates/{TemplateName}/unstitch/{DocumentId}/nocheck")]
+		[HttpPost]
+		public UnStitchResult PostUnStitchNoCheck(string CompanyId, string TemplateName, Guid DocumentId, UnStitchInput unstitchInput) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
 
-        if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
-          return null;
+				if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
+					return null;
 
-        string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-        AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-        UnStitchResult ret = helper.UnstitchStaticHierarchyNoCheck(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
-        return ret; // the client side should do whole refresh.
-        //return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
-      }
-      catch (Exception ex)
-      {
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-        LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, unstitchInput.TargetStaticHierarchyID, string.Join("|", unstitchInput.DocumentTimeSliceIDs)));
-        return null;
-      }
-    }
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				UnStitchResult ret = helper.UnstitchStaticHierarchyNoCheck(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+				return ret; // the client side should do whole refresh.
+				//return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}, TargetStaticHierarchyID: {3}, StitchingIDs {4}", CompanyId, TemplateName, DocumentId, unstitchInput.TargetStaticHierarchyID, string.Join("|", unstitchInput.DocumentTimeSliceIDs)));
+				return null;
+			}
+		}
 
-    public class StitchInput {
+		public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
 		}

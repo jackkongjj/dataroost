@@ -56,7 +56,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 				// Fetch FPE data
 				using (SqlCommand cmd = new SqlCommand(pantheonQuery, connection)) {
-					cmd.CommandTimeout = 300;
+					cmd.CommandTimeout = 500;
 					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.Add(new SqlParameter("@stdCode", SqlDbType.Char, 5) { Value = stdCode });
 					cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) { Value = searchDate });
@@ -138,7 +138,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 				// Fetch FPE data
 				using (SqlCommand cmd = new SqlCommand(query, connection)) {
-					cmd.CommandTimeout = 300;
+					cmd.CommandTimeout = 500;
 					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.Add(new SqlParameter("@searchDate", SqlDbType.DateTime2) { Value = searchDate });
 					cmd.Parameters.Add(new SqlParameter("@since", SqlDbType.DateTime2)
