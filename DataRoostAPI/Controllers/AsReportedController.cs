@@ -12,8 +12,8 @@ using System.Diagnostics;
 using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using LogPerformance;
 using CCS.Fundamentals.DataRoostAPI.CommLogger;
-
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
     [CommunicationLogger]
@@ -25,11 +25,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
 				MailMessage message = new MailMessage();
 				message.From = mailFrom;
-				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
-				var leo = new MailAddress("lchang@factset.com", "Lun Jiang");
-				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
-				message.To.Add(ljiang);
-				message.To.Add(adam);
+				//var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
+				//var leo = new MailAddress("lchang@factset.com", "Leo");
+				//var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
+				var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
+                //message.To.Add(ljiang);
+                message.To.Add(vsaxena);
+				//message.To.Add(adam);
 				//message.To.Add(leo);
 				message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
@@ -1352,8 +1354,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						result = helper.UpdateTDPByDocumentTableID(id, newValue);
 					} catch (Exception ex) {
 						result.Message += ex.Message;
-					}
-				}
+                        LogError(ex);
+
+                    }
+                }
 				return result;
 			} catch (Exception ex) {
 				LogError(ex);

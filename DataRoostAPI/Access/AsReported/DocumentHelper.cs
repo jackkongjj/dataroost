@@ -15,7 +15,7 @@ using DataRoostAPI.Common.Models.SuperFast;
 using System.Web.Mvc;
 using System.Globalization;
 using ExpressionStore.Components;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 	public class DocumentHelper {
@@ -32,7 +32,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		}
 
 		public AsReportedDocument GetDocument(int iconum, string documentId) {
-			string query = @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+
+            string query = @"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
@@ -61,8 +64,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					}
 				}
 			}
-			return null;
-		}
+            CommunicationLogger.LogEvent("GetDocument", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return null;
+        }
 
 		public AsReportedDocument[] GetDocuments(int iconum, string documentId) {
 
@@ -88,8 +92,8 @@ AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,-1,-2,-3) order by Yr  desc)";
 
 
-
-			List<AsReportedDocument> documents = new List<AsReportedDocument>();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            List<AsReportedDocument> documents = new List<AsReportedDocument>();
 
 			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 				connection.Open();
@@ -115,11 +119,13 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
+            CommunicationLogger.LogEvent("GetDocuments", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			return documents.ToArray();
+            return documents.ToArray();
 		}
 
 		public AsReportedDocument[] GetDocuments(int iconum, DateTime startDate, DateTime endDate, string reportType) {
+
 			const string queryWithReportType =
 								@"SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DAMDocumentId, d.Id, d.hasXBRL
 																			FROM DocumentSeries s
@@ -146,7 +152,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 				query = queryWithReportType;
 			}
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -173,7 +181,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
-			return documents.ToArray();
+            CommunicationLogger.LogEvent("GetDocuments", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return documents.ToArray();
 		}
 
 		private AsReportedTable[] GetDocumentTables(string documentId) {
@@ -183,8 +193,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 													JOIN TableDimension d ON d.DocumentTableID = t.ID
 													JOIN DimensionType dt ON dt.ID = d.DimensionTypeID
 												WHERE t.DocumentID = @documentId";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-			Dictionary<int, AsReportedTable> tables = new Dictionary<int, AsReportedTable>();
+            Dictionary<int, AsReportedTable> tables = new Dictionary<int, AsReportedTable>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -221,8 +232,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
+            CommunicationLogger.LogEvent("GetDocumentTables", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			foreach (AsReportedTable table in tables.Values) {
+            foreach (AsReportedTable table in tables.Values) {
 				table.Cells = GetTableCells(table);
 			}
 			return tables.Values.ToArray();
@@ -242,7 +254,8 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 													WHERE d.DocumentTableID = @tableId";
 
 			Dictionary<int, Cell> cells = new Dictionary<int, Cell>();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@tableId", table.Id);
@@ -297,7 +310,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
-			return cells.Values.ToList();
+            CommunicationLogger.LogEvent("GetTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return cells.Values.ToList();
 		}
 
 		#region Direct Collection
@@ -308,8 +323,8 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
 																				AND d.DAMDocumentId = @documentId";
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -335,7 +350,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
-			return null;
+            CommunicationLogger.LogEvent("GetDCDocument", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return null;
 		}
 
 		public AsReportedDocument[] GetDCDocuments(int iconum, List<string> documentIds) {
@@ -354,8 +371,8 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 			}
 
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
-
-			using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection connection = new SqlConnection(_sfConnectionString)) {
 				connection.Open();
 
 				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
@@ -404,8 +421,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
+            CommunicationLogger.LogEvent("GetDCDocuments", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			return documents.ToArray();
+            return documents.ToArray();
 		}
 
 		public AsReportedDocument[] GetDCDocuments(int iconum, DateTime startDate, DateTime endDate, string reportType) {
@@ -435,7 +453,8 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 				query = queryWithReportType;
 			}
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -477,7 +496,9 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 					}
 				}
 			}
-			return documents.ToArray();
+            CommunicationLogger.LogEvent("GetDCDocuments", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return documents.ToArray();
 		}
 		//	AND d.ReportTypeID = @reportType
 		public AsReportedDocument[] GetHistory(int iconum, string documentId, string reportType) {
@@ -510,7 +531,8 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 			} else {
 				query = queryWithReportType;
 			}
-			List<AsReportedDocument> documents = new List<AsReportedDocument>();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            List<AsReportedDocument> documents = new List<AsReportedDocument>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -558,7 +580,9 @@ and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, 
 					}
 				}
 			}
-			return documents.ToArray();
+            CommunicationLogger.LogEvent("GetHistory", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return documents.ToArray();
 		}
 
 		public AsReportedDocument[] GetHistory(int iconum, string documentId, double years) {
@@ -581,7 +605,8 @@ and d.DocumentDate  between
 			}
 
 			List<AsReportedDocument> documents = new List<AsReportedDocument>();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -626,11 +651,14 @@ and d.DocumentDate  between
 					}
 				}
 			}
-			return documents.ToArray();
+            CommunicationLogger.LogEvent("GetHistory", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return documents.ToArray();
 		}
 
 		public string DownloadFile(int iconum, string documentId) {
-			AsReportedDocument document = GetDCDocument(iconum, documentId);
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            AsReportedDocument document = GetDCDocument(iconum, documentId);
 			//export Data as CSV
 			StringBuilder sb = new StringBuilder();
 			foreach (var tc in document.Cells.OrderBy(o => o.CftId).GroupBy(o => o.CftId)) {
@@ -641,12 +669,15 @@ and d.DocumentDate  between
 				sb.AppendLine();
 			}
 			string contents = sb.ToString();
-			return contents;
+            CommunicationLogger.LogEvent("DownloadFile", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return contents;
 
 		}
 
 		public void InsertTINTOffsets(string documentId, int CompanyId) {
-			TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            TINT.DocumentHelper helper = new TINT.DocumentHelper(_sfConnectionString, _damConnectionString);
 			Dictionary<byte, Tint> tintFiles = helper.GetTintFiles(documentId);
 			Guid SFDocumentId = GetSuperFastDocumentID(documentId, CompanyId).Value;
 			int documentSeries = GetDocumentSeriesID(SFDocumentId.ToString());
@@ -701,15 +732,17 @@ and d.DocumentDate  between
 					}
 				}
 			}
+            CommunicationLogger.LogEvent("InsertTINTOffsets", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-		}
+        }
 
-		public List<Cell> GetDocumentTableCells(string documentId, int CompanyId) {
+        public List<Cell> GetDocumentTableCells(string documentId, int CompanyId) {
 			return GetTableCells(GetSuperFastDocumentID(documentId, CompanyId).Value.ToString());
 		}
 
 		private List<Cell> GetTableCells(string documentId) {
-			string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"select  c.ID, c.CompanyFinancialTermID, c.CellDate, c.Value, c.ValueNumeric, c.PeriodLength, c.PeriodTypeID, c.Offset,
 												c.ScalingFactorID, c.CurrencyCode, cft.Description, c.XBRLTag, isnull(td.label,c.Label) ,isnull(tt.Description,''), td.AdjustedOrder , c.ScarUpdated, 
 												nlsl.Label
 												from dbo.TableCell c with (NOLOCK)												
@@ -761,11 +794,14 @@ and d.DocumentDate  between
 					}
 				}
 			}
-			return cells;
+            CommunicationLogger.LogEvent("GetTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return cells;
 		}
 
 		private Dictionary<string, string> GetSDBItems() {
-			Dictionary<string, string> items = new Dictionary<string, string>();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            Dictionary<string, string> items = new Dictionary<string, string>();
 			string query = "select distinct SDBCode , Description from SDBItem";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -778,12 +814,15 @@ and d.DocumentDate  between
 					}
 				}
 			}
-			return items;
+            CommunicationLogger.LogEvent("GetSDBItems", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return items;
 		}
 
 		private List<Cell> GetTableCells(string documentId, int Iconum) {
 			string connString = ConfigurationManager.AppSettings["ElasticEndpointA"];
-			var terms = connString.Split(';');
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var terms = connString.Split(';');
 			string uri = "http://" + terms[0].Substring(terms[0].IndexOf("NodeUri=") + 8);
 			string Username = terms[1].Substring(terms[0].IndexOf("Username=") + 10);
 			string Password = terms[2].Substring(terms[0].IndexOf("Password=") + 10);
@@ -833,13 +872,15 @@ and d.DocumentDate  between
 				}
 
 			}
-			return cells;
+            CommunicationLogger.LogEvent("GetTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return cells;
 		}
 
 		private Guid? GetSuperFastDocumentID(string DamDocId, int iconum) {
 			const string sqltxt = @"prcGet_FFDocHist_GetSuperFastDocumentID";
-
-			try {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            try {
 				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
 				using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
 					cmd.CommandType = CommandType.StoredProcedure;
@@ -847,19 +888,23 @@ and d.DocumentDate  between
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					sqlConn.Open();
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						if (sdr.Read())
+                        CommunicationLogger.LogEvent("GetSuperFastDocumentID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                        if (sdr.Read())
 							return sdr.GetGuid(0);
 						else
 							return null;
+
 					}
-				}
-			} catch (Exception e) {
+
+                }
+            } catch (Exception e) {
 				return null;
 			}
 		}
 
 		private Guid GetDamDocumentID(string SFDocumentId) {
-			const string SQLTEXT = @"select DamDocumentID from document (nolock) where id = @sfdocID";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            const string SQLTEXT = @"select DamDocumentID from document (nolock) where id = @sfdocID";
 			Guid DamDocID;
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString))
 			using (SqlCommand sql = new SqlCommand(SQLTEXT, conn)) {
@@ -869,13 +914,16 @@ and d.DocumentDate  between
 					sdr.Read();
 					DamDocID = sdr.GetGuid(0);
 				}
-			}
+                CommunicationLogger.LogEvent("GetDamDocumentID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			return DamDocID;
+            }
+
+            return DamDocID;
 		}
 
 		public Guid? GetSuperFastDocumentID(Guid DamDocId, int iconum) {
-			const string sqltxt = @"prcGet_FFDocHist_GetSuperFastDocumentID";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            const string sqltxt = @"prcGet_FFDocHist_GetSuperFastDocumentID";
 
 			try {
 				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
@@ -885,12 +933,14 @@ and d.DocumentDate  between
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					sqlConn.Open();
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						if (sdr.Read())
+                        CommunicationLogger.LogEvent("GetSuperFastDocumentID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                        if (sdr.Read())
 							return sdr.GetGuid(0);
 						else
 							return null;
-					}
-				}
+                    }
+
+                }
 			} catch (Exception e) {
 				return null;
 			}
@@ -899,22 +949,27 @@ and d.DocumentDate  between
 		private int GetDocumentSeriesID(string DocumentId) {
 
 			const string sqltxt = @"select DocumentSeriesID from document with (nolock) where ID = @docId";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-			using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
+            using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString))
 			using (SqlCommand cmd = new SqlCommand(sqltxt, sqlConn)) {
 				cmd.Parameters.AddWithValue("@docId", DocumentId);
 				sqlConn.Open();
 				using (SqlDataReader sdr = cmd.ExecuteReader()) {
-					if (sdr.Read())
+                    CommunicationLogger.LogEvent("GetDocument", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                    if (sdr.Read())
 						return sdr.GetInt32(0);
 					else
 						return -1;
 				}
 			}
-		}
 
-		private List<SFTimeseriesDTO> GetTimeSliceForDocument(string documentId, int Iconum) {
-			List<SFTimeseriesDTO> timeSlices = new List<SFTimeseriesDTO>();
+        }
+
+        private List<SFTimeseriesDTO> GetTimeSliceForDocument(string documentId, int Iconum) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            List<SFTimeseriesDTO> timeSlices = new List<SFTimeseriesDTO>();
 			const string sqltxt = @" select ts.TimeSliceDate, ts.AccountTypeID, ts.ReportTypeID, ts.InterimTypeID, ts.EncoreFlag, ts.AutoCalcFlag,ts.PeriodLength, ts.PeriodTypeID from dbo.TimeSlice ts 
  join document d on d.id = ts.DocumentID
  JOIN dbo.DocumentSeries ds on ds.id = d.documentseriesid
@@ -941,12 +996,15 @@ and d.DocumentDate  between
 					}
 				}
 			}
-			return timeSlices;
+            CommunicationLogger.LogEvent("GetTimeSliceForDocument", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return timeSlices;
 		}
 
 		public String UpdateSplitAdjustmentDate(string SFDocumentId, String date, int Iconum) {
 			try {
-				const string sqltxt = @"UPDATE Document 
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                const string sqltxt = @"UPDATE Document 
 																	set 
                                       SplitAdjustmentDate=@SplitAdjustmentDate 
 																WHERE ID=@id";
@@ -958,7 +1016,10 @@ and d.DocumentDate  between
 					cmd.Parameters.AddWithValue("@SplitAdjustmentDate", date);
 					cmd.ExecuteNonQuery();
 				}
-			} catch (Exception ex) {
+                CommunicationLogger.LogEvent("UpdateSplitAdjustmentDate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            }
+            catch (Exception ex) {
 				return ex.Message;
 			}
 			return "";

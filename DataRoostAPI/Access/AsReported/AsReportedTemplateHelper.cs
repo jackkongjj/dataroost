@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
 
@@ -29,7 +29,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		}
 
 		public object GetCompany(int companyId) {
-			int ID;
+            int ID;
 			int Iconum;
 			string Priority = "1";
 			string Industry = "";
@@ -49,7 +49,8 @@ select DocumentSeriesID, ds.CompanyId, f.priority_oper, ig.Description, filer.Co
 	join Months m (nolock) on cm.FYEMonth = m.ID
 where ds.companyid = @companyId
 ";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(sql, conn)) {
 					cmd.Parameters.AddWithValue("@companyId", companyId);
@@ -65,8 +66,8 @@ where ds.companyid = @companyId
 						}
 					}
 				}
-                
-				if (CompanyName == null) {
+                CommunicationLogger.LogEvent("GetCompany", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                if (CompanyName == null) {
 					String sql1 = @"
 select DocumentSeriesID, ds.CompanyId, ig.Description, filer.Company, m.Description
 	from Document d (nolock) 
@@ -79,8 +80,8 @@ select DocumentSeriesID, ds.CompanyId, ig.Description, filer.Company, m.Descript
 	join Months m (nolock) on cm.FYEMonth = m.ID
 where ds.companyid = @companyId
 ";
-
-					using (SqlCommand cmd = new SqlCommand(sql1, conn)) {
+                    starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    using (SqlCommand cmd = new SqlCommand(sql1, conn)) {
 						cmd.Parameters.AddWithValue("@companyId", companyId);
 						//conn.Open();
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
@@ -96,7 +97,8 @@ where ds.companyid = @companyId
 					}
 
 				}
-				if (CompanyName == null) {
+                CommunicationLogger.LogEvent("GetCompany", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                if (CompanyName == null) {
 					String sql2 = @"
 select DocumentSeriesID, ds.CompanyId, f.priority_oper, '', filer.Company, m.Description
 	from Document d (nolock) 
@@ -107,8 +109,8 @@ select DocumentSeriesID, ds.CompanyId, f.priority_oper, '', filer.Company, m.Des
 	join Months m (nolock) on cm.FYEMonth = m.ID
 where d.companyId = @companyId
 ";
-
-					using (SqlCommand cmd = new SqlCommand(sql2, conn)) {
+                    starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    using (SqlCommand cmd = new SqlCommand(sql2, conn)) {
 						cmd.Parameters.AddWithValue("@companyId", companyId);
 						//conn.Open();
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
@@ -122,8 +124,9 @@ where d.companyId = @companyId
 							}
 						}
 					}
-				}
-			}
+                    CommunicationLogger.LogEvent("GetCompany", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                }
+            }
 			return new { companyPriority = Priority, name = CompanyName, industry = Industry, fisicalYearEndMonth = FiscalYearEndMonth };
 		}
 
@@ -178,7 +181,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 			ScarResult temp = new ScarResult();
 			string query_sproc = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CreateStaticHierarchyIfNecessary";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				#region Using SqlConnection
 				using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 					conn.Open();
@@ -198,7 +202,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				}
 				#endregion
 			}
-			return temp;
+            CommunicationLogger.LogEvent("CreateStaticHierarchyForTemplate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return temp;
 		}
 
 
@@ -1549,7 +1554,8 @@ WHERE  CompanyID = @Iconum";
 				List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
 				Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
 				query += CellsQuery + TimeSliceQuery + TimeSliceIsSummaryQuery;
-				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					#region Using SqlConnection
 					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
 						cmd.CommandType = System.Data.CommandType.StoredProcedure;
@@ -1798,8 +1804,9 @@ WHERE  CompanyID = @Iconum";
 					}
 					#endregion
 				}
+                CommunicationLogger.LogEvent("GetTemplateWithSqlDataReader", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-        sb.AppendLine("Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                sb.AppendLine("Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
         foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
           sb.AppendLine("Calculate Sh." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
           if (!sh.ParentID.HasValue) {
@@ -2180,7 +2187,8 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 
 			temp.StaticHierarchies = new List<int>();
 			List<int> StaticHierarchies = temp.StaticHierarchies;
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -2191,11 +2199,13 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 						}
 					}
 				}
+            CommunicationLogger.LogEvent("GetTemplateSkeleton_CalculateCellValue_StaticHierarchies", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-
-				temp.TimeSlices = new List<int>();
+                temp.TimeSlices = new List<int>();
 				List<int> TimeSlices = temp.TimeSlices;
-				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
+                starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+                using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
 					cmd.Parameters.AddWithValue("@iconum", iconum);
 					cmd.Parameters.AddWithValue("@templateName", TemplateName);
 
@@ -2206,9 +2216,10 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 						}
 					}
 				}
+                CommunicationLogger.LogEvent("GetTemplateSkeleton_CalculateCellValue_TimeSlices", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			}
-			return temp;
+            }
+            return temp;
 		}
 
 		public StaticHierarchy GetStaticHierarchy(int id) {
@@ -2230,11 +2241,10 @@ FROM DocumentSeries ds WITH (NOLOCK)
 
 WHERE sh.id = @id
 ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				StaticHierarchy sh;
-
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+                using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@id", id);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
@@ -2255,8 +2265,9 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							Cells = new List<SCARAPITableCell>()
 						};
 					}
-				}
-
+                }
+                CommunicationLogger.LogEvent("GetStaticHierarchy", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@id", id);
 
@@ -2293,19 +2304,19 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 								ARDErrorTypeId = reader.GetNullable<int>(25),
 								MTMWErrorTypeId = reader.GetNullable<int>(26)
 							};
-
-							sh.Cells.Add(cell);
-
+                            sh.Cells.Add(cell);
 						}
 					}
 				}
-
-				return sh;
+                CommunicationLogger.LogEvent("GetStaticHierarchy_CellsQuery", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return sh;
 			}
 		}
 
 		public ScarResult CopyDocumentHierarchy(int iconum, int TableTypeid, Guid DocumentId) {
-			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
 			string text_query = @"
 DECLARE @newDocumentTableId int;
 BEGIN TRY
@@ -2400,12 +2411,16 @@ END CATCH
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("CopyDocumentHierarchy", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchySeperator(int id, bool isGroup) {
 
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            string query = @"
 UPDATE StaticHierarchy SET SeperatorFlag = @newValue 
 WHERE id = @TargetSHID;
 
@@ -2446,7 +2461,9 @@ where id = @TargetSHID;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateStaticHierarchySeperator", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyUnitType(int id, string newValue) {
@@ -2462,8 +2479,8 @@ where id = @TargetSHID;
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -2492,7 +2509,8 @@ where id = @TargetSHID;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyUnitType", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyMeta(int id, string newValue) {
@@ -2508,8 +2526,8 @@ where id = @TargetSHID;
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -2538,7 +2556,8 @@ where id = @TargetSHID;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyMeta", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyAddHeader(int id) {
@@ -2696,7 +2715,8 @@ SELECT *
 		}
 
 		public ScarResult CleanupStaticHierarchy(int iconum, string tableType) {
-			ScarResult response = new ScarResult();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			string query = @"
 
@@ -2737,13 +2757,16 @@ SELECT StaticHierarchyID FROM @SHIDS
 					}
 				}
 			}
-			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
-			return response;
+            response.Message += "StaticHierarchy Deleted: " + sb.ToString();
+            CommunicationLogger.LogEvent("CleanupStaticHierarchy", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return response;
 		}
 
 
 		public ScarResult CleanupStaticHierarchyOld(List<int> StaticHierarchyIds) {
-			ScarResult response = new ScarResult();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			var inclause = string.Join(",", StaticHierarchyIds);
 			string query = @"
@@ -2787,11 +2810,14 @@ SELECT id From @AllStaticHierarchy
 				}
 			}
 			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
-			return response;
+            CommunicationLogger.LogEvent("CleanupStaticHierarchyOld", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyDeleteHeader(string headerText, List<int> StaticHierarchyIds) {
-			ScarResult response = new ScarResult();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			string query = @"SCARRemoveHeader";
 
@@ -2829,11 +2855,14 @@ SELECT id From @AllStaticHierarchy
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyDeleteHeader", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyDeleteParent(string headerText, List<int> StaticHierarchyIds) {
-			ScarResult response = new ScarResult();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
 			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DeleteParent";
 
@@ -2871,12 +2900,14 @@ SELECT id From @AllStaticHierarchy
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyDeleteParent", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyCusip(int id, string newCusip) {
-
-			string deletequery = @"delete from dbo.StaticHierarchySecurity where StaticHierarchyId in ({0})";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string deletequery = @"delete from dbo.StaticHierarchySecurity where StaticHierarchyId in ({0})";
 			string insertquery = @"insert into dbo.StaticHierarchySecurity (StaticHierarchyId,SecPermId) values ({0},'{1}')";
 
 			String q1 = string.Format(deletequery, id);
@@ -2898,12 +2929,14 @@ SELECT id From @AllStaticHierarchy
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyCusip", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyLabel(int id, string newLabel) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 DECLARE @TableTypeId INT = (SELECT TableTypeId FROM StaticHierarchy WHERE ID = @TargetSHID)
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
@@ -3012,12 +3045,14 @@ SELECT *
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyHeaderLabel(int id, string newLabel) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
@@ -3071,11 +3106,13 @@ END
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateStaticHierarchyAddParent(int id) {
-
-			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_AddParent";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_AddParent";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -3110,12 +3147,14 @@ END
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyAddParent", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyConvertDanglingHeader(int id, string newValue) {
-
-			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_ConvertDanglingHeader";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_ConvertDanglingHeader";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -3151,11 +3190,14 @@ END
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyConvertDanglingHeader", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchySwitchChildrenOrientation(int id) {
-			const string SQL_SwitchChildrenOrientation = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            const string SQL_SwitchChildrenOrientation = @"
 
 DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
@@ -3198,11 +3240,13 @@ SELECT * FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateStaticHierarchySwitchChildrenOrientation", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateStaticHierarchyMove(int id, string direction) {
-			string BeginTran = @" 
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string BeginTran = @" 
 ";
 			string RollbackTran = @" 
 ";
@@ -3323,12 +3367,14 @@ SELECT *
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyMove", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult DragDropStaticHierarchyLabel(int DraggedId, int TargetId, string Location) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 BEGIN TRY
 	BEGIN TRAN
 DECLARE @TargetParentId INT = (select ParentID from StaticHierarchy WITH (NOLOCK) where id = @TargetSHID)
@@ -3375,12 +3421,14 @@ END CATCH
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("DragDropStaticHierarchyLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult DragDropStaticHierarchyLabelByString(int tableTypeId, string DraggedLabel, string TargetLabel, string Location) {
-
-			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -3403,12 +3451,14 @@ END CATCH
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("DragDropStaticHierarchyLabelByString", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public TimeSlice GetTimeSlice(int id) {
-
-			string query = @"SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE ID = @id";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE ID = @id";
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				StaticHierarchy sh;
@@ -3441,15 +3491,18 @@ END CATCH
 							ManualOrgSet = reader.GetBoolean(18),
 							TableTypeID = reader.GetInt32(19)
 						};
-						return slice;
+
+                        CommunicationLogger.LogEvent("GetTimeSlice", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                        return slice;
 					}
 				}
 			}
 		}
 
 		public ScarResult UpdateTimeSliceIsSummary(int id, string TableType) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 
 IF EXISTS(SELECT TOP 1 DocumentTimeSliceID FROM DocumentTimeSliceTableTypeIsSummary WITH (NOLOCK) WHERE DocumentTimeSliceID = @id and TableType = @TableType)
@@ -3504,12 +3557,14 @@ END
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTimeSliceIsSummary", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTimeSlicePeriodNote(int id, string PeriodNoteId) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 
 IF @PeriodNoteId is null
@@ -3578,12 +3633,14 @@ END
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTimeSlicePeriodNote", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTimeSliceReportType(int id, string ReportType) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 declare @docid uniqueidentifier = (select documentid from dbo.DocumentTimeSlice WITH (NOLOCK) where id = @id)
 UPDATE dbo.DocumentTimeSlice SET ReportType = @ReportType where DocumentId = @docid;
@@ -3629,12 +3686,13 @@ SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE DocumentId = @docid;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTimeSliceReportType", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTimeSliceManualOrgSet(int id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE dbo.DocumentTimeSlice SET ManualOrgSet = @newValue where id = @id;
 
@@ -3679,12 +3737,14 @@ SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE id = @id;
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTimeSliceManualOrgSet", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult GetTableCell(string id) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 
@@ -3738,12 +3798,13 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("GetTableCell", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableCellMetaNumericValue(string id, string NumericValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE TableCell SET ValueNumeric = @NumericValue where ID = @id;
 
@@ -3800,11 +3861,13 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableCellMetaNumericValue", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableCellMetaScalingFactor(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE TableCell SET ScalingFactorID = @ScalingFactorID where ID = @id;
 
@@ -3861,11 +3924,12 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTableCellMetaScalingFactor", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableCellMetaPeriodDate(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE TableCell SET CellDate = @CellDate where ID = @id;
 UPDATE TableCell SET CellDay = DATEPART(day, @CellDate) where ID = @id;
@@ -3925,11 +3989,13 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableCellMetaPeriodDate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableCellMetaPeriodType(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE TableCell SET PeriodTypeID = @PeriodTypeID where ID = @id;
 UPDATE TableCell SET CellPeriodType = (select top 1 [Description] from [PeriodType] where ID = @PeriodTypeID) where ID = @id;
@@ -3988,11 +4054,13 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableCellMetaPeriodType", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableCellMetaPeriodLength(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE TableCell SET PeriodLength = @PeriodLength where ID = @id;
 
@@ -4049,11 +4117,12 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTableCellMetaPeriodLength", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableCellMetaCurrency(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE TableCell SET CurrencyCode = @CurrencyCode where ID = @id;
 UPDATE TableCell SET Currency = (select top 1 [Description] from [Currencies] where [Code] = @CurrencyCode) where ID = @id;
@@ -4111,12 +4180,13 @@ SELECT 'x', * FROM TableCell WITH (NOLOCK) WHERE ID = @id;
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTableCellMetaCurrency", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableRowMetaCusip(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 update tc
 set cusip = @cusip
@@ -4186,11 +4256,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableRowMetaCusip", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableRowMetaPit(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 update tc
 set PeriodTypeID = 'P', CellPeriodType = 'PIT', PeriodLength = 0
@@ -4259,11 +4331,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableRowMetaPit", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableRowMetaScalingFactor(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 update tc
 set ScalingFactorID = @ScalingFactorID
@@ -4333,12 +4407,14 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableRowMetaScalingFactor", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableColumnMetaPeriodDate(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 update tc
 set CellDate = @cellDate,  CellDay = DATEPART(day, @CellDate), CellMonth = DATEPART(month, @CellDate), CellYear = DATEPART(year, @CellDate)
 from [DimensionToCell] dtc 
@@ -4416,11 +4492,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaPeriodDate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 		public ScarResult UpdateTableColumnMetaColumnHeader(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 update td
 set label = @newLabel
 from [DimensionToCell] dtc 
@@ -4494,12 +4572,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaColumnHeader", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableColumnMetaPeriodType(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 update tc
 set PeriodTypeID = @newPeriodType
 from [DimensionToCell] dtc 
@@ -4574,12 +4653,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaPeriodType", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableColumnMetaPeriodLength(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 update tc
 set PeriodLength =  @newPeriodLength
 from [DimensionToCell] dtc 
@@ -4654,12 +4734,14 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaPeriodLength", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableColumnMetaCurrencyCode(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 update tc
 set CurrencyCode =  @newCurrencyCode
 from [DimensionToCell] dtc 
@@ -4734,12 +4816,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaCurrencyCode", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableColumnMetaInterimType(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE dbo.DocumentTimeSlice SET PeriodType = @newValue
 where id = @id
@@ -4770,13 +4853,16 @@ SELECT * from dbo.DocumentTimeSlice WITH (NOLOCK) where id = @id and PeriodType 
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaInterimType", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult UpdateTableColumnMetaInterimType(string id, string newValue, bool obselete) {
-			// TODO:
-			// need to handle "--" interim type
-			string query = @"
+            // TODO:
+            // need to handle "--" interim type
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 DECLARE @newDtsID int = 0;
 
@@ -4859,13 +4945,15 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTableColumnMetaInterimType", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 
 		public ScarResult UpdateDocumentTimeSliceTableCell(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 UPDATE DocumentTimeSliceTableCell 
 SET DocumentTimeSliceId = @newDtsID WHERE DocumentTimeSliceId = @oldDtsID
@@ -4895,12 +4983,13 @@ SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId
 					}
 				}
 			}
-			return response;
+            CommunicationLogger.LogEvent("UpdateDocumentTimeSliceTableCell", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult CopyDocumentTimeSliceTableCell(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 INSERT DocumentTimeSliceTableCell
 SELECT @newDtsID, TableCellId FROM  DocumentTimeSliceTableCell WITH (NOLOCK)
@@ -4931,12 +5020,14 @@ SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("CopyDocumentTimeSliceTableCell", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult DeleteDocumentTimeSliceTableCell(string id, string newValue) {
-
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 
 DELETE FROM  DocumentTimeSliceTableCell
  WHERE DocumentTimeSliceId = @oldDtsID
@@ -4965,7 +5056,9 @@ SELECT * from DocumentTimeSliceTableCell WITH (NOLOCK) WHERE DocumentTimeSliceId
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("DeleteDocumentTimeSliceTableCell", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 
@@ -5046,7 +5139,8 @@ OUTPUT $action, 'CompanyFinancialTerm', inserted.Id,0 INTO @ChangeResult;
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -5115,7 +5209,8 @@ elem["obj"]["EncoreTermFlag"].ToString(),
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+                CommunicationLogger.LogEvent("Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 		}
@@ -5189,7 +5284,8 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -5269,7 +5365,8 @@ OUTPUT $action, 'TableDimension', inserted.Id,0 INTO @ChangeResult;
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+                CommunicationLogger.LogEvent("JsonToSQLTableDimension.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 		}
@@ -5397,7 +5494,8 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -5534,13 +5632,16 @@ OUTPUT $action, 'TableCell', inserted.Id,0 INTO @ChangeResult;
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLTableCell.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 		}
 
 		public class JsonToSQLDimensionToCell : JsonToSQL {
-			string delete_sql = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string delete_sql = @"
 DECLARE @TempDTS TABLE(TableDimensionID int, TableCellID int)
 INSERT INTO @TempDTS (TableDimensionID, TableCellID)
 VALUES  {0}
@@ -5624,7 +5725,9 @@ OUTPUT $action, 'DimensionToCell', inserted.TableCellID,0 INTO @ChangeResult;
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLDimensionToCell.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 		}
@@ -5736,7 +5839,8 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -5856,11 +5960,14 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLDocumentTimeSlice.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 			public string TranslateInsert() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				bool is_merging = false;
 
@@ -5923,7 +6030,9 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLDocumentTimeSlice.TranslateInsert", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 		}
 
@@ -5978,7 +6087,8 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 				List<string> deleted_ids = new List<string>();
 				string tableTypeId = null;
@@ -6037,11 +6147,14 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				} else {
 					result = sb.ToString();
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLStaticHierarchy.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 			public string TranslateInsert() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
 				foreach (var elem in _jarray) {
@@ -6066,7 +6179,8 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 					}
 				}
 
-				return sb.ToString(); ;
+                CommunicationLogger.LogEvent("JsonToSQLStaticHierarchy.TranslateInsert", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return sb.ToString(); ;
 			}
 		}
 
@@ -6104,7 +6218,8 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId,0 INTO @Chang
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -6152,7 +6267,9 @@ OUTPUT $action, 'DocumentTimeSliceTableCell', inserted.TableCellId,0 INTO @Chang
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLDocumentTimeSliceTableCell.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 		}
@@ -6223,7 +6340,8 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				}
 			}
 			public override string Translate() {
-				if (_jarray == null) return "";
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                if (_jarray == null) return "";
 				System.Text.StringBuilder merging_ids = new System.Text.StringBuilder();
 				System.Text.StringBuilder deleting_ids = new System.Text.StringBuilder();
 				bool is_deleting = false;
@@ -6297,13 +6415,16 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				if (is_merging) {
 					result += string.Format(merge_sql, merging_ids.ToString());
 				}
-				return result;
+
+                CommunicationLogger.LogEvent("JsonToSQLDocumentTable.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return result;
 			}
 
 		}
 
 		public ScarResult UpdateTDPByDocumentTableID(string dtid, string updateInJson) {
-			updateInJson = updateInJson.Replace("\\", "\\\\").Replace("&quotx;", "\\\"");
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            updateInJson = updateInJson.Replace("\\", "\\\\").Replace("&quotx;", "\\\"");
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -6382,7 +6503,9 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				result.ReturnValue["DebugMessage"] += ex.Message;
 
 			}
-			return result;
+
+            CommunicationLogger.LogEvent("UpdateTDPByDocumentTableID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return result;
 		}
 
 		public ScarResult DeleteRowColumnTDPByDocumentTableID(string dtid, string updateInJson) {
@@ -6419,9 +6542,10 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				sb.AppendLine("END CATCH");
 				result.ReturnValue["DebugMessage"] += sb.ToString();
 
-				//				return result;
+                //				return result;
 
-				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
 						cmd.CommandTimeout = 0;
 						conn.Open();
@@ -6445,8 +6569,10 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
 						}
 					}
-				}
-			} catch (Exception ex) {
+                    CommunicationLogger.LogEvent("DeleteRowColumnTDPByDocumentTableID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                }
+            } catch (Exception ex) {
 				result.ReturnValue["DebugMessage"] += ex.Message;
 
 			}
@@ -6495,7 +6621,9 @@ BEGIN CATCH
 END CATCH
 ";
 			ScarResult result = new ScarResult();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(SQL_Delete, conn)) {
 					conn.Open();
@@ -6513,8 +6641,10 @@ END CATCH
 						}
 					}
 				}
-			}
-			return result;
+            }
+            CommunicationLogger.LogEvent("DeleteDocumentTableID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return result;
 		}
 		public ScarResult UpdateTDP(string id, string newValue, bool obselete) {
 			string SQL_MergeCft = @"
@@ -6557,7 +6687,8 @@ where dtc.TableCellID = @id
 			response.StaticHierarchies.Add(sh);
 			sh.Description = @"";
 			sh.Cells = new List<SCARAPITableCell>();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(sql_query, conn)) {
 					conn.Open();
@@ -6601,10 +6732,13 @@ where dtc.TableCellID = @id
 					}
 				}
 			}
-			return response;
+
+            CommunicationLogger.LogEvent("UpdateTDP", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
 		}
 
 		public ScarResult CreateTimeSlice(string updateInJson) {
+
 			ScarResult result = new ScarResult();
 			result.ReturnValue["DebugMessage"] = "";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -6634,7 +6768,9 @@ where dtc.TableCellID = @id
 				//				return result;
 				String cmd1 = sb.ToString();
 				Console.WriteLine(cmd1);
-				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn)) {
 						conn.Open();
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
@@ -6657,8 +6793,10 @@ where dtc.TableCellID = @id
 							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
 						}
 					}
-				}
-			} catch (Exception ex) {
+                    CommunicationLogger.LogEvent("CreateTimeSlice", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                }
+            } catch (Exception ex) {
 				result.ReturnValue["DebugMessage"] += ex.Message;
 
 			}
@@ -6779,7 +6917,8 @@ FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @newId or id = @dts or id = 
 ";
 
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				ScarResult response = new ScarResult();
 				response.TimeSlices = new List<TimeSlice>();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -6815,7 +6954,9 @@ FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @newId or id = @dts or id = 
 						}
 					}
 				}
-				return response;
+                CommunicationLogger.LogEvent("CloneUpdateTimeSlice", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                return response;
 			}
 		}
 
@@ -6845,7 +6986,9 @@ where companyid = @Iconum
 and tt.description = @TableType
 
 ";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				ScarResult response = new ScarResult();
 				response.TimeSlices = new List<TimeSlice>();
 
@@ -6884,7 +7027,9 @@ and tt.description = @TableType
 						}
 					}
 				}
-				return response;
+
+                CommunicationLogger.LogEvent("GetReviewTimeSlice", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return response;
 			}
 		}
 
@@ -6976,8 +7121,9 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID and n.TimeSlicePeriod
 select distinct ts.*
 from #tmptimeslices ts 
 ";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				StaticHierarchy sh;
 				ScarResult response = new ScarResult();
 				response.TimeSlices = new List<TimeSlice>();
@@ -7043,7 +7189,8 @@ from #tmptimeslices ts
 						}
 					}
 				}
-				return response;
+                CommunicationLogger.LogEvent("GetTimeSliceByTemplate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                return response;
 			}
 		}
 
@@ -7186,7 +7333,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					SQL_UpdateFlipIncomeFlag
 					+ SQL_ValidateCells
 					;
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(SQL_FlipSignCommand, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
@@ -7262,7 +7410,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					}
 				}
 			}
-			return result;
+            CommunicationLogger.LogEvent("FlipSign", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return result;
 		}
 
 		public ScarResult FlipChildren(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
@@ -7425,8 +7574,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
 			result.ChangedCells = new List<SCARAPITableCell>();
 
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
@@ -7502,7 +7651,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					}
 				}
 			}
-			return result;
+            CommunicationLogger.LogEvent("FlipChildren", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return result;
 		}
 
 		public ScarResult FlipHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
@@ -7651,8 +7802,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
 			result.ChangedCells = new List<SCARAPITableCell>();
 
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
@@ -7728,7 +7879,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					}
 				}
 			}
-			return result;
+            CommunicationLogger.LogEvent("FlipHistorical", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return result;
 		}
 
 		public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
@@ -7884,8 +8037,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
 			result.ChangedCells = new List<SCARAPITableCell>();
 
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
@@ -7961,7 +8114,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					}
 				}
 			}
-			return result;
+            CommunicationLogger.LogEvent("FlipChildrenHistorical", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return result;
 		}
 
 		public ScarResult SwapValue(string firstCellId, string secondCellId) {
@@ -8005,8 +8160,9 @@ END CATCH
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
 			result.ChangedCells = new List<SCARAPITableCell>();
 
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@firstCellId ", firstCellId);
@@ -8025,7 +8181,8 @@ END CATCH
 
 				}
 			}
-			return result;
+            CommunicationLogger.LogEvent("SwapValue", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return result;
 		}
 
 		public StitchResult StitchStaticHierarchies(int TargetStaticHierarchyID, Guid DocumentID, List<int> StitchingStaticHierarchyIDs, int iconum) {
@@ -8043,8 +8200,8 @@ END CATCH
 				StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
 				DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
 			};
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					cmd.CommandType = System.Data.CommandType.StoredProcedure;
@@ -8155,8 +8312,9 @@ END CATCH
 
 							res.CellToDTS.Add(cell, sdr.GetInt32(29));
 						}
-					}
-				}
+                    CommunicationLogger.LogEvent("StitchStaticHierarchies", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                    }
+                }
 			}
 
 			foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells) {
@@ -8212,7 +8370,7 @@ END CATCH
         StaticHierarchyAdjustedOrders = new List<StaticHierarchyAdjustedOrder>(),
         DTSToMTMWComponent = new Dictionary<int, List<CellMTMWComponent>>()
       };
-
+        string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
       using (SqlConnection conn = new SqlConnection(_sfConnectionString))
       {
         conn.Open();
@@ -8334,9 +8492,11 @@ END CATCH
             }
           }
         }
-      }
+        CommunicationLogger.LogEvent("StitchStaticHierarchiesNoCheck", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-      foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells)
+            }
+
+            foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells)
       {
         decimal value = (cell.ValueNumeric.HasValue ? cell.ValueNumeric.Value : 0) * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
         decimal sum = 0;
@@ -8396,7 +8556,7 @@ END CATCH
 			Dictionary<Tuple<int, int>, SCARAPITableCell> CellMap = new Dictionary<Tuple<int, int>, SCARAPITableCell>();
 			List<CellMTMWComponent> CellChangeComponents;
 			Dictionary<int, int> SHLevels;
-
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
@@ -8516,8 +8676,9 @@ END CATCH
 			}
 
 
+            CommunicationLogger.LogEvent("UnstitchStaticHierarchy", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
+            Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
 
 			foreach (CellMTMWComponent comp in CellChangeComponents) {
 				Tuple<int, int> tup = new Tuple<int, int>(comp.RootStaticHierarchyID, comp.RootDocumentTimeSliceID);
@@ -8561,7 +8722,7 @@ END CATCH
       List<CellMTMWComponent> CellChangeComponents;
       Dictionary<int, int> SHLevels;
 
-
+      string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
       using (SqlConnection conn = new SqlConnection(_sfConnectionString))
       {
         conn.Open();
@@ -8689,11 +8850,13 @@ END CATCH
             ).ToList();
           }
         }
-      }
+        CommunicationLogger.LogEvent("UnstitchStaticHierarchyNoCheck", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+        }
 
 
 
-      Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
+            Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
 
       foreach (CellMTMWComponent comp in CellChangeComponents)
       {
@@ -8722,7 +8885,8 @@ END CATCH
 
     #region Deprecated Methods
     public SCARAPITableCell GetCell(string CellId) {
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@cellId", CellId);
@@ -8777,7 +8941,9 @@ END CATCH
 					}
 				}
 			}
-			return new SCARAPITableCell();
+            CommunicationLogger.LogEvent("GetCell", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return new SCARAPITableCell();
 		}
 
 		public TableCellResult AddMakeTheMathWorkNote(string CellId, Guid DocumentId) {
@@ -8814,8 +8980,9 @@ END
 
 
 
-";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+"; string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -8832,7 +8999,9 @@ END
 					cmd.ExecuteNonQuery();
 				}
 			}
-			return AddMakeTheMathWorkNote(CellId, DocumentId);
+            CommunicationLogger.LogEvent("AddMakeTheMathWorkNote", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return AddMakeTheMathWorkNote(CellId, DocumentId);
 		}
 
 		public List<int> GetSibilingTableCells(int Shid, List<int> dtsids) {
@@ -8861,8 +9030,9 @@ and tc.CompanyFinancialTermID in
 (select CompanyFinancialTermID from StaticHierarchy where id = {1})
 
 ";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-			String sql = string.Format(SQL, String.Join(",", dtsids), Shid);
+            String sql = string.Format(SQL, String.Join(",", dtsids), Shid);
 				List<int> ret = new List<int>();
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(sql, conn)) {
@@ -8875,7 +9045,9 @@ and tc.CompanyFinancialTermID in
 						}
 					}
 				}
-				return ret;
+            CommunicationLogger.LogEvent("GetSibilingTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return ret;
 		}
 
 		public List<SCARAPITableCell> GetLPVChangeCells(string CellId, Guid DocumentId) {
@@ -9006,7 +9178,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 ";
 			//List<int> IDs = new List<int>();
 			int cftid = 0;
-			List<SCARAPITableCell> ret = new List<SCARAPITableCell>();
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            List<SCARAPITableCell> ret = new List<SCARAPITableCell>();
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(SQL_CellCFTID, conn)) {
 					conn.Open();
@@ -9019,8 +9193,11 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
+                CommunicationLogger.LogEvent("GetLPVChangeCells_CellCFTID", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                  starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-				using (SqlCommand cmd = new SqlCommand(SQL_ValidateCells, conn)) {
+
+                using (SqlCommand cmd = new SqlCommand(SQL_ValidateCells, conn)) {
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@CFTID", cftid);
@@ -9085,8 +9262,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						}
 					}
 				}
-			}
-			return ret;
+                CommunicationLogger.LogEvent("GetLPVChangeCells_SQL_ValidateCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            }
+            return ret;
 		}
 
 		public TableCellResult AddLikePeriodValidationNote(string CellId, Guid DocumentId) {
@@ -9124,8 +9302,8 @@ END
 
 
 
-";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+"; string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
@@ -9142,8 +9320,9 @@ END
 					cmd.ExecuteNonQuery();
 				}
 			}
+            CommunicationLogger.LogEvent("AddLikePeriodValidationNote", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-			ScarResult result = new ScarResult();
+            ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
 			result.ChangedCells = new List<SCARAPITableCell>();
 			result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
@@ -9174,7 +9353,8 @@ END
 
 
 ";
-      using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
       {
 
         using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -9194,8 +9374,9 @@ END
           cmd.ExecuteNonQuery();
         }
       }
+            CommunicationLogger.LogEvent("AddLikePeriodValidationNoteNoCheck", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-      ScarResult result = new ScarResult();
+            ScarResult result = new ScarResult();
       result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
       result.ChangedCells = new List<SCARAPITableCell>();
       //result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
@@ -9222,7 +9403,8 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 			var sb = new System.Text.StringBuilder();
 			string returnMessage = "";
 			try {
-				using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
+                string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                using (SqlConnection sqlConn = new SqlConnection(_sfConnectionString)) {
 					sqlConn.Open();
 					bool isComma = false;
 
@@ -9249,7 +9431,9 @@ where sh.id in ({0}) and (lower(sh.Description) like '%\[per share\]%'  escape '
 						}
 						isSuccess = true;
 					}
-					if (isComma) { // at least one ID
+                    CommunicationLogger.LogEvent("UpdateRedStarSlotting", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                    if (isComma) { // at least one ID
 						using (SqlCommand cmd = new SqlCommand(string.Format(query, sb.ToString()), sqlConn)) {
 							//cmd.Parameters.AddWithValue("@SHIds", sb.ToString());
 							using (SqlDataReader sdr = cmd.ExecuteReader()) {
@@ -9278,7 +9462,8 @@ from Document d WITH (NOLOCK)
 join PPIIconumMap pim WITH (NOLOCK) on d.PPI = pim.PPI
 WHERE d.ID = @SFDocumentID 
 ";
-			string isoCountry = "";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string isoCountry = "";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
@@ -9290,7 +9475,8 @@ WHERE d.ID = @SFDocumentID
 					}
 				}
 			}
-			return isoCountry;
+            CommunicationLogger.LogEvent("GetDocumentIsoCountry", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return isoCountry;
 		}
 
 		public string CheckParsedTableInterimTypeAndCurrency(Guid SFDocumentId, int Iconum, string ContentType = "Full") {
@@ -9340,7 +9526,9 @@ WHERE d.ID = @SFDocumentID
  where  tc.currencycode is null
 ";
 			string errorMessage = "";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 
 				using (SqlCommand cmd = new SqlCommand("prcInsert_CreateDocumentTimeSlices", conn)) {
@@ -9349,15 +9537,18 @@ WHERE d.ID = @SFDocumentID
 					cmd.Parameters.AddWithValue("@ContentType", ContentType);
 					cmd.ExecuteNonQuery();
 				}
+                CommunicationLogger.LogEvent("CheckParsedTableInterimTypeAndCurrency_prcInsert_CreateDocumentTimeSlices", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                  starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-				using (SqlCommand cmd = new SqlCommand("SCARSetParentIDs", conn)) {
+                using (SqlCommand cmd = new SqlCommand("SCARSetParentIDs", conn)) {
 					cmd.CommandType = CommandType.StoredProcedure;
 					cmd.Parameters.AddWithValue("@Iconum", Iconum);
 					cmd.ExecuteNonQuery();
 				}
+                CommunicationLogger.LogEvent("CheckParsedTableInterimTypeAndCurrency_SCARSetParentIDs", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                  starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+                using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					cmd.Parameters.AddWithValue("@DocumentID", SFDocumentId);
 
 
@@ -9379,8 +9570,10 @@ WHERE d.ID = @SFDocumentID
 						}
 					}
 				}
-			}
-			return errorMessage;
+                CommunicationLogger.LogEvent("CheckParsedTableInterimTypeAndCurrency_CheckBigThree", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            }
+            return errorMessage;
 		}
 
 		public bool GetMtmwTableCells(int iconum, Guid DocumentId) {
@@ -9436,18 +9629,20 @@ AND ChildrenSum <> CellValue
 			ScarResult result = new ScarResult();
 
 			result.ChangedCells = new List<SCARAPITableCell>();
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						return !reader.HasRows;
+                        CommunicationLogger.LogEvent("GetMtmwTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                        return !reader.HasRows;
 					}
 				}
 			}
+
 			return false;
 		}
 
@@ -9526,8 +9721,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			ScarResult result = new ScarResult();
 
 			result.ChangedCells = new List<SCARAPITableCell>();
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
@@ -9583,29 +9778,34 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 				}
 
 			}
-			return result;
+            CommunicationLogger.LogEvent("GetLpvTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return result;
 		}
 		#endregion
 
 		internal IEnumerable<string> GetAllTemplates(string ConnectionString, int Iconum) {
-
-			using (SqlConnection conn = new SqlConnection(ConnectionString)) {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(ConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(@"SELECT tt.Description FROM DocumentSeries ds WITH (NOLOCK) JOIN TableType tt WITH (NOLOCK) ON tt.DocumentSeriesID = ds.ID WHERE ds.CompanyID = @Iconum", conn)) {
 					cmd.Parameters.AddWithValue(@"@Iconum", Iconum);
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						return sdr.Cast<IDataRecord>().Select(r => r.GetStringSafe(0)).ToList();
+                        CommunicationLogger.LogEvent("GetAllTemplates", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                        return sdr.Cast<IDataRecord>().Select(r => r.GetStringSafe(0)).ToList();
 					}
 				}
 			}
-		}
 
-		public void SetIncomeOrientation(Guid DocumentID) {
+        }
+
+        public void SetIncomeOrientation(Guid DocumentID) {
 			var url = ConfigurationManager.AppSettings["SetIncomeOrientationURL"];
 
 			List<Tuple<int, int>> Tables;
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand("select ID, TableTypeID from [dbo].[vw_SCARDocumentTimeSlices] WITH (NOLOCK) WHERE DocumentID = @DocumentID", conn)) {
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentID);
@@ -9614,12 +9814,16 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 					}
 				}
 			}
+            CommunicationLogger.LogEvent("SetIncomeOrientation", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
 
 			foreach (Tuple<int, int> table in Tables) {
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url + table.Item1 + "/" + table.Item2);
 				request.ContentType = "application/json";
 				request.Method = "GET";
-				var response = (HttpWebResponse)request.GetResponse();
+                CommunicationLogger.LogEvent("SetIncomeOrientation_getwebrequest", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+                var response = (HttpWebResponse)request.GetResponse();
 				//We can get the response if we care but for now we can just let it run
 				//if (response.StatusCode == HttpStatusCode.OK) {
 				//	using (var streamReader = new StreamReader(response.GetResponseStream())) {
@@ -9670,7 +9874,9 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 	  , @Message)
  set @log_id = scope_identity();
 ";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					cmd.Parameters.AddWithValue("@DocumentID", damDocumentId);
@@ -9685,9 +9891,10 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 					}
 				}
 			}
-		}
+            CommunicationLogger.LogEvent("LogError", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+        }
 
-		public class CompleteTestResult {
+        public class CompleteTestResult {
 			public IndividualTestResult[] Results { get; set; }
 		}
 		public class IndividualTestResult {
@@ -9710,7 +9917,8 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 
 		public Dictionary<string, string> ARDValidation(Guid DocumentID) {
 
-			string url = ConfigurationManager.AppSettings["ARDValidationURL"];
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string url = ConfigurationManager.AppSettings["ARDValidationURL"];
 			//string url =  @"https://data-wellness-orchestrator-staging.factset.io/Check/Full/92C6C824-0F9A-4A5C-BC62-000095729E1B";
 			url = url + DocumentID.ToString(); ;
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
@@ -9753,7 +9961,9 @@ INSERT [dbo].[LogAutoStitchingAgent] (
 			}
 			returnValue["Success"] = hasNoError ? "T" : "F";
 			returnValue["Message"] = errorBuilder.ToString();
-			return returnValue;
+            CommunicationLogger.LogEvent("ARDValidation", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            return returnValue;
 		}
 
 	}
