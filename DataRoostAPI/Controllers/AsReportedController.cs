@@ -12,9 +12,12 @@ using System.Diagnostics;
 using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using LogPerformance;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
 	public class AsReportedController : ApiController {
 		public static void SendEmail(string subject, string emailBody) {
 			try {
@@ -22,13 +25,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
 				MailMessage message = new MailMessage();
 				message.From = mailFrom;
-				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
-				var leo = new MailAddress("lchang@factset.com", "Lun Jiang");
-				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
-				message.To.Add(ljiang);
-				message.To.Add(adam);
-				//message.To.Add(leo);
-				message.Subject = subject + " from " + Environment.MachineName;
+                var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
+                var leo = new MailAddress("lchang@factset.com", "Leo");
+                var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
+                var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
+                var rohan = new MailAddress("rthankachan@factset.com", "Rohan Jacob");
+                message.To.Add(ljiang);
+                message.To.Add(vsaxena);
+                message.To.Add(adam);
+                message.To.Add(leo);
+                message.To.Add(rohan);
+                message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
 				message.Body = emailBody;
 				message.IsBodyHtml = true;
@@ -1325,8 +1332,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						result = helper.UpdateTDPByDocumentTableID(id, newValue);
 					} catch (Exception ex) {
 						result.Message += ex.Message;
-					}
-				}
+                        LogError(ex);
+
+                    }
+                }
 				return result;
 			} catch (Exception ex) {
 				LogError(ex);

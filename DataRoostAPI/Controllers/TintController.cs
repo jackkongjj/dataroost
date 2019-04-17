@@ -7,9 +7,11 @@ using System.Net.Http;
 using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access.TINT;
 using DataRoostAPI.Common.Models.TINT;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/tint")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/tint")]
 	public class TintController : ApiController {
 
 		[Route("documents/{documentId}")]

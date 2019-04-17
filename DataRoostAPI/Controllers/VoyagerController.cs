@@ -7,13 +7,13 @@ using System.Net.Http;
 using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.Voyager;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/voyager")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/voyager")]
 	public class VoyagerController : ApiController {
 
 		[Route("datatypes/")]
