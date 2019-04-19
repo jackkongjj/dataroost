@@ -43,12 +43,10 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                     DateTime StartDateStamp = Convert.ToDateTime(eventStartTimeStamp);
                     DateTime EndDateStamp = Convert.ToDateTime(eventEndTimeStamp);
 
-                    JObject logMsg = new JObject
-                    {
-                        ["ScarFunctionality"] = functionalityInvoked,
-                        ["StartDateStamp"] = StartDateStamp,
-                        ["EndDateStamp"] = EndDateStamp
-                    };
+                    JObject logMsg = new JObject();
+                    jsonObject["ScarFunctionality"] = functionalityInvoked;
+                    jsonObject["StartDateStamp"] = StartDateStamp;
+                    jsonObject["EndDateStamp"] = EndDateStamp;
 
                     string loggedMsg = JsonConvert.SerializeObject(logMsg, Formatting.Indented);
 
@@ -90,12 +88,10 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                 string sessionID = jsonObject.GetValue("sessionID").ToString();
                 string documentid = jsonObject.GetValue("documentID").ToString();
                 string workqueueid = jsonObject.GetValue("workqueueID").ToString();
-                JObject logMsg = new JObject
-                {
-                    ["Route"] = filePath,
-                    ["StartDateStamp"] = StartTimeUtc,
-                    ["EndDateStamp"] = EndTimeUtc
-                };
+                JObject logMsg = new JObject();
+                jsonObject["Route"] = filePath;
+                jsonObject["StartDateStamp"] = StartTimeUtc;
+                jsonObject["EndDateStamp"] = EndTimeUtc;
                 string loggedMsg = JsonConvert.SerializeObject(logMsg, Formatting.Indented);
                 addLoggingTiming(functionalityInvoked, "DataRoost_API", StartTimeUtc, EndTimeUtc, sessionID, documentid, workqueueid, loggedMsg, userName);
             }
@@ -106,7 +102,7 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
             await base.OnActionExecutingAsync(actionContext, cancellationToken);
             actionContext.Request.Properties[actionContext.ActionDescriptor.ActionName] = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
         }
-        public override bool AllowMultiple => true;
+        //public override bool AllowMultiple => true;
         private void addLoggingTiming(string eventName, string regionName, string eventStartTimeStamp, string eventEndTimeStamp, string sessionID, string documentid, string workqueueid, string msg, string userid)
         {
             PerformanceLogger.LogEvent(eventName, regionName, eventStartTimeStamp, eventEndTimeStamp, sessionID, documentid, workqueueid, userid, msg, true);

@@ -133,10 +133,6 @@
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="LogPerformance, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LogPerformance\bin\Debug\LogPerformance.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Data.Edm, Version=5.8.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Data.Edm.5.8.1\lib\net40\Microsoft.Data.Edm.dll</HintPath>
@@ -521,6 +517,10 @@
     <ProjectReference Include="..\DataRoostAPI.Common\DataRoostAPI.Common.csproj">
       <Project>{252b98af-b404-46ac-8e5f-523322166d1b}</Project>
       <Name>DataRoostAPI.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LogPerformance\LogPerformance.csproj">
+      <Project>{73db560b-1982-47e9-a5d5-9256564fe8fd}</Project>
+      <Name>LogPerformance</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
