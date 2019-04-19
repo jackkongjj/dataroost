@@ -27,6 +27,8 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                 if (HttpContext.Current != null && HttpContext.Current.User.Identity.IsAuthenticated)
                 {
                     userName = HttpContext.Current.User.Identity.Name;
+                    Logger.Info("userName " + userName);
+
                 }
                 else
                 {
@@ -34,6 +36,7 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                 }
                 if (HttpContext.Current != null && HttpContext.Current.Request.Headers["LoggingSessionDetails"] != null)
                 {
+                    Logger.Info("HttpContext.Current Not Null " + HttpContext.Current.Request.Headers["LoggingSessionDetails"]);
                     string sessionDetails = HttpContext.Current.Request.Headers["LoggingSessionDetails"];
                     JObject jsonObject = JObject.Parse(sessionDetails);
                     sessionID = jsonObject.GetValue("sessionID").ToString();
@@ -56,10 +59,14 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                     }
 
                     PerformanceLogger.LogEvent(eventName, regionName, StartDateStamp.ToString("yyyy-MM-dd HH:mm:ss"), EndDateStamp.ToString("yyyy-MM-dd HH:mm:ss"), sessionID, documentid, workqueueid, userName, loggedMsg);
+                } else
+                {
+                     
+                    Logger.Error("HttpContext.Current is null" + userName);
                 }
             }catch(Exception e)
             {
-                Console.WriteLine(e.StackTrace);
+                Logger.Error("Unable to log " + e.StackTrace);
             }
             //});
         }
