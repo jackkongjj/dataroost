@@ -1,32 +1,23 @@
 ﻿using Nest;
+using NLog;
 using System;
 using System.Configuration;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
 namespace LogPerformance
 {
     public class PerformanceLogger
     {
-        private static Boolean DisableLogging = true;
-
-        //public static void LogEvent(string _eventName, string _regionName, EventAction ev, string _message, string _eventStartTimeStamp, string ShortcutKey, string _eventEndTimeStamp)
-
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         public static void LogEvent(string _eventName, string _regionName, string _eventStartTimeStamp, string _eventEndTimeStamp, string sessionID, string documentid, string workqueueid, string userid, string msg, bool enableLogging = false)
         {
-
-
-            //await Task.Run(() =>
-            //{
-                //if (DisableLogging)
-                //    return;
-                //string functionalityInvoked = System.Web.HttpContext.Current.Request.Headers["LoggingKey"];
-                //string sessionDetails = System.Web.HttpContext.Current.Request.Headers["LoggingSessionDetails"];
+            try
+            {
                 var server = new Uri(ConfigurationManager.AppSettings["LoggingStore"]);
                 var settings = new ConnectionSettings(server);
                 var settingAuthentication = settings.BasicAuthentication(ConfigurationManager.AppSettings["LoggingStoreId"], ConfigurationManager.AppSettings["LoggingStorePassword"]);
                 var elastic = new ElasticClient(settings);
-                //_regionName = "DataRoost_Performance";
                 _eventName = _eventName + "_Timing";
                 string dfsPath = String.Empty;
                 string fileName = String.Empty;
@@ -52,7 +43,7 @@ namespace LogPerformance
                     ManagerName = null,
                     Market = null,
                     jobType = null,
-                    EnvironmentName = ConfigurationManager.AppSettings["FactSet.Fundamentals.InteractiveMultiAgent.Settings.EnvironmentName"],
+                    EnvironmentName = ConfigurationManager.AppSettings["FactSet.Fundamentals.Settings.EnvironmentName"],
                     Application = null,
                     WqType = null,
                     eventName = _eventName,
@@ -74,27 +65,32 @@ namespace LogPerformance
                                         );
                         if (result.IsValid)
                         {
-                            Console.WriteLine("document inserted");
+                            Logger.Error("document inserted");
                             return;
                         }
                         else
                         {
-
-                            Console.WriteLine("document Failed insertion");
+                            String errorneousObject = Newtonsoft.Json.JsonConvert.SerializeObject(userEventDocument);
+                            Logger.Error("document Failed insertion " + ConfigurationManager.AppSettings["LoggingStore"] +
+                                ConfigurationManager.AppSettings["LoggingStoreId"] + errorneousObject);
                             return;
                         }
                         Thread.Sleep((Int32)Math.Pow(2, i) * 100);
                     }
-                    #region WritetoFileSystemifWritetoDatabaseFails
 
-                    #endregion
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Console.WriteLine("Unable to Write Log file to Log System.");
+
+                    Logger.Error("Unable to Write Log file to Log System." + e.StackTrace);
 
                 }
-            //});
+            }
+            catch (Exception e)
+            {
+
+                Logger.Error("Unable to Write Log file" + e.StackTrace);
+            }
         }
     }
     public class SessionUserEventMirror
