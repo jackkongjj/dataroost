@@ -47,9 +47,9 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                     DateTime EndDateStamp = Convert.ToDateTime(eventEndTimeStamp);
 
                     JObject logMsg = new JObject();
-                    jsonObject["ScarFunctionality"] = functionalityInvoked;
-                    jsonObject["StartDateStamp"] = StartDateStamp;
-                    jsonObject["EndDateStamp"] = EndDateStamp;
+                    logMsg["ScarFunctionality"] = functionalityInvoked;
+                    logMsg["StartDateStamp"] = StartDateStamp;
+                    logMsg["EndDateStamp"] = EndDateStamp;
 
                     string loggedMsg = JsonConvert.SerializeObject(logMsg, Formatting.Indented);
 
@@ -96,9 +96,9 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
                 string documentid = jsonObject.GetValue("documentID").ToString();
                 string workqueueid = jsonObject.GetValue("workqueueID").ToString();
                 JObject logMsg = new JObject();
-                jsonObject["Route"] = filePath;
-                jsonObject["StartDateStamp"] = StartTimeUtc;
-                jsonObject["EndDateStamp"] = EndTimeUtc;
+                logMsg["Route"] = filePath;
+                logMsg["StartDateStamp"] = StartTimeUtc;
+                logMsg["EndDateStamp"] = EndTimeUtc;
                 string loggedMsg = JsonConvert.SerializeObject(logMsg, Formatting.Indented);
                 addLoggingTiming(functionalityInvoked, "DataRoost_API", StartTimeUtc, EndTimeUtc, sessionID, documentid, workqueueid, loggedMsg, userName);
             }
