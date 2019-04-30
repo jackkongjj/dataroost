@@ -65,13 +65,18 @@ namespace LogPerformance
                                         );
                         if (result.IsValid)
                         {
-                            Logger.Error("document inserted");
+                            String errorneousObject = Newtonsoft.Json.JsonConvert.SerializeObject(userEventDocument);
+                            Logger.Error("document inserted " + ConfigurationManager.AppSettings["LoggingStore"] +
+                                ConfigurationManager.AppSettings["LoggingStoreId"] + errorneousObject);
+                           
                             return;
                         }
                         else
                         {
-                            String errorneousObject = Newtonsoft.Json.JsonConvert.SerializeObject(userEventDocument);
-                            Logger.Error("document Failed insertion " + ConfigurationManager.AppSettings["LoggingStore"] +
+                            
+                               String errorneousObject = Newtonsoft.Json.JsonConvert.SerializeObject(userEventDocument);
+                            Logger.Error("document Failed insertion " + result.DebugInformation.ToString() +
+                                ConfigurationManager.AppSettings["LoggingStore"] +
                                 ConfigurationManager.AppSettings["LoggingStoreId"] + errorneousObject);
                             return;
                         }
