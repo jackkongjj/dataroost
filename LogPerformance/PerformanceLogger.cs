@@ -71,8 +71,9 @@ namespace LogPerformance
                         else
                         {
                             String errorneousObject = Newtonsoft.Json.JsonConvert.SerializeObject(userEventDocument);
-                            Logger.Error("document Failed insertion " + ConfigurationManager.AppSettings["LoggingStore"] +
-                                ConfigurationManager.AppSettings["LoggingStoreId"] + errorneousObject);
+                            Logger.Error("document Failed insertion " + result.DebugInformation.ToString()+
+                                ConfigurationManager.AppSettings["LoggingStore"] +":"+
+                                ConfigurationManager.AppSettings["LoggingStoreId"] +" "+ errorneousObject);
                             return;
                         }
                         Thread.Sleep((Int32)Math.Pow(2, i) * 100);
