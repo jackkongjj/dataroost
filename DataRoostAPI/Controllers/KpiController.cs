@@ -12,10 +12,11 @@ using CCS.Fundamentals.DataRoostAPI.Access.Kpi;
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.KPI;
 using DataRoostAPI.Common.Models.TimeseriesValues;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/kpi")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/kpi")]
 	public class KpiController : ApiController {
 		[Route("datatypes/")]
 		[HttpGet]

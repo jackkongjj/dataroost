@@ -11,9 +11,11 @@ using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 using sfVoy = CCS.Fundamentals.DataRoostAPI.Access.SfVoy;
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.SfVoy;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/sfvoy_join/statementType/{statementType}")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/sfvoy_join/statementType/{statementType}")]
 	public class SfVoyController : ApiController {
 		[Route("datatypes/")]
 		[HttpGet]

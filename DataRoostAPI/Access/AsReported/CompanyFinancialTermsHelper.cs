@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
-
 using DataRoostAPI.Common.Models.AsReported;
-
 using FactSet.Data.SqlClient;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class CompanyFinancialTermsHelper {
@@ -19,7 +18,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 
 		public CompanyFinancialTerm[] GetCompanyFinancialTerms(int iconum) {
 
-			string query =
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query =
 				@"SELECT DISTINCT cft.ID, cft.Description
 																			FROM DocumentSeries ds
 																					JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
@@ -42,7 +42,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 					}
 				}
 			}
-			return companyFinancialTerms.ToArray();
+            CommunicationLogger.LogEvent("GetCompanyFinancialTerms", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return companyFinancialTerms.ToArray();
 		}
 	}
 }

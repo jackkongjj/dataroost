@@ -6,16 +6,15 @@ using System.Net.Http;
 using System.Web.Http;
 using System.Configuration;
 using System.Web.Http.Cors;
-
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 using DataRoostAPI.Common.Exceptions;
 using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies")]
 	public class SharesController : ApiController {
 
 		[Route("{CompanyId}/shares/latestFiscalPeriodEnd/")]
