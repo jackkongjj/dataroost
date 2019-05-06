@@ -8,9 +8,11 @@ using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Timeslice;
 using DataRoostAPI.Common.Models;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	[RoutePrefix("api/v1/companies/{CompanyId}/TimeSlice")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/TimeSlice")]
 	public class TimeSliceController : ApiController {
 
 

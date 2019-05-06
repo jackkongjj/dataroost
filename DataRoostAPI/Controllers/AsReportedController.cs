@@ -12,8 +12,11 @@ using System.Diagnostics;
 using DataRoostAPI.Common.Models.AsReported;
 using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
+using LogPerformance;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
+	[CommunicationLogger]
 	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/asreported")]
 	public class AsReportedController : ApiController {
 		public static void SendEmail(string subject, string emailBody) {
@@ -22,12 +25,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
 				MailMessage message = new MailMessage();
 				message.From = mailFrom;
-				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
-				var leo = new MailAddress("lchang@factset.com", "Lun Jiang");
+				var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
+				var leo = new MailAddress("lchang@factset.com", "Leo");
 				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
+				var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
+				var rohan = new MailAddress("rthankachan@factset.com", "Rohan Jacob");
 				message.To.Add(ljiang);
+				message.To.Add(vsaxena);
 				message.To.Add(adam);
-				//message.To.Add(leo);
+				message.To.Add(leo);
+				message.To.Add(rohan);
 				message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
 				message.Body = emailBody;
@@ -626,6 +633,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyHeaderLabel(id, input.StringData);
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
+		[Route("staticHierarchy/{id}/header/{uppercount}")]
+		[HttpPut]
+		public ScarResult EditHierarchyHeaderLabel(string CompanyId, int id, int uppercount, StringInput input) {
+			try {
+				if (input == null || string.IsNullOrEmpty(input.StringData))
+					return null;
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.UpdateStaticHierarchyHeaderLabelWithUpperCount(uppercount, id, input.StringData);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;
@@ -1325,6 +1347,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						result = helper.UpdateTDPByDocumentTableID(id, newValue);
 					} catch (Exception ex) {
 						result.Message += ex.Message;
+						LogError(ex);
+
 					}
 				}
 				return result;

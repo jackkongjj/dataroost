@@ -7,12 +7,12 @@ using System.Web.Http;
 using System.Configuration;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
-
+using LogPerformance;
 using DataRoostAPI.Common.Models;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1")]
 	public class CompanyController : ApiController {
 
 		[Route("companies/")]
