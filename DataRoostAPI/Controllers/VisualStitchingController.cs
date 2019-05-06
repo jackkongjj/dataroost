@@ -58,7 +58,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				return vsHelper.GetJson();
+				return vsHelper.GetJson(id);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;

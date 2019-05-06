@@ -25,19 +25,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 
         private string connString = "Host=ip-172-31-81-210.manager.factset.io;Port=32791;Username=uyQKYrcTSrnnqB;Password=NoCLf_xBeXiB0UXZjhZUNg7Zx8;Database=di8UFb70sJdA5e;sslmode=Require;Trust Server Certificate=true;";
 
-        public string GetJson()
+        public string GetJson(int id)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             using (
                 var conn = new NpgsqlConnection(connString))
             {
                 conn.Open();
-
                 // Retrieve all rows
-                using (var cmd = new NpgsqlCommand("SELECT value FROM json LIMIT 1", conn))
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                        sb.Append(reader.GetString(0));
+                using (var cmd = new NpgsqlCommand("SELECT value FROM json where id = @id LIMIT 1", conn))
+                {
+                    cmd.Parameters.AddWithValue("id", id);
+                    using (var reader = cmd.ExecuteReader())
+                    { 
+                        while (reader.Read())
+                            sb.Append(reader.GetString(0));
+                    }
+                }
             }
             return sb.ToString();
         }
