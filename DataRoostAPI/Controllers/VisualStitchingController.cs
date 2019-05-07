@@ -52,14 +52,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("json/{id}")]
 		[HttpGet]
-		public string GetDocument(int id) {
+		public HttpResponseMessage GetDocument(int id) {
 			try {
 
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				return vsHelper.GetJson(id);
-			} catch (Exception ex) {
+				var json = vsHelper.GetJson(id);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            } catch (Exception ex) {
 				LogError(ex);
 				return null;
 			}
