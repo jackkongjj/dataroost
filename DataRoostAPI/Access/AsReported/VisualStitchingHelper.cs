@@ -46,5 +46,62 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
             }
             return sb.ToString();
         }
+        public string GetJsonByHash(string hashkey)
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            using (
+                var conn = new NpgsqlConnection(connString))
+            {
+                conn.Open();
+                // Retrieve all rows
+                using (var cmd = new NpgsqlCommand("SELECT value FROM json where hashkey = @hashkey LIMIT 1", conn))
+                {
+                    cmd.Parameters.AddWithValue("@hashkey", hashkey);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                            sb.Append(reader.GetString(0));
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+        public int SetJsonByHash(string hashkey, string value)
+        {
+            string query = @"
+UPDATE json SET value=@value WHERE hashkey=@hashkey;
+INSERT INTO json (value, hashkey)
+       SELECT @value, @hashkey
+       WHERE NOT EXISTS (SELECT 1 FROM json WHERE  hashkey=@hashkey);
+
+SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
+
+";
+            int result = 0;
+            try
+            {
+                using (
+                    var conn = new NpgsqlConnection(connString))
+                {
+                    conn.Open();
+                    // Retrieve all rows
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@hashkey", hashkey);
+                        cmd.Parameters.AddWithValue("@value", value);
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                                result = reader.GetInt32(0);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result = -1;
+            }
+            return result;
+        }
     }
 }
