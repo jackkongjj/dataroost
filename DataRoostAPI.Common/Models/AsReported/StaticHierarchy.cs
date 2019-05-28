@@ -46,10 +46,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("isIncomePositive")]
 		public bool IsIncomePositive { get; set; }
 
-        [JsonProperty("isDanglingHeader")]
-        public bool IsDanglingHeader { get; set; }
-
-        [JsonProperty("childrenExpandDown")]
+		[JsonProperty("childrenExpandDown")]
 		public bool ChildrenExpandDown { get; set; }
 
 		[JsonProperty("cells")]
