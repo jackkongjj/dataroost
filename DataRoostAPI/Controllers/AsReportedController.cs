@@ -48,6 +48,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (ex.InnerException != null)
 				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
 			SendEmail("DataRoost Exception", msg + extra);
+            CommunicationLogger.LogToFile(msg + extra);
 		}
 
 		[Route("")]
