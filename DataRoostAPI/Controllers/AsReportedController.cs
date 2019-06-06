@@ -414,7 +414,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
-                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DamDocumentId: {2}", CompanyId, TemplateName, DamDocumentID));
                 return null;
             }
         }

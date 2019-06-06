@@ -20,7 +20,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
 
 		private readonly string _sfConnectionString;
-        private static log4net.ILog log = log4net.LogManager.GetLogger(typeof(AsReportedTemplateHelper));
+        //private static log4net.ILog log = log4net.LogManager.GetLogger(typeof(AsReportedTemplateHelper));
+        private static NLog.ILogger logger = NLog.LogManager.GetLogger(typeof(AsReportedTemplateHelper).ToString());
 
         static AsReportedTemplateHelper() {
 
@@ -730,8 +731,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
             }
             catch (Exception ex)
             {
-                string logError = ex.Message.ToString() + "\n" + ex.StackTrace.ToString();
-                log.Error(logError);
+                throw ex;                
             }
             return outputExport;
         }
