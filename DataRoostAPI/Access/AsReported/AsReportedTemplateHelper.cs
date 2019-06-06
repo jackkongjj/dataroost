@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using DataRoostAPI.Common.Models.AsReported;
+using CCS.Fundamentals.DataRoostAPI.Controllers;
 using SuperfastModel = DataRoostAPI.Common.Models.SuperFast;
 using PantheonHelper = CCS.Fundamentals.DataRoostAPI.Helpers.PantheonHelper;
 using FactSet.Data.SqlClient;
@@ -731,6 +732,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
             }
             catch (Exception ex)
             {
+                AsReportedController.SendEmail("Pantheon STD Diff Error: " + ex.Message.ToString(), ex.StackTrace.ToString());
                 throw ex;                
             }
             return outputExport;
