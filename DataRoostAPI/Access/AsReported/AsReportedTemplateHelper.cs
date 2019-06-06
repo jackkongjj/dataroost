@@ -6,9 +6,10 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Web;
 using System.Net.Mail;
 using DataRoostAPI.Common.Models.AsReported;
+using SuperfastModel = DataRoostAPI.Common.Models.SuperFast;
+using PantheonHelper = CCS.Fundamentals.DataRoostAPI.Helpers.PantheonHelper;
 using FactSet.Data.SqlClient;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -19,8 +20,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
 
 		private readonly string _sfConnectionString;
+        private static log4net.ILog log = log4net.LogManager.GetLogger(typeof(AsReportedTemplateHelper));
 
-		static AsReportedTemplateHelper() {
+        static AsReportedTemplateHelper() {
 
 		}
 
@@ -701,7 +703,40 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return sb.ToString();
 		}
 
-		public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+        public SuperfastModel.ExportMaster GetPantheonStdDiff(int iconum, Guid damDocumentId)
+        {
+            //ScarProductViewResult result = new ScarProductViewResult();
+            string dfsPath = ConfigurationManager.AppSettings["PantheonBackupDFS"];
+            List<SuperfastModel.TimeSlice> timeSlices = new List<SuperfastModel.TimeSlice>();
+            List<SuperfastModel.STDTimeSliceDetail> stdTimeSliceDetails = new List<SuperfastModel.STDTimeSliceDetail>();
+            SuperfastModel.ExportMaster outputExport = new SuperfastModel.ExportMaster();
+            try
+            {
+                #region Getting the last Exported
+                SuperfastModel.ExportMaster previousExport = PantheonHelper.GetDataFromDFS(damDocumentId, iconum);
+                timeSlices.AddRange(previousExport.timeSlices);
+                stdTimeSliceDetails.AddRange(previousExport.stdTimeSliceDetail);
+                #endregion
+
+                #region Getting the newly collected
+                SuperfastModel.ExportMaster newlyCollectedValue = PantheonHelper.GetStdTimeSliceDetailForTimeSlice(iconum, damDocumentId);
+                timeSlices.AddRange(newlyCollectedValue.timeSlices);
+                stdTimeSliceDetails.AddRange(newlyCollectedValue.stdTimeSliceDetail);
+                #endregion
+
+                outputExport.stdItems = PantheonHelper.GetAllStdItems();
+                outputExport.timeSlices = timeSlices;
+                outputExport.stdTimeSliceDetail = stdTimeSliceDetails;
+            }
+            catch (Exception ex)
+            {
+                string logError = ex.Message.ToString() + "\n" + ex.StackTrace.ToString();
+                log.Error(logError);
+            }
+            return outputExport;
+        }
+
+        public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			return GetProductView(iconum, TemplateName, DamDocumentID, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 
 			//ScarProductViewResult newFormat = new ScarProductViewResult();

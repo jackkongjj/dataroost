@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Net.Mail;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
-using System.Diagnostics;
+using SuperfastModel = DataRoostAPI.Common.Models.SuperFast;
 using DataRoostAPI.Common.Models.AsReported;
-using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
-using LogPerformance;
 using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
@@ -402,7 +399,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("productview/{TemplateName}/meta")]
+        [Route("pantheonDiffScreen/{TemplateName}/{DamDocumentID}")]
+        [HttpGet]
+        public SuperfastModel.ExportMaster GetStdDiffScreen(string CompanyId, string TemplateName, Guid DamDocumentID)
+        {
+            try
+            {
+                int iconum = PermId.PermId2Iconum(CompanyId);
+                if (TemplateName == null)
+                    return null;
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.GetPantheonStdDiff(iconum, DamDocumentID);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}", CompanyId, TemplateName));
+                return null;
+            }
+        }
+
+        [Route("productview/{TemplateName}/meta")]
 		[HttpGet]
 		public object GetMeta(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
