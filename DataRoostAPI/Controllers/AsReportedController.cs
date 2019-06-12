@@ -1023,7 +1023,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("cells/{id}")]
+        [Route("cells/{cftId}/{timesliceId}/addMissingValueValidation/{DocumentId}")]
+        [HttpPost]
+        public ScarResult AddMissingValueValidation(string cftId, string timesliceId,Guid DocumentId, StringInput input) {
+            try {
+                if (input == null)
+                    return new ScarResult();
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.AddMissingValueValidation(cftId, timesliceId, DocumentId,input.StringData);
+            }
+            catch (Exception ex) {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("cells/{id}")]
 		[HttpGet]
 		public ScarResult GetTableCell(string id) {
 			try {

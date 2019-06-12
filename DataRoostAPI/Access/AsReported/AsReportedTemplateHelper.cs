@@ -1596,29 +1596,47 @@ WHERE  CompanyID = @Iconum";
 						sb.AppendLine("ConnectionOpen." + conn.State.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 						using (SqlDataReader reader = cmd.EndExecuteReader(result)) {
 							sb.AppendLine("StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+                            var ordinals = new {
+                                StaticHierarchyID = reader.GetOrdinal("Id"),
+                                CompanyFinancialTermID = reader.GetOrdinal("CompanyFinancialTermId"),
+                                AdjustedOrder = reader.GetOrdinal("AdjustedOrder"),
+                                TableTypeID = reader.GetOrdinal("TableTypeId"),
+                                Description = reader.GetOrdinal("Description"),
+                                HierarchyTypeID = reader.GetOrdinal("HierarchyTypeId"),
+                                SeperatorFlag = reader.GetOrdinal("SeperatorFlag"),
+                                StaticHierarchyMetaId = reader.GetOrdinal("StaticHierarchyMetaId"),
+                                UnitTypeId = reader.GetOrdinal("UnitTypeId"),
+                                IsIncomePositive = reader.GetOrdinal("IsIncomePositive"),
+                                ChildrenExpandDown = reader.GetOrdinal("ChildrenExpandDown"),
+                                ParentID = reader.GetOrdinal("ParentID"),
+                                IsDanglingHeader = reader.GetOrdinal("IsDanglingHeader"),
+                                //DocumentSeriesID = reader.GetOrdinal("DocumentSeriesID"),
+                                StaticHierarchyMetaType = reader.GetOrdinal("Code"),
+                                TableTypeDescription = reader.GetOrdinal("TableTypeDescription"),
+                            };
 							while (reader.Read()) {
 								sb.AppendLine("Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 								StaticHierarchy shs = new StaticHierarchy
 								{
-									Id = reader.GetInt32(0),
-									CompanyFinancialTermId = reader.GetInt32(1),
-									AdjustedOrder = reader.GetInt32(2),
-									TableTypeId = reader.GetInt32(3)
+									Id = reader.GetInt32(ordinals.StaticHierarchyID),
+									CompanyFinancialTermId = reader.GetInt32(ordinals.CompanyFinancialTermID),
+									AdjustedOrder = reader.GetInt32(ordinals.AdjustedOrder),
+									TableTypeId = reader.GetInt32(ordinals.TableTypeID)
 								};
 								sb.AppendLine("Description." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-								shs.Description = reader.GetString(4);
+								shs.Description = reader.GetString(ordinals.Description);
 								sb.AppendLine("HierarchyTypeId." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-								shs.HierarchyTypeId = reader.GetString(5)[0];
-								shs.SeparatorFlag = reader.GetBoolean(6);
-								shs.StaticHierarchyMetaId = reader.GetInt32(7);
-								shs.UnitTypeId = reader.GetInt32(8);
+								shs.HierarchyTypeId = reader.GetString(ordinals.HierarchyTypeID)[0];
+								shs.SeparatorFlag = reader.GetBoolean(ordinals.SeperatorFlag);
+								shs.StaticHierarchyMetaId = reader.GetInt32(ordinals.StaticHierarchyMetaId);
+								shs.UnitTypeId = reader.GetInt32(ordinals.UnitTypeId);
 								sb.AppendLine("shsIsIncomePositive." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-								shs.IsIncomePositive = reader.GetBoolean(9);
-								shs.ChildrenExpandDown = reader.GetBoolean(10);
-								shs.ParentID = reader.GetNullable<int>(11);
-                                shs.IsDanglingHeader = reader.GetBoolean(12);
-                                shs.StaticHierarchyMetaType = reader.GetString(13);
-								shs.TableTypeDescription = reader.GetString(14);
+								shs.IsIncomePositive = reader.GetBoolean(ordinals.IsIncomePositive);
+								shs.ChildrenExpandDown = reader.GetBoolean(ordinals.ChildrenExpandDown);
+								shs.ParentID = reader.GetNullable<int>(ordinals.ParentID);
+                                shs.IsDanglingHeader = reader.GetBoolean(ordinals.IsDanglingHeader);
+                                shs.StaticHierarchyMetaType = reader.GetString(ordinals.StaticHierarchyMetaType);
+								shs.TableTypeDescription = reader.GetString(ordinals.TableTypeDescription);
 								sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 								shs.Cells = new List<SCARAPITableCell>();
 								sb.AppendLine("Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
@@ -9430,7 +9448,49 @@ END
 			return result;
 		}
 
-		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
+        public ScarResult AddMissingValueValidation(string CFTId, string TimeSliceId, Guid DocumentId, string newValue) {
+            string query = @"
+IF EXISTS(SELECT TOP 1 CompanyFinancialTermID 
+                        from MVCErrorTypeTableCells 
+                        where TimeSliceID = @TSId and CompanyFinancialTermID = @CFTId)
+    BEGIN
+            UPDATE MVCErrorTypeTableCells
+            SET MVCErrorTypeID = @newValue
+            WHERE TimeSliceID = @TSId and CompanyFinancialTermID = @CFTId;
+    END
+ELSE
+    BEGIN
+        select 'Cell not found'
+    END                            
+";
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+                using (SqlCommand cmd = new SqlCommand(query, conn)) {
+                    conn.Open();
+                    int newInt = -1;
+                    bool isSuccess = false;
+                    if (!string.IsNullOrEmpty(newValue)) {
+                        isSuccess = Int32.TryParse(newValue, out newInt);
+                    }
+                    cmd.Parameters.AddWithValue("@CFTId", CFTId);
+                    cmd.Parameters.AddWithValue("@TSId", TimeSliceId);
+                    cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int) {
+                        Value = (!isSuccess ? DBNull.Value : (object)newInt)
+                    });
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            CommunicationLogger.LogEvent("AddMissingValueValidation", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            ScarResult result = new ScarResult();
+            result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+            result.ChangedCells = new List<SCARAPITableCell>();
+            //result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
+            return result;
+        }
+
+        private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
 			return new SCARAPITableCell[0];
 		}
 		#endregion
