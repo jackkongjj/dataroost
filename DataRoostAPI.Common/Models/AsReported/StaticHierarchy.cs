@@ -49,6 +49,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
         [JsonProperty("isDanglingHeader")]
         public bool IsDanglingHeader { get; set; }
 
+        [JsonProperty("DocumentSeriesID")]
+        public int DocumentSeriesId { get; set; }
+
         [JsonProperty("childrenExpandDown")]
 		public bool ChildrenExpandDown { get; set; }
 
