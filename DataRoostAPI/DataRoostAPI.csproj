@@ -122,12 +122,18 @@
     <Reference Include="FactSet.Util">
       <HintPath>..\packages\CommonLib.Util.1.0.0.0\lib\net45\FactSet.Util.dll</HintPath>
     </Reference>
+    <Reference Include="FCE.ExpressionEvaluator, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\FactSet.FCE.ExpressionEvaluator.1.0.1\lib\net45\FCE.ExpressionEvaluator.dll</HintPath>
+    </Reference>
     <Reference Include="FFDotNetHelpers, Version=1.0.9.22, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FFDotNetHelpers.1.0.9.22\lib\net45\FFDotNetHelpers.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\packages\ICSharpCode.SharpZipLib.dll.0.85.4.369\lib\net20\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="Jace, Version=0.8.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Jace.0.8.7\lib\net40\Jace.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
@@ -163,6 +169,9 @@
     <Reference Include="Microsoft.Owin.Security">
       <HintPath>..\packages\Microsoft.Owin.Security.3.0.1\lib\net45\Microsoft.Owin.Security.dll</HintPath>
     </Reference>
+    <Reference Include="NCalc, Version=1.3.8.0, Culture=neutral, PublicKeyToken=973cde3f1cafed03, processorArchitecture=MSIL">
+      <HintPath>..\packages\ncalc.1.3.8\lib\NCalc.dll</HintPath>
+    </Reference>
     <Reference Include="Nest, Version=2.0.0.0, Culture=neutral, PublicKeyToken=96c599bbe3e70f5d, processorArchitecture=MSIL">
       <HintPath>..\packages\NEST.2.5.2\lib\net45\Nest.dll</HintPath>
       <Private>True</Private>
@@ -185,8 +194,7 @@
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
     <Reference Include="Supercore.ExpressionStore, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\FactSet.FCE.Supercore.ExpressionStore.2.0.33\lib\net45\Supercore.ExpressionStore.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\FactSet.FCE.Supercore.ExpressionStore.6.2.67\lib\net45\Supercore.ExpressionStore.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -294,6 +302,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\WebGrease.1.6.0\lib\WebGrease.dll</HintPath>
     </Reference>
+    <Reference Include="Xid.Net.Net40, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Xid.Net.1.0.1\lib\net40\Xid.Net.Net40.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\SolutionAssemblyInfo.cs">
@@ -382,6 +393,7 @@
     </Compile>
     <Compile Include="Filters\CommunicationLogger.cs" />
     <Compile Include="Helpers\ExprStoreClient.cs" />
+    <Compile Include="Helpers\PantheonHelper.cs" />
     <Compile Include="Helpers\StringExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />
@@ -503,9 +515,11 @@
     </None>
     <None Include="Web.PROD.config">
       <DependentUpon>Web.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="Web.STAGING.config">
       <DependentUpon>Web.config</DependentUpon>
+      <SubType>Designer</SubType>
     </None>
     <None Include="Web.Training.config">
       <DependentUpon>Web.config</DependentUpon>
