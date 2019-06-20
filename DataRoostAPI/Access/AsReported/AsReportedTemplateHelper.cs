@@ -5288,7 +5288,7 @@ DELETE FROM dbo.StaticHierarchy where id in ({0});
 ";
 			string merge_sql = @"MERGE dbo.StaticHierarchy
 USING ( select {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} ) as src (Id,CompanyFinancialTermId,AdjustedOrder,TableTypeId
-,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown,ParentID)
+,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown,ParentID,IsDanglingHeader, DocumentSeriesID)
 ON dbo.StaticHierarchy.Id = src.Id
 WHEN MATCHED THEN
 	UPDATE SET CompanyFinancialTermId = src.CompanyFinancialTermId
@@ -5302,9 +5302,11 @@ WHEN MATCHED THEN
       ,IsIncomePositive = src.IsIncomePositive
       ,ChildrenExpandDown = src.ChildrenExpandDown
       ,ParentID = src.ParentID
+      ,IsDanglingHeader = StaticHierarchy.IsDanglingHeader
+      ,DocumentSeriesID = StaticHierarchy.DocumentSeriesID
 WHEN NOT MATCHED THEN
 	INSERT (CompanyFinancialTermId,AdjustedOrder,TableTypeId
-,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown) VALUES
+,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown, ParentID, IsDanglingHeader,DocumentSeriesID ) VALUES
 	  (
 src.CompanyFinancialTermId 
 ,CASE src.AdjustedOrder WHEN -1 THEN -101 ELSE src.AdjustedOrder END
@@ -5316,6 +5318,9 @@ src.CompanyFinancialTermId
 ,src.UnitTypeId 
 ,src.IsIncomePositive 
 ,src.ChildrenExpandDown 
+,src.ParentID
+,src.IsDanglingHeader
+,src.DocumentSeriesID
 	  )
 OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @ChangeResult;
 
@@ -5338,7 +5343,20 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 				List<string> deleted_ids = new List<string>();
 				string tableTypeId = null;
-				foreach (var elem in _jarray) {
+                string documentSeriesId = "";
+                foreach (var elem in _jarray)
+                {
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue()) && !string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue()))
+                        {
+                            documentSeriesId = elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue();
+                            break;
+                        }
+                    }
+                    catch { }
+                }
+                foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
 							deleted_ids.Add(elem["obj"]["ID"].AsValue());
@@ -5354,8 +5372,10 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["UnitTypeId"].AsValue(),
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
-								elem["obj"]["ParentID"].AsValue()
-								));
+								elem["obj"]["ParentID"].AsValue(),
+                                "0", // will be ignored
+                                "0"
+                                ));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
@@ -5371,8 +5391,10 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["UnitTypeId"].AsValue(),
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
-								"NULL"
-								));
+								"NULL",
+                                "0", //elem["obj"]["IsDanglingHeader"].AsBoolean(),
+                                documentSeriesId //elem["obj"]["DocumentSeriesID"].AsValue()
+                                ));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
@@ -5826,6 +5848,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult DeleteDocumentTableID(string CompanyId, string dtid, string tabletype) {
+            // TODO: DocumentSeries
 			string SQL_Delete = @"
 BEGIN TRY
 	BEGIN TRAN
@@ -6207,7 +6230,7 @@ FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @newId or id = @dts or id = 
 		}
 
 		public ScarResult GetReviewTimeSlice(string TemplateName, int iconum) {
-
+            // TODO: DocumentSeries
 			string SQL_ReviewButton = @"
 select tc.CellDate as PeriodEndDate, 
 case when dts.PeriodType = 'XX' THEN 'AR' ELSE dts.PeriodType END as TimeSeries, 
