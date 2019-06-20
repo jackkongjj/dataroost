@@ -1609,7 +1609,7 @@ WHERE  CompanyID = @Iconum";
                                 IsIncomePositive = reader.GetOrdinal("IsIncomePositive"),
                                 ChildrenExpandDown = reader.GetOrdinal("ChildrenExpandDown"),
                                 ParentID = reader.GetOrdinal("ParentID"),
-                                IsDanglingHeader = reader.GetOrdinal("IsDanglingHeader"),
+                                //IsDanglingHeader = reader.GetOrdinal("IsDanglingHeader"),
                                 //DocumentSeriesID = reader.GetOrdinal("DocumentSeriesID"),
                                 StaticHierarchyMetaType = reader.GetOrdinal("Code"),
                                 TableTypeDescription = reader.GetOrdinal("TableTypeDescription"),
@@ -1634,7 +1634,7 @@ WHERE  CompanyID = @Iconum";
 								shs.IsIncomePositive = reader.GetBoolean(ordinals.IsIncomePositive);
 								shs.ChildrenExpandDown = reader.GetBoolean(ordinals.ChildrenExpandDown);
 								shs.ParentID = reader.GetNullable<int>(ordinals.ParentID);
-                                shs.IsDanglingHeader = reader.GetBoolean(ordinals.IsDanglingHeader);
+                                //shs.IsDanglingHeader = reader.GetBoolean(ordinals.IsDanglingHeader);
                                 shs.StaticHierarchyMetaType = reader.GetString(ordinals.StaticHierarchyMetaType);
 								shs.TableTypeDescription = reader.GetString(ordinals.TableTypeDescription);
 								sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
