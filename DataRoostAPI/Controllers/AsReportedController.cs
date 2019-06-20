@@ -158,24 +158,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		//TODO: Add IsSummary for timeslices and Derivation Meta for cells, add MTMW.
-		[Route("templates/{TemplateName}/{DocumentId}/obselete")]
-		[HttpGet]
-		public AsReportedTemplate GetTemplateObselete(string CompanyId, string TemplateName, Guid DocumentId) {
-			try {
-				int iconum = PermId.PermId2Iconum(CompanyId);
-				if (TemplateName == null)
-					return null;
-
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTemplate(iconum, TemplateName, DocumentId);
-			} catch (Exception ex) {
-				LogError(ex);
-				return null;
-			}
-		}
-
 		public static double PingTimeAverage(string host, int echoNum) {
 			long totalTime = 0;
 			int timeout = 120;
@@ -210,23 +192,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				result += "error";
 			}
 			return result;
-		}
-
-		[Route("templates/{TemplateName}/{DocumentId}/june")]
-		[HttpGet]
-		public ScarResult GetTemplateJune(string CompanyId, string TemplateName, Guid DocumentId) {
-			try {
-				int iconum = PermId.PermId2Iconum(CompanyId);
-				if (TemplateName == null)
-					return null;
-
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTemplateInScarResultJune(iconum, TemplateName, DocumentId);
-			} catch (Exception ex) {
-				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-				return null;
-			}
 		}
 
 		[Route("templates/{TemplateName}/{DocumentId}")]
@@ -305,41 +270,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("templates/{TemplateName}/{DocumentId}/debug")]
-		[HttpGet]
-		public ScarResult GetTemplateDebug(string CompanyId, string TemplateName, Guid DocumentId) {
-			try {
-				int iconum = PermId.PermId2Iconum(CompanyId);
-				if (TemplateName == null)
-					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				var r = helper.GetTemplateInScarResultDebug(iconum, TemplateName, DocumentId);
-				r.ReturnValue["Message"] = r.ReturnValue["Message"] + "GetTemplateDebugController Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
-				return r;
-			} catch (Exception ex) {
-				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-				return null;
-			}
-		}
-
-		[Route("templates/{TemplateName}/{DocumentId}/debugdatatable")]
-		[HttpGet]
-		public ScarResult GetTemplateDebugDataTable(string CompanyId, string TemplateName, Guid DocumentId) {
-			try {
-				int iconum = PermId.PermId2Iconum(CompanyId);
-				if (TemplateName == null)
-					return null;
-
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTemplateInScarResultDebugDataTable(iconum, TemplateName, DocumentId);
-			} catch (Exception ex) {
-				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-				return null;
-			}
-		}
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpPost]
 		public ScarResult PostTemplate(string CompanyId, string TemplateName, Guid DocumentId, StringInput data) {
@@ -1925,7 +1856,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t => t == "IS" || t == "BS" || t == "CF"))
-					templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+					templates.Add(helper.GetTemplateWithSqlDataReader(iconum, TemplateName, SfDocumentId));
 
 				//IEnumerable<StaticHierarchy> shs = templates.SelectMany(t => t.StaticHierarchies.Where(sh => sh.Cells.Any(c => c.LikePeriodValidationFlag || c.MTMWValidationFlag)));
 				IEnumerable<SCARAPITableCell> cells = templates.SelectMany(t => t.StaticHierarchies.SelectMany(sh => sh.Cells.Where(c => ((c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD") ||
@@ -1965,7 +1896,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				try {
 					foreach (string TemplateName in helper.GetAllTemplates(sfConnectionString, iconum).Where(t => t == "IS" || t == "BS" || t == "CF")) {
 						templates = new List<AsReportedTemplate>();
-						templates.Add(helper.GetTemplate(iconum, TemplateName, SfDocumentId));
+						templates.Add(helper.GetTemplateWithSqlDataReader(iconum, TemplateName, SfDocumentId));
 
 						IEnumerable<SCARAPITableCell> mtmwcells = templates.SelectMany(t => t.StaticHierarchies
 							.SelectMany(sh => sh.Cells.Where(c => c.MTMWValidationFlag && sh.StaticHierarchyMetaType != "SD" && sh.StaticHierarchyMetaType != "FN")));
