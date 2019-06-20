@@ -17,7 +17,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public int Id { get; set; }
 
 		[JsonProperty("companyFinancialTermId")]
-		public int CompanyFinancialTermId { get; set; }
+		public int? CompanyFinancialTermId { get; set; }
 
 		[JsonProperty("adjustedOrder")]
 		public int AdjustedOrder { get; set; }

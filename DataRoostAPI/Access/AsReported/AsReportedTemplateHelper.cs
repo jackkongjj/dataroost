@@ -1028,7 +1028,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								StaticHierarchy shs = new StaticHierarchy
 								{
 									Id = reader.GetInt32(ordinals.StaticHierarchyID),
-									CompanyFinancialTermId = reader.GetInt32(ordinals.CompanyFinancialTermID),
+									CompanyFinancialTermId = reader.GetNullable<int>(ordinals.CompanyFinancialTermID),
 									AdjustedOrder = reader.GetInt32(ordinals.AdjustedOrder),
 									TableTypeId = reader.GetInt32(ordinals.TableTypeID)
 								};
