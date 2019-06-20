@@ -1520,7 +1520,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		public StaticHierarchy GetStaticHierarchy(int id) {
 
 			string query = @"SELECT * FROM StaticHierarchy WHERE ID = @id";
-
+            // TODO: DocumentSeries
 			string CellsQuery =
 	@"SELECT DISTINCT tc.*,
 		(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
@@ -1610,79 +1610,8 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 
 		public ScarResult CopyDocumentHierarchy(int iconum, int TableTypeid, Guid DocumentId) {
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-
+            // TODO: DocumentSeries
 			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
-			string text_query = @"
-DECLARE @newDocumentTableId int;
-BEGIN TRY
-	BEGIN TRAN
-
-				Declare @DocSeriesId int;
-				Declare @DocumentDate DateTime;
-				Declare @LatestScalingFactor Varchar(6);
-				
-
-				select @DocumentDate= DocumentDate,@DocSeriesId=DocumentSeriesID from Document Where Id=@DocumentId;
-
-				select TOP 1 @LatestScalingFactor = ISNULL(dt.ScalingFactorID, 'A')
-				from DocumentTable dt  WITH (NOLOCK)
-				inner join Document d WITH (NOLOCK) on d.ID=dt.DocumentID and dt.TableTypeId = @TableTypeId
-				where dt.ScalingFactorID<>'A' and d.DocumentDate<@DocumentDate
-				order by d.DocumentDate DESC, d.ReportTypeID ASC
-
-				INSERT DocumentTable(DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
-				VALUES (@DocumentId, 1, @TableTypeId, 1, @LatestScalingFactor, @LatestScalingFactor, -1, 0)
-
-				select @newDocumentTableId =  cast(scope_identity() as int);
-				select * from DocumentTable WITH (NOLOCK) where id = @newDocumentTableId
-
-				DECLARE @newTableDimensionColumn int;
-				INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
-				VALUES (@newDocumentTableId, 2, '', '', -1, -1, NULL, 0, -1)
-				select @newTableDimensionColumn =  cast(scope_identity() as int);
-				select * from TableDimension WITH (NOLOCK) where id = @newTableDimensionColumn
-
-				DECLARE @newTableDimensionRows TABLE(Id int, CFT int, AdjustedOrder int)
-				MERGE INTO TableDimension
-				USING (	SELECT sh.Description, sh.AdjustedOrder, sh.CompanyFinancialTermId
-					FROM StaticHierarchy sh where sh.TableTypeId = @TableTypeId) as Src ON 1=0
-				WHEN NOT MATCHED THEN
-					INSERT (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
-					VALUES (@newDocumentTableId, 1, src.Description, 'Description', -1, -1, NULL, 0, src.AdjustedOrder)
-				OUTPUT inserted.ID, src.CompanyFinancialTermId, inserted.AdjustedOrder into @newTableDimensionRows(Id, CFT, AdjustedOrder);
-				select * FROM TableDimension where id = @newDocumentTableId
-
-
-				DECLARE @newTableCells TABLE(Id int, CFT int, AdjustedOrder int)
-				MERGE INTO TableCell
-				USING (	SELECT sh.Description, sh.CompanyFinancialTermId, sh.AdjustedOrder
-					FROM StaticHierarchy sh where sh.TableTypeId = @TableTypeId) as Src ON 1=0
-				WHEN NOT MATCHED THEN
-					INSERT (Offset,CompanyFinancialTermId,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,ScarUpdated,IsIncomePositive,DocumentId,Label)
-					VALUES ('', src.CompanyFinancialTermId, 0, @LatestScalingFactor, @LatestScalingFactor, 0, 1, @DocumentId, src.description)
-				OUTPUT inserted.ID, inserted.CompanyFinancialTermId, src.AdjustedOrder into @newTableCells(Id, CFT, AdjustedOrder);
-				select * from @newTableCells
-
-				INSERT INTO DimensionToCell(TableDimensionID,TableCellID)
-				SELECT r.id, tc.id FROM
-				@newTableDimensionRows r 
-				JOIN @newTableCells tc ON r.CFT = tc.CFT and r.AdjustedOrder = tc.AdjustedOrder
-
-				INSERT INTO DimensionToCell (TableDimensionID,TableCellID)
-				SELECT @newTableDimensionColumn, tc.ID FROM
-				@newTableCells tc
-
-				SELECT * FROM DimensionToCell WITH (NOLOCK) where TableDimensionID = @newTableDimensionColumn or
-				TableDimensionID in (select id from @newTableDimensionRows)
-
-		COMMIT; 
-		select * from DocumentTable where id = @newDocumentTableId
-END TRY
-BEGIN CATCH
-	ROLLBACK;
-  select 0;
-END CATCH
-";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -1856,7 +1785,7 @@ where id = @TargetSHID;
 		}
 
 		public ScarResult UpdateStaticHierarchyAddHeader(int id) {
-
+            // TODO: DOcumentSeries
 			string query = @"
 
 DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
@@ -2013,6 +1942,7 @@ SELECT *
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
+            // TODO: DocumentSeries
 			string query = @"
 
 DECLARE @TableTypeId INT = (select tt.ID from DocumentSeries ds (nolock) join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID where companyid = @Iconum AND tt.Description = @tableType)
@@ -2059,61 +1989,11 @@ SELECT StaticHierarchyID FROM @SHIDS
 		}
 
 
-		public ScarResult CleanupStaticHierarchyOld(List<int> StaticHierarchyIds) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			ScarResult response = new ScarResult();
-			response.StaticHierarchies = new List<StaticHierarchy>();
-			var inclause = string.Join(",", StaticHierarchyIds);
-			string query = @"
-DECLARE @AllStaticHierarchy TABLE
-(ID int, CompanyFinancialTermID int);
-INSERT @AllStaticHierarchy 
-SELECT distinct ID, CompanyFinancialTermID from StaticHierarchy where id in ({0});
-
-
-DECLARE @GoodStaticHierarchy TABLE
-(ID int, CFT int);
-
-INSERT @GoodStaticHierarchy
-Select distinct sh.id, sh.CompanyFinancialTermID from 
-@AllStaticHierarchy sh 
-JOIN TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.ID 
-
-INSERT @GoodStaticHierarchy
-Select distinct sh.id, sh.CompanyFinancialTermID from 
-@AllStaticHierarchy sh 
-JOIN TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-JOIN DimensionToCell dtc on dtc.TableCellId = tc.ID 
-
-DELETE FROM @AllStaticHierarchy where id in (select id from @GoodStaticHierarchy)
-delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (select id from @AllStaticHierarchy);
-delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (select id from @AllStaticHierarchy);
-delete from dbo.statichierarchy where Id in (select id from @AllStaticHierarchy);
-SELECT id From @AllStaticHierarchy
-";
-			String finalquery = string.Format(query, inclause);
-			System.Text.StringBuilder sb = new System.Text.StringBuilder();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				conn.Open();
-				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							sb.AppendLine(reader.GetInt32(0).AsInt32().ToString() + ",");
-						}
-					}
-				}
-			}
-			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
-			CommunicationLogger.LogEvent("CleanupStaticHierarchyOld", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-
-			return response;
-		}
-
 		public ScarResult UpdateStaticHierarchyDeleteHeader(string headerText, List<int> StaticHierarchyIds) {
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
+            // TODO: Document Series
 			string query = @"SCARRemoveHeader";
 
 			DataTable dt = new DataTable();
