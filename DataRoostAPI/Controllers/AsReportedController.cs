@@ -285,23 +285,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("templates/{TemplateName}/skeleton/")]
-		[HttpGet]
-		public AsReportedTemplateSkeleton GetTemplateSkeleton(string CompanyId, string TemplateName) {
-			try {
-				int iconum = PermId.PermId2Iconum(CompanyId);
-				if (TemplateName == null)
-					return null;
-
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.GetTemplateSkeleton(iconum, TemplateName);
-			} catch (Exception ex) {
-				LogError(ex);
-				return null;
-			}
-		}
-
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
 		public ScarProductViewResult GetProductTemplate(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
