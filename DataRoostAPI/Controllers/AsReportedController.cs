@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Net.Mail;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.AsReported;
-using System.Diagnostics;
+using SuperfastModel = DataRoostAPI.Common.Models.SuperFast;
 using DataRoostAPI.Common.Models.AsReported;
-using System.Runtime.InteropServices;
 using System.Net.NetworkInformation;
-using LogPerformance;
 using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
@@ -48,6 +45,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (ex.InnerException != null)
 				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
 			SendEmail("DataRoost Exception", msg + extra);
+            CommunicationLogger.LogToFile(msg + extra);
 		}
 
 		[Route("")]
@@ -401,7 +399,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("productview/{TemplateName}/meta")]
+        [Route("pantheonDiffScreen/{TemplateName}/{DamDocumentID}")]
+        [HttpGet]
+        public SuperfastModel.ExportMaster GetStdDiffScreen(string CompanyId, string TemplateName, Guid DamDocumentID)
+        {
+            try
+            {
+                int iconum = PermId.PermId2Iconum(CompanyId);
+                if (TemplateName == null)
+                    return null;
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.GetPantheonStdDiff(iconum, DamDocumentID);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DamDocumentId: {2}", CompanyId, TemplateName, DamDocumentID));
+                return null;
+            }
+        }
+
+        [Route("productview/{TemplateName}/meta")]
 		[HttpGet]
 		public object GetMeta(string CompanyId, string TemplateName, string reverseRepresentation = "false", string filterPeriod = "ALL", string filterRecap = "ALL", string filterYear = "YEARS") {
 			try {
@@ -1005,7 +1023,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("cells/{id}")]
+        [Route("cells/{cftId}/{timesliceId}/addMissingValueValidation/{DocumentId}")]
+        [HttpPost]
+        public ScarResult AddMissingValueValidation(string cftId, string timesliceId,Guid DocumentId, StringInput input) {
+            try {
+                if (input == null)
+                    return new ScarResult();
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.AddMissingValueValidation(cftId, timesliceId, DocumentId,input.StringData);
+            }
+            catch (Exception ex) {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("cells/{id}")]
 		[HttpGet]
 		public ScarResult GetTableCell(string id) {
 			try {
