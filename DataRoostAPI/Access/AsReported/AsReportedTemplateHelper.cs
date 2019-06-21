@@ -5791,8 +5791,8 @@ BEGIN TRY
 select sh.ID
 from DocumentSeries ds (nolock) 
 join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID
-JOIN CompanyFinancialTerm cft (nolock) ON cft.DocumentSeriesID = ds.ID
-JOIN StaticHierarchy sh (nolock) on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
+JOIN StaticHierarchy sh (nolock) on ds.id = sh.DocumentSeriesID AND sh.TableTypeID = tt.ID
+LEFT JOIN CompanyFinancialTerm cft (nolock) ON cft.id = sh.CompanyFinancialTermID
 where companyid = @CompanyId
 AND tt.Description = @tabletype
 AND NOT EXISTS(select CompanyFinancialTermId
