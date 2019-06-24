@@ -1557,7 +1557,10 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							UnitTypeId = reader.GetInt32(8),
 							IsIncomePositive = reader.GetBoolean(9),
 							ChildrenExpandDown = reader.GetBoolean(10),
-							Cells = new List<SCARAPITableCell>()
+                            ParentID = reader.GetNullable<int>(11),
+                            IsDanglingHeader = reader.GetBoolean(12),
+                            DocumentSeriesId = reader.GetInt32(13),
+                            Cells = new List<SCARAPITableCell>()
 						};
 					}
 				}
@@ -1678,7 +1681,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1726,7 +1732,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1773,7 +1782,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1816,7 +1828,10 @@ EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_AddHeader @TargetSHID, 'New Header'
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1987,7 +2002,10 @@ SELECT StaticHierarchyID FROM @SHIDS
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2053,7 +2071,7 @@ DECLARE @NewHierarchyLabel varchar(1024)
 	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 ) UPDATE sh
-   SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel)
+   SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel) -- what if its root and multiple occurance? 
 FROM CTE_Children cte
 JOIN StaticHierarchy sh on cte.ID = SH.Id   
 
@@ -2069,7 +2087,10 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,[UnitTypeId]
       ,[IsIncomePositive]
       ,[ChildrenExpandDown]
-      ,[ParentID]) AS(
+      ,[ParentID]      
+    ,[IsDanglingHeader]
+      ,[DocumentSeriesID]
+) AS(
 	SELECT [Id]
       ,[CompanyFinancialTermId]
       ,[AdjustedOrder]
@@ -2081,7 +2102,9 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,[UnitTypeId]
       ,[IsIncomePositive]
       ,[ChildrenExpandDown]
-      ,[ParentID] FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
+      ,[ParentID]      
+    ,[IsDanglingHeader]
+      ,[DocumentSeriesID] FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
  
 	SELECT sh.[Id]
@@ -2095,7 +2118,9 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,sh.[UnitTypeId]
       ,sh.[IsIncomePositive]
       ,sh.[ChildrenExpandDown]
-      ,sh.[ParentID] 
+      ,sh.[ParentID]      
+    ,sh.[IsDanglingHeader]
+      ,sh.[DocumentSeriesID] 
 	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 )
@@ -2132,6 +2157,9 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
 								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
@@ -2307,7 +2335,10 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2350,7 +2381,10 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2400,7 +2434,10 @@ SELECT * FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2527,7 +2564,10 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2594,33 +2634,34 @@ END CATCH
 		}
 
 		public ScarResult DragDropStaticHierarchyLabelByString(int tableTypeId, string DraggedLabel, string TargetLabel, string Location) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
+            return new ScarResult();
+			//string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+			//string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
 
-			ScarResult response = new ScarResult();
-			response.StaticHierarchies = new List<StaticHierarchy>();
+			//ScarResult response = new ScarResult();
+			//response.StaticHierarchies = new List<StaticHierarchy>();
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+			//using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.CommandType = System.Data.CommandType.StoredProcedure;
-					cmd.Parameters.AddWithValue("@DraggedLabel", DraggedLabel);
-					cmd.Parameters.AddWithValue("@TargetLabel", TargetLabel);
-					cmd.Parameters.AddWithValue("@TableTypeID", tableTypeId);
-					cmd.Parameters.AddWithValue("@Location", Location);
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						int i = 0;
-						while (reader.Read()) {
-							i++;
-						}
-					}
-				}
-			}
+			//	using (SqlCommand cmd = new SqlCommand(query, conn)) {
+			//		conn.Open();
+			//		cmd.CommandType = System.Data.CommandType.StoredProcedure;
+			//		cmd.Parameters.AddWithValue("@DraggedLabel", DraggedLabel);
+			//		cmd.Parameters.AddWithValue("@TargetLabel", TargetLabel);
+			//		cmd.Parameters.AddWithValue("@TableTypeID", tableTypeId);
+			//		cmd.Parameters.AddWithValue("@Location", Location);
+			//		using (SqlDataReader reader = cmd.ExecuteReader()) {
+			//			int i = 0;
+			//			while (reader.Read()) {
+			//				i++;
+			//			}
+			//		}
+			//	}
+			//}
 
-			CommunicationLogger.LogEvent("DragDropStaticHierarchyLabelByString", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-			return response;
+			//CommunicationLogger.LogEvent("DragDropStaticHierarchyLabelByString", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+			//return response;
 		}
 
 		public TimeSlice GetTimeSlice(int id) {
