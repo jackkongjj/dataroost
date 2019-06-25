@@ -2075,6 +2075,7 @@ DECLARE @NewHierarchyLabel varchar(1024)
 FROM CTE_Children cte
 JOIN StaticHierarchy sh on cte.ID = SH.Id   
 
+--  SET sh.Description = STUFF(sh.description, CHARINDEX(@OrigHierarchyLabel,sh.description), LEN(@OrigHierarchyLabel), @NewHierarchyLabel)
 
 ;WITH CTE_Children ([Id]
       ,[CompanyFinancialTermId]
