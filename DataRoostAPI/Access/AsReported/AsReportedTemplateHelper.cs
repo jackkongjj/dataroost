@@ -2237,73 +2237,82 @@ SELECT *
 
 
 		public ScarResult UpdateStaticHierarchyHeaderLabelWithUpperCount(int uppercount, int id, string newLabel) {
-            return new ScarResult();
-//			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-//			string query = @"
-//DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
-//exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
+DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
-//DECLARE @Description varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
-//DECLARE @HierarchyLabel varchar(1024) =  dbo.GetHierarchyLabelSafe(@Description);
-//DECLARE @Label2 varchar(1024) =  SUBSTRING(@HierarchyLabel, 0,  DATALENGTH(@HierarchyLabel) - CHARINDEX(']', REVERSE(@HierarchyLabel))+1);
-//DECLARE @ParentHierarchyLabel varchar(1024) =  SUBSTRING(@Label2, 0,  DATALENGTH(@Label2) - CHARINDEX(']', REVERSE(@Label2))+2);
-//If @Label2 = @ParentHierarchyLabel
-//	set @ParentHierarchyLabel = '';
+DECLARE @Description varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
+DECLARE @HierarchyLabel varchar(1024) =  dbo.GetHierarchyLabelSafe(@Description);
+DECLARE @OldEndLabel varchar(1024) =  dbo.GetEndLabelSafe(@Description);
+DECLARE @ParentID int = (SELECT Parentid FROM StaticHierarchy WHERE ID = @TargetSHID)
+DECLARE @Label2 varchar(1024) =  SUBSTRING(@HierarchyLabel, 0,  DATALENGTH(@HierarchyLabel) - CHARINDEX(']', REVERSE(@HierarchyLabel))+1);
+DECLARE @ParentHierarchyLabel varchar(1024) =  SUBSTRING(@Label2, 0,  DATALENGTH(@Label2) - CHARINDEX(']', REVERSE(@Label2))+2);
+If @Label2 = @ParentHierarchyLabel
+	set @ParentHierarchyLabel = '';
 
-//while @count > 1
-//	begin
-//		set @HierarchyLabel = @ParentHierarchyLabel;
-//        DECLARE @Label1 varchar(1024) =  SUBSTRING(@HierarchyLabel, 0,  DATALENGTH(@HierarchyLabel) - CHARINDEX(']', REVERSE(@HierarchyLabel))+1);
-//	    select @Label1
-//		set @ParentHierarchyLabel =  SUBSTRING(@Label1, 0,  DATALENGTH(@Label1) - CHARINDEX(']', REVERSE(@Label1))+2);
+while @count > 1
+	begin
+		set @HierarchyLabel = @ParentHierarchyLabel;
+        DECLARE @Label1 varchar(1024) =  SUBSTRING(@HierarchyLabel, 0,  DATALENGTH(@HierarchyLabel) - CHARINDEX(']', REVERSE(@HierarchyLabel))+1);
+	    select @Label1
+		set @ParentHierarchyLabel =  SUBSTRING(@Label1, 0,  DATALENGTH(@Label1) - CHARINDEX(']', REVERSE(@Label1))+2);
 		
-//		If @Label1 = @ParentHierarchyLabel
-//			set @ParentHierarchyLabel = '';
+		If @Label1 = @ParentHierarchyLabel
+			set @ParentHierarchyLabel = '';
 
-//		set @count = (@count-1);
-//	end
+		set @count = (@count-1);
+	end
 
-//DECLARE @NewHierarchyLabel varchar(1024) = @ParentHierarchyLabel + '[' + @NewEndLabel + ']'
+DECLARE @NewHierarchyLabel varchar(1024) = @ParentHierarchyLabel + '[' + @NewEndLabel + ']'
 
-//UPDATE StaticHierarchy
-//	SET Description =  Stuff(@Description, CharIndex(@HierarchyLabel, @Description), dataLength(@HierarchyLabel), @NewHierarchyLabel)
-//WHERE TableTypeId = @TableTypeId and charindex(@HierarchyLabel,Description)= 1  
-//";
+UPDATE StaticHierarchy
+	SET Description =  Stuff(@Description, CharIndex(@HierarchyLabel, @Description), dataLength(@HierarchyLabel), @NewHierarchyLabel)
+WHERE TableTypeId = @TableTypeId and charindex(@HierarchyLabel,Description)= 1  
 
-//			ScarResult response = new ScarResult();
-//			response.StaticHierarchies = new List<StaticHierarchy>();
+UPDATE StaticHierarchy
+	SET Description = @ParentHierarchyLabel +  @NewEndLabel
+WHERE TableTypeId = @TableTypeId and IsDanglingHeader = 1 and ID in (@TargetSHID, @ParentID)  
+";
 
-//			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-//				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-//					conn.Open();
-//					cmd.Parameters.AddWithValue("@TargetSHID", id);
-//					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
-//					cmd.Parameters.AddWithValue("@count", uppercount);
-//					using (SqlDataReader reader = cmd.ExecuteReader()) {
-//						while (reader.Read()) {
-//							StaticHierarchy sh = new StaticHierarchy
-//							{
-//								Id = reader.GetInt32(0),
-//								CompanyFinancialTermId = reader.GetInt32(1),
-//								AdjustedOrder = reader.GetInt32(2),
-//								TableTypeId = reader.GetInt32(3),
-//								Description = reader.GetStringSafe(4),
-//								HierarchyTypeId = reader.GetStringSafe(5)[0],
-//								SeparatorFlag = reader.GetBoolean(6),
-//								StaticHierarchyMetaId = reader.GetInt32(7),
-//								UnitTypeId = reader.GetInt32(8),
-//								IsIncomePositive = reader.GetBoolean(9),
-//								ChildrenExpandDown = reader.GetBoolean(10),
-//								Cells = new List<SCARAPITableCell>()
-//							};
-//							response.StaticHierarchies.Add(sh);
-//						}
-//					}
-//				}
-//			}
-//			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabelWithUpperCount", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-//			return response;
-		}
+            ScarResult response = new ScarResult();
+            response.StaticHierarchies = new List<StaticHierarchy>();
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@TargetSHID", id);
+                    cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+                    cmd.Parameters.AddWithValue("@count", uppercount);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            //StaticHierarchy sh = new StaticHierarchy
+                            //{
+                            //    Id = reader.GetInt32(0),
+                            //    CompanyFinancialTermId = reader.GetInt32(1),
+                            //    AdjustedOrder = reader.GetInt32(2),
+                            //    TableTypeId = reader.GetInt32(3),
+                            //    Description = reader.GetStringSafe(4),
+                            //    HierarchyTypeId = reader.GetStringSafe(5)[0],
+                            //    SeparatorFlag = reader.GetBoolean(6),
+                            //    StaticHierarchyMetaId = reader.GetInt32(7),
+                            //    UnitTypeId = reader.GetInt32(8),
+                            //    IsIncomePositive = reader.GetBoolean(9),
+                            //    ChildrenExpandDown = reader.GetBoolean(10),
+                            //    Cells = new List<SCARAPITableCell>()
+                            //};
+                            //response.StaticHierarchies.Add(sh);
+                        }
+                    }
+                }
+            }
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabelWithUpperCount", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
+        }
 
 
 		public ScarResult UpdateStaticHierarchyAddParent(int id) {
