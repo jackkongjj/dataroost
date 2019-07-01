@@ -6487,7 +6487,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -6542,7 +6542,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -6679,7 +6679,7 @@ DECLARE @OldStaticHierarchyList StaticHierarchyList
 	UNION ALL
 	SELECT sh.Id 
 	FROM StaticHierarchy sh WITH (NOLOCK)
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
+	JOIN CTE_Children cte on sh.ParentID = cte.ID and sh.IsDanglingHeader = 0
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
 FROM CTE_Children cte
@@ -6734,7 +6734,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -6788,7 +6788,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -6963,7 +6963,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -7015,7 +7015,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -7148,7 +7148,7 @@ DECLARE @OldStaticHierarchyList StaticHierarchyList
 	UNION ALL
 	SELECT sh.Id 
 	FROM StaticHierarchy sh WITH (NOLOCK)
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
+	JOIN CTE_Children cte on sh.ParentID = cte.ID and sh.IsDanglingHeader = 0
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
 FROM CTE_Children cte
@@ -7197,7 +7197,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -7250,7 +7250,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -8363,7 +8363,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -8409,7 +8409,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 --SELECT MAX(level)
 --FROM cte_level
