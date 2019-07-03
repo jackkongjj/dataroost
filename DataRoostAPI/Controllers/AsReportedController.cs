@@ -646,7 +646,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
+				if (input == null || input.StaticHierarchyIDs.Count == 0)
 					return null;
 
 				return helper.UpdateStaticHierarchyDeleteHeader(input.StringData, input.StaticHierarchyIDs);
