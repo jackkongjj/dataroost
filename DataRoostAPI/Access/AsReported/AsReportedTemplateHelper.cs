@@ -2267,7 +2267,7 @@ while @count > 1
 DECLARE @NewHierarchyLabel varchar(1024) = @ParentHierarchyLabel + '[' + @NewEndLabel + ']'
 
 UPDATE StaticHierarchy
-	SET Description =  Stuff(@Description, CharIndex(@HierarchyLabel, @Description), dataLength(@HierarchyLabel), @NewHierarchyLabel)
+	SET Description =  Stuff(Description, CharIndex(@HierarchyLabel, @Description), dataLength(@HierarchyLabel), @NewHierarchyLabel)
 WHERE TableTypeId = @TableTypeId and charindex(@HierarchyLabel,Description)= 1  
 
 UPDATE StaticHierarchy
