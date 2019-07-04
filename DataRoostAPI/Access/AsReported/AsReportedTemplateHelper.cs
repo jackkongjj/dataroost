@@ -133,53 +133,6 @@ where d.companyId = @companyId
 			return new { companyPriority = Priority, name = CompanyName, industry = Industry, fisicalYearEndMonth = FiscalYearEndMonth };
 		}
 
-		#region SQL
-		private string SQL_GetCellQuery =
-																@"
-SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
-				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
-				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
-				tc.XBRLTag, null, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
-				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
-				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
-				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
-FROM DocumentSeries ds WITH (NOLOCK) 
-JOIN CompanyFinancialTerm cft  WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
-JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
-JOIN(
-	SELECT distinct dts.ID
-	FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK)  on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc WITH (NOLOCK)  on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt WITH (NOLOCK)  on tt.ID = sh.TableTypeID
-	WHERE tc.ID = @cellId
-	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-) as ts on 1=1
-JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK)  on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
-JOIN(
-	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
-	JOIN TableCell tc WITH (NOLOCK)  on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf WITH (NOLOCK)  on sf.ID = tc.ScalingFactorID
-	WHERE tc.ID = @cellId
-) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d WITH (NOLOCK)  on dts.documentid = d.ID
-WHERE 1=1
-ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
-
-";//I hate this query, it is so bad
-
-		#endregion
-
 		public ScarResult CreateStaticHierarchyForTemplate(int iconum, string TemplateName, Guid DocumentId) {
 
 			ScarResult temp = new ScarResult();
@@ -217,420 +170,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
 		}
-		public ScarResult GetTemplateInScarResultDebug(int iconum, string TemplateName, Guid DocumentId) {
-			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
-			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
-			newFormat.TimeSlices = oldFormat.TimeSlices;
-			newFormat.ReturnValue["Message"] = oldFormat.Message + "GetTemplateInScarResultDebug Finished" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
-			return newFormat;
-		}
-		public ScarResult GetTemplateInScarResultDebugDataTable(int iconum, string TemplateName, Guid DocumentId) {
-			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplate(iconum, TemplateName, DocumentId);
-			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
-			newFormat.TimeSlices = oldFormat.TimeSlices;
-			newFormat.ReturnValue["Message"] = oldFormat.Message;
-			return newFormat;
-		}
 
-		public ScarResult GetTemplateInScarResultJune(int iconum, string TemplateName, Guid DocumentId) {
-			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplate(iconum, TemplateName, DocumentId);
-			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
-			newFormat.TimeSlices = oldFormat.TimeSlices;
-			return newFormat;
-		}
-		public AsReportedTemplate GetTemplate(int iconum, string TemplateName, Guid DocumentId) {
-			var sw = System.Diagnostics.Stopwatch.StartNew();
-
-			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
-			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
-
-			AsReportedTemplate temp = new AsReportedTemplate();
-			System.Text.StringBuilder sb = new System.Text.StringBuilder();
-			try {
-				sb.AppendLine("Start." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				string query_sproc = @"SCARGetTemplate";
-				temp.StaticHierarchies = new List<StaticHierarchy>();
-				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
-				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
-				Dictionary<int, StaticHierarchy> SHLookup = new Dictionary<int, StaticHierarchy>();
-				Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
-				List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
-				Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
-				DataSet dataSet = new DataSet();
-				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-					#region Using SqlConnection
-					using (SqlCommand cmd = new SqlCommand(query_sproc, conn)) {
-						cmd.CommandType = System.Data.CommandType.StoredProcedure;
-						cmd.CommandTimeout = 120;
-						cmd.Parameters.Add("@iconum", SqlDbType.Int).Value = iconum;
-						cmd.Parameters.Add("@templateName", SqlDbType.VarChar).Value = TemplateName;
-						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = DocumentId;
-						conn.Open();
-						sb.AppendLine("ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						//using (DataTable dt = new DataTable()) {
-						//	dt.Load(reader);
-						//	Console.WriteLine(dt.Rows.Count);
-						//}
-						SqlDataAdapter da = new SqlDataAdapter(cmd);
-						da.Fill(dataSet);
-						conn.Close();
-					}
-					#endregion
-				}
-				#region In-Memory Processing
-				sb.AppendLine("Filled." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				var shTable = dataSet.Tables[0];
-				if (shTable != null) {
-					sb.AppendLine("StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-					foreach (DataRow row in shTable.Rows) {
-						sb.AppendLine("Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						StaticHierarchy shs = new StaticHierarchy
-						{
-							Id = row[0].AsInt32(),
-							CompanyFinancialTermId = row[1].AsInt32(),
-							AdjustedOrder = row[2].AsInt32(),
-							TableTypeId = row[3].AsInt32()
-						};
-						sb.AppendLine("Description." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						shs.Description = row[4].AsString();
-						sb.AppendLine("HierarchyTypeId." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						shs.HierarchyTypeId = row[5].AsString()[0];
-						shs.SeparatorFlag = row[6].AsBoolean();
-						shs.StaticHierarchyMetaId = row[7].AsInt32();
-						shs.UnitTypeId = row[8].AsInt32();
-						sb.AppendLine("shsIsIncomePositive." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						shs.IsIncomePositive = row[9].AsBoolean();
-						shs.ChildrenExpandDown = row[10].AsBoolean();
-						shs.ParentID = row[11].AsInt32Nullable();
-						shs.StaticHierarchyMetaType = row[12].AsString();
-						shs.TableTypeDescription = row[13].ToString();
-						sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						shs.Cells = new List<SCARAPITableCell>();
-						StaticHierarchies.Add(shs);
-						SHLookup.Add(shs.Id, shs);
-						sb.AppendLine("SHLookup." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						if (!SHChildLookup.ContainsKey(shs.Id))
-							SHChildLookup.Add(shs.Id, new List<StaticHierarchy>());
-
-						if (shs.ParentID != null) {
-							sb.AppendLine("ParentID." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-							if (!SHChildLookup.ContainsKey(shs.ParentID.Value))
-								SHChildLookup.Add(shs.ParentID.Value, new List<StaticHierarchy>());
-
-							SHChildLookup[shs.ParentID.Value].Add(shs);
-							sb.AppendLine("ChildLookup." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						}
-					}
-				}
-				sb.AppendLine("Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				var cellTable = dataSet.Tables[1];
-				sb.AppendLine("Cells Next Result." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				int shix = 0;
-				int adjustedOrder = 0;
-
-				if (cellTable != null) {
-					#region read CellsQuery
-					sb.AppendLine("Cell2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-					foreach (DataRow row in cellTable.Rows) {
-						if (shix >= StaticHierarchies.Count())
-							break;
-						if (row[29].AsInt64() == 1) {
-							SCARAPITableCell cell;
-							if (row[0].AsInt32Nullable().HasValue) {
-								cell = new SCARAPITableCell
-								{
-									ID = row[0].AsInt32(),
-									Offset = row[1].AsString(),
-									CellPeriodType = row[2].AsString(),
-									PeriodTypeID = row[3].AsString(),
-									CellPeriodCount = row[4].AsString(),
-									PeriodLength = row[5].AsInt32Nullable(),
-									CellDay = row[6].AsString(),
-									CellMonth = row[7].AsString(),
-									CellYear = row[8].AsString(),
-									CellDate = row[9].AsDateTimeNullable(),
-									Value = row[10].AsString(),
-									CompanyFinancialTermID = row[11].AsInt32Nullable(),
-									ValueNumeric = row[12].AsDecimalNullable(),
-									NormalizedNegativeIndicator = row[13].AsBoolean(),
-									ScalingFactorID = row[14].AsString(),
-									AsReportedScalingFactor = row[15].AsString(),
-									Currency = row[16].AsString(),
-									CurrencyCode = row[17].AsString(),
-									Cusip = row[18].AsString(),
-									ScarUpdated = row[19].AsBoolean(),
-									IsIncomePositive = row[20].AsBoolean(),
-									XBRLTag = row[21].AsString(),
-									UpdateStampUTC = row[22].AsDateTimeNullable(),
-									DocumentID = row[23].AsGuid(),
-									Label = row[24].AsString(),
-									ScalingFactorValue = row[25].AsDouble(),
-									ARDErrorTypeId = row[26].AsInt32Nullable(),
-									MTMWErrorTypeId = row[27].AsInt32Nullable()
-								};
-								adjustedOrder = row[28].AsInt32();
-							} else {
-								cell = new SCARAPITableCell();
-								adjustedOrder = row[28].AsInt32();
-								cell.CompanyFinancialTermID = row[34].AsInt32Nullable();
-							}
-							if (adjustedOrder < 0) {
-								var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
-								if (negSh == null) continue;
-								if (cell.ID == 0) {
-									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
-								}
-
-								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(negSh, negSh.Cells.Count));
-
-								if (cell.ID == 0 || cell.CompanyFinancialTermID == negSh.CompanyFinancialTermId) {
-									negSh.Cells.Add(cell);
-								} else {
-									throw new Exception();
-								}
-
-							} else {
-								while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
-									shix++;
-									if (shix >= StaticHierarchies.Count())
-										break;
-								}
-								var currSh = StaticHierarchies.FirstOrDefault(x => x.AdjustedOrder == adjustedOrder && x.CompanyFinancialTermId == cell.CompanyFinancialTermID);
-								if (currSh == null) {
-									continue;
-								}
-								//while (adjustedOrder == StaticHierarchies[shix].AdjustedOrder && cell.CompanyFinancialTermID != StaticHierarchies[shix].CompanyFinancialTermId) {
-								//	shix++;
-								//	if (shix >= StaticHierarchies.Count())
-								//		break;
-								//}
-								if (shix >= StaticHierarchies.Count())
-									break;
-								if (cell.ID == 0) {
-									BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
-								}
-								CellLookup.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
-
-								if (cell.ID == 0 || cell.CompanyFinancialTermID == currSh.CompanyFinancialTermId) {
-									currSh.Cells.Add(cell);
-								} else {
-									throw new Exception();
-								}
-							}
-						}
-					}
-					#endregion
-				}
-				var timesliceTable = dataSet.Tables[2];
-				sb.AppendLine("TimeSlice." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				temp.TimeSlices = new List<TimeSlice>();
-				List<TimeSlice> TimeSlices = temp.TimeSlices;
-				if (timesliceTable != null) {
-					int cellmapcount = 0;
-					sb.AppendLine("TimeSlice.2" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-					#region Read TimeSlice
-					foreach (DataRow row in timesliceTable.Rows) {
-						TimeSlice slice = new TimeSlice
-						{
-							Id = row[0].AsInt32(),
-							DocumentId = row[1].AsGuid(),
-							DocumentSeriesId = row[2].AsInt32(),
-							TimeSlicePeriodEndDate = row[3].AsDateTime(),
-							ReportingPeriodEndDate = row[4].AsDateTime(),
-							FiscalDistance = row[5].AsInt32(),
-							Duration = row[6].AsInt32(),
-							PeriodType = row[7].AsString(),
-							AcquisitionFlag = row[8].AsString(),
-							AccountingStandard = row[9].AsString(),
-							ConsolidatedFlag = row[10].AsString(),
-							IsProForma = row[11].AsBoolean(),
-							IsRecap = row[12].AsBoolean(),
-							CompanyFiscalYear = row[13].AsDecimal(),
-							ReportType = row[14].AsString(),
-							IsAmended = row[15].AsBoolean(),
-							IsRestated = row[16].AsBoolean(),
-							IsAutoCalc = row[17].AsBoolean(),
-							ManualOrgSet = row[18].AsBoolean(),
-							TableTypeID = row[19].AsInt32(),
-							PublicationDate = row[20].AsDateTime(),
-							DamDocumentId = row[21].AsGuid(),
-							PeriodNoteID = row[22].AsByteNullable()
-						};
-
-						TimeSlices.Add(slice);
-
-						Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
-						if (!TimeSliceMap.ContainsKey(tup)) {
-							TimeSliceMap.Add(tup, new List<int>());
-						}
-
-						int tsCount = TimeSlices.Count - 1;
-						TimeSliceMap[tup].Add(tsCount > 0 ? tsCount : 0);
-						if (TimeSlices.Count <= 0) {
-							continue;
-						}
-						sb.AppendLine("TimeSliceMap." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-						foreach (StaticHierarchy sh in temp.StaticHierarchies) {
-							try {
-								cellmapcount++;
-								if (tsCount >= 0 && sh.Cells.Count > tsCount) {
-									CellMap.Add(new Tuple<StaticHierarchy, TimeSlice>(sh, slice), sh.Cells[tsCount]);
-								}
-							} catch (Exception ex) {
-								sb.AppendLine("CellMapError." + ex.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-								//throw ex;
-							}
-						}
-						sb.AppendLine("TimeSliceMapDone." + cellmapcount.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-
-
-
-					}
-					#endregion
-				}
-				var issummaryTable = dataSet.Tables[3];
-				sb.AppendLine("IsSummary." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				if (issummaryTable != null) {
-					sb.AppendLine("IsSummary 2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-					foreach (DataRow row in issummaryTable.Rows) {
-						int TimeSliceID = row[0].AsInt32();
-						if (TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID) != null) {
-							TimeSlices.FirstOrDefault(t => t.Id == TimeSliceID).IsSummary = true;
-						}
-						if (!IsSummaryLookup.ContainsKey(TimeSliceID)) {
-							IsSummaryLookup.Add(TimeSliceID, new List<string>());
-						}
-
-						IsSummaryLookup[TimeSliceID].Add(row[1].AsString());
-					}
-				}
-
-				sb.AppendLine("Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
-					sb.AppendLine("Calculate Sh." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-					if (!sh.ParentID.HasValue) {
-						sh.Level = 0;
-					}
-					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
-						ch.Level = sh.Level + 1;
-					}
-					for (int i = 0; i < sh.Cells.Count; i++) {
-						try {
-							TimeSlice ts = temp.TimeSlices[i];
-
-							SCARAPITableCell tc = sh.Cells[i];
-							if (ts.Cells == null) {
-								ts.Cells = new List<SCARAPITableCell>();
-							}
-							ts.Cells.Add(tc);
-							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
-
-							bool hasValidChild = false;
-							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
-							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
-								tc.VirtualValueNumeric = calcChildSum;
-							}
-
-
-							//bool whatever = false;
-							//decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
-
-							//List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
-
-							//if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
-							//) {
-							//	tc.LikePeriodValidationFlag = true;
-							//	tc.StaticHierarchyID = sh.Id;
-							//	tc.DocumentTimeSliceID = ts.Id;
-							//}
-
-							//bool ChildrenSumEqual = false;
-							//if (!tc.ValueNumeric.HasValue || !hasValidChild)
-							//	ChildrenSumEqual = true;
-							//else {
-							//	decimal diff = cellValue - calcChildSum;
-							//	diff = Math.Abs(diff);
-
-							//	if (tc.ScalingFactorValue == 1.0)
-							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
-							//	else
-							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
-							//}
-
-							//tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
-							//		!ChildrenSumEqual &&
-							//				!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
-
-						} catch (Exception ex) {
-							Console.WriteLine(ex.Message);
-							break;
-						}
-					}
-					sb.AppendLine("Calculate Sh Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-					for (int i = 0; i < sh.Cells.Count; i++) {
-						try {
-							TimeSlice ts = temp.TimeSlices[i];
-
-							SCARAPITableCell tc = sh.Cells[i];
-
-							if (ts.Cells == null) {
-								ts.Cells = new List<SCARAPITableCell>();
-							}
-							ts.Cells.Add(tc);
-							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
-
-							bool hasValidChild = false;
-							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
-							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
-								tc.VirtualValueNumeric = calcChildSum;
-							}
-
-							bool whatever = false;
-							decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
-
-							List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
-
-							if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
-							) {
-								tc.LikePeriodValidationFlag = true;
-								tc.StaticHierarchyID = sh.Id;
-								tc.DocumentTimeSliceID = ts.Id;
-							}
-
-							bool ChildrenSumEqual = false;
-							if (!tc.ValueNumeric.HasValue || !hasValidChild)
-								ChildrenSumEqual = true;
-							else {
-								decimal diff = cellValue - calcChildSum;
-								diff = Math.Abs(diff);
-
-								if (tc.ScalingFactorValue == 1.0)
-									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
-								else
-									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
-							}
-
-							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
-									!ChildrenSumEqual &&
-											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
-
-						} catch (Exception ex) {
-							Console.WriteLine(ex.Message);
-							break;
-						}
-					}
-				}
-				sb.AppendLine("Finished." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				#endregion
-			} catch (Exception ex) {
-				throw new Exception(sb.ToString() + "ExceptionTime:" + DateTime.UtcNow.ToString() + ex.Message, ex);
-			}
-			temp.Message = sb.ToString();
-			return temp;
-		}
 
 		public class MetaData {
 			[JsonProperty("industry")]
@@ -665,6 +205,7 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 		public string GetProductTemplateYearList(int iconum, string TemplateName, Guid DamDocumentID) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
+            // TODO: DocumentSeries
 			string TimeSliceQuery =
 		@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
  FROM DocumentSeries ds WITH (NOLOCK) 
@@ -1438,137 +979,6 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
 		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
 			var sw = System.Diagnostics.Stopwatch.StartNew();
-			#region Old Queries
-			string query =
-								@"
-SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
-BEGIN TRY
-DROP TABLE #StaticHierarchy
-END TRY
-BEGIN CATCH
-END CATCH 
-
-
-SELECT DISTINCT sh.*, shm.Code, tt.Description as 'TableTypeDescription'
-INTO #StaticHierarchy
-FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
-    JOIN HierarchyMetaTypes shm WITH (NOLOCK) on sh.StaticHierarchyMetaId = shm.id
-WHERE ds.CompanyID = @iconum
-AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc
-
-select * from #StaticHierarchy
-";
-
-			string CellsQuery =
-				@"
-SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
---SELECT *
---FROM (
-SELECT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
-				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
-				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
-tc.XBRLTag, 
---tc.UpdateStampUTC
-null as nul
-, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
-				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId) as arderr,
-				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId) as mtmwerr, 
-				sh.AdjustedOrder, ROW_NUMBER() OVER (PARTITION BY sh.ID, ts.ID ORDER BY tc.ID asc) as rwnm, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime, sh.CompanyFinancialTermID
-				
-FROM DocumentSeries ds WITH (NOLOCK) 
-JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-JOIN #StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
-JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
-JOIN(
-	SELECT distinct dts.ID
-	FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN dbo.DocumentTimeSlice dts  WITH (NOLOCK) on ds.ID = Dts.DocumentSeriesId
-	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
-	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
-	JOIN TableCell tc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
-	JOIN DimensionToCell dtc  WITH (NOLOCK) on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN #StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-	JOIN TableType tt  WITH (NOLOCK) on tt.ID = sh.TableTypeID
-	WHERE ds.CompanyID = @iconum
-	AND tt.Description = @templateName
-	AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-) as ts on 1=1
---JOIN (SELECT DISTINCT dts.*, d.PublicationDateTime
---		FROM DocumentSeries ds
---			JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesId = ds.Id
---			JOIN #StaticHierarchy sh on cft.ID = sh.CompanyFinancialTermID
---			JOIN TableType tt on sh.TableTypeID = tt.ID
---			JOIN TableCell tc on tc.CompanyFinancialTermID = cft.ID
---			JOIN DimensionToCell dtc on tc.ID = dtc.TableCellID -- check that is in a table
---			JOIN DocumentTimeSliceTableCell dtstc on tc.ID = dtstc.TableCellID
---			JOIN dbo.DocumentTimeSlice dts on dtstc.DocumentTimeSliceID = dts.ID
---			JOIN Document d on dts.DocumentId = d.ID
---		WHERE ds.CompanyID = @iconum
---		AND tt.Description = @templateName
---		AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1) 
---	)dts
-join dbo.DocumentTimeSlice dts WITH (NOLOCK) 
-	on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
-LEFT JOIN(
-	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
-	FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
-	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on dtstc.TableCellID = tc.ID
-	JOIN ScalingFactor sf  WITH (NOLOCK) on sf.ID = tc.ScalingFactorID
-	WHERE ds.CompanyID = @iconum
-	AND tt.Description = @templateName
-) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
-JOIN Document d  WITH (NOLOCK) on dts.documentid = d.ID
-WHERE ds.CompanyID = @iconum
-AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') asc, dts.Duration desc, d.PublicationDateTime desc, dts.ReportingPeriodEndDate desc
---) a WHERE rwnm = 1
---ORDER BY AdjustedOrder asc, TimeSlicePeriodEndDate desc, Duration desc, ReportingPeriodEndDate desc, PublicationDateTime desc
-
-";//I hate this query, it is so bad
-
-			string TimeSliceQuery =
-				@"
-SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
-SELECT DISTINCT dts.*, d.PublicationDateTime, d.damdocumentid, dtspn.PeriodNoteID, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') as CHARINDEX
-FROM DocumentSeries ds WITH (NOLOCK) 
-	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
-	JOIN #StaticHierarchy sh  WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt  WITH (NOLOCK) on sh.TableTypeID = tt.ID
-	JOIN TableCell tc  WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
-	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
-	JOIN DocumentTimeSliceTableCell dtstc  WITH (NOLOCK) on tc.ID = dtstc.TableCellID
-	JOIN dbo.DocumentTimeSlice dts  WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID  and dts.DocumentSeriesId = ds.ID 
-	JOIN Document d  WITH (NOLOCK) on dts.DocumentId = d.ID
-  LEFT JOIN DocumentTimeSlicePeriodNotes dtspn WITH (nolock) on dts.ID = dtspn.DocumentTimeSliceID
-WHERE ds.CompanyID = @iconum
-AND tt.Description = @templateName
-AND (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
---ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
-ORDER BY dts.TimeSlicePeriodEndDate desc, CHARINDEX(dts.PeriodType, '""XX"", ""AR"", ""IF"", ""T3"", ""Q4"", ""Q3"", ""T2"", ""I1"", ""Q2"", ""T1"", ""Q1"", ""Q9"", ""Q8"", ""Q6""') asc, dts.Duration desc, d.PublicationDateTime desc, dts.ReportingPeriodEndDate desc
-";
-
-			string TimeSliceIsSummaryQuery = @"
-SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
-select distinct DocumentTimeSliceID, TableType
-from DocumentSeries ds WITH (NOLOCK) 
-JOIN Document d WITH (NOLOCK) on ds.ID = d.DocumentSeriesID
-JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on dts.DocumentId = d.ID and dts.DocumentSeriesId = ds.ID 
-join DocumentTimeSliceTableTypeIsSummary dtsis WITH (NOLOCK) on dts.id = dtsis.DocumentTimeSliceID
-WHERE  CompanyID = @Iconum";
-			#endregion
-
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
 
@@ -1584,7 +994,6 @@ WHERE  CompanyID = @Iconum";
 				Dictionary<int, List<StaticHierarchy>> SHChildLookup = new Dictionary<int, List<StaticHierarchy>>();
 				List<StaticHierarchy> StaticHierarchies = temp.StaticHierarchies;
 				Dictionary<int, List<string>> IsSummaryLookup = new Dictionary<int, List<string>>();
-				query += CellsQuery + TimeSliceQuery + TimeSliceIsSummaryQuery;
 				string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					#region Using SqlConnection
@@ -1622,7 +1031,7 @@ WHERE  CompanyID = @Iconum";
                                 ChildrenExpandDown = reader.GetOrdinal("ChildrenExpandDown"),
                                 ParentID = reader.GetOrdinal("ParentID"),
                                 IsDanglingHeader = reader.GetOrdinal("IsDanglingHeader"),
-                                //DocumentSeriesID = reader.GetOrdinal("DocumentSeriesID"),
+                                DocumentSeriesID = reader.GetOrdinal("DocumentSeriesID"),
                                 StaticHierarchyMetaType = reader.GetOrdinal("Code"),
                                 TableTypeDescription = reader.GetOrdinal("TableTypeDescription"),
                             };
@@ -1631,7 +1040,7 @@ WHERE  CompanyID = @Iconum";
 								StaticHierarchy shs = new StaticHierarchy
 								{
 									Id = reader.GetInt32(ordinals.StaticHierarchyID),
-									CompanyFinancialTermId = reader.GetInt32(ordinals.CompanyFinancialTermID),
+									CompanyFinancialTermId = reader.GetNullable<int>(ordinals.CompanyFinancialTermID),
 									AdjustedOrder = reader.GetInt32(ordinals.AdjustedOrder),
 									TableTypeId = reader.GetInt32(ordinals.TableTypeID)
 								};
@@ -1647,6 +1056,7 @@ WHERE  CompanyID = @Iconum";
 								shs.ChildrenExpandDown = reader.GetBoolean(ordinals.ChildrenExpandDown);
 								shs.ParentID = reader.GetNullable<int>(ordinals.ParentID);
                                 shs.IsDanglingHeader = reader.GetBoolean(ordinals.IsDanglingHeader);
+                                shs.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesID);
                                 shs.StaticHierarchyMetaType = reader.GetString(ordinals.StaticHierarchyMetaType);
 								shs.TableTypeDescription = reader.GetString(ordinals.TableTypeDescription);
 								sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
@@ -2044,91 +1454,11 @@ WHERE  CompanyID = @Iconum";
 				//hasChildren = true;
 				return cell.VirtualValueNumeric.Value;
 			} else {
-				/*
-				if (BlankCells.ContainsKey(cell)) {
-					decimal sum = 0;
-					StaticHierarchy sh = BlankCells[cell].Item1;
-					int timesliceIndex = BlankCells[cell].Item2;
-					TimeSlice ts = timeSlices[timesliceIndex];
-					bool subChildren = false;
 
-					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
-						hasChildren = true;
-						if (
-							(((child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
-								|| ((child.StaticHierarchyMetaId == 2 || child.StaticHierarchyMetaId == 5 || child.StaticHierarchyMetaId == 6) && child.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
-							&& child.UnitTypeId != 2
-							) {
-							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, IsSummaryLookup, ref subChildren, timeSlices);
-							if (subChildren)
-								hasChildren = true;
-
-						}
-					}
-					if (SHChildLookup[sh.Id].Where(c =>
-						(((c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
-								|| ((c.StaticHierarchyMetaId == 2 || c.StaticHierarchyMetaId == 5 || c.StaticHierarchyMetaId == 6) && c.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
-							&& c.UnitTypeId != 2
-						).Count() > 0) {
-						if (!cell.ValueNumeric.HasValue && hasChildren && !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription))) {
-							cell.VirtualValueNumeric = sum;
-						}
-						return sum;
-					}
-				}
-				*/
 			}
 			return 0;
 		}
 
-
-		/*
-		private decimal CalculateCellValue(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells, Dictionary<int, List<StaticHierarchy>> SHChildLookup,
-			Dictionary<int, List<string>> IsSummaryLookup, ref bool hasChildren, List<TimeSlice> timeSlices) {
-			if (cell.ValueNumeric.HasValue) {
-				hasChildren = true;
-				return cell.ValueNumeric.Value * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
-			} else if (cell.VirtualValueNumeric.HasValue) {
-				hasChildren = true;
-				return cell.VirtualValueNumeric.Value;
-			} else {
-				if (BlankCells.ContainsKey(cell)) {
-					decimal sum = 0;
-					StaticHierarchy sh = BlankCells[cell].Item1;
-					int timesliceIndex = BlankCells[cell].Item2;
-					TimeSlice ts = timeSlices[timesliceIndex];
-					bool subChildren = false;
-
-					foreach (StaticHierarchy child in SHChildLookup[sh.Id]) {
-
-
-						if (
-							(((child.StaticHierarchyMetaId != 2 && child.StaticHierarchyMetaId != 5 && child.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
-								|| ((child.StaticHierarchyMetaId == 2 || child.StaticHierarchyMetaId == 5 || child.StaticHierarchyMetaId == 6) && child.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
-							&& child.UnitTypeId != 2
-							) {
-							sum += CalculateCellValue(child.Cells[timesliceIndex], BlankCells, SHChildLookup, IsSummaryLookup, ref subChildren, timeSlices);
-							if (subChildren)
-								hasChildren = true;
-
-						}
-					}
-					if (SHChildLookup[sh.Id].Where(c =>
-						(((c.StaticHierarchyMetaId != 2 && c.StaticHierarchyMetaId != 5 && c.StaticHierarchyMetaId != 6) && (sh.StaticHierarchyMetaId != 2 && sh.StaticHierarchyMetaId != 5 && sh.StaticHierarchyMetaId != 6))
-								|| ((c.StaticHierarchyMetaId == 2 || c.StaticHierarchyMetaId == 5 || c.StaticHierarchyMetaId == 6) && c.StaticHierarchyMetaId == sh.StaticHierarchyMetaId))
-							&& c.UnitTypeId != 2
-						).Count() > 0) {
-						if (!cell.ValueNumeric.HasValue && subChildren && !(IsSummaryLookup.ContainsKey(ts.Id) && IsSummaryLookup[ts.Id].Contains(sh.TableTypeDescription)))
-							cell.VirtualValueNumeric = sum;
-
-						return sum;
-					}
-				}
-			}
-			return 0;
-		}
-
-		*/
 
 		private IEnumerable<SCARAPITableCell> GetChildren(SCARAPITableCell cell, Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup, Dictionary<int, List<StaticHierarchy>> SHChildLookup) {
 
@@ -2199,76 +1529,10 @@ WHERE  CompanyID = @Iconum";
 			return vv;
 		}
 
-		public AsReportedTemplateSkeleton GetTemplateSkeleton(int iconum, string TemplateName) {
-
-			string query =
-				@"
-SELECT DISTINCT sh.ID, sh.AdjustedOrder
-FROM DocumentSeries ds WITH (NOLOCK)
-	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
-WHERE ds.CompanyID = @iconum
-AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc";
-
-			string TimeSliceQuery =
-				@"SELECT DISTINCT dts.ID, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate
-FROM DocumentSeries ds WITH (NOLOCK)
-	JOIN CompanyFinancialTerm cft WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
-	JOIN StaticHierarchy sh WITH (NOLOCK) on cft.ID = sh.CompanyFinancialTermID
-	JOIN TableType tt WITH (NOLOCK) on sh.TableTypeID = tt.ID
-	JOIN TableCell tc WITH (NOLOCK) on tc.CompanyFinancialTermID = cft.ID
-	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK) on tc.ID = dtstc.TableCellID
-	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK) on dtstc.DocumentTimeSliceID = dts.ID and dts.DocumentSeriesId = ds.ID 
-WHERE ds.CompanyID = @iconum
-AND tt.Description = @templateName
-ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc, dts.ReportingPeriodEndDate desc";
-
-
-			AsReportedTemplateSkeleton temp = new AsReportedTemplateSkeleton();
-
-			temp.StaticHierarchies = new List<int>();
-			List<int> StaticHierarchies = temp.StaticHierarchies;
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							StaticHierarchies.Add(reader.GetInt32(0));
-						}
-					}
-				}
-				CommunicationLogger.LogEvent("GetTemplateSkeleton_CalculateCellValue_StaticHierarchies", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-
-				temp.TimeSlices = new List<int>();
-				List<int> TimeSlices = temp.TimeSlices;
-				starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-
-				using (SqlCommand cmd = new SqlCommand(TimeSliceQuery, conn)) {
-					cmd.Parameters.AddWithValue("@iconum", iconum);
-					cmd.Parameters.AddWithValue("@templateName", TemplateName);
-
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-
-						while (reader.Read()) {
-							TimeSlices.Add(reader.GetInt32(0));
-						}
-					}
-				}
-				CommunicationLogger.LogEvent("GetTemplateSkeleton_CalculateCellValue_TimeSlices", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-
-			}
-			return temp;
-		}
-
 		public StaticHierarchy GetStaticHierarchy(int id) {
 
 			string query = @"SELECT * FROM StaticHierarchy WHERE ID = @id";
-
+            // TODO: DocumentSeries
 			string CellsQuery =
 	@"SELECT DISTINCT tc.*,
 		(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
@@ -2305,7 +1569,10 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							UnitTypeId = reader.GetInt32(8),
 							IsIncomePositive = reader.GetBoolean(9),
 							ChildrenExpandDown = reader.GetBoolean(10),
-							Cells = new List<SCARAPITableCell>()
+                            ParentID = reader.GetNullable<int>(11),
+                            IsDanglingHeader = reader.GetBoolean(12),
+                            DocumentSeriesId = reader.GetInt32(13),
+                            Cells = new List<SCARAPITableCell>()
 						};
 					}
 				}
@@ -2358,79 +1625,8 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 
 		public ScarResult CopyDocumentHierarchy(int iconum, int TableTypeid, Guid DocumentId) {
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-
+            // TODO: DocumentSeries
 			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
-			string text_query = @"
-DECLARE @newDocumentTableId int;
-BEGIN TRY
-	BEGIN TRAN
-
-				Declare @DocSeriesId int;
-				Declare @DocumentDate DateTime;
-				Declare @LatestScalingFactor Varchar(6);
-				
-
-				select @DocumentDate= DocumentDate,@DocSeriesId=DocumentSeriesID from Document Where Id=@DocumentId;
-
-				select TOP 1 @LatestScalingFactor = ISNULL(dt.ScalingFactorID, 'A')
-				from DocumentTable dt  WITH (NOLOCK)
-				inner join Document d WITH (NOLOCK) on d.ID=dt.DocumentID and dt.TableTypeId = @TableTypeId
-				where dt.ScalingFactorID<>'A' and d.DocumentDate<@DocumentDate
-				order by d.DocumentDate DESC, d.ReportTypeID ASC
-
-				INSERT DocumentTable(DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
-				VALUES (@DocumentId, 1, @TableTypeId, 1, @LatestScalingFactor, @LatestScalingFactor, -1, 0)
-
-				select @newDocumentTableId =  cast(scope_identity() as int);
-				select * from DocumentTable WITH (NOLOCK) where id = @newDocumentTableId
-
-				DECLARE @newTableDimensionColumn int;
-				INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
-				VALUES (@newDocumentTableId, 2, '', '', -1, -1, NULL, 0, -1)
-				select @newTableDimensionColumn =  cast(scope_identity() as int);
-				select * from TableDimension WITH (NOLOCK) where id = @newTableDimensionColumn
-
-				DECLARE @newTableDimensionRows TABLE(Id int, CFT int, AdjustedOrder int)
-				MERGE INTO TableDimension
-				USING (	SELECT sh.Description, sh.AdjustedOrder, sh.CompanyFinancialTermId
-					FROM StaticHierarchy sh where sh.TableTypeId = @TableTypeId) as Src ON 1=0
-				WHEN NOT MATCHED THEN
-					INSERT (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
-					VALUES (@newDocumentTableId, 1, src.Description, 'Description', -1, -1, NULL, 0, src.AdjustedOrder)
-				OUTPUT inserted.ID, src.CompanyFinancialTermId, inserted.AdjustedOrder into @newTableDimensionRows(Id, CFT, AdjustedOrder);
-				select * FROM TableDimension where id = @newDocumentTableId
-
-
-				DECLARE @newTableCells TABLE(Id int, CFT int, AdjustedOrder int)
-				MERGE INTO TableCell
-				USING (	SELECT sh.Description, sh.CompanyFinancialTermId, sh.AdjustedOrder
-					FROM StaticHierarchy sh where sh.TableTypeId = @TableTypeId) as Src ON 1=0
-				WHEN NOT MATCHED THEN
-					INSERT (Offset,CompanyFinancialTermId,NormalizedNegativeIndicator,ScalingFactorID,AsReportedScalingFactor,ScarUpdated,IsIncomePositive,DocumentId,Label)
-					VALUES ('', src.CompanyFinancialTermId, 0, @LatestScalingFactor, @LatestScalingFactor, 0, 1, @DocumentId, src.description)
-				OUTPUT inserted.ID, inserted.CompanyFinancialTermId, src.AdjustedOrder into @newTableCells(Id, CFT, AdjustedOrder);
-				select * from @newTableCells
-
-				INSERT INTO DimensionToCell(TableDimensionID,TableCellID)
-				SELECT r.id, tc.id FROM
-				@newTableDimensionRows r 
-				JOIN @newTableCells tc ON r.CFT = tc.CFT and r.AdjustedOrder = tc.AdjustedOrder
-
-				INSERT INTO DimensionToCell (TableDimensionID,TableCellID)
-				SELECT @newTableDimensionColumn, tc.ID FROM
-				@newTableCells tc
-
-				SELECT * FROM DimensionToCell WITH (NOLOCK) where TableDimensionID = @newTableDimensionColumn or
-				TableDimensionID in (select id from @newTableDimensionRows)
-
-		COMMIT; 
-		select * from DocumentTable where id = @newDocumentTableId
-END TRY
-BEGIN CATCH
-	ROLLBACK;
-  select 0;
-END CATCH
-";
 
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
@@ -2497,7 +1693,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2545,7 +1744,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2592,7 +1794,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2604,79 +1809,10 @@ where id = @TargetSHID;
 		}
 
 		public ScarResult UpdateStaticHierarchyAddHeader(int id) {
-
+            // TODO: DOcumentSeries
 			string query = @"
 
-DECLARE @OrigDescription varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
-DECLARE @OrigHierarchyLabel varchar(1024) 
-DECLARE @NewHierarchyLabel varchar(1024)  
-DECLARE @TableTypeID INT
-
-SET @TableTypeID = (SELECT TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
- SET @OrigHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe(Description) + '[' + dbo.GetEndLabelSafe(Description) + ']' FROM StaticHierarchy WHERE ID = @TargetSHID)
- SET @NewHierarchyLabel = (SELECT dbo.GetHierarchyLabelSafe	(Description) + '[New Header][' + dbo.GetEndLabelSafe(Description) + ']'  FROM StaticHierarchy WHERE ID = @TargetSHID)
-	 UPDATE StaticHierarchy
-	SET Description = (dbo.GetHierarchyLabelSafe(@OrigDescription) + '[New Header]' + dbo.GetEndLabelSafe(Description))
-	WHERE ID = @TargetSHID
-
-;WITH CTE_Children(ID) AS(
-	SELECT ID FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
-	UNION ALL
-	SELECT sh.Id 
-	FROM StaticHierarchy sh WITH (NOLOCK)
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
-) UPDATE sh
-   SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel)
-FROM CTE_Children cte
-JOIN StaticHierarchy sh on cte.ID = SH.Id   
-
-exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeID
-
-;WITH CTE_Children ([Id]
-      ,[CompanyFinancialTermId]
-      ,[AdjustedOrder]
-      ,[TableTypeId]
-      ,[Description]
-      ,[HierarchyTypeId]
-      ,[SeperatorFlag]
-      ,[StaticHierarchyMetaId]
-      ,[UnitTypeId]
-      ,[IsIncomePositive]
-      ,[ChildrenExpandDown]
-      ,[ParentID]) AS(
-	SELECT [Id]
-      ,[CompanyFinancialTermId]
-      ,[AdjustedOrder]
-      ,[TableTypeId]
-      ,[Description]
-      ,[HierarchyTypeId]
-      ,[SeperatorFlag]
-      ,[StaticHierarchyMetaId]
-      ,[UnitTypeId]
-      ,[IsIncomePositive]
-      ,[ChildrenExpandDown]
-      ,[ParentID] FROM StaticHierarchy WHERE ID = @TargetSHID
-	UNION ALL
- 
-	SELECT sh.[Id]
-      ,sh.[CompanyFinancialTermId]
-      ,sh.[AdjustedOrder]
-      ,sh.[TableTypeId]
-      ,sh.[Description]
-      ,sh.[HierarchyTypeId]
-      ,sh.[SeperatorFlag]
-      ,sh.[StaticHierarchyMetaId]
-      ,sh.[UnitTypeId]
-      ,sh.[IsIncomePositive]
-      ,sh.[ChildrenExpandDown]
-      ,sh.[ParentID] 
-	FROM StaticHierarchy sh
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
-)
- 
-SELECT *
-  FROM CTE_Children
-  order by AdjustedOrder
+EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_AddHeader @TargetSHID, 'New Header'
 
 ";
 
@@ -2704,7 +1840,10 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2761,6 +1900,7 @@ SELECT *
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
+            // TODO: DocumentSeries
 			string query = @"
 
 DECLARE @TableTypeId INT = (select tt.ID from DocumentSeries ds (nolock) join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID where companyid = @Iconum AND tt.Description = @tableType)
@@ -2772,13 +1912,12 @@ INSERT @SHIDS(StaticHierarchyID)
 select sh.ID
 from DocumentSeries ds
 join TableType tt on ds.ID = tt.DocumentSeriesID
-JOIN CompanyFinancialTerm cft ON cft.DocumentSeriesID = ds.ID
-JOIN StaticHierarchy sh on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
+JOIN StaticHierarchy sh on ds.ID = sh.DocumentSeriesID AND sh.TableTypeID = tt.ID
 where companyid = @Iconum
 AND tt.Description = @TableType
 AND NOT EXISTS(select CompanyFinancialTermId
 				FROM [dbo].[vw_SCARDocumentTimeSliceTableCell] tc
-				WHERE tc.CompanyFinancialTermID = sh.CompanyFinancialTermID)
+				WHERE tc.CompanyFinancialTermID = ISNULL(sh.CompanyFinancialTermID, 0))
 AND NOT EXISTS(select top 1 Parentid from StaticHierarchy shchild where ParentID = sh.id)
 
 delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
@@ -2807,61 +1946,11 @@ SELECT StaticHierarchyID FROM @SHIDS
 		}
 
 
-		public ScarResult CleanupStaticHierarchyOld(List<int> StaticHierarchyIds) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			ScarResult response = new ScarResult();
-			response.StaticHierarchies = new List<StaticHierarchy>();
-			var inclause = string.Join(",", StaticHierarchyIds);
-			string query = @"
-DECLARE @AllStaticHierarchy TABLE
-(ID int, CompanyFinancialTermID int);
-INSERT @AllStaticHierarchy 
-SELECT distinct ID, CompanyFinancialTermID from StaticHierarchy where id in ({0});
-
-
-DECLARE @GoodStaticHierarchy TABLE
-(ID int, CFT int);
-
-INSERT @GoodStaticHierarchy
-Select distinct sh.id, sh.CompanyFinancialTermID from 
-@AllStaticHierarchy sh 
-JOIN TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-JOIN DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.ID 
-
-INSERT @GoodStaticHierarchy
-Select distinct sh.id, sh.CompanyFinancialTermID from 
-@AllStaticHierarchy sh 
-JOIN TableCell tc on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
-JOIN DimensionToCell dtc on dtc.TableCellId = tc.ID 
-
-DELETE FROM @AllStaticHierarchy where id in (select id from @GoodStaticHierarchy)
-delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (select id from @AllStaticHierarchy);
-delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (select id from @AllStaticHierarchy);
-delete from dbo.statichierarchy where Id in (select id from @AllStaticHierarchy);
-SELECT id From @AllStaticHierarchy
-";
-			String finalquery = string.Format(query, inclause);
-			System.Text.StringBuilder sb = new System.Text.StringBuilder();
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				conn.Open();
-				using (SqlCommand cmd = new SqlCommand(finalquery, conn)) {
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							sb.AppendLine(reader.GetInt32(0).AsInt32().ToString() + ",");
-						}
-					}
-				}
-			}
-			response.Message += "StaticHierarchy Deleted: " + sb.ToString();
-			CommunicationLogger.LogEvent("CleanupStaticHierarchyOld", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-
-			return response;
-		}
-
 		public ScarResult UpdateStaticHierarchyDeleteHeader(string headerText, List<int> StaticHierarchyIds) {
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
+            // TODO: Document Series
 			string query = @"SCARRemoveHeader";
 
 			DataTable dt = new DataTable();
@@ -2880,18 +1969,7 @@ SELECT id From @AllStaticHierarchy
 						while (reader.Read()) {
 							StaticHierarchy sh = new StaticHierarchy
 							{
-								Id = reader.GetInt32(0),
-								CompanyFinancialTermId = reader.GetInt32(1),
-								AdjustedOrder = reader.GetInt32(2),
-								TableTypeId = reader.GetInt32(3),
-								Description = reader.GetStringSafe(4),
-								HierarchyTypeId = reader.GetStringSafe(5)[0],
-								SeparatorFlag = reader.GetBoolean(6),
-								StaticHierarchyMetaId = reader.GetInt32(7),
-								UnitTypeId = reader.GetInt32(8),
-								IsIncomePositive = reader.GetBoolean(9),
-								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+								Id = reader.GetInt32(0) // not used
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2936,7 +2014,10 @@ SELECT id From @AllStaticHierarchy
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -3002,10 +2083,11 @@ DECLARE @NewHierarchyLabel varchar(1024)
 	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 ) UPDATE sh
-   SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel)
+   SET sh.Description = REPLACE(sh.description, @OrigHierarchyLabel, @NewHierarchyLabel) -- what if its root and multiple occurance? 
 FROM CTE_Children cte
 JOIN StaticHierarchy sh on cte.ID = SH.Id   
 
+--  SET sh.Description = STUFF(sh.description, CHARINDEX(@OrigHierarchyLabel,sh.description), LEN(@OrigHierarchyLabel), @NewHierarchyLabel)
 
 ;WITH CTE_Children ([Id]
       ,[CompanyFinancialTermId]
@@ -3018,7 +2100,10 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,[UnitTypeId]
       ,[IsIncomePositive]
       ,[ChildrenExpandDown]
-      ,[ParentID]) AS(
+      ,[ParentID]      
+    ,[IsDanglingHeader]
+      ,[DocumentSeriesID]
+) AS(
 	SELECT [Id]
       ,[CompanyFinancialTermId]
       ,[AdjustedOrder]
@@ -3030,7 +2115,9 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,[UnitTypeId]
       ,[IsIncomePositive]
       ,[ChildrenExpandDown]
-      ,[ParentID] FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
+      ,[ParentID]      
+    ,[IsDanglingHeader]
+      ,[DocumentSeriesID] FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID
 	UNION ALL
  
 	SELECT sh.[Id]
@@ -3044,7 +2131,9 @@ JOIN StaticHierarchy sh on cte.ID = SH.Id
       ,sh.[UnitTypeId]
       ,sh.[IsIncomePositive]
       ,sh.[ChildrenExpandDown]
-      ,sh.[ParentID] 
+      ,sh.[ParentID]      
+    ,sh.[IsDanglingHeader]
+      ,sh.[DocumentSeriesID] 
 	FROM StaticHierarchy sh WITH (NOLOCK)
 	JOIN CTE_Children cte on sh.ParentID = cte.ID
 )
@@ -3081,6 +2170,9 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
 								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
@@ -3094,75 +2186,78 @@ SELECT *
 		}
 
 		public ScarResult UpdateStaticHierarchyHeaderLabel(int id, string newLabel) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			string query = @"
-DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
-exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
+            return new ScarResult();
+//			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+//			string query = @"
+//DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+//exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
-DECLARE @OrigDescription varchar(1024) = (SELECT dbo.GetHierarchyLabelSafe(Description)  FROM StaticHierarchy WHERE ID = @TargetSHID)
-DECLARE @OrigHierarchyLabel varchar(1024) 
-DECLARE @NewHierarchyLabel varchar(1024)  
-DECLARE @OrigParent varchar(1024)
+//DECLARE @OrigDescription varchar(1024) = (SELECT dbo.GetHierarchyLabelSafe(Description)  FROM StaticHierarchy WHERE ID = @TargetSHID)
+//DECLARE @OrigHierarchyLabel varchar(1024) 
+//DECLARE @NewHierarchyLabel varchar(1024)  
+//DECLARE @OrigParent varchar(1024)
 
-IF (DATALENGTH(@OrigDescription) > 2)
-BEGIN 
-SET @OrigParent = dbo.GetHierarchyLabelSafe(SUBSTRING(@OrigDescription, 0, DATALENGTH(@OrigDescription)))
-SET @NewHierarchyLabel = @OrigParent + '[' + @NewEndLabel + ']'
-	 UPDATE StaticHierarchy
-	SET Description = Replace(Description, @OrigDescription,@NewHierarchyLabel) 
-	WHERE TableTypeId = @TableTypeId   
-END
-
-
-
-";
-
-			ScarResult response = new ScarResult();
-			response.StaticHierarchies = new List<StaticHierarchy>();
-
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+//IF (DATALENGTH(@OrigDescription) > 2)
+//BEGIN 
+//SET @OrigParent = dbo.GetHierarchyLabelSafe(SUBSTRING(@OrigDescription, 0, DATALENGTH(@OrigDescription)))
+//SET @NewHierarchyLabel = @OrigParent + '[' + @NewEndLabel + ']'
+//	 UPDATE StaticHierarchy
+//	SET Description = Replace(Description, @OrigDescription,@NewHierarchyLabel) 
+//	WHERE TableTypeId = @TableTypeId   
+//END
 
 
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.Parameters.AddWithValue("@TargetSHID", id);
-					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							StaticHierarchy sh = new StaticHierarchy
-							{
-								Id = reader.GetInt32(0),
-								CompanyFinancialTermId = reader.GetInt32(1),
-								AdjustedOrder = reader.GetInt32(2),
-								TableTypeId = reader.GetInt32(3),
-								Description = reader.GetStringSafe(4),
-								HierarchyTypeId = reader.GetStringSafe(5)[0],
-								SeparatorFlag = reader.GetBoolean(6),
-								StaticHierarchyMetaId = reader.GetInt32(7),
-								UnitTypeId = reader.GetInt32(8),
-								IsIncomePositive = reader.GetBoolean(9),
-								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
-							};
-							response.StaticHierarchies.Add(sh);
-						}
-					}
-				}
-			}
 
-			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-			return response;
+//";
+
+//			ScarResult response = new ScarResult();
+//			response.StaticHierarchies = new List<StaticHierarchy>();
+
+//			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+//				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+//					conn.Open();
+//					cmd.Parameters.AddWithValue("@TargetSHID", id);
+//					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+//					using (SqlDataReader reader = cmd.ExecuteReader()) {
+//						while (reader.Read()) {
+//							StaticHierarchy sh = new StaticHierarchy
+//							{
+//								Id = reader.GetInt32(0),
+//								CompanyFinancialTermId = reader.GetInt32(1),
+//								AdjustedOrder = reader.GetInt32(2),
+//								TableTypeId = reader.GetInt32(3),
+//								Description = reader.GetStringSafe(4),
+//								HierarchyTypeId = reader.GetStringSafe(5)[0],
+//								SeparatorFlag = reader.GetBoolean(6),
+//								StaticHierarchyMetaId = reader.GetInt32(7),
+//								UnitTypeId = reader.GetInt32(8),
+//								IsIncomePositive = reader.GetBoolean(9),
+//								ChildrenExpandDown = reader.GetBoolean(10),
+//								Cells = new List<SCARAPITableCell>()
+//							};
+//							response.StaticHierarchies.Add(sh);
+//						}
+//					}
+//				}
+//			}
+
+//			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+//			return response;
 		}
 
 
 		public ScarResult UpdateStaticHierarchyHeaderLabelWithUpperCount(int uppercount, int id, string newLabel) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			string query = @"
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
 DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
 DECLARE @Description varchar(1024) = (SELECT Description FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @HierarchyLabel varchar(1024) =  dbo.GetHierarchyLabelSafe(@Description);
+DECLARE @OldEndLabel varchar(1024) =  dbo.GetEndLabelSafe(@Description);
+DECLARE @ParentID int = (SELECT Parentid FROM StaticHierarchy WHERE ID = @TargetSHID)
 DECLARE @Label2 varchar(1024) =  SUBSTRING(@HierarchyLabel, 0,  DATALENGTH(@HierarchyLabel) - CHARINDEX(']', REVERSE(@HierarchyLabel))+1);
 DECLARE @ParentHierarchyLabel varchar(1024) =  SUBSTRING(@Label2, 0,  DATALENGTH(@Label2) - CHARINDEX(']', REVERSE(@Label2))+2);
 If @Label2 = @ParentHierarchyLabel
@@ -3184,44 +2279,52 @@ while @count > 1
 DECLARE @NewHierarchyLabel varchar(1024) = @ParentHierarchyLabel + '[' + @NewEndLabel + ']'
 
 UPDATE StaticHierarchy
-	SET Description =  Stuff(@Description, CharIndex(@HierarchyLabel, @Description), dataLength(@HierarchyLabel), @NewHierarchyLabel)
+	SET Description =  Stuff(Description, CharIndex(@HierarchyLabel, @Description), dataLength(@HierarchyLabel), @NewHierarchyLabel)
 WHERE TableTypeId = @TableTypeId and charindex(@HierarchyLabel,Description)= 1  
+
+UPDATE StaticHierarchy
+	SET Description = @ParentHierarchyLabel +  @NewEndLabel
+WHERE TableTypeId = @TableTypeId and IsDanglingHeader = 1 and ID in (@TargetSHID, @ParentID)  
 ";
 
-			ScarResult response = new ScarResult();
-			response.StaticHierarchies = new List<StaticHierarchy>();
+            ScarResult response = new ScarResult();
+            response.StaticHierarchies = new List<StaticHierarchy>();
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.Parameters.AddWithValue("@TargetSHID", id);
-					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
-					cmd.Parameters.AddWithValue("@count", uppercount);
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							StaticHierarchy sh = new StaticHierarchy
-							{
-								Id = reader.GetInt32(0),
-								CompanyFinancialTermId = reader.GetInt32(1),
-								AdjustedOrder = reader.GetInt32(2),
-								TableTypeId = reader.GetInt32(3),
-								Description = reader.GetStringSafe(4),
-								HierarchyTypeId = reader.GetStringSafe(5)[0],
-								SeparatorFlag = reader.GetBoolean(6),
-								StaticHierarchyMetaId = reader.GetInt32(7),
-								UnitTypeId = reader.GetInt32(8),
-								IsIncomePositive = reader.GetBoolean(9),
-								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
-							};
-							response.StaticHierarchies.Add(sh);
-						}
-					}
-				}
-			}
-			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabelWithUpperCount", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-			return response;
-		}
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@TargetSHID", id);
+                    cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+                    cmd.Parameters.AddWithValue("@count", uppercount);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            //StaticHierarchy sh = new StaticHierarchy
+                            //{
+                            //    Id = reader.GetInt32(0),
+                            //    CompanyFinancialTermId = reader.GetInt32(1),
+                            //    AdjustedOrder = reader.GetInt32(2),
+                            //    TableTypeId = reader.GetInt32(3),
+                            //    Description = reader.GetStringSafe(4),
+                            //    HierarchyTypeId = reader.GetStringSafe(5)[0],
+                            //    SeparatorFlag = reader.GetBoolean(6),
+                            //    StaticHierarchyMetaId = reader.GetInt32(7),
+                            //    UnitTypeId = reader.GetInt32(8),
+                            //    IsIncomePositive = reader.GetBoolean(9),
+                            //    ChildrenExpandDown = reader.GetBoolean(10),
+                            //    Cells = new List<SCARAPITableCell>()
+                            //};
+                            //response.StaticHierarchies.Add(sh);
+                        }
+                    }
+                }
+            }
+            CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabelWithUpperCount", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            return response;
+        }
 
 
 		public ScarResult UpdateStaticHierarchyAddParent(int id) {
@@ -3254,7 +2357,10 @@ WHERE TableTypeId = @TableTypeId and charindex(@HierarchyLabel,Description)= 1
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -3297,7 +2403,10 @@ WHERE TableTypeId = @TableTypeId and charindex(@HierarchyLabel,Description)= 1
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -3347,7 +2456,10 @@ SELECT * FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -3474,7 +2586,10 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-								Cells = new List<SCARAPITableCell>()
+                                ParentID = reader.GetNullable<int>(11),
+                                IsDanglingHeader = reader.GetBoolean(12),
+                                DocumentSeriesId = reader.GetInt32(13),
+                                Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -3541,33 +2656,34 @@ END CATCH
 		}
 
 		public ScarResult DragDropStaticHierarchyLabelByString(int tableTypeId, string DraggedLabel, string TargetLabel, string Location) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
+            return new ScarResult();
+			//string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+			//string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
 
-			ScarResult response = new ScarResult();
-			response.StaticHierarchies = new List<StaticHierarchy>();
+			//ScarResult response = new ScarResult();
+			//response.StaticHierarchies = new List<StaticHierarchy>();
 
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+			//using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
 
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.CommandType = System.Data.CommandType.StoredProcedure;
-					cmd.Parameters.AddWithValue("@DraggedLabel", DraggedLabel);
-					cmd.Parameters.AddWithValue("@TargetLabel", TargetLabel);
-					cmd.Parameters.AddWithValue("@TableTypeID", tableTypeId);
-					cmd.Parameters.AddWithValue("@Location", Location);
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						int i = 0;
-						while (reader.Read()) {
-							i++;
-						}
-					}
-				}
-			}
+			//	using (SqlCommand cmd = new SqlCommand(query, conn)) {
+			//		conn.Open();
+			//		cmd.CommandType = System.Data.CommandType.StoredProcedure;
+			//		cmd.Parameters.AddWithValue("@DraggedLabel", DraggedLabel);
+			//		cmd.Parameters.AddWithValue("@TargetLabel", TargetLabel);
+			//		cmd.Parameters.AddWithValue("@TableTypeID", tableTypeId);
+			//		cmd.Parameters.AddWithValue("@Location", Location);
+			//		using (SqlDataReader reader = cmd.ExecuteReader()) {
+			//			int i = 0;
+			//			while (reader.Read()) {
+			//				i++;
+			//			}
+			//		}
+			//	}
+			//}
 
-			CommunicationLogger.LogEvent("DragDropStaticHierarchyLabelByString", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-			return response;
+			//CommunicationLogger.LogEvent("DragDropStaticHierarchyLabelByString", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+			//return response;
 		}
 
 		public TimeSlice GetTimeSlice(int id) {
@@ -6155,8 +5271,8 @@ OUTPUT $action, 'DocumentTimeSlice', inserted.Id,0 INTO @ChangeResult;
 DELETE FROM dbo.StaticHierarchy where id in ({0});
 ";
 			string merge_sql = @"MERGE dbo.StaticHierarchy
-USING ( select {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} ) as src (Id,CompanyFinancialTermId,AdjustedOrder,TableTypeId
-,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown,ParentID)
+USING ( select {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13} ) as src (Id,CompanyFinancialTermId,AdjustedOrder,TableTypeId
+,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown,ParentID,IsDanglingHeader, DocumentSeriesID)
 ON dbo.StaticHierarchy.Id = src.Id
 WHEN MATCHED THEN
 	UPDATE SET CompanyFinancialTermId = src.CompanyFinancialTermId
@@ -6170,9 +5286,11 @@ WHEN MATCHED THEN
       ,IsIncomePositive = src.IsIncomePositive
       ,ChildrenExpandDown = src.ChildrenExpandDown
       ,ParentID = src.ParentID
+      ,IsDanglingHeader = StaticHierarchy.IsDanglingHeader
+      ,DocumentSeriesID = StaticHierarchy.DocumentSeriesID
 WHEN NOT MATCHED THEN
 	INSERT (CompanyFinancialTermId,AdjustedOrder,TableTypeId
-,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown) VALUES
+,Description,HierarchyTypeId,SeperatorFlag,StaticHierarchyMetaId,UnitTypeId,IsIncomePositive,ChildrenExpandDown, ParentID, IsDanglingHeader,DocumentSeriesID ) VALUES
 	  (
 src.CompanyFinancialTermId 
 ,CASE src.AdjustedOrder WHEN -1 THEN -101 ELSE src.AdjustedOrder END
@@ -6184,6 +5302,9 @@ src.CompanyFinancialTermId
 ,src.UnitTypeId 
 ,src.IsIncomePositive 
 ,src.ChildrenExpandDown 
+,src.ParentID
+,src.IsDanglingHeader
+,src.DocumentSeriesID
 	  )
 OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @ChangeResult;
 
@@ -6206,7 +5327,20 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 				List<string> deleted_ids = new List<string>();
 				string tableTypeId = null;
-				foreach (var elem in _jarray) {
+                string documentSeriesId = "";
+                foreach (var elem in _jarray)
+                {
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue()) && !string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue()))
+                        {
+                            documentSeriesId = elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue();
+                            break;
+                        }
+                    }
+                    catch { }
+                }
+                foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
 							deleted_ids.Add(elem["obj"]["ID"].AsValue());
@@ -6222,8 +5356,10 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["UnitTypeId"].AsValue(),
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
-								elem["obj"]["ParentID"].AsValue()
-								));
+								elem["obj"]["ParentID"].AsValue(),
+                                "0", // will be ignored
+                                "0"
+                                ));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
@@ -6239,8 +5375,10 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["UnitTypeId"].AsValue(),
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
-								"NULL"
-								));
+								"NULL",
+                                "0", //elem["obj"]["IsDanglingHeader"].AsBoolean(),
+                                documentSeriesId //elem["obj"]["DocumentSeriesID"].AsValue()
+                                ));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
@@ -6285,8 +5423,11 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["UnitTypeId"].AsValue(),
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
-								elem["obj"]["ParentID"].AsValue()
-	));
+								elem["obj"]["ParentID"].AsValue(),
+                                elem["obj"]["IsDanglingHeader"].AsBoolean(),
+                                elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue() // TODO:
+
+    ));
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
@@ -6694,6 +5835,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult DeleteDocumentTableID(string CompanyId, string dtid, string tabletype) {
+            // TODO: DocumentSeries
 			string SQL_Delete = @"
 BEGIN TRY
 	BEGIN TRAN
@@ -6712,8 +5854,8 @@ BEGIN TRY
 select sh.ID
 from DocumentSeries ds (nolock) 
 join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID
-JOIN CompanyFinancialTerm cft (nolock) ON cft.DocumentSeriesID = ds.ID
-JOIN StaticHierarchy sh (nolock) on cft.id = sh.CompanyFinancialTermId AND sh.TableTypeID = tt.ID
+JOIN StaticHierarchy sh (nolock) on ds.id = sh.DocumentSeriesID AND sh.TableTypeID = tt.ID
+LEFT JOIN CompanyFinancialTerm cft (nolock) ON cft.id = sh.CompanyFinancialTermID
 where companyid = @CompanyId
 AND tt.Description = @tabletype
 AND NOT EXISTS(select CompanyFinancialTermId
@@ -7075,7 +6217,7 @@ FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @newId or id = @dts or id = 
 		}
 
 		public ScarResult GetReviewTimeSlice(string TemplateName, int iconum) {
-
+            // TODO: DocumentSeries
 			string SQL_ReviewButton = @"
 select tc.CellDate as PeriodEndDate, 
 case when dts.PeriodType = 'XX' THEN 'AR' ELSE dts.PeriodType END as TimeSeries, 
@@ -7357,7 +6499,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -7412,7 +6554,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -7549,7 +6691,7 @@ DECLARE @OldStaticHierarchyList StaticHierarchyList
 	UNION ALL
 	SELECT sh.Id 
 	FROM StaticHierarchy sh WITH (NOLOCK)
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
+	JOIN CTE_Children cte on sh.ParentID = cte.ID and sh.IsDanglingHeader = 0
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
 FROM CTE_Children cte
@@ -7604,7 +6746,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -7658,7 +6800,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -7833,7 +6975,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -7885,7 +7027,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -8018,7 +7160,7 @@ DECLARE @OldStaticHierarchyList StaticHierarchyList
 	UNION ALL
 	SELECT sh.Id 
 	FROM StaticHierarchy sh WITH (NOLOCK)
-	JOIN CTE_Children cte on sh.ParentID = cte.ID
+	JOIN CTE_Children cte on sh.ParentID = cte.ID and sh.IsDanglingHeader = 0
 ) INSERT @OldStaticHierarchyList ([StaticHierarchyID])
    SELECT ID 
 FROM CTE_Children cte
@@ -8067,7 +7209,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -8120,7 +7262,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 SELECT MAX(level)
 FROM cte_level
@@ -8966,7 +8108,55 @@ END CATCH
 
 		#region Deprecated Methods
 		public SCARAPITableCell GetCell(string CellId) {
-			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    #region SQL
+
+        // TODO: StaticHierarchy DocumentSeriesID
+        string SQL_GetCellQuery =
+                                                                @"
+SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
+				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
+				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
+				tc.XBRLTag, null, tc.DocumentId, tc.Label, tc.ScalingFactorValue,
+				(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
+				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.Id = metc.TableCellId), 
+				sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime
+FROM DocumentSeries ds WITH (NOLOCK) 
+JOIN CompanyFinancialTerm cft  WITH (NOLOCK) ON cft.DocumentSeriesId = ds.Id
+JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
+JOIN(
+	SELECT distinct dts.ID
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK)  on ds.ID = Dts.DocumentSeriesId
+	JOIN Document d WITH (NOLOCK)  on dts.DocumentId = d.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dts.ID = dtstc.DocumentTimeSliceID
+	JOIN TableCell tc WITH (NOLOCK)  on dtstc.TableCellID = tc.ID
+	JOIN DimensionToCell dtc WITH (NOLOCK)  on tc.ID = dtc.TableCellID -- check that is in a table
+	JOIN StaticHierarchy sh WITH (NOLOCK)  on tc.CompanyFinancialTermID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK)  on tt.ID = sh.TableTypeID
+	WHERE tc.ID = @cellId
+	AND (d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
+) as ts on 1=1
+JOIN dbo.DocumentTimeSlice dts WITH (NOLOCK)  on dts.ID = ts.ID and dts.DocumentSeriesId = ds.ID 
+JOIN(
+	SELECT tc.*, dtstc.DocumentTimeSliceID, sf.Value as ScalingFactorValue
+	FROM DocumentSeries ds WITH (NOLOCK) 
+	JOIN CompanyFinancialTerm cft WITH (NOLOCK)  ON cft.DocumentSeriesId = ds.Id
+	JOIN StaticHierarchy sh WITH (NOLOCK)  on cft.ID = sh.CompanyFinancialTermID
+	JOIN TableType tt WITH (NOLOCK)  on sh.TableTypeID = tt.ID
+	JOIN TableCell tc WITH (NOLOCK)  on tc.CompanyFinancialTermID = cft.ID
+	JOIN DocumentTimeSliceTableCell dtstc WITH (NOLOCK)  on dtstc.TableCellID = tc.ID
+	JOIN ScalingFactor sf WITH (NOLOCK)  on sf.ID = tc.ScalingFactorID
+	WHERE tc.ID = @cellId
+) as tc ON tc.DocumentTimeSliceID = ts.ID AND tc.CompanyFinancialTermID = cft.ID
+JOIN Document d WITH (NOLOCK)  on dts.documentid = d.ID
+WHERE 1=1
+ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc
+
+";//I hate this query, it is so bad
+
+        #endregion
+        string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
 					conn.Open();
@@ -9185,7 +8375,7 @@ AS
        UNION ALL
        SELECT ID, sh.CompanyFinancialTermID, sh.ParentID, cte.DocumentTimeSliceID, dtc.TableCellID, 0, cte.RootStaticHierarchyID, cte.RootDocumentTimeSliceID
        FROM cte_sh cte
-       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID
+       JOIN StaticHierarchy sh WITH (NOLOCK) on sh.ID = cte.ParentID and sh.IsDanglingHeader = 0
        OUTER APPLY(SELECT dtc.TableCellID FROM vw_SCARDocumentTimeSliceTableCell2 dtc WHERE sh.CompanyFinancialTermID = dtc.CompanyFinancialTermID 
                                   AND dtc.DocumentTimeSliceID = cte.DocumentTimeSliceID)dtc
        WHERE cte.IsRoot = 1 OR (cte.IsRoot = 0 AND cte.TableCellID IS NULL)
@@ -9231,7 +8421,7 @@ AS
 	SELECT cte.SHRootID, shp.ID, cte.level+1
 	FROM cte_level cte
 	JOIN StaticHierarchy sh WITH (NOLOCK) ON cte.SHID = sh.ID
-	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID
+	JOIN StaticHierarchy shp WITH (NOLOCK) ON sh.ParentID = shp.ID and shp.IsDanglingHeader = 0
 )
 --SELECT MAX(level)
 --FROM cte_level
