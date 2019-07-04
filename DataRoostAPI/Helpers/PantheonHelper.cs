@@ -13,7 +13,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers
     public static class PantheonHelper
     {
         private static string getDocumentSeriesID = @"Select ID From DocumentSeries With (NoLock) Where CompanyID = @iconum";
-        private static string getSTDExpressionsForTimeSlice = @"[Supercore].[GetStdTimeSliceDetailForTimeSlice]";
+        private static string getSTDDataForStatement = @"[Supercore].[usp_GetSTDDataForStatement]";
 
         public static int GetDocSeriesId(int Iconum)
         {
@@ -42,85 +42,127 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers
             return docSeriesId;
         }
 
-        public static ExportMaster GetStdTimeSliceDetailForTimeSlice(int iconum, Guid damDocumentId = default(Guid))
+        public static ExportMaster GetSTDDataForStatement(int iconum, List<string> statementTypes, string templateCode, Guid damDocumentId = default(Guid))
         {
             int docSeriesId = GetDocSeriesId(iconum);
             ExportMaster exportDocumentMeta = new ExportMaster();
             List<TimeSlice> timeSlices = new List<TimeSlice>();
-            List<STDTimeSliceDetail> stdTimeSliceDetails = new List<STDTimeSliceDetail>();
+            List<StdValueMeta> stdValueMeta = new List<StdValueMeta>();
+            List<StdValueMeta> finalStdValueMeta = new List<StdValueMeta>();
             try
             {
-                using (SqlConnection ffdoc = new SqlConnection(ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString()))
+                foreach (var statement in statementTypes)
                 {
-                    ffdoc.Open();
-                    using (SqlCommand sql = new SqlCommand(getSTDExpressionsForTimeSlice, ffdoc))
+                    using (SqlConnection ffdoc = new SqlConnection(ConfigurationManager.ConnectionStrings["FFDocumentHistoryReadOnly"].ToString()))
                     {
-                        sql.Parameters.AddWithValue("@docSeriesId", docSeriesId);
-                        sql.Parameters.AddWithValue("@damDocumentId", damDocumentId);
-                        sql.CommandType = CommandType.StoredProcedure;
-                        using (SqlDataReader sdr = sql.ExecuteReader())
+                        ffdoc.Open();
+                        using (SqlCommand sql = new SqlCommand(getSTDDataForStatement, ffdoc))
                         {
-                            while (sdr.Read())
+                            sql.Parameters.AddWithValue("@Iconum", iconum);
+                            sql.Parameters.AddWithValue("@statementType", statement);
+                            sql.Parameters.AddWithValue("@templateCode", templateCode);
+                            sql.Parameters.AddWithValue("@damDocumentId", damDocumentId);
+                            sql.CommandType = CommandType.StoredProcedure;
+                            using (SqlDataReader sdr = sql.ExecuteReader())
                             {
-                                TimeSlice ts = new TimeSlice();
-                                ts.DamDocumentId = damDocumentId;
-                                ts.DocSeriesId = docSeriesId;
-                                ts.Id = sdr.GetGuid(0);
-                                ts.TimeSliceDate = sdr.GetDateTime(1);
-                                ts.PeriodLength = sdr.GetInt32(2);
-                                ts.PeriodTypeId = sdr.GetString(3);
-                                ts.CompanyFiscalYear = sdr.GetDecimal(4);
-                                ts.ReportTypeId = sdr.GetString(5);
-                                ts.InterimTypeId = !sdr.IsDBNull(6) ? sdr.GetString(6) : "";
-                                ts.ConsolidatedTypeId = sdr.GetString(7);
-                                ts.CurrencyCode = sdr.GetString(8);
-                                ts.ScalingFactorId = sdr.GetString(9);
-                                ts.AccountTypeId = sdr.GetString(10);
-                                ts.SDBValidatedFlag = sdr.GetBoolean(11);
-                                ts.STDValidatedFlag = sdr.GetBoolean(12);
-                                ts.GaapTypeID = !sdr.IsDBNull(13) ? sdr.GetString(13) : "";
-                                ts.UpdateTypeID = sdr.GetString(14);
-                                ts.EncoreFlag = sdr.GetBoolean(15);
-                                ts.Auto_InterimType = !sdr.IsDBNull(16) ? sdr.GetString(16) : "";
-                                ts.AutoCalcFlag = sdr.GetInt32(17);
-                                ts.AuditorsOpinionID = !sdr.IsDBNull(18) ? sdr.GetInt32(18) : 0;
-                                ts.FormatCodeCashflowID = !sdr.IsDBNull(19) ? sdr.GetInt32(19) : 0;
-                                ts.LongTermInvestmentID = !sdr.IsDBNull(20) ? sdr.GetInt32(20) : 0;
-                                ts.IsProspectus = sdr.GetBoolean(21);
-                                ts.isQX = sdr.GetBoolean(22);
-                                ts.IsDCV = sdr.GetBoolean(31);
-                                ts.CollectionTypeId = !sdr.IsDBNull(32) ? sdr.GetString(32) : "";
-                                ts.IndustryCountryAssociationID = sdr.GetInt32(33);
-                                ts.DocSeriesId = sdr.GetInt32(34);
-                                ts.IsExport = sdr.GetBoolean(35);
-                                ts.HIndicator = !sdr.IsDBNull(36) ? sdr.GetBoolean(36) : false;
-                                ts.IsVoy = !sdr.IsDBNull(37) ? sdr.GetBoolean(37) : false;
-                                ts.IsFYC = sdr.GetBoolean(38);
-                                ts.PresentationTypeId = sdr.GetInt32(39);
-                                timeSlices.Add(ts);
-                            }
+                                while (sdr.Read())
+                                {
+                                    TimeSlice ts = new TimeSlice();
+                                    if (finalStdValueMeta.Count == 0)
+                                    {
+                                        ts.DamDocumentId = damDocumentId;
+                                        ts.DocSeriesId = docSeriesId;
+                                        ts.Id = sdr.GetGuid(0);
+                                        ts.TimeSliceDate = sdr.GetDateTime(1);
+                                        ts.PeriodLength = sdr.GetInt32(2);
+                                        ts.PeriodTypeId = sdr.GetString(3);
+                                        ts.CompanyFiscalYear = sdr.GetDecimal(4);
+                                        ts.ReportTypeId = sdr.GetString(5);
+                                        ts.InterimTypeId = !sdr.IsDBNull(6) ? sdr.GetString(6) : "";
+                                        ts.ConsolidatedTypeId = sdr.GetString(7);
+                                        ts.CurrencyCode = sdr.GetString(8);
+                                        ts.ScalingFactorId = sdr.GetString(9);
+                                        ts.AccountTypeId = sdr.GetString(10);
+                                        ts.SDBValidatedFlag = sdr.GetBoolean(11);
+                                        ts.STDValidatedFlag = sdr.GetBoolean(12);
+                                        ts.GaapTypeID = !sdr.IsDBNull(13) ? sdr.GetString(13) : "";
+                                        ts.UpdateTypeID = sdr.GetString(14);
+                                        ts.EncoreFlag = sdr.GetBoolean(15);
+                                        ts.Auto_InterimType = !sdr.IsDBNull(16) ? sdr.GetString(16) : "";
+                                        ts.AutoCalcFlag = sdr.GetInt32(17);
+                                        ts.AuditorsOpinionID = !sdr.IsDBNull(18) ? sdr.GetInt32(18) : 0;
+                                        ts.FormatCodeCashflowID = !sdr.IsDBNull(19) ? sdr.GetInt32(19) : 0;
+                                        ts.LongTermInvestmentID = !sdr.IsDBNull(20) ? sdr.GetInt32(20) : 0;
+                                        ts.IsProspectus = sdr.GetBoolean(21);
+                                        ts.isQX = sdr.GetBoolean(22);
+                                        ts.IsDCV = sdr.GetBoolean(31);
+                                        ts.CollectionTypeId = !sdr.IsDBNull(32) ? sdr.GetString(32) : "";
+                                        ts.IndustryCountryAssociationID = sdr.GetInt32(33);
+                                        ts.DocSeriesId = sdr.GetInt32(34);
+                                        ts.IsExport = sdr.GetBoolean(35);
+                                        ts.HIndicator = !sdr.IsDBNull(36) ? sdr.GetBoolean(36) : false;
+                                        ts.IsVoy = !sdr.IsDBNull(37) ? sdr.GetBoolean(37) : false;
+                                        ts.IsFYC = sdr.GetBoolean(38);
+                                        ts.PresentationTypeId = sdr.GetInt32(39);
+                                        ts.ModelMasterId = sdr.GetInt32(40);// == 14 ? 15 : sdr.GetInt32(40);
+                                        ts.Source = "DB";
+                                        timeSlices.Add(ts);
+                                    }
+                                }
 
-                            sdr.NextResult();
+                                sdr.NextResult();
 
-                            while (sdr.Read())
-                            {
-                                STDTimeSliceDetail std = new STDTimeSliceDetail();
-                                std.DocSeriesId = docSeriesId;
-                                std.ID = sdr.GetInt32(0);
-                                std.TimeSliceId = sdr.GetGuid(1);
-                                std.STDItemID = sdr.GetInt32(2);
-                                std.Value = sdr.GetString(3);
-                                std.StatementModelDetailId = sdr.GetInt32(7);
-                                std.SecurityId = !sdr.IsDBNull(8) ? sdr.GetString(8) : "";
-                                std.Cusip = !sdr.IsDBNull(9) ? sdr.GetString(9) : "";
-                                std.ModelMasterId = sdr.GetInt32(10);
-                                stdTimeSliceDetails.Add(std);
+                                while (sdr.Read())
+                                {
+                                    StdValueMeta std = new StdValueMeta();
+                                    std.docSeriesId = docSeriesId;
+                                    std.itemcode = sdr.GetString(0);
+                                    std.itemdescription = sdr.GetString(1);
+                                    std.pitflag = sdr.GetBoolean(2);
+                                    std.Value = !sdr.IsDBNull(3) ? sdr.GetString(3) : "";
+                                    std.CellId = !sdr.IsDBNull(4) ? sdr.GetInt32(4) : 0;
+                                    std.SecurityId = !sdr.IsDBNull(5) ? sdr.GetString(5) : "";
+                                    std.NAME = !sdr.IsDBNull(6) ? sdr.GetString(6) : "";
+                                    std.ScalingFactor = !sdr.IsDBNull(7) ? sdr.GetString(7) : "";
+                                    std.itemsequence = sdr.GetInt32(8);
+                                    std.itemusagetypeid = !sdr.IsDBNull(9) ? sdr.GetString(9) : "";
+                                    std.statementtypeid = !sdr.IsDBNull(10) ? sdr.GetString(10) : "";
+                                    std.itemid = sdr.GetInt32(11);
+                                    std.Indent = sdr.GetInt32(12);
+                                    std.damdocumentid = sdr.GetGuid(13);
+                                    std.itemtypeid = sdr.GetString(14)[0];
+                                    std.viewid = sdr.GetString(15)[0];
+                                    std.TimeSliceId = sdr.GetGuid(16);
+                                    std.Source = "DB";
+                                    std.documentdate = sdr.GetDateTime(17);
+                                    int modelId = 0;
+                                    switch(statement)
+                                    {
+                                        case "P":
+                                            modelId = 2;
+                                            break;
+                                        case "B":
+                                            modelId = 9;
+                                            break;
+                                        case "C":
+                                            modelId = 12;
+                                            break;
+                                        case "E":
+                                            modelId = 14;
+                                            break;
+                                    }
+                                    std.ModelMasterId = modelId;
+                                    stdValueMeta.Add(std);
+                                }
                             }
                         }
                     }
+                    if (stdValueMeta != null && stdValueMeta.Count > 0)
+                        finalStdValueMeta.AddRange(stdValueMeta);
                 }
+
                 exportDocumentMeta.timeSlices = timeSlices;
-                exportDocumentMeta.stdTimeSliceDetail = stdTimeSliceDetails;
+                exportDocumentMeta.stdValueMeta = finalStdValueMeta;
             }
             catch (Exception ex)
             {

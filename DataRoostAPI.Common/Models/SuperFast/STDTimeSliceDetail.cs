@@ -12,6 +12,7 @@ namespace DataRoostAPI.Common.Models.SuperFast
         public int STDItemID { get; set; }
         public string Value { get; set; }
         public string MathML { get; set; }
+        public string Source { get; set; }
         public DateTime LastUpdatedDate { get; set; }
         public string LastUpdatedByUser { get; set; }
         public int StatementModelDetailId { get; set; }

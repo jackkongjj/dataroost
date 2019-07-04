@@ -9,6 +9,7 @@ namespace DataRoostAPI.Common.Models.SuperFast
     public class ExportMaster
     {
         public IEnumerable<TimeSlice> timeSlices;
+        public IEnumerable<StdValueMeta> stdValueMeta;
         public IEnumerable<STDTimeSliceDetail> stdTimeSliceDetail;
         public IEnumerable<StdItem> stdItems;
     }
