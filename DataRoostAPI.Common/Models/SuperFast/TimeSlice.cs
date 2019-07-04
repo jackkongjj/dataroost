@@ -9,6 +9,7 @@ namespace DataRoostAPI.Common.Models.SuperFast
     public class TimeSlice
     {
         public Guid DamDocumentId { get; set; }
+        public string Source { get; set; }
         public DateTime TimeSliceDate { get; set; }
         public int PeriodLength { get; set; }
         public string PeriodTypeId { get; set; }
@@ -42,6 +43,7 @@ namespace DataRoostAPI.Common.Models.SuperFast
         public bool IsDCV { get; set; }
         public string CollectionTypeId { get; set; }
         public int IndustryCountryAssociationID { get; set; }
+        public int ModelMasterId { get; set; }
         public bool IsExport { get; set; }
         public bool HIndicator { get; set; }
         public bool IsVoy { get; set; }

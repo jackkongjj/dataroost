@@ -161,6 +161,7 @@
     <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
     <Compile Include="Models\SuperFast\StdItem.cs" />
     <Compile Include="Models\SuperFast\STDTimeSliceDetail.cs" />
+    <Compile Include="Models\SuperFast\StdValueMeta.cs" />
     <Compile Include="Models\SuperFast\TimeSlice.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TemplateItemDTO.cs" />

@@ -704,32 +704,44 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return sb.ToString();
 		}
 
-        public SuperfastModel.ExportMaster GetPantheonStdDiff(int iconum, Guid damDocumentId)
+        public SuperfastModel.ExportMaster GetPantheonStdDiff(int iconum, Guid damDocumentId, string templateCode)
         {
             //ScarProductViewResult result = new ScarProductViewResult();
             string dfsPath = ConfigurationManager.AppSettings["PantheonBackupDFS"];
+            List<string> statementTypes = new List<string>() { "P", "E", "B", "C" };
             List<SuperfastModel.TimeSlice> timeSlices = new List<SuperfastModel.TimeSlice>();
             List<SuperfastModel.STDTimeSliceDetail> stdTimeSliceDetails = new List<SuperfastModel.STDTimeSliceDetail>();
+            List<SuperfastModel.StdValueMeta> stdValueMetas = new List<SuperfastModel.StdValueMeta>();
             SuperfastModel.ExportMaster outputExport = new SuperfastModel.ExportMaster();
             try
             {
                 #region Getting the last Exported
                 SuperfastModel.ExportMaster previousExport = PantheonHelper.GetDataFromDFS(damDocumentId, iconum);
+                foreach (var ts in previousExport.timeSlices)
+                    ts.Source = "Backup";
                 timeSlices.AddRange(previousExport.timeSlices);
-                stdTimeSliceDetails.AddRange(previousExport.stdTimeSliceDetail);
+                if (previousExport.stdTimeSliceDetail != null)
+                {
+                    foreach (var stdItem in previousExport.stdTimeSliceDetail)
+                    {
+                        stdItem.Source = "Backup";
+                    }
+                    stdTimeSliceDetails.AddRange(previousExport.stdTimeSliceDetail);
+                }
                 #endregion
 
                 #region Getting the newly collected
-                SuperfastModel.ExportMaster newlyCollectedValue = PantheonHelper.GetStdTimeSliceDetailForTimeSlice(iconum, damDocumentId);
+                SuperfastModel.ExportMaster newlyCollectedValue = PantheonHelper.GetSTDDataForStatement(iconum, statementTypes, templateCode, damDocumentId);
                 timeSlices.AddRange(newlyCollectedValue.timeSlices);
-                stdTimeSliceDetails.AddRange(newlyCollectedValue.stdTimeSliceDetail);
+                stdValueMetas.AddRange(newlyCollectedValue.stdValueMeta);
                 #endregion
 
                 outputExport.stdItems = PantheonHelper.GetAllStdItems();
                 outputExport.timeSlices = timeSlices;
                 outputExport.stdTimeSliceDetail = stdTimeSliceDetails;
+                outputExport.stdValueMeta = stdValueMetas;
             }
-            catch
+            catch(Exception ex)
             {      
                 //Throw here if you want to debug any issues with this route
             }

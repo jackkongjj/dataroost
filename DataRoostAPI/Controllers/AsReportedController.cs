@@ -399,9 +399,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-        [Route("pantheonDiffScreen/{TemplateName}/{DamDocumentID}")]
+        [Route("pantheonDiffScreen/{TemplateName}/{DamDocumentID}/{templateCode}")]
         [HttpGet]
-        public SuperfastModel.ExportMaster GetStdDiffScreen(string CompanyId, string TemplateName, Guid DamDocumentID)
+        public SuperfastModel.ExportMaster GetStdDiffScreen(string CompanyId, string TemplateName, Guid DamDocumentID, string templateCode)
         {
             try
             {
@@ -410,7 +410,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                     return null;
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetPantheonStdDiff(iconum, DamDocumentID);
+                return helper.GetPantheonStdDiff(iconum, DamDocumentID, templateCode);
             }
             catch (Exception ex)
             {
