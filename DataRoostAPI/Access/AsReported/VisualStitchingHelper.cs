@@ -8,6 +8,9 @@ using Npgsql;
 using NpgsqlTypes;
 using System.Net;
 using Newtonsoft.Json;
+using System.Linq;
+using System.Collections.Generic;
+
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
     public class VisualStitchingHelper
@@ -126,6 +129,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public int Id { get; set; }
             [JsonProperty("label")]
             public string Label { get; set; }
+            [JsonProperty("labelHierarhcy")]
+            public List<string> LabelHierarchy { get; set; }
+            
         }
         public class Node
         {
@@ -136,6 +142,204 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             [JsonProperty("nodes")]
             public List<Node> Nodes { get; set; }
         }
+        public string GetDataTreeFake(Guid DamDocumnetID)
+        {
+
+            //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
+            string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
+            string testURL = @"http://auto-tablehandler-dev.factset.io/queue/document/dd17a130-682b-e711-80ea-8cdcd4af21e4/31";
+            string url = String.Format(urlPattern, DamDocumnetID);
+            url = testURL;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.ContentType = "application/json";
+            request.Timeout = 120000;
+            request.Method = "GET";
+            var response = (HttpWebResponse)request.GetResponse();
+            string outputresult = null;
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                using (var streamReader = new StreamReader(response.GetResponseStream()))
+                {
+                    outputresult = streamReader.ReadToEnd();
+                }
+            }
+            var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+
+            List<Node> nodes = new List<Node>();
+            string[] big3Table = { "BS", "IS", "CF" };
+            foreach (var table in result.Tables)
+            {
+                if (!big3Table.Contains(table.Type.ToUpper()))
+                    continue;
+                Node t = new Node();
+                nodes.Add(t);
+                t.Id = table.Id;
+                t.Title = table.Type;
+                t.Nodes = new List<Node>();
+                Stack<Node> stack = new Stack<Node>();
+                stack.Push(t);
+
+                foreach (var row in table.Rows)
+                {
+                    int i = 0;
+                    foreach (var labelAtlevel in row.LabelHierarchy)
+                    {
+                        i++;
+                        if (stack.Count <= i)
+                        {
+                            break;  
+                        }
+                        if (stack.ElementAt(i - 1).Title != labelAtlevel)
+                        {
+                            while (stack.Count >= i && stack.Count > 1)
+                            {
+                                stack.Pop();
+                            }
+                        }
+                    }
+                    var lastRoot = stack.Peek();
+                    var endLabel = row.LabelHierarchy.Last();
+                    i = 0;
+                    int j = 0; // insert
+                    foreach (var labelAtlevel in row.LabelHierarchy)
+                    {
+                        i++;
+                        if (stack.Count > i)
+                        {
+                            continue;
+                        }
+                        if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
+                        {
+                            Node r = new Node();
+                            r.Id = -1;
+                            r.Title = labelAtlevel;
+                            r.Nodes = new List<Node>();
+                            t.Nodes.Add(r);
+                            lastRoot = r;
+                            stack.Push(r);
+                        }
+                        else
+                        {
+                            Node r = new Node();
+                            r.Id = row.Id;
+                            r.Title = endLabel;
+                            r.Nodes = new List<Node>();
+                            lastRoot.Nodes.Add(r);
+                        }
+                    }
+
+                }
+
+                //foreach (var row in table.Rows)
+                //{
+                //    var lastRoot = stack.Peek();
+                //    var endLabel = row.LabelHierarchy.Last();
+                //    int i = 0;
+                //    if (lastRoot == t)
+                //    {
+                //        foreach (var labelAtlevel in row.LabelHierarchy)
+                //        {
+                //            i++;
+                //            if (endLabel != labelAtlevel)
+                //            {
+                //                Node r = new Node();
+                //                r.Id = -1;
+                //                r.Title = labelAtlevel;
+                //                r.Nodes = new List<Node>();
+                //                t.Nodes.Add(r);
+                //                lastRoot = r;
+                //                stack.Push(r);
+                //            }
+                //            else
+                //            {
+                //                Node r = new Node();
+                //                r.Id = row.Id;
+                //                r.Title = row.Label;
+                //                r.Nodes = new List<Node>();
+                //                lastRoot.Nodes.Add(r);
+                //            }
+                //        }
+                //    }
+                //    else
+                //    {
+                //        foreach (var labelAtlevel in row.LabelHierarchy)
+                //        {
+                //            i++;
+                //            if (endLabel != labelAtlevel)
+                //            {
+                //                Node r = new Node();
+                //                r.Id = -1;
+                //                r.Title = labelAtlevel;
+                //                r.Nodes = new List<Node>();
+                //                t.Nodes.Add(r);
+                //                lastRoot = r;
+                //                stack.Push(r);
+                //            }
+                //            else
+                //            {
+                //                Node r = new Node();
+                //                r.Id = row.Id;
+                //                r.Title = row.Label;
+                //                r.Nodes = new List<Node>();
+                //                lastRoot.Nodes.Add(r);
+                //            }
+                //        }
+                //    }
+                //}
+
+
+
+                //foreach (var row in table.Rows)
+                //{
+                //    var lastRoot = stack.Peek();
+                //    var endLabel = row.LabelHierarchy.Last();
+                //    int i = 0;
+                //    foreach (var labelAtlevel in row.LabelHierarchy)
+                //    {
+                //        i++;
+
+                //        if (stack.Count > i && lastRoot != t && stack.ElementAt(i).Title != labelAtlevel && endLabel != labelAtlevel)
+                //        {
+                //            Node r = new Node();
+                //            r.Id = -1;
+                //            r.Title = labelAtlevel;
+                //            r.Nodes = new List<Node>();
+                //            t.Nodes.Add(r);
+                //            lastRoot = r;
+                //            stack.Push(r);
+                //        }
+                //        else
+                //        {
+                //            Node r = new Node();
+                //            r.Id = row.Id;
+                //            r.Title = row.Label;
+                //            r.Nodes = new List<Node>();
+                //            lastRoot.Nodes.Add(r);
+                //        }
+                //    }
+                    //foreach (var labelAtlevel in row.LabelHierarchy)
+                    //{
+
+                    //    if (endLabel == labelAtlevel)
+                    //    {
+                    //        Node r = new Node();
+                    //        r.Id = row.Id;
+                    //        r.Title = row.Label;
+                    //        r.Nodes = new List<Node>();
+                    //        t.Nodes.Add(r);
+                    //    }
+                    //    if (lastRoot.Title != labelAtlevel)
+                    //    {
+
+                    //    }
+                    //}
+
+     
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
+        // gotta do it recrusively? 
+        // or via stack? 
         public string GetDataTree(Guid DamDocumnetID)
         {
             //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
@@ -149,7 +353,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             request.Method = "GET";
             var response = (HttpWebResponse)request.GetResponse();
             string outputresult = null;
-            if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted)
+            if (response.StatusCode == HttpStatusCode.OK)
             {
                 using (var streamReader = new StreamReader(response.GetResponseStream()))
                 {
@@ -166,7 +370,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                 t.Id = table.Id;
                 t.Title = table.Type;
                 t.Nodes = new List<Node>();
-                foreach(var row in table.Rows)
+                foreach (var row in table.Rows)
                 {
                     Node r = new Node();
                     r.Id = row.Id;
