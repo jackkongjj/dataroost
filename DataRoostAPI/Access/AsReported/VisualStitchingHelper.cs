@@ -1,11 +1,13 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using Npgsql;
 using NpgsqlTypes;
-
+using System.Net;
+using Newtonsoft.Json;
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
     public class VisualStitchingHelper
@@ -102,6 +104,60 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                 result = -1;
             }
             return result;
+        }
+        public class TintInfo
+        {
+
+            [JsonProperty("tables")]
+            public List<Table> Tables { get; set; }
+        }
+        public class Table
+        {
+            [JsonProperty("id")]
+            public int Id { get; set; }
+            [JsonProperty("type")]
+            public string Type { get; set; }
+            [JsonProperty("rows")]
+            public List<Row> Rows { get; set; }
+        }
+        public class Row
+        {
+            [JsonProperty("rowId")]
+            public int Id { get; set; }
+            [JsonProperty("label")]
+            public string Label { get; set; }
+        }
+        public class Node
+        {
+            [JsonProperty("id")]
+            public int Id { get; set; }
+            [JsonProperty("title")]
+            public string Title { get; set; }
+            [JsonProperty("nodes")]
+            public List<Node> Nodes { get; set; }
+        }
+        public string GetDataTree(Guid DamDocumnetID)
+        {
+            //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
+            string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
+            string url = String.Format(urlPattern, DamDocumnetID);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.ContentType = "application/json";
+            request.Timeout = 120000;
+            request.Method = "GET";
+            var response = (HttpWebResponse)request.GetResponse();
+            string outputresult = null;
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                using (var streamReader = new StreamReader(response.GetResponseStream()))
+                {
+                    outputresult = streamReader.ReadToEnd();
+                }
+            }
+            var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+
+            List<Node> nodes = new List<Node>();
+            return JsonConvert.SerializeObject(nodes);
         }
     }
 }

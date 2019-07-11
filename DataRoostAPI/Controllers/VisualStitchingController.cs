@@ -115,6 +115,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
+        [Route("datatree/{DamDocumentId}")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTree(Guid DamDocumentId)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetDataTree(DamDocumentId);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
 
         public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
