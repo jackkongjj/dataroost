@@ -140,14 +140,16 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
         {
             //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
             string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
+            string testURL = @"http://auto-tablehandler-dev.factset.io/queue/document/dd17a130-682b-e711-80ea-8cdcd4af21e4/31";
             string url = String.Format(urlPattern, DamDocumnetID);
+            url = testURL;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.ContentType = "application/json";
             request.Timeout = 120000;
             request.Method = "GET";
             var response = (HttpWebResponse)request.GetResponse();
             string outputresult = null;
-            if (response.StatusCode == HttpStatusCode.OK)
+            if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted)
             {
                 using (var streamReader = new StreamReader(response.GetResponseStream()))
                 {
@@ -157,6 +159,22 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
 
             List<Node> nodes = new List<Node>();
+            foreach (var table in result.Tables)
+            {
+                Node t = new Node();
+                nodes.Add(t);
+                t.Id = table.Id;
+                t.Title = table.Type;
+                t.Nodes = new List<Node>();
+                foreach(var row in table.Rows)
+                {
+                    Node r = new Node();
+                    r.Id = row.Id;
+                    r.Title = row.Label;
+                    r.Nodes = new List<Node>();
+                    t.Nodes.Add(r);
+                }
+            }
             return JsonConvert.SerializeObject(nodes);
         }
     }
