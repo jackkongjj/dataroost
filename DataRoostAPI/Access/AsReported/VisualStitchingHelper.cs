@@ -142,14 +142,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             [JsonProperty("nodes")]
             public List<Node> Nodes { get; set; }
         }
-        public string GetDataTreeFake(Guid DamDocumnetID)
+        private string GetTintFile(string url)
         {
-
-            //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
-            string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
-            string testURL = @"http://auto-tablehandler-dev.factset.io/queue/document/dd17a130-682b-e711-80ea-8cdcd4af21e4/31";
-            string url = String.Format(urlPattern, DamDocumnetID);
-            url = testURL;
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.ContentType = "application/json";
             request.Timeout = 120000;
@@ -163,8 +157,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                     outputresult = streamReader.ReadToEnd();
                 }
             }
-            var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+            else
+            {
+                throw new Exception("call failed");
+            }
+            return outputresult;
 
+        }
+        private List<Node> GetAngularTree(TintInfo result)
+        {
             List<Node> nodes = new List<Node>();
             string[] big3Table = { "BS", "IS", "CF" };
             foreach (var table in result.Tables)
@@ -187,11 +188,11 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                         i++;
                         if (stack.Count <= i)
                         {
-                            break;  
+                            break;
                         }
-                        if (stack.ElementAt(i - 1).Title != labelAtlevel)
+                        if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel)
                         {
-                            while (stack.Count >= i && stack.Count > 1)
+                            while (stack.Count > i && stack.Count > 1)
                             {
                                 stack.Pop();
                             }
@@ -214,7 +215,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                             r.Id = -1;
                             r.Title = labelAtlevel;
                             r.Nodes = new List<Node>();
-                            t.Nodes.Add(r);
+                            lastRoot.Nodes.Add(r);
                             lastRoot = r;
                             stack.Push(r);
                         }
@@ -229,154 +230,66 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                     }
 
                 }
-
-                //foreach (var row in table.Rows)
-                //{
-                //    var lastRoot = stack.Peek();
-                //    var endLabel = row.LabelHierarchy.Last();
-                //    int i = 0;
-                //    if (lastRoot == t)
-                //    {
-                //        foreach (var labelAtlevel in row.LabelHierarchy)
-                //        {
-                //            i++;
-                //            if (endLabel != labelAtlevel)
-                //            {
-                //                Node r = new Node();
-                //                r.Id = -1;
-                //                r.Title = labelAtlevel;
-                //                r.Nodes = new List<Node>();
-                //                t.Nodes.Add(r);
-                //                lastRoot = r;
-                //                stack.Push(r);
-                //            }
-                //            else
-                //            {
-                //                Node r = new Node();
-                //                r.Id = row.Id;
-                //                r.Title = row.Label;
-                //                r.Nodes = new List<Node>();
-                //                lastRoot.Nodes.Add(r);
-                //            }
-                //        }
-                //    }
-                //    else
-                //    {
-                //        foreach (var labelAtlevel in row.LabelHierarchy)
-                //        {
-                //            i++;
-                //            if (endLabel != labelAtlevel)
-                //            {
-                //                Node r = new Node();
-                //                r.Id = -1;
-                //                r.Title = labelAtlevel;
-                //                r.Nodes = new List<Node>();
-                //                t.Nodes.Add(r);
-                //                lastRoot = r;
-                //                stack.Push(r);
-                //            }
-                //            else
-                //            {
-                //                Node r = new Node();
-                //                r.Id = row.Id;
-                //                r.Title = row.Label;
-                //                r.Nodes = new List<Node>();
-                //                lastRoot.Nodes.Add(r);
-                //            }
-                //        }
-                //    }
-                //}
-
-
-
-                //foreach (var row in table.Rows)
-                //{
-                //    var lastRoot = stack.Peek();
-                //    var endLabel = row.LabelHierarchy.Last();
-                //    int i = 0;
-                //    foreach (var labelAtlevel in row.LabelHierarchy)
-                //    {
-                //        i++;
-
-                //        if (stack.Count > i && lastRoot != t && stack.ElementAt(i).Title != labelAtlevel && endLabel != labelAtlevel)
-                //        {
-                //            Node r = new Node();
-                //            r.Id = -1;
-                //            r.Title = labelAtlevel;
-                //            r.Nodes = new List<Node>();
-                //            t.Nodes.Add(r);
-                //            lastRoot = r;
-                //            stack.Push(r);
-                //        }
-                //        else
-                //        {
-                //            Node r = new Node();
-                //            r.Id = row.Id;
-                //            r.Title = row.Label;
-                //            r.Nodes = new List<Node>();
-                //            lastRoot.Nodes.Add(r);
-                //        }
-                //    }
-                    //foreach (var labelAtlevel in row.LabelHierarchy)
-                    //{
-
-                    //    if (endLabel == labelAtlevel)
-                    //    {
-                    //        Node r = new Node();
-                    //        r.Id = row.Id;
-                    //        r.Title = row.Label;
-                    //        r.Nodes = new List<Node>();
-                    //        t.Nodes.Add(r);
-                    //    }
-                    //    if (lastRoot.Title != labelAtlevel)
-                    //    {
-
-                    //    }
-                    //}
-
-     
             }
-            return JsonConvert.SerializeObject(nodes);
+            return nodes;
         }
-        // gotta do it recrusively? 
-        // or via stack? 
-        public string GetDataTree(Guid DamDocumnetID)
+        public string GetDataTreeFake(Guid DamDocumentID)
         {
+
             //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
             string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
             string testURL = @"http://auto-tablehandler-dev.factset.io/queue/document/dd17a130-682b-e711-80ea-8cdcd4af21e4/31";
-            string url = String.Format(urlPattern, DamDocumnetID);
+            string url = String.Format(urlPattern, DamDocumentID);
             url = testURL;
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            request.ContentType = "application/json";
-            request.Timeout = 120000;
-            request.Method = "GET";
-            var response = (HttpWebResponse)request.GetResponse();
-            string outputresult = null;
-            if (response.StatusCode == HttpStatusCode.OK)
+
+            int tries = 3;
+            List<Node> nodes = new List<Node>();
+
+            while (tries > 0)
             {
-                using (var streamReader = new StreamReader(response.GetResponseStream()))
+                try
                 {
-                    outputresult = streamReader.ReadToEnd();
+                    var outputresult = GetTintFile(url);
+                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+                    nodes = GetAngularTree(result);
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+
                 }
             }
-            var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+            return JsonConvert.SerializeObject(nodes);
+        }
+ 
+        public string GetDataTree(Guid DamDocumentID, int fileNo)
+        {
 
+            string urlPattern = @"http://auto-tablehandler-dev.factset.io/queue/document/{0}/{1}";
+            string url = String.Format(urlPattern, DamDocumentID, fileNo);
+            int tries = 3;
             List<Node> nodes = new List<Node>();
-            foreach (var table in result.Tables)
+
+            while (tries > 0)
             {
-                Node t = new Node();
-                nodes.Add(t);
-                t.Id = table.Id;
-                t.Title = table.Type;
-                t.Nodes = new List<Node>();
-                foreach (var row in table.Rows)
+                try
                 {
-                    Node r = new Node();
-                    r.Id = row.Id;
-                    r.Title = row.Label;
-                    r.Nodes = new List<Node>();
-                    t.Nodes.Add(r);
+                    var outputresult = GetTintFile(url);
+                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+                    nodes = GetAngularTree(result);
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+
                 }
             }
             return JsonConvert.SerializeObject(nodes);
