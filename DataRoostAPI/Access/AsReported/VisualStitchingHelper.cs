@@ -289,6 +289,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                     {
                         System.Threading.Thread.Sleep(1000);
                     }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<Node>());
+                    }
 
                 }
             }
