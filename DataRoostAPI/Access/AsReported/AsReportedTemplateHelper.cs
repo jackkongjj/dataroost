@@ -20,10 +20,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
 
 		private readonly string _sfConnectionString;
-        //private static log4net.ILog log = log4net.LogManager.GetLogger(typeof(AsReportedTemplateHelper));
-        private static NLog.ILogger logger = NLog.LogManager.GetLogger(typeof(AsReportedTemplateHelper).ToString());
+		//private static log4net.ILog log = log4net.LogManager.GetLogger(typeof(AsReportedTemplateHelper));
+		private static NLog.ILogger logger = NLog.LogManager.GetLogger(typeof(AsReportedTemplateHelper).ToString());
 
-        static AsReportedTemplateHelper() {
+		static AsReportedTemplateHelper() {
 
 		}
 
@@ -205,7 +205,7 @@ where d.companyId = @companyId
 
 		public string GetProductTemplateYearList(int iconum, string TemplateName, Guid DamDocumentID) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder("YEARS");
-            // TODO: DocumentSeries
+			// TODO: DocumentSeries
 			string TimeSliceQuery =
 		@"SELECT DISTINCT CONVERT(varchar, DATEPART(yyyy, tc.CellDate))
  FROM DocumentSeries ds WITH (NOLOCK) 
@@ -245,51 +245,45 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return sb.ToString();
 		}
 
-        public SuperfastModel.ExportMaster GetPantheonStdDiff(int iconum, Guid damDocumentId, string templateCode)
-        {
-            //ScarProductViewResult result = new ScarProductViewResult();
-            string dfsPath = ConfigurationManager.AppSettings["PantheonBackupDFS"];
-            List<string> statementTypes = new List<string>() { "P", "E", "B", "C" };
-            List<SuperfastModel.TimeSlice> timeSlices = new List<SuperfastModel.TimeSlice>();
-            List<SuperfastModel.STDTimeSliceDetail> stdTimeSliceDetails = new List<SuperfastModel.STDTimeSliceDetail>();
-            List<SuperfastModel.StdValueMeta> stdValueMetas = new List<SuperfastModel.StdValueMeta>();
-            SuperfastModel.ExportMaster outputExport = new SuperfastModel.ExportMaster();
-            try
-            {
-                #region Getting the last Exported
-                SuperfastModel.ExportMaster previousExport = PantheonHelper.GetDataFromDFS(damDocumentId, iconum);
-                foreach (var ts in previousExport.timeSlices)
-                    ts.Source = "Backup";
-                timeSlices.AddRange(previousExport.timeSlices);
-                if (previousExport.stdTimeSliceDetail != null)
-                {
-                    foreach (var stdItem in previousExport.stdTimeSliceDetail)
-                    {
-                        stdItem.Source = "Backup";
-                    }
-                    stdTimeSliceDetails.AddRange(previousExport.stdTimeSliceDetail);
-                }
-                #endregion
+		public SuperfastModel.ExportMaster GetPantheonStdDiff(int iconum, Guid damDocumentId, string templateCode) {
+			//ScarProductViewResult result = new ScarProductViewResult();
+			string dfsPath = ConfigurationManager.AppSettings["PantheonBackupDFS"];
+			List<string> statementTypes = new List<string>() { "P", "E", "B", "C" };
+			List<SuperfastModel.TimeSlice> timeSlices = new List<SuperfastModel.TimeSlice>();
+			List<SuperfastModel.STDTimeSliceDetail> stdTimeSliceDetails = new List<SuperfastModel.STDTimeSliceDetail>();
+			List<SuperfastModel.StdValueMeta> stdValueMetas = new List<SuperfastModel.StdValueMeta>();
+			SuperfastModel.ExportMaster outputExport = new SuperfastModel.ExportMaster();
+			try {
+				#region Getting the last Exported
+				SuperfastModel.ExportMaster previousExport = PantheonHelper.GetDataFromDFS(damDocumentId, iconum);
+				foreach (var ts in previousExport.timeSlices)
+					ts.Source = "Backup";
+				timeSlices.AddRange(previousExport.timeSlices);
+				if (previousExport.stdTimeSliceDetail != null) {
+					foreach (var stdItem in previousExport.stdTimeSliceDetail) {
+						stdItem.Source = "Backup";
+					}
+					stdTimeSliceDetails.AddRange(previousExport.stdTimeSliceDetail);
+				}
+				#endregion
 
-                #region Getting the newly collected
-                SuperfastModel.ExportMaster newlyCollectedValue = PantheonHelper.GetSTDDataForStatement(iconum, statementTypes, templateCode, damDocumentId);
-                timeSlices.AddRange(newlyCollectedValue.timeSlices);
-                stdValueMetas.AddRange(newlyCollectedValue.stdValueMeta);
-                #endregion
+				#region Getting the newly collected
+				SuperfastModel.ExportMaster newlyCollectedValue = PantheonHelper.GetSTDDataForStatement(iconum, statementTypes, templateCode, damDocumentId);
+				timeSlices.AddRange(newlyCollectedValue.timeSlices);
+				stdValueMetas.AddRange(newlyCollectedValue.stdValueMeta);
+				#endregion
 
-                outputExport.stdItems = PantheonHelper.GetAllStdItems();
-                outputExport.timeSlices = timeSlices;
-                outputExport.stdTimeSliceDetail = stdTimeSliceDetails;
-                outputExport.stdValueMeta = stdValueMetas;
-            }
-            catch(Exception ex)
-            {      
-                //Throw here if you want to debug any issues with this route
-            }
-            return outputExport;
-        }
+				outputExport.stdItems = PantheonHelper.GetAllStdItems();
+				outputExport.timeSlices = timeSlices;
+				outputExport.stdTimeSliceDetail = stdTimeSliceDetails;
+				outputExport.stdValueMeta = stdValueMetas;
+			} catch (Exception ex) {
+				//Throw here if you want to debug any issues with this route
+			}
+			return outputExport;
+		}
 
-        public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
+		public ScarProductViewResult GetProductViewInScarResult(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			return GetProductView(iconum, TemplateName, DamDocumentID, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 
 			//ScarProductViewResult newFormat = new ScarProductViewResult();
@@ -1017,24 +1011,25 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						sb.AppendLine("ConnectionOpen." + conn.State.ToString() + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 						using (SqlDataReader reader = cmd.EndExecuteReader(result)) {
 							sb.AppendLine("StaticHierarchy." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-                            var ordinals = new {
-                                StaticHierarchyID = reader.GetOrdinal("Id"),
-                                CompanyFinancialTermID = reader.GetOrdinal("CompanyFinancialTermId"),
-                                AdjustedOrder = reader.GetOrdinal("AdjustedOrder"),
-                                TableTypeID = reader.GetOrdinal("TableTypeId"),
-                                Description = reader.GetOrdinal("Description"),
-                                HierarchyTypeID = reader.GetOrdinal("HierarchyTypeId"),
-                                SeperatorFlag = reader.GetOrdinal("SeperatorFlag"),
-                                StaticHierarchyMetaId = reader.GetOrdinal("StaticHierarchyMetaId"),
-                                UnitTypeId = reader.GetOrdinal("UnitTypeId"),
-                                IsIncomePositive = reader.GetOrdinal("IsIncomePositive"),
-                                ChildrenExpandDown = reader.GetOrdinal("ChildrenExpandDown"),
-                                ParentID = reader.GetOrdinal("ParentID"),
-                                IsDanglingHeader = reader.GetOrdinal("IsDanglingHeader"),
-                                DocumentSeriesID = reader.GetOrdinal("DocumentSeriesID"),
-                                StaticHierarchyMetaType = reader.GetOrdinal("Code"),
-                                TableTypeDescription = reader.GetOrdinal("TableTypeDescription"),
-                            };
+							var ordinals = new
+							{
+								StaticHierarchyID = reader.GetOrdinal("Id"),
+								CompanyFinancialTermID = reader.GetOrdinal("CompanyFinancialTermId"),
+								AdjustedOrder = reader.GetOrdinal("AdjustedOrder"),
+								TableTypeID = reader.GetOrdinal("TableTypeId"),
+								Description = reader.GetOrdinal("Description"),
+								HierarchyTypeID = reader.GetOrdinal("HierarchyTypeId"),
+								SeperatorFlag = reader.GetOrdinal("SeperatorFlag"),
+								StaticHierarchyMetaId = reader.GetOrdinal("StaticHierarchyMetaId"),
+								UnitTypeId = reader.GetOrdinal("UnitTypeId"),
+								IsIncomePositive = reader.GetOrdinal("IsIncomePositive"),
+								ChildrenExpandDown = reader.GetOrdinal("ChildrenExpandDown"),
+								ParentID = reader.GetOrdinal("ParentID"),
+								IsDanglingHeader = reader.GetOrdinal("IsDanglingHeader"),
+								DocumentSeriesID = reader.GetOrdinal("DocumentSeriesID"),
+								StaticHierarchyMetaType = reader.GetOrdinal("Code"),
+								TableTypeDescription = reader.GetOrdinal("TableTypeDescription"),
+							};
 							while (reader.Read()) {
 								sb.AppendLine("Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 								StaticHierarchy shs = new StaticHierarchy
@@ -1055,9 +1050,9 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								shs.IsIncomePositive = reader.GetBoolean(ordinals.IsIncomePositive);
 								shs.ChildrenExpandDown = reader.GetBoolean(ordinals.ChildrenExpandDown);
 								shs.ParentID = reader.GetNullable<int>(ordinals.ParentID);
-                                shs.IsDanglingHeader = reader.GetBoolean(ordinals.IsDanglingHeader);
-                                shs.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesID);
-                                shs.StaticHierarchyMetaType = reader.GetString(ordinals.StaticHierarchyMetaType);
+								shs.IsDanglingHeader = reader.GetBoolean(ordinals.IsDanglingHeader);
+								shs.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesID);
+								shs.StaticHierarchyMetaType = reader.GetString(ordinals.StaticHierarchyMetaType);
 								shs.TableTypeDescription = reader.GetString(ordinals.TableTypeDescription);
 								sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 								shs.Cells = new List<SCARAPITableCell>();
@@ -1532,7 +1527,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		public StaticHierarchy GetStaticHierarchy(int id) {
 
 			string query = @"SELECT * FROM StaticHierarchy WHERE ID = @id";
-            // TODO: DocumentSeries
+			// TODO: DocumentSeries
 			string CellsQuery =
 	@"SELECT DISTINCT tc.*,
 		(select aetc.ARDErrorTypeId from ARDErrorTypeTableCell aetc (nolock) where tc.Id = aetc.TableCellId),
@@ -1569,10 +1564,10 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 							UnitTypeId = reader.GetInt32(8),
 							IsIncomePositive = reader.GetBoolean(9),
 							ChildrenExpandDown = reader.GetBoolean(10),
-                            ParentID = reader.GetNullable<int>(11),
-                            IsDanglingHeader = reader.GetBoolean(12),
-                            DocumentSeriesId = reader.GetInt32(13),
-                            Cells = new List<SCARAPITableCell>()
+							ParentID = reader.GetNullable<int>(11),
+							IsDanglingHeader = reader.GetBoolean(12),
+							DocumentSeriesId = reader.GetInt32(13),
+							Cells = new List<SCARAPITableCell>()
 						};
 					}
 				}
@@ -1625,7 +1620,7 @@ ORDER BY sh.AdjustedOrder asc, dts.Duration asc, dts.TimeSlicePeriodEndDate desc
 
 		public ScarResult CopyDocumentHierarchy(int iconum, int TableTypeid, Guid DocumentId) {
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            // TODO: DocumentSeries
+			// TODO: DocumentSeries
 			string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_CopyHierarchy";
 
 			ScarResult response = new ScarResult();
@@ -1693,10 +1688,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1744,10 +1739,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1794,10 +1789,10 @@ where id = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1809,7 +1804,7 @@ where id = @TargetSHID;
 		}
 
 		public ScarResult UpdateStaticHierarchyAddHeader(int id) {
-            // TODO: DOcumentSeries
+			// TODO: DOcumentSeries
 			string query = @"
 
 EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_AddHeader @TargetSHID, 'New Header'
@@ -1840,10 +1835,10 @@ EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_AddHeader @TargetSHID, 'New Header'
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -1900,7 +1895,7 @@ EXEC prcUpd_FFDocHist_UpdateStaticHierarchy_AddHeader @TargetSHID, 'New Header'
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
-            // TODO: DocumentSeries
+			// TODO: DocumentSeries
 			string query = @"
 
 DECLARE @TableTypeId INT = (select tt.ID from DocumentSeries ds (nolock) join TableType tt (nolock) on ds.ID = tt.DocumentSeriesID where companyid = @Iconum AND tt.Description = @tableType)
@@ -1950,7 +1945,7 @@ SELECT StaticHierarchyID FROM @SHIDS
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			ScarResult response = new ScarResult();
 			response.StaticHierarchies = new List<StaticHierarchy>();
-            // TODO: Document Series
+			// TODO: Document Series
 			string query = @"SCARRemoveHeader";
 
 			DataTable dt = new DataTable();
@@ -2014,10 +2009,10 @@ SELECT StaticHierarchyID FROM @SHIDS
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2170,9 +2165,9 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
 								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
@@ -2186,71 +2181,71 @@ SELECT *
 		}
 
 		public ScarResult UpdateStaticHierarchyHeaderLabel(int id, string newLabel) {
-            return new ScarResult();
-//			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-//			string query = @"
-//DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
-//exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
+			return new ScarResult();
+			//			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+			//			string query = @"
+			//DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
+			//exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
-//DECLARE @OrigDescription varchar(1024) = (SELECT dbo.GetHierarchyLabelSafe(Description)  FROM StaticHierarchy WHERE ID = @TargetSHID)
-//DECLARE @OrigHierarchyLabel varchar(1024) 
-//DECLARE @NewHierarchyLabel varchar(1024)  
-//DECLARE @OrigParent varchar(1024)
+			//DECLARE @OrigDescription varchar(1024) = (SELECT dbo.GetHierarchyLabelSafe(Description)  FROM StaticHierarchy WHERE ID = @TargetSHID)
+			//DECLARE @OrigHierarchyLabel varchar(1024) 
+			//DECLARE @NewHierarchyLabel varchar(1024)  
+			//DECLARE @OrigParent varchar(1024)
 
-//IF (DATALENGTH(@OrigDescription) > 2)
-//BEGIN 
-//SET @OrigParent = dbo.GetHierarchyLabelSafe(SUBSTRING(@OrigDescription, 0, DATALENGTH(@OrigDescription)))
-//SET @NewHierarchyLabel = @OrigParent + '[' + @NewEndLabel + ']'
-//	 UPDATE StaticHierarchy
-//	SET Description = Replace(Description, @OrigDescription,@NewHierarchyLabel) 
-//	WHERE TableTypeId = @TableTypeId   
-//END
-
-
-
-//";
-
-//			ScarResult response = new ScarResult();
-//			response.StaticHierarchies = new List<StaticHierarchy>();
-
-//			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+			//IF (DATALENGTH(@OrigDescription) > 2)
+			//BEGIN 
+			//SET @OrigParent = dbo.GetHierarchyLabelSafe(SUBSTRING(@OrigDescription, 0, DATALENGTH(@OrigDescription)))
+			//SET @NewHierarchyLabel = @OrigParent + '[' + @NewEndLabel + ']'
+			//	 UPDATE StaticHierarchy
+			//	SET Description = Replace(Description, @OrigDescription,@NewHierarchyLabel) 
+			//	WHERE TableTypeId = @TableTypeId   
+			//END
 
 
-//				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-//					conn.Open();
-//					cmd.Parameters.AddWithValue("@TargetSHID", id);
-//					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
-//					using (SqlDataReader reader = cmd.ExecuteReader()) {
-//						while (reader.Read()) {
-//							StaticHierarchy sh = new StaticHierarchy
-//							{
-//								Id = reader.GetInt32(0),
-//								CompanyFinancialTermId = reader.GetInt32(1),
-//								AdjustedOrder = reader.GetInt32(2),
-//								TableTypeId = reader.GetInt32(3),
-//								Description = reader.GetStringSafe(4),
-//								HierarchyTypeId = reader.GetStringSafe(5)[0],
-//								SeparatorFlag = reader.GetBoolean(6),
-//								StaticHierarchyMetaId = reader.GetInt32(7),
-//								UnitTypeId = reader.GetInt32(8),
-//								IsIncomePositive = reader.GetBoolean(9),
-//								ChildrenExpandDown = reader.GetBoolean(10),
-//								Cells = new List<SCARAPITableCell>()
-//							};
-//							response.StaticHierarchies.Add(sh);
-//						}
-//					}
-//				}
-//			}
 
-//			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-//			return response;
+			//";
+
+			//			ScarResult response = new ScarResult();
+			//			response.StaticHierarchies = new List<StaticHierarchy>();
+
+			//			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+
+
+			//				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+			//					conn.Open();
+			//					cmd.Parameters.AddWithValue("@TargetSHID", id);
+			//					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+			//					using (SqlDataReader reader = cmd.ExecuteReader()) {
+			//						while (reader.Read()) {
+			//							StaticHierarchy sh = new StaticHierarchy
+			//							{
+			//								Id = reader.GetInt32(0),
+			//								CompanyFinancialTermId = reader.GetInt32(1),
+			//								AdjustedOrder = reader.GetInt32(2),
+			//								TableTypeId = reader.GetInt32(3),
+			//								Description = reader.GetStringSafe(4),
+			//								HierarchyTypeId = reader.GetStringSafe(5)[0],
+			//								SeparatorFlag = reader.GetBoolean(6),
+			//								StaticHierarchyMetaId = reader.GetInt32(7),
+			//								UnitTypeId = reader.GetInt32(8),
+			//								IsIncomePositive = reader.GetBoolean(9),
+			//								ChildrenExpandDown = reader.GetBoolean(10),
+			//								Cells = new List<SCARAPITableCell>()
+			//							};
+			//							response.StaticHierarchies.Add(sh);
+			//						}
+			//					}
+			//				}
+			//			}
+
+			//			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabel", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+			//			return response;
 		}
 
 
 		public ScarResult UpdateStaticHierarchyHeaderLabelWithUpperCount(int uppercount, int id, string newLabel) {
-            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            string query = @"
+			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+			string query = @"
 DECLARE @TableTypeId int = (SELECT Top 1 TableTypeId  FROM StaticHierarchy WHERE ID = @TargetSHID)
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId
 
@@ -2287,44 +2282,40 @@ UPDATE StaticHierarchy
 WHERE TableTypeId = @TableTypeId and IsDanglingHeader = 1 and ID in (@TargetSHID, @ParentID)  
 ";
 
-            ScarResult response = new ScarResult();
-            response.StaticHierarchies = new List<StaticHierarchy>();
+			ScarResult response = new ScarResult();
+			response.StaticHierarchies = new List<StaticHierarchy>();
 
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-            {
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@TargetSHID", id);
-                    cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
-                    cmd.Parameters.AddWithValue("@count", uppercount);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            //StaticHierarchy sh = new StaticHierarchy
-                            //{
-                            //    Id = reader.GetInt32(0),
-                            //    CompanyFinancialTermId = reader.GetInt32(1),
-                            //    AdjustedOrder = reader.GetInt32(2),
-                            //    TableTypeId = reader.GetInt32(3),
-                            //    Description = reader.GetStringSafe(4),
-                            //    HierarchyTypeId = reader.GetStringSafe(5)[0],
-                            //    SeparatorFlag = reader.GetBoolean(6),
-                            //    StaticHierarchyMetaId = reader.GetInt32(7),
-                            //    UnitTypeId = reader.GetInt32(8),
-                            //    IsIncomePositive = reader.GetBoolean(9),
-                            //    ChildrenExpandDown = reader.GetBoolean(10),
-                            //    Cells = new List<SCARAPITableCell>()
-                            //};
-                            //response.StaticHierarchies.Add(sh);
-                        }
-                    }
-                }
-            }
-            CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabelWithUpperCount", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-            return response;
-        }
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@TargetSHID", id);
+					cmd.Parameters.AddWithValue("@NewEndLabel", newLabel);
+					cmd.Parameters.AddWithValue("@count", uppercount);
+					using (SqlDataReader reader = cmd.ExecuteReader()) {
+						while (reader.Read()) {
+							//StaticHierarchy sh = new StaticHierarchy
+							//{
+							//    Id = reader.GetInt32(0),
+							//    CompanyFinancialTermId = reader.GetInt32(1),
+							//    AdjustedOrder = reader.GetInt32(2),
+							//    TableTypeId = reader.GetInt32(3),
+							//    Description = reader.GetStringSafe(4),
+							//    HierarchyTypeId = reader.GetStringSafe(5)[0],
+							//    SeparatorFlag = reader.GetBoolean(6),
+							//    StaticHierarchyMetaId = reader.GetInt32(7),
+							//    UnitTypeId = reader.GetInt32(8),
+							//    IsIncomePositive = reader.GetBoolean(9),
+							//    ChildrenExpandDown = reader.GetBoolean(10),
+							//    Cells = new List<SCARAPITableCell>()
+							//};
+							//response.StaticHierarchies.Add(sh);
+						}
+					}
+				}
+			}
+			CommunicationLogger.LogEvent("UpdateStaticHierarchyHeaderLabelWithUpperCount", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+			return response;
+		}
 
 
 		public ScarResult UpdateStaticHierarchyAddParent(int id) {
@@ -2357,10 +2348,10 @@ WHERE TableTypeId = @TableTypeId and IsDanglingHeader = 1 and ID in (@TargetSHID
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2403,10 +2394,10 @@ WHERE TableTypeId = @TableTypeId and IsDanglingHeader = 1 and ID in (@TargetSHID
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2456,10 +2447,10 @@ SELECT * FROM StaticHierarchy WITH (NOLOCK) WHERE ID = @TargetSHID;
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2586,10 +2577,10 @@ SELECT *
 								UnitTypeId = reader.GetInt32(8),
 								IsIncomePositive = reader.GetBoolean(9),
 								ChildrenExpandDown = reader.GetBoolean(10),
-                                ParentID = reader.GetNullable<int>(11),
-                                IsDanglingHeader = reader.GetBoolean(12),
-                                DocumentSeriesId = reader.GetInt32(13),
-                                Cells = new List<SCARAPITableCell>()
+								ParentID = reader.GetNullable<int>(11),
+								IsDanglingHeader = reader.GetBoolean(12),
+								DocumentSeriesId = reader.GetInt32(13),
+								Cells = new List<SCARAPITableCell>()
 							};
 							response.StaticHierarchies.Add(sh);
 						}
@@ -2656,7 +2647,7 @@ END CATCH
 		}
 
 		public ScarResult DragDropStaticHierarchyLabelByString(int tableTypeId, string DraggedLabel, string TargetLabel, string Location) {
-            return new ScarResult();
+			return new ScarResult();
 			//string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			//string query = @"prcUpd_FFDocHist_UpdateStaticHierarchy_DragDrop_ByLabel";
 
@@ -5327,20 +5318,16 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 				System.Text.StringBuilder sb = new System.Text.StringBuilder();
 				List<string> deleted_ids = new List<string>();
 				string tableTypeId = null;
-                string documentSeriesId = "";
-                foreach (var elem in _jarray)
-                {
-                    try
-                    {
-                        if (!string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue()) && !string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue()))
-                        {
-                            documentSeriesId = elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue();
-                            break;
-                        }
-                    }
-                    catch { }
-                }
-                foreach (var elem in _jarray) {
+				string documentSeriesId = "";
+				foreach (var elem in _jarray) {
+					try {
+						if (!string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue()) && !string.IsNullOrWhiteSpace(elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue())) {
+							documentSeriesId = elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue();
+							break;
+						}
+					} catch { }
+				}
+				foreach (var elem in _jarray) {
 					try {
 						if (elem["action"].ToString() == "delete") {
 							deleted_ids.Add(elem["obj"]["ID"].AsValue());
@@ -5357,9 +5344,9 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
 								elem["obj"]["ParentID"].AsValue(),
-                                "0", // will be ignored
-                                "0"
-                                ));
+																"0", // will be ignored
+																"0"
+																));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
@@ -5376,9 +5363,9 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
 								"NULL",
-                                "0", //elem["obj"]["IsDanglingHeader"].AsBoolean(),
-                                documentSeriesId //elem["obj"]["DocumentSeriesID"].AsValue()
-                                ));
+																"0", //elem["obj"]["IsDanglingHeader"].AsBoolean(),
+																documentSeriesId //elem["obj"]["DocumentSeriesID"].AsValue()
+																));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
@@ -5424,10 +5411,10 @@ exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
 								elem["obj"]["ParentID"].AsValue(),
-                                elem["obj"]["IsDanglingHeader"].AsBoolean(),
-                                elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue() // TODO:
+																elem["obj"]["IsDanglingHeader"].AsBoolean(),
+																elem["obj"]["CompanyFinancialTerm"]["DocumentSeries"]["ID"].AsValue() // TODO:
 
-    ));
+		));
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
@@ -5835,7 +5822,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 		}
 
 		public ScarResult DeleteDocumentTableID(string CompanyId, string dtid, string tabletype) {
-            // TODO: DocumentSeries
+			// TODO: DocumentSeries
 			string SQL_Delete = @"
 BEGIN TRY
 	BEGIN TRAN
@@ -6217,7 +6204,7 @@ FROM dbo.DocumentTimeSlice WITH (NOLOCK) where id = @newId or id = @dts or id = 
 		}
 
 		public ScarResult GetReviewTimeSlice(string TemplateName, int iconum) {
-            // TODO: DocumentSeries
+			// TODO: DocumentSeries
 			string SQL_ReviewButton = @"
 select tc.CellDate as PeriodEndDate, 
 case when dts.PeriodType = 'XX' THEN 'AR' ELSE dts.PeriodType END as TimeSeries, 
@@ -8108,11 +8095,11 @@ END CATCH
 
 		#region Deprecated Methods
 		public SCARAPITableCell GetCell(string CellId) {
-                    #region SQL
+			#region SQL
 
-        // TODO: StaticHierarchy DocumentSeriesID
-        string SQL_GetCellQuery =
-                                                                @"
+			// TODO: StaticHierarchy DocumentSeriesID
+			string SQL_GetCellQuery =
+																															@"
 SELECT DISTINCT tc.ID, tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, tc.CompanyFinancialTermID, tc.ValueNumeric, tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
@@ -8155,8 +8142,8 @@ ORDER BY sh.AdjustedOrder asc, dts.TimeSlicePeriodEndDate desc, dts.Duration des
 
 ";//I hate this query, it is so bad
 
-        #endregion
-        string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+			#endregion
+			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(SQL_GetCellQuery, conn)) {
 					conn.Open();
@@ -8650,8 +8637,8 @@ END
 			return result;
 		}
 
-        public ScarResult AddMissingValueValidation(string CFTId, string TimeSliceId, Guid DocumentId, string newValue) {
-            string query = @"
+		public ScarResult AddMissingValueValidation(string CFTId, string TimeSliceId, Guid DocumentId, string newValue) {
+			string query = @"
 IF EXISTS(SELECT TOP 1 CompanyFinancialTermID 
                         from MVCErrorTypeTableCells 
                         where TimeSliceID = @TSId and CompanyFinancialTermID = @CFTId)
@@ -8665,34 +8652,35 @@ ELSE
         select 'Cell not found'
     END                            
 ";
-            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 
-                using (SqlCommand cmd = new SqlCommand(query, conn)) {
-                    conn.Open();
-                    int newInt = -1;
-                    bool isSuccess = false;
-                    if (!string.IsNullOrEmpty(newValue)) {
-                        isSuccess = Int32.TryParse(newValue, out newInt);
-                    }
-                    cmd.Parameters.AddWithValue("@CFTId", CFTId);
-                    cmd.Parameters.AddWithValue("@TSId", TimeSliceId);
-                    cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int) {
-                        Value = (!isSuccess ? DBNull.Value : (object)newInt)
-                    });
-                    cmd.ExecuteNonQuery();
-                }
-            }
-            CommunicationLogger.LogEvent("AddMissingValueValidation", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					int newInt = -1;
+					bool isSuccess = false;
+					if (!string.IsNullOrEmpty(newValue)) {
+						isSuccess = Int32.TryParse(newValue, out newInt);
+					}
+					cmd.Parameters.AddWithValue("@CFTId", CFTId);
+					cmd.Parameters.AddWithValue("@TSId", TimeSliceId);
+					cmd.Parameters.Add(new SqlParameter("@newValue", SqlDbType.Int)
+					{
+						Value = (!isSuccess ? DBNull.Value : (object)newInt)
+					});
+					cmd.ExecuteNonQuery();
+				}
+			}
+			CommunicationLogger.LogEvent("AddMissingValueValidation", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-            ScarResult result = new ScarResult();
-            result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
-            result.ChangedCells = new List<SCARAPITableCell>();
-            //result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
-            return result;
-        }
+			ScarResult result = new ScarResult();
+			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
+			result.ChangedCells = new List<SCARAPITableCell>();
+			//result.ChangedCells.AddRange(GetLPVChangeCells(CellId, DocumentId));
+			return result;
+		}
 
-        private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
+		private SCARAPITableCell[] getSibilingsCells(string CellId, Guid DocumentId) {
 			return new SCARAPITableCell[0];
 		}
 		#endregion
