@@ -148,8 +148,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 					public int Id { get; set; }
 					[JsonProperty("title")]
 					public string Title { get; set; }
-					[JsonProperty("nodes")]
-					public List<ReactNode> children { get; set; }
+					[JsonProperty("children")]
+					public List<ReactNode> Nodes { get; set; }
 				}
 
 
@@ -186,7 +186,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 						nodes.Add(t);
 						t.Id = table.Id;
 						t.Title = table.Type;
-						t.children = new List<ReactNode>();
+						t.Nodes = new List<ReactNode>();
 						Stack<ReactNode> stack = new Stack<ReactNode>();
 						stack.Push(t);
 
@@ -216,16 +216,16 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 									ReactNode r = new ReactNode();
 									r.Id = -1;
 									r.Title = labelAtlevel;
-									r.children = new List<ReactNode>();
-									lastRoot.children.Add(r);
+									r.Nodes = new List<ReactNode>();
+									lastRoot.Nodes.Add(r);
 									lastRoot = r;
 									stack.Push(r);
 								} else {
 									ReactNode r = new ReactNode();
 									r.Id = row.Id;
 									r.Title = endLabel;
-									r.children = new List<ReactNode>();
-									lastRoot.children.Add(r);
+									r.Nodes = new List<ReactNode>();
+									lastRoot.Nodes.Add(r);
 								}
 							}
 
