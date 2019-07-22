@@ -172,7 +172,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 						string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
 						var vsHelper = new VisualStitchingHelper(sfConnectionString);
-						var json = vsHelper.GetDataTree(DamDocumentId, FileNo);
+						var json = vsHelper.GetDataTreeTest(DamDocumentId, FileNo);
 						return new HttpResponseMessage()
 						{
 							Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
