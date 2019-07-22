@@ -142,6 +142,17 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             [JsonProperty("nodes")]
             public List<Node> Nodes { get; set; }
         }
+
+				public class ReactNode {
+					[JsonProperty("id")]
+					public int Id { get; set; }
+					[JsonProperty("title")]
+					public string Title { get; set; }
+					[JsonProperty("nodes")]
+					public List<ReactNode> children { get; set; }
+				}
+
+
         private string GetTintFile(string url)
         {
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
@@ -164,6 +175,66 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             return outputresult;
 
         }
+
+				private List<ReactNode> GetAngularTreeTest(TintInfo result) {
+					List<ReactNode> nodes = new List<ReactNode>();
+					string[] big3Table = { "BS", "IS", "CF" };
+					foreach (var table in result.Tables) {
+						if (!big3Table.Contains(table.Type.ToUpper()))
+							continue;
+						ReactNode t = new ReactNode();
+						nodes.Add(t);
+						t.Id = table.Id;
+						t.Title = table.Type;
+						t.children = new List<ReactNode>();
+						Stack<ReactNode> stack = new Stack<ReactNode>();
+						stack.Push(t);
+
+						foreach (var row in table.Rows) {
+							int i = 0;
+							foreach (var labelAtlevel in row.LabelHierarchy) {
+								i++;
+								if (stack.Count <= i) {
+									break;
+								}
+								if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel) {
+									while (stack.Count > i && stack.Count > 1) {
+										stack.Pop();
+									}
+								}
+							}
+							var lastRoot = stack.Peek();
+							var endLabel = row.LabelHierarchy.Last();
+							i = 0;
+							int j = 0; // insert
+							foreach (var labelAtlevel in row.LabelHierarchy) {
+								i++;
+								if (stack.Count > i) {
+									continue;
+								}
+								if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel) {
+									ReactNode r = new ReactNode();
+									r.Id = -1;
+									r.Title = labelAtlevel;
+									r.children = new List<ReactNode>();
+									lastRoot.children.Add(r);
+									lastRoot = r;
+									stack.Push(r);
+								} else {
+									ReactNode r = new ReactNode();
+									r.Id = row.Id;
+									r.Title = endLabel;
+									r.children = new List<ReactNode>();
+									lastRoot.children.Add(r);
+								}
+							}
+
+						}
+					}
+					return nodes;
+				}
+
+
         private List<Node> GetAngularTree(TintInfo result)
         {
             List<Node> nodes = new List<Node>();
@@ -298,5 +369,31 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             }
             return JsonConvert.SerializeObject(nodes);
         }
+
+				public string GetDataTreeTest(Guid DamDocumentID, int fileNo) {
+
+					string urlPattern = @"http://auto-tablehandler-dev.factset.io/queue/document/{0}/{1}";
+					string url = String.Format(urlPattern, DamDocumentID, fileNo);
+					int tries = 3;
+					List<ReactNode> nodes = new List<ReactNode>();
+
+					while (tries > 0) {
+						try {
+							var outputresult = GetTintFile(url);
+							var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+							nodes = GetAngularTreeTest(result);
+							tries = 0;
+						} catch (Exception ex) {
+							if (--tries > 0) {
+								System.Threading.Thread.Sleep(1000);
+							} else {
+								return JsonConvert.SerializeObject(new List<ReactNode>());
+							}
+
+						}
+					}
+					return JsonConvert.SerializeObject(nodes);
+				}
+
     }
 }
