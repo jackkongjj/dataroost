@@ -7569,11 +7569,22 @@ FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
 JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and tc.DocumentTimeSliceID = @CurrentTimeSliceID
  
+DECLARE @SHCells TABLE (
+	[TableCellID] [int]
+)
+
+INSERT @SHCells([TableCellID])
+SELECT tc.ID
+from TableCell tc 
+join StaticHierarchy sh on sh.CompanyFinancialTermId  = tc.CompanyFinancialTermID
+join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.ID
+where sh.ParentID = @TargetSHID and dtstc.DocumentTimeSliceId = @CurrentTimeSliceID
+ 
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
 FROM 
 TableCell tc 
-JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID is the cellID
+JOIN @SHCells shc on tc.id = shc.TableCellID 
  
 
 DECLARE @CellsForLPV CellList
@@ -8031,14 +8042,23 @@ INSERT @OldSHCells
 SELECT distinct tc.TableCellID, tc.DocumentTimeSliceID
 FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN @OldStaticHierarchyList shl ON sh.id = shl.StaticHierarchyID
-JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID and sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
+JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON sh.CompanyFinancialTermId = tc.CompanyFinancialTermID  
+ 
+DECLARE @SHCells TABLE (
+	[TableCellID] [int]
+)
+
+INSERT @SHCells([TableCellID])
+SELECT tc.ID
+from TableCell tc 
+join StaticHierarchy sh on sh.CompanyFinancialTermId  = tc.CompanyFinancialTermID
+where sh.ParentID = @TargetSHID
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
 FROM 
 TableCell tc 
-JOIN @OldSHCells osh on tc.id = osh.StaticHierarchyID  --- osh staticHierarchyID is the cellID
- 
+JOIN @SHCells shc on tc.id = shc.TableCellID 
 
 DECLARE @CellsForLPV CellList
 DECLARE @CellsForMTMW CellList
