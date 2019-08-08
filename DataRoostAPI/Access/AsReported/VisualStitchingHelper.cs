@@ -139,6 +139,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public int Id { get; set; }
             [JsonProperty("title")]
             public string Title { get; set; }
+            [JsonIgnore]
+            public int? ParentId { get; set; }
+
             [JsonProperty("nodes")]
             public List<Node> Nodes { get; set; }
         }
@@ -394,6 +397,79 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 					}
 					return JsonConvert.SerializeObject(nodes);
 				}
+
+
+        public string GetSegmentTree(string treeName)
+        {
+            const string query = @"
+;WITH CteTables
+AS
+(
+    SELECT p.ID, p.DisplayName, p.ParentID
+    FROM NameTree (nolock) AS p
+   WHERE DisplayName = @treeName and parentid is null
+    
+	UNION ALL
+    
+	SELECT child.ID, child.DisplayName,  child.ParentID
+    FROM NameTree (nolock) AS child
+	INNER JOIN CteTables as p
+		ON child.ParentID = p.id and child.ParentID != child.ID  
+)
+ 
+SELECT ID, DisplayName, ParentID
+FROM CteTables order by parentid
+			";
+            try
+            {
+                List<Node> allNodes = new List<Node>();
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        cmd.Parameters.AddWithValue("@treeName", treeName);
+
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                Node n = new Node();
+                                n.Id = sdr.GetInt16(0);
+                                n.Title = sdr.GetString(1);
+                                n.ParentId = sdr.IsDBNull(2) ? -1 : sdr.GetInt16(2);
+                                n.Nodes = new List<Node>();
+                                allNodes.Add(n);
+                            }
+                        }
+                    }
+                }
+                List<Node> nodes = new List<Node>();
+                var rootnodes = allNodes.Where(x => x.ParentId == null || x.ParentId.Value < 0);
+                nodes.AddRange(rootnodes);
+                foreach (var n in allNodes)
+                {
+                    if (nodes.Contains(n)) continue;
+                    var parentNode = allNodes.FirstOrDefault(x => x.Id == n.ParentId.Value);
+                    if (parentNode != null)
+                    {
+                        if (parentNode.Nodes == null) parentNode.Nodes = new List<Node>();
+                        parentNode.Nodes.Add(n);
+                    }
+                }
+
+                return JsonConvert.SerializeObject(nodes);
+
+            }
+            catch (Exception ex)
+            {
+                List<Node>errorNodes = new List<Node>();
+                Node errorNode = new Node() { Id = 0, Title = "Error", Nodes = new List<Node>()};
+                errorNodes.Add(errorNode);
+                return JsonConvert.SerializeObject(errorNodes);
+            }
+          
+        }
 
     }
 }

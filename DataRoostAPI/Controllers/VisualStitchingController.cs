@@ -182,7 +182,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 						return null;
 					}
 				}
+        [Route("nametree/{segment}")]
+        [HttpGet]
+        public HttpResponseMessage GetNameTree(string segment)
+        {
+            try
+            {
 
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetSegmentTree(segment);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
 
         public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
