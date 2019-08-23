@@ -18,7 +18,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public Dictionary<byte, Tint> GetTINT(string documentId) {
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetTintFiles(documentId);
@@ -29,7 +29,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public void GetTINT(string documentId, string CompanyId) {
 			return; // temporary fix for SC freezing issue 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			CCS.Fundamentals.DataRoostAPI.Access.AsReported.DocumentHelper documentHelper = new CCS.Fundamentals.DataRoostAPI.Access.AsReported.DocumentHelper(sfConnectionString, damConnectionString);
 			documentHelper.InsertTINTOffsets(documentId, int.Parse(CompanyId));

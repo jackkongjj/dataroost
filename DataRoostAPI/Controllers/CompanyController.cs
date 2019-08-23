@@ -28,7 +28,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -46,7 +46,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -64,7 +64,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, EffortDTO>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -86,7 +86,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -112,7 +112,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, CompanyPriority>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;

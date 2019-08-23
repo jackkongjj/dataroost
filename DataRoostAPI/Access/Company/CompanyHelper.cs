@@ -162,27 +162,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 		private Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClasses(List<int> iconums) {
 
 			Dictionary<int, List<ShareClassDataDTO>> companyShareClasses = ShareClasses(iconums);
-			List<int> missingIconums = new List<int>();
-			foreach (int iconum in iconums) {
-				if (!companyShareClasses.ContainsKey(iconum)) {
-					missingIconums.Add(iconum);
-				}
-			}
+			//List<int> missingIconums = new List<int>();
+			//foreach (int iconum in iconums) {
+			//	if (!companyShareClasses.ContainsKey(iconum)) {
+			//		missingIconums.Add(iconum);
+			//	}
+			//}
 
-			foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
-				IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
-				IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
-				foreach (IGrouping<string, string> ppiGroup in groups) {
-					if (ppiGroup.Count() > 1) {
-						string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
-						ShareClassDataDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
-						shareClasses.Remove(rootShareClass);
-					}
-				}
-			}
+			//foreach (List<ShareClassDataDTO> shareClasses in companyShareClasses.Values) {
+			//	IEnumerable<string> ppis = shareClasses.Where(s => s.PPI != null).Select(s => s.PPI).Distinct();
+			//	IEnumerable<IGrouping<string, string>> groups = ppis.GroupBy(i => i.Substring(0, i.Length - 1));
+			//	foreach (IGrouping<string, string> ppiGroup in groups) {
+			//		if (ppiGroup.Count() > 1) {
+			//			string rootPpi = ppiGroup.FirstOrDefault(i => i != null && i.EndsWith("0"));
+			//			ShareClassDataDTO rootShareClass = shareClasses.FirstOrDefault(s => s.PPI == rootPpi);
+			//			shareClasses.Remove(rootShareClass);
+			//		}
+			//	}
+			//}
 
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-			voyagerShares.PopulateTypeOfShare(companyShareClasses);
+			//VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
+			//voyagerShares.PopulateTypeOfShare(companyShareClasses);
 
 			return companyShareClasses;
 		}

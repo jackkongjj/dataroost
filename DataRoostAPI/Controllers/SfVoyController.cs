@@ -48,7 +48,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		private TemplateDTO[] GetTemplates(string companyId, string statementType, string templateId, StandardizationType dataTypes) {
-			string connString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string connString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);
@@ -58,7 +58,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		private SfVoyTimeSeries[]GetTimeSeries(string companyId, string statementType, string templateId, StandardizationType dataType, string timeSeriesId = null) {
-			string sfConnString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			var qs = HttpUtility.ParseQueryString(HttpContext.Current.Request.QueryString.ToString());
 

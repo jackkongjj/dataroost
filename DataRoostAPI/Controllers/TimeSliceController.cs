@@ -21,7 +21,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public bool MigrateIconumTimeSlices(string CompanyId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-Pantheon"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -37,7 +37,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public bool CreateTimeSlice(string CompanyId, [FromBody] TimeSlice TimeSlice) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-Pantheon"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -51,7 +51,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public List<TimeSlice> GetTimeSlices(string CompanyId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -64,7 +64,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[Route("DocumentMeta/{DocumentId}")]
 		[HttpGet]
 		public object GetDocumentMeta(string DocumentId) {
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -80,7 +80,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public List<TimeSlice> GetTimeSlices(string CompanyId, string Year) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -96,7 +96,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public List<TimeSlice> GetTimeSlices(string CompanyId, Guid DocumentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -111,7 +111,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public object GetProductTimeSlices(string CompanyId, string ProductId, string Year, bool IsDiff) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -126,7 +126,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public object GetProductTimeSlices(string CompanyId, string ProductId, Guid DocumentId, bool IsDiff) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -142,7 +142,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public List<object> GetRPEDDocumentsForIconum(string CompanyId, [FromUri]DateTime reportPeriodEndDate) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -157,7 +157,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public bool RemoveDocumentLink(string CompanyId, Guid DocumentId, Guid TimeSliceId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
@@ -172,7 +172,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		public bool UpsertDocumentLink(Guid TimeSliceId, [FromBody]TimeSliceDocument Document) {
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ToString();
 			string kpiConnectionString = ConfigurationManager.ConnectionStrings["FFKPI"].ToString();
 			string sfarConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ToString();
 			string segmentsConnectionString = ConfigurationManager.ConnectionStrings["FFSegments"].ToString();
