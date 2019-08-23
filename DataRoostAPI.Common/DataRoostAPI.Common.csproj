@@ -155,9 +155,14 @@
     <Compile Include="Models\ShareClassDTO.cs" />
     <Compile Include="Models\StandardizationType.cs" />
     <Compile Include="Models\SuperFast\ElasticObjectTree.cs" />
+    <Compile Include="Models\SuperFast\ExportMaster.cs" />
     <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />
     <Compile Include="Models\SuperFast\SFTemplateDTO.cs" />
     <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
+    <Compile Include="Models\SuperFast\StdItem.cs" />
+    <Compile Include="Models\SuperFast\STDTimeSliceDetail.cs" />
+    <Compile Include="Models\SuperFast\StdValueMeta.cs" />
+    <Compile Include="Models\SuperFast\TimeSlice.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TemplateItemDTO.cs" />
     <Compile Include="Models\TimeseriesDTO.cs" />

@@ -50,7 +50,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			SendEmail("DataRoost Exception", msg + extra);
 		}
 
-		[Route("json/{id}")]
+		[Route("json/id/{id}")]
 		[HttpGet]
 		public HttpResponseMessage GetDocument(int id) {
 			try {
@@ -69,7 +69,142 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		public class StitchInput {
+        [Route("json/{hashkey}")]
+        [HttpGet]
+        public HttpResponseMessage GetDocumentByHashkey(string hashkey)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetJsonByHash(hashkey);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("json/{hashkey}")]
+        [HttpPost]
+        public HttpResponseMessage SetDocumentByHashkey(string hashkey, Newtonsoft.Json.Linq.JObject value)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.SetJsonByHash(hashkey, Newtonsoft.Json.JsonConvert.SerializeObject(value));
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("datatree/{DamDocumentId}")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTree(Guid DamDocumentId)
+        {
+            return GetDataTreeFileNo(DamDocumentId, 0);
+        }
+
+        [Route("datatree/{DamDocumentId}/{FileNo}")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTreeFileNo(Guid DamDocumentId, int FileNo)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetDataTree(DamDocumentId, FileNo);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+        [Route("datatree/{DamDocumentId}/debug")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTreeFake(Guid DamDocumentId)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetDataTreeFake(DamDocumentId);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+				[Route("datatreetest/{DamDocumentId}/{FileNo}")]
+				[HttpGet]
+				public HttpResponseMessage GetDataTreeFileNoTest(Guid DamDocumentId, int FileNo) {
+					try {
+
+						string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+						var vsHelper = new VisualStitchingHelper(sfConnectionString);
+						var json = vsHelper.GetDataTreeTest(DamDocumentId, FileNo);
+						return new HttpResponseMessage()
+						{
+							Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+						};
+					} catch (Exception ex) {
+						LogError(ex);
+						return null;
+					}
+				}
+        [Route("nametree/{segment}")]
+        [HttpGet]
+        public HttpResponseMessage GetNameTree(string segment)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetSegmentTree(segment);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }
 		}

@@ -114,6 +114,9 @@ namespace CCS.Fundamentals.DataRoostAPI.CommLogger
         {
             PerformanceLogger.LogEvent(eventName, regionName, eventStartTimeStamp, eventEndTimeStamp, sessionID, documentid, workqueueid, userid, msg, true);
         }
+        public static void LogToFile(string details) {
+            Logger.Error(details);
+        }
     }
 
 
