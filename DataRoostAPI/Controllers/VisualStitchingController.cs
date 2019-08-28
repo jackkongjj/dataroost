@@ -55,7 +55,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public HttpResponseMessage GetDocument(int id) {
 			try {
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
 				var json = vsHelper.GetJson(id);

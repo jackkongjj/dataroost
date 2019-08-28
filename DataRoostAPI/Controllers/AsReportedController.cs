@@ -54,7 +54,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (string.IsNullOrEmpty(CompanyId)) {
 				return null;
 			}
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
@@ -68,7 +68,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 				return documentHelper.GetDocument(iconum, documentId);
@@ -82,7 +82,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateSplitAdjustmentDate(string CompanyId, Guid documentId, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				DocumentHelper helper = new DocumentHelper(sfConnectionString, damConnectionString);
@@ -107,7 +107,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 				return documentHelper.GetDocuments(iconum, documentId);
@@ -123,7 +123,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 
@@ -149,7 +149,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				CompanyFinancialTermsHelper companyFinancialTermsHelper = new CompanyFinancialTermsHelper(sfConnectionString);
 				return companyFinancialTermsHelper.GetCompanyFinancialTerms(iconum);
 			} catch (Exception ex) {
@@ -157,6 +157,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 		}
+
+
 
 		public static double PingTimeAverage(string host, int echoNum) {
 			long totalTime = 0;
@@ -177,7 +179,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				string hostname = "ffdamsql-staging.prod.factset.com";
 				string searchString = "Data Source=tcp:";
-				var connectString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				var connectString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				var startindex = connectString.IndexOf(searchString);
 				if (startindex <= 0) {
 					searchString = "Data Source=";
@@ -202,7 +204,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -254,7 +256,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				var r = helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 				var json = Newtonsoft.Json.JsonConvert.SerializeObject(r);
@@ -271,12 +273,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 
+
 		[Route("templates/{TemplateName}/{DocumentId}")]
 		[HttpPost]
 		public ScarResult PostTemplate(string CompanyId, string TemplateName, Guid DocumentId, StringInput data) {
 			try {
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.CreateStaticHierarchyForTemplate(0, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -284,6 +287,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 		}
+
 
 		[Route("productview/{TemplateName}")]
 		[HttpGet]
@@ -304,7 +308,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetProductViewInScarResult(iconum, TemplateName, DamDocumentID, reverseRepresentation, filterPeriod, filterRecap, filterYear);
 			} catch (Exception ex) {
@@ -336,7 +340,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (CompanyId == null)
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetMetaData(iconum);
 			} catch (Exception ex) {
@@ -363,7 +367,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (TemplateName == null)
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetProductTemplateYearList(iconum, TemplateName, DamDocumentID);
 			} catch (Exception ex) {
@@ -382,7 +386,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					return null;
 				if (tabletypeID <= 0)
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.CopyDocumentHierarchy(iconum, tabletypeID, DocumentId);
 			} catch (Exception ex) {
@@ -399,7 +403,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (id == 0 || id == -1)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetStaticHierarchy(id);
 			} catch (Exception ex) {
@@ -412,9 +416,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult EditHierarchyLabel(string CompanyId, int id, StringInput input) {
 			try {
-				if (input == null || string.IsNullOrEmpty(input.StringData))
-					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                if (input == null || string.IsNullOrEmpty(input.StringData))
+                    return null;
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyLabel(id, input.StringData);
 			} catch (Exception ex) {
@@ -429,7 +433,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyCusip(id, input.StringData);
 			} catch (Exception ex) {
@@ -444,7 +448,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyMove(id, input.StringData);
 			} catch (Exception ex) {
@@ -458,7 +462,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult SwitchChildrenOrientation(string CompanyId, int id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchySwitchChildrenOrientation(id);
 			} catch (Exception ex) {
@@ -473,7 +477,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (string.IsNullOrEmpty(location))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.DragDropStaticHierarchyLabel(id, targetId, location.ToUpper());
 			} catch (Exception ex) {
@@ -488,7 +492,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (string.IsNullOrEmpty(location))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				int tableTypeid;
 				int.TryParse(dict.StringData["TableTypeId"], out tableTypeid);
@@ -506,7 +510,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyUnitType(id, input.StringData);
 			} catch (Exception ex) {
@@ -520,7 +524,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyMeta(id, input.StringData);
 			} catch (Exception ex) {
@@ -532,7 +536,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult GroupStatichHierarchy(string CompanyId, int id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchySeperator(id, true);
 			} catch (Exception ex) {
@@ -544,7 +548,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UngroupStatichHierarchy(string CompanyId, int id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchySeperator(id, false);
 			} catch (Exception ex) {
@@ -558,7 +562,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyHeaderLabel(id, input.StringData);
 			} catch (Exception ex) {
@@ -573,7 +577,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyHeaderLabelWithUpperCount(uppercount, id, input.StringData);
 			} catch (Exception ex) {
@@ -585,7 +589,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPost]
 		public ScarResult AddHeaderStatichHierarchy(string CompanyId, int id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyAddHeader(id);
 			} catch (Exception ex) {
@@ -598,7 +602,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpDelete]
 		public ScarResult DeleteStaticHierarchyWithId(string CompanyId, ScarStringListInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
 					return null;
@@ -615,7 +619,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult CleanupStaticHierarchyWithId(string CompanyId, string TemplateName, ScarStringListInput input) {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 
 				return helper.CleanupStaticHierarchy(iconum, TemplateName);
@@ -640,7 +644,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpDelete]
 		public ScarResult DeleteHeaderStaticHierarchy(string CompanyId, ScarStringListInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				if (input == null || input.StaticHierarchyIDs.Count == 0)
 					return null;
@@ -656,7 +660,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPost]
 		public ScarResult AddParentStatichHierarchy(string CompanyId, int id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyAddParent(id);
 			} catch (Exception ex) {
@@ -669,7 +673,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpDelete]
 		public ScarResult DeleteParentStaticHierarchy(string CompanyId, ScarStringListInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				if (input == null || input.StaticHierarchyIDs.Count == 0 || input.StaticHierarchyIDs.Any(s => s == 0))
 					return null;
@@ -688,7 +692,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyConvertDanglingHeader(id, input.StringData);
 			} catch (Exception ex) {
@@ -707,7 +711,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (id == 0 || id == -1)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTimeSlice(id);
 			} catch (Exception ex) {
@@ -723,7 +727,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.CreateTimeSlice(input.StringData);
 			} catch (Exception ex) {
@@ -739,7 +743,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateTimeSliceReportType(id, input.StringData);
 			} catch (Exception ex) {
@@ -754,7 +758,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.CloneUpdateTimeSlice(id, input.StringData);
 			} catch (Exception ex) {
@@ -769,7 +773,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateTimeSliceManualOrgSet(id, input.StringData);
 			} catch (Exception ex) {
@@ -787,7 +791,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int targetSH = 1;
 				if (input != null && input.TargetStaticHierarchyID != 0)
 					targetSH = input.TargetStaticHierarchyID;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.FlipSign(id, DocumentId, iconum, targetSH);
 			} catch (Exception ex) {
@@ -803,7 +807,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				//if (input == null || input.TargetStaticHierarchyID == 0)
 				//	return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.FlipChildren(id, DocumentId, iconum, 0);
 			} catch (Exception ex) {
@@ -819,7 +823,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				//if (input == null || input.TargetStaticHierarchyID == 0)
 				//	return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.FlipHistorical(id, DocumentId, iconum, 0);
 			} catch (Exception ex) {
@@ -835,7 +839,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				//if (input == null || input.TargetStaticHierarchyID == 0)
 				//	return null;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.FlipChildrenHistorical(id, DocumentId, iconum, 0);
 			} catch (Exception ex) {
@@ -853,7 +857,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					ret.ReturnValue["Success"] = "F";
 					return ret;
 				}
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.SwapValue(id, input.StringData);
 			} catch (Exception ex) {
@@ -866,7 +870,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public TableCellResult AddMakeTheMathWorkNote(string id, Guid DocumentId) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddMakeTheMathWorkNote(id, DocumentId);
 			} catch (Exception ex) {
@@ -881,7 +885,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return AddMakeTheMathWorkNote(id, DocumentId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddMakeTheMathWorkNote(id, DocumentId, input.StringData);
 			} catch (Exception ex) {
@@ -894,7 +898,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public TableCellResult AddLikePeriodValidationNote(string id, Guid DocumentId) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddLikePeriodValidationNote(id, DocumentId);
 			} catch (Exception ex) {
@@ -909,7 +913,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddLikePeriodValidationNote(id, DocumentId, input.StringData);
 			} catch (Exception ex) {
@@ -924,7 +928,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null || string.IsNullOrEmpty(input.StringData))
 					return new ScarResult();// AddLikePeriodValidationNote(id, DocumentId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddLikePeriodValidationNoteNoCheck(id, DocumentId, input.StringData);
 			} catch (Exception ex) {
@@ -952,7 +956,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public ScarResult GetTableCell(string id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTableCell(id);
 			} catch (Exception ex) {
@@ -965,7 +969,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaNumericValue(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -985,7 +989,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaScalingFactor(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1005,7 +1009,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaPeriodDate(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1025,7 +1029,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaPeriodType(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1045,7 +1049,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaPeriodLength(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1065,7 +1069,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableCellMetaCurrency(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1085,7 +1089,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableRowMetaCusip(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1105,7 +1109,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableRowMetaPit(string id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 
 				return helper.UpdateTableRowMetaPit(id, "");
@@ -1118,7 +1122,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableRowMetaScalingFactor(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1138,7 +1142,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableColumnMetaPeriodDate(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1158,7 +1162,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableColumnMetaColumnHeader(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1178,7 +1182,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableColumnMetaPeriodType(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1198,7 +1202,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableColumnMetaPeriodLength(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1219,7 +1223,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableColumnMetaCurrencyCode(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1239,7 +1243,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateTableColumnMetaInterimType(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1263,7 +1267,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (TemplateName == null)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -1276,7 +1280,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult UpdateTDP(string id, StringInput input) {
 			try {
 				ScarResult result = new ScarResult();
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1306,7 +1310,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult DeleteRowColumnTDP(string id, StringInput input) {
 			try {
 				ScarResult result = new ScarResult();
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1334,7 +1338,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult DeleteTDP(String CompanyId, string id, string tabletype) {
 			try {
 				ScarResult result = new ScarResult();
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 
@@ -1349,7 +1353,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult UpdateDocumentTimeSliceTableCell(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1370,7 +1374,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPost]
 		public ScarResult CopyDocumentTimeSliceTableCell(string id, StringInput input) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				string newValue = "";
 				if (input != null && !string.IsNullOrEmpty(input.StringData)) {
@@ -1391,7 +1395,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpDelete]
 		public ScarResult DeleteDocumentTimeSliceTableCell(string id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.DeleteDocumentTimeSliceTableCell(id, "");
 			} catch (Exception ex) {
@@ -1403,7 +1407,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public ScarResult GetTimeSliceByTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetTimeSliceByTemplate(CompanyId, TemplateName, DocumentId);
 			} catch (Exception ex) {
@@ -1417,7 +1421,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public ScarResult GetTimeSliceReview(string CompanyId, string TemplateName) {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.GetReviewTimeSlice(TemplateName, iconum);
 			} catch (Exception ex) {
@@ -1429,7 +1433,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult PutTimeSliceIsSummary(string CompanyId, string TemplateName, int id) {
 			try {
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateTimeSliceIsSummary(id, TemplateName);
 			} catch (Exception ex) {
@@ -1445,7 +1449,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				string periodNote = null;
 				if (input != null && !string.IsNullOrEmpty(input.StringData))
 					periodNote = input.StringData;
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 
 				return helper.UpdateTimeSlicePeriodNote(id, periodNote);
@@ -1464,7 +1468,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.StitchStaticHierarchies(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
 			} catch (Exception ex) {
@@ -1483,7 +1487,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (stitchInput == null || stitchInput.TargetStaticHierarchyID == 0 || stitchInput.StitchingStaticHierarchyIDs.Count == 0 || stitchInput.StitchingStaticHierarchyIDs.Any(s => s == 0))
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.StitchStaticHierarchiesNoCheck(stitchInput.TargetStaticHierarchyID, DocumentId, stitchInput.StitchingStaticHierarchyIDs, iconum);
 			} catch (Exception ex) {
@@ -1503,7 +1507,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				List<int> cellids = helper.GetSibilingTableCells(unstitchInput.TargetStaticHierarchyID, unstitchInput.DocumentTimeSliceIDs);
 				UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
@@ -1536,7 +1540,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				if (unstitchInput == null || unstitchInput.TargetStaticHierarchyID == 0)
 					return null;
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				UnStitchResult ret = helper.UnstitchStaticHierarchyNoCheck(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 				return ret; // the client side should do whole refresh.
@@ -1616,7 +1620,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 				DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 				var document = documentHelper.GetDocument(iconum, documentId);
@@ -1646,7 +1650,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 
 
@@ -1733,7 +1737,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				ScarResult result = new ScarResult();
 				result.ReturnValue = helper.ARDValidation(SfDocumentId);
@@ -1750,7 +1754,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				ScarResult result = new ScarResult();
 
@@ -1767,7 +1771,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				helper.SetIncomeOrientation(SfDocumentId);
 			} catch (Exception ex) {
@@ -1781,7 +1785,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				var result = new ScarResult();
@@ -1803,7 +1807,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				var result = new ScarResult();
@@ -1829,7 +1833,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
 
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
@@ -1865,7 +1869,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId); // SFDocumentID
 				int iconum = PermId.PermId2Iconum(CompanyId);
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				List<AsReportedTemplate> templates = new List<AsReportedTemplate>();
 				var result = new ScarResult();
 				System.Text.StringBuilder errorMessageBuilder = new System.Text.StringBuilder();
@@ -1938,7 +1942,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				var result = helper.GetMtmwTableCells(0, SfDocumentId);
 				return result;
@@ -1953,7 +1957,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				var sfDocument = GetDocument(CompanyId, damdocumentId.ToString());
 				Guid SfDocumentId = new Guid(sfDocument.SuperFastDocumentId);
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				var result = helper.GetLpvTableCells(0, SfDocumentId);
 				return result;

@@ -952,9 +952,9 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		public static string PingMessage() {
 			string result = "PingTime: ";
 			try {
-				string hostname = "ffdamsql-staging.prod.factset.com";
-				string searchString = "Data Source=tcp:";
-				var connectString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+                string hostname = "ffdamsql-staging.prod.factset.com";
+                string searchString = "Data Source=tcp:";
+                var connectString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				var startindex = connectString.IndexOf(searchString);
 				if (startindex <= 0) {
 					searchString = "Data Source=";
@@ -2516,7 +2516,7 @@ DECLARE @DraggedParentParentId int = (SELECT TOP 1 ParentID from [StaticHierarch
 
 
 SELECT *
-  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] WITH (NOLOCK) where tabletypeid = @tableTypeId
+  FROM [dbo].[StaticHierarchy] WITH (NOLOCK) where tabletypeid = @tableTypeId
   order by AdjustedOrder
 
 
@@ -2542,7 +2542,7 @@ END
 			string query = @"
 DECLARE @tableTypeId2 INT = (SELECT TOP 1 [TableTypeId] from [StaticHierarchy] WITH (NOLOCK) where id = @DraggedSHID)
 SELECT *
-  FROM [ffdocumenthistory].[dbo].[StaticHierarchy] WITH (NOLOCK) where tabletypeid = @tableTypeId2
+  FROM [dbo].[StaticHierarchy] WITH (NOLOCK) where tabletypeid = @tableTypeId2
   order by AdjustedOrder
 
 			";
