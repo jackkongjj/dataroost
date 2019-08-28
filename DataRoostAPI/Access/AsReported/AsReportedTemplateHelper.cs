@@ -1405,7 +1405,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			if (tc.ARDErrorTypeId.HasValue || (tc.VirtualValueNumeric.HasValue && GetChildren(tc, CellLookup, SHChildLookup).Any(c => c.ARDErrorTypeId.HasValue)))
 				return false;
 
-			if (tc.ID > 0 && !tc.ValueNumeric.HasValue)
+			if (tc.ID != 0 && !tc.ValueNumeric.HasValue)
 				return true;
 
 			if (!tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue)
@@ -1505,7 +1505,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						hasValidChild = true;
 						continue;
 					}
-					if (cc.ID > 0) {
+					if (cc.ID != 0) {
 						continue;
 					}
 
@@ -8484,7 +8484,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						while (reader.Read()) {
 							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(1).HasValue) {
-								if (reader.GetNullable<int>(1).Value > 0) {
+								if (reader.GetNullable<int>(1).Value != 0) {
 									cell = new SCARAPITableCell
 									{
 										ID = reader.GetInt32(1),
