@@ -7464,7 +7464,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						while (reader.Read()) {
 							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(1).HasValue) {
-								if (reader.GetNullable<int>(1).Value > 0) {
+								if (reader.GetNullable<int>(1).Value != 0) {
 									cell = new SCARAPITableCell
 									{
 										ID = reader.GetInt32(1),
@@ -7716,7 +7716,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						while (reader.Read()) {
 							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(1).HasValue) {
-								if (reader.GetNullable<int>(1).Value > 0) {
+								if (reader.GetNullable<int>(1).Value != 0) {
 									cell = new SCARAPITableCell
 									{
 										ID = reader.GetInt32(1),
@@ -7944,7 +7944,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						while (reader.Read()) {
 							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(1).HasValue) {
-								if (reader.GetNullable<int>(1).Value > 0) {
+								if (reader.GetNullable<int>(1).Value != 0) {
 									cell = new SCARAPITableCell
 									{
 										ID = reader.GetInt32(1),
@@ -8188,7 +8188,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 						while (reader.Read()) {
 							SCARAPITableCell cell;
 							if (reader.GetNullable<int>(1).HasValue) {
-								if (reader.GetNullable<int>(1).Value > 0) {
+								if (reader.GetNullable<int>(1).Value != 0) {
 									cell = new SCARAPITableCell
 									{
 										ID = reader.GetInt32(1),
