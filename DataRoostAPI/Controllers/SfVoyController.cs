@@ -58,8 +58,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 		private SfVoyTimeSeries[]GetTimeSeries(string companyId, string statementType, string templateId, StandardizationType dataType, string timeSeriesId = null) {
-			string sfConnString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
-			string voyConnString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+			string sfConnString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
 			var qs = HttpUtility.ParseQueryString(HttpContext.Current.Request.QueryString.ToString());
 
 			int iconum = 0;
@@ -72,7 +71,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				tsId = new sfVoy.TimeseriesIdentifier(timeSeriesId);
 
 			//TimeseriesHelper tsh = new TimeseriesHelper(sfConnString);
-			sfVoy.TimeseriesHelper tsh = new sfVoy.TimeseriesHelper(sfConnString, voyConnString);
+			sfVoy.TimeseriesHelper tsh = new sfVoy.TimeseriesHelper(sfConnString);
 			SfVoyTimeSeries[] result = tsh.QueryTimeseries(iconum, templId, tsId, dataType,statementType ,qs);
 			return result; // tsh.QuerySDBTimeseries(iconum, templId, tsId, dataType, qs);
 		}

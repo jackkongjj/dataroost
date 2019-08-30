@@ -183,24 +183,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 
 		public Dictionary<string, List<ShareClassDataItem>> GetCurrentShareDataItems(int iconum) {
 
-			string queryPantheon = @"SELECT s.ID, s.STDItemID, '', s.Value, i.STDCode, i.ItemName, '', s.SecurityID, i.StdItemTypeId
+			string query = @"SELECT s.ID, s.STDItemID, '', s.Value, i.STDCode, i.ItemName, '', s.SecurityID, i.StdItemTypeId
                                 FROM SuperCore.STDTimeSliceDetail s
                                     JOIN STDItem i ON i.ID = s.STDItemID
 								join SuperCore.TimeSlice ts with (nolock) on s.TimeSliceID = ts.ID
 								join SuperCore.DocumentTimeSlice dts with (nolock)  on dts.timesliceid = ts.id
 								join dbo.documentseries ds on ds.id = dts.documentseriesid
-                  WHERE ds.CompanyID =  @iconum AND s.SecurityID IS NOT NULL";
-
-
-			string queryDC = @"SELECT s.ID, s.STDItemID, null STDExpressionID, case when  (s.MathML is not null and s.MathML != '<null/>') then s.Value  ELSE null end  Value,
-                                i.STDCode, i.ItemName, case s.mathml when '<null/>' then s.Value when null then s.Value else null end , s.SecurityID, i.StdItemTypeId
-                                FROM dbo.STDCompanyDetailElastic s
-                                    JOIN STDItem i ON i.ID = s.STDItemID
-                                WHERE s.iconum = @iconum AND s.SecurityID IS NOT NULL";
-
-			bool isIconumPantheon = IsIconumPantheon(iconum);
-
-			string query = isIconumPantheon ? queryPantheon : queryDC;
+                  WHERE ds.CompanyID =  @iconum AND s.SecurityID IS NOT NULL";			
 
 			Dictionary<string, List<ShareClassDataItem>> perShareData = new Dictionary<string, List<ShareClassDataItem>>();
 			using (SqlConnection connection = new SqlConnection(_connectionString)) {

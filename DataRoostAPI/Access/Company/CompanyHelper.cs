@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net.Mail;
 using CCS.Fundamentals.DataRoostAPI.Access.SuperFast;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
-
 using DataRoostAPI.Common.Exceptions;
 using DataRoostAPI.Common.Models;
 using FactSet.Data.SqlClient;
@@ -18,15 +17,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		private readonly string _damConnectionString;
 		private readonly string _lionConnectionString;
-		private readonly string _sfConnectionString;
-		private readonly string _voyConnectionString;
+		private readonly string _sfConnectionString;		
 
-		public CompanyHelper(string sfConnectionString,
-												 string voyConnectionString,
-												 string lionConnectionString,
-												 string damConnectionString) {
-			_sfConnectionString = sfConnectionString;
-			_voyConnectionString = voyConnectionString;
+		public CompanyHelper(string sfConnectionString,	string lionConnectionString, string damConnectionString) {
+			_sfConnectionString = sfConnectionString;			
 			_lionConnectionString = lionConnectionString;
 			_damConnectionString = damConnectionString;
 		}
@@ -155,7 +149,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			if (shareClassDictionary.Count() > 0) {
 				return shareClassDictionary.Values.First();
 			}
-
 			return null;
 		}
 
@@ -179,11 +172,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 						shareClasses.Remove(rootShareClass);
 					}
 				}
-			}
-
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-			voyagerShares.PopulateTypeOfShare(companyShareClasses);
-
+			}			
 			return companyShareClasses;
 		}
 
@@ -307,16 +296,8 @@ ORDER BY ChangeDate DESC";
             try {
                 DateTime startTime = DateTime.Now;
                 Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
-                Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
-
-                //Skipping Voyager check for US Companies, as those are already transitioned to Supercore
-                List<int> voyagerIconums = companyEfforts.Where(x => x.Value.Name == EffortDTO.Voyager().Name ||
-                !companyShareClassData.ContainsKey(x.Key) ||
-                !companyShareClassData[x.Key].Any() ||
-                !companyShareClassData[x.Key].First().PPI.StartsWith("C840")).Select(k => k.Key).ToList();
-
+                Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);                
                 List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
-
                 // Supercore data is SecPermId based
                 if (superfastIconums.Count > 0) {
                     SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
@@ -336,31 +317,7 @@ ORDER BY ChangeDate DESC";
                             }
                         }
                     }
-                }
-
-                // Voyager data is PPI based
-                if (voyagerIconums.Count > 0) {
-                    VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-                    Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
-                        voyagerShares.GetLatestCompanyFPEShareData(voyagerIconums, reportDate, since);
-                    foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
-                        int iconum = keyValuePair.Key;
-                        Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
-                        if (companyShareClassData.ContainsKey(iconum)) {
-                            List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-                            foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-                                if (shareClass.ShareClassData == null)
-                                    shareClass.ShareClassData = new List<ShareClassDataItem>();
-                                if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
-                                    var supercoreReportDate = shareClass.ShareClassData.Any() ? shareClass.ShareClassData.Max(x => x.ReportDate) : DateTime.MinValue;
-                                    if (voyagerSecurityItems[shareClass.PPI].Max(x => x.ReportDate) > supercoreReportDate)
-                                        shareClass.ShareClassData = voyagerSecurityItems[shareClass.PPI];
-                                }
-                            }
-                        }
-                    }
-                }
-
+                }                
                 return companyShareClassData;
             }catch(Exception ex) {                
                 LogException(ex, string.Join(",", iconums));
@@ -379,11 +336,8 @@ ORDER BY ChangeDate DESC";
 		public Dictionary<int, List<ShareClassDataDTO>> GetAllShareClassData(List<int> iconums, string stdCode, DateTime? reportDate, DateTime? since) {
             try {
                 Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
-                Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
-
-                List<int> voyagerIconums = companyEfforts.Keys.ToList();
-                List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
-                HashSet<string> mergeChecker = new HashSet<string>();
+                Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);                
+                List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();                
 
                 // Supercore data is SecPermId based
                 if (superfastIconums.Count > 0) {
@@ -399,46 +353,14 @@ ORDER BY ChangeDate DESC";
                                 List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
                                 if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
                                     foreach (var item in superfastSecurityItems[shareClass.PermId]) {
-                                        var key = String.Format("{0}:{1}:{2}:{3}:{4}", iconum, shareClass.PermId ?? "", shareClass.PPI ?? "", item.ReportDate, item.ItemId);
-                                        if (!mergeChecker.Contains(key)) {
-                                            securityItemList.Add(item);
-                                            mergeChecker.Add(key);
-                                        }
+                                        securityItemList.Add(item);
                                     }
                                 }
                                 shareClass.ShareClassData = securityItemList;
                             }
                         }
                     }
-                }
-
-                // Voyager data is PPI based
-                if (voyagerIconums.Count > 0) {
-                    VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-                    Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> voyagerShareData =
-                            voyagerShares.GetAllFpeShareDataForStdCode(voyagerIconums, stdCode, reportDate, since);
-                    foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in voyagerShareData) {
-                        int iconum = keyValuePair.Key;
-                        Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = keyValuePair.Value;
-                        if (companyShareClassData.ContainsKey(iconum)) {
-                            List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-                            foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-                                if (shareClass.ShareClassData == null)
-                                    shareClass.ShareClassData = new List<ShareClassDataItem>();
-                                if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI) && voyagerSecurityItems[shareClass.PPI].Any()) {
-                                    foreach (var item in voyagerSecurityItems[shareClass.PPI]) {
-                                        var key = String.Format("{0}:{1}:{2}:{3}:{4}", iconum, shareClass.PermId, shareClass.PPI, item.ReportDate, item.ItemId);
-                                        if (!mergeChecker.Contains(key)) {
-                                            shareClass.ShareClassData.Add(item);
-                                            mergeChecker.Add(key);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
+                }                
                 return companyShareClassData;
             }catch(Exception ex) {
                 LogException(ex, string.Join(",", iconums));
@@ -450,22 +372,16 @@ ORDER BY ChangeDate DESC";
 		public IEnumerable<ShareClassDataDTO> GetCurrentCompanyShareClassData(int iconum) {
 			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
 			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
-
-			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-			VoyagerSharesHelper voyagerShares = new VoyagerSharesHelper(_voyConnectionString, _sfConnectionString);
-			Dictionary<string, List<ShareClassDataItem>> voyagerSecurityItems = voyagerShares.GetCurrentShareDataItems(iconum);
+			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);						
 			Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = superfastShares.GetCurrentShareDataItems(iconum);
 			foreach (ShareClassDTO shareClass in shareClasses) {
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
 				if (shareClass.Cusip != null && superfastSecurityItems.ContainsKey(shareClass.Cusip)) {
 					securityItemList = superfastSecurityItems[shareClass.Cusip];
-				} else if (shareClass.PPI != null && voyagerSecurityItems.ContainsKey(shareClass.PPI)) {
-					securityItemList = voyagerSecurityItems[shareClass.PPI];
 				}
 				ShareClassDataDTO shareClassData = new ShareClassDataDTO(shareClass, securityItemList);
 				shareClassDataList.Add(shareClassData);
 			}
-
 			return shareClassDataList;
 		}
 
@@ -478,81 +394,12 @@ ORDER BY ChangeDate DESC";
 		}
 
 		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
-
 			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
-			DataTable table = new DataTable();
-			table.Columns.Add("iconum", typeof(int));
 			foreach (int iconum in companies) {
-				table.Rows.Add(iconum);
-				effortDictionary.Add(iconum, EffortDTO.Voyager());
-			}
-
-			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
-			const string query = @"
-with ico as
-(
-       select c.iconum, IsoCountry 
-       from #iconums c
-       join PPIIconumMap fds WITH (NOLOCK) on fds.iconum = c.iconum
-       where IsAdr = 0 and IsActive=1 --order by ClientAddDate, [Priority]
-)      
-select  fds.iconum
-from fce.rules r WITH (NOLOCK)
-join ico fds WITH (NOLOCK) on r.country = fds.IsoCountry
-join fce.RulesToPath rtp WITH (NOLOCK) on r.id = rtp.RuleId
-join fce.Paths p WITH (NOLOCK) on p.Id = rtp.PathId
-join fce.PathTransitions pt WITH (NOLOCK) on p.Id = pt.PathId
-join WorkQueueTasks wqt WITH (NOLOCK) on wqt.id = pt.taskid
-left join fce.CompanyListRulesToPath clr WITH (NOLOCK) on clr.RulesToPathId = rtp.Id
-where wqt.name = 'Finantula' and clr.RulesToPathId is null
-union
-select matchList.iconum from
-(
-       select fds.iconum, rulestopathid, matchcount = count(distinct 1)
-       from fce.rules r WITH (NOLOCK)
-       join ico fds WITH (NOLOCK) on r.country = fds.IsoCountry
-       join fce.RulesToPath rtp WITH (NOLOCK) on r.id = rtp.RuleId
-       join fce.Paths p WITH (NOLOCK) on p.Id = rtp.PathId
-       join fce.PathTransitions pt WITH (NOLOCK) on p.Id = pt.PathId
-       join WorkQueueTasks wqt WITH (NOLOCK) on wqt.id = pt.taskid
-       join fce.CompanyListRulesToPath clr WITH (NOLOCK) on clr.RulesToPathId = rtp.Id
-       join companylistcompanies clc WITH (NOLOCK) on clc.companylistid = clr.companylistid and clc.iconum = fds.iconum
-       where wqt.name = 'Finantula'
-       group by clr.RulesToPathId, fds.iconum
-) as matchList
-join (
-       select rulestopathid, matchcount = count(1)
-       from fce.CompanyListRulesToPath WITH (NOLOCK)
-       group by rulestopathid
-) as reqList on matchList.RulesToPathId = reqList.RulesToPathId and matchList.matchcount = reqList.matchcount";
-
-			// Create Global Temp Table
-			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
-				connection.Open();
-				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-					cmd.ExecuteNonQuery();
-				}
-
-				// Upload all iconums to Temp table
-				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#iconums";
-					bulkCopy.WriteToServer(table);
-				}
-
-				using (SqlCommand cmd = new SqlCommand(query, connection)) {
-                    cmd.CommandTimeout = 500;
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							int iconum = reader.GetInt32(0);
-							EffortDTO superfastEffort = EffortDTO.SuperCore();
-							effortDictionary[iconum] = superfastEffort;
-						}
-					}
-				}
-			}
-
-			return effortDictionary;
+				//table.Rows.Add(iconum);
+				effortDictionary.Add(iconum, EffortDTO.SuperCore());
+			}            
+            return effortDictionary;
 		}        
 
         public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {
