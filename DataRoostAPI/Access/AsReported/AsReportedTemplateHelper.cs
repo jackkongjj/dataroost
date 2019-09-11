@@ -344,6 +344,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			if (!IsHierarchyMetaTypesLoaded()) {
 				return null;
 			}
+			decimal maxdif = getDifVariance(DamDocumentID, true);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			ScarProductViewResult result = new ScarProductViewResult();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -690,8 +691,14 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
 								if (tc.ScalingFactorValue == 1.0)
 									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
-								else
-									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+								else {
+									if (maxdif > 0) {
+										decimal maxdifvalue = Math.Abs(maxdif * cellValue);
+										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff <= maxdifvalue));
+									} else {
+										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+									}
+								}
 							}
 
 							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
@@ -952,9 +959,9 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		public static string PingMessage() {
 			string result = "PingTime: ";
 			try {
-                string hostname = "ffdamsql-staging.prod.factset.com";
-                string searchString = "Data Source=tcp:";
-                var connectString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				string hostname = "ffdamsql-staging.prod.factset.com";
+				string searchString = "Data Source=tcp:";
+				var connectString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				var startindex = connectString.IndexOf(searchString);
 				if (startindex <= 0) {
 					searchString = "Data Source=";
@@ -971,7 +978,47 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return result;
 		}
 
+		public decimal getDifVariance(Guid DocumentId, Boolean isDamid) {
+			decimal ret = 0;
+			string query = @"
+			select map.IsoCountry from document as d(nolock)
+			join PpiIconumMap as map (nolock)
+			on d.PPI = map.PPI
+			where id = @DocumentID
+			";
+
+			if (isDamid) {
+				query = @"
+			select map.IsoCountry from document as d(nolock)
+			join PpiIconumMap as map (nolock)
+			on d.PPI = map.PPI
+			where DAMDocumentId = @DocumentID
+			";
+			}
+
+			try {
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(query, conn)) {
+						cmd.CommandType = System.Data.CommandType.Text;
+						cmd.CommandTimeout = 120;
+						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = DocumentId;
+						conn.Open();
+						SqlDataReader reader = cmd.ExecuteReader();
+						while (reader.Read()) {
+							String countrycode = reader.GetString(0);
+							if (countrycode == "JP")
+								return 0.005m;
+						}
+					}
+				}
+			} catch (Exception ex) {
+
+			}
+			return ret;
+		}
+
 		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
+			decimal maxdif = getDifVariance(DocumentId, false);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
 			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
@@ -1355,8 +1402,14 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
 								if (tc.ScalingFactorValue == 1.0)
 									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
-								else
-									ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+								else {
+									if (maxdif > 0) {
+										decimal maxdifvalue = Math.Abs(maxdif * cellValue);
+										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff <= maxdifvalue));
+									} else {
+										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
+									}
+								}
 							}
 
 							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&

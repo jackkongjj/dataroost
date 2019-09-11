@@ -205,7 +205,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
                                         s.To_Cusip,
                                         s.Issue_Type,
                                         p.PPI,
-                                        x.permid
+                                        x.permid,
+                                        p.ShareType
                                     FROM PpiIconumMap p
 									    LEFT JOIN #iconums ico ON ico.iconum = p.iconum
 									    LEFT JOIN SecMas s ON p.CUSIP = s.Cusip
@@ -261,7 +262,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 								IssueType = sdr.GetStringSafe(13),
 								PPI = sdr.GetStringSafe(14),
 								Id = sdr.GetStringSafe(15),
-								PermId = sdr.GetStringSafe(15)
+								PermId = sdr.GetStringSafe(15),
+                                TypeOfShare = sdr.GetStringSafe(16)
 							};
 							if (!companyShareClasses.ContainsKey(iconum)) {
 								companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
