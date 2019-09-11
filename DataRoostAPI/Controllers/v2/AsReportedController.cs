@@ -22,7 +22,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 		public AsReportedDocument GetDCDocument(string CompanyId, string documentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetDCDocument(iconum, documentId);
@@ -33,7 +33,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 		public AsReportedDocument[] GetHistory(string CompanyId, string documentId, string reportType = null) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetHistory(iconum, documentId, reportType);
@@ -45,7 +45,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
         {
             int iconum = PermId.PermId2Iconum(CompanyId);
 
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
             string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
             DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
             return documentHelper.GetHistory(iconum, documentId, years);
@@ -57,7 +57,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 		public List<Cell> GetDCDocumentDownload(string CompanyId, string documentId) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetDocumentTableCells(documentId, iconum);
@@ -69,7 +69,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 		public AsReportedDocument[] GetDCDocuments(string CompanyId, List<string> documentIds) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 			return documentHelper.GetDCDocuments(iconum, documentIds);
@@ -80,7 +80,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers.v2 {
 		public AsReportedDocument[] GetDCDocuments(string CompanyId, int? startYear = null, int? endYear = null, string reportType = null) {
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
 			DocumentHelper documentHelper = new DocumentHelper(sfConnectionString, damConnectionString);
 

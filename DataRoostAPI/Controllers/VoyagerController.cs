@@ -7,13 +7,13 @@ using System.Net.Http;
 using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Voyager;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.Voyager;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/voyager")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/voyager")]
 	public class VoyagerController : ApiController {
 
 		[Route("datatypes/")]
@@ -106,7 +106,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		private VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, string timeseriesId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);
@@ -122,7 +122,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		private VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, int startYear, int endYear, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);
@@ -134,7 +134,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		public VoyagerTimeseriesDTO[] GetTimeseries(string companyId, string templateId, StandardizationType dataTypes) {
 			string connString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			int iconum = 0;
 			if (!int.TryParse(companyId, out iconum))
 				iconum = PermId.PermId2Iconum(companyId);

@@ -57,6 +57,15 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Training|AnyCPU'">
+    <OutputPath>bin\Training\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="FactSet.Data.SqlClient">
       <HintPath>..\packages\CommonLib.Data.SqlClient.1.0.0.0\lib\net45\FactSet.Data.SqlClient.dll</HintPath>
@@ -92,6 +101,7 @@
       <HintPath>..\packages\System.Spatial.5.8.1\lib\net40\System.Spatial.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -138,20 +148,27 @@
     <Compile Include="Models\KPI\KpiTimeSeriesDTO.cs" />
     <Compile Include="Models\AsReported\TableCellResult.cs" />
     <Compile Include="Models\AsReported\ScarResult.cs" />
+    <Compile Include="Models\AsReported\ScarProductViewResult.cs" />
     <Compile Include="Models\Segment\SegmentTimeSeriesDTO.cs" />
     <Compile Include="Models\SfVoy\SfVoyTimeSeries.cs" />
     <Compile Include="Models\ShareClassDataDTO.cs" />
     <Compile Include="Models\ShareClassDTO.cs" />
     <Compile Include="Models\StandardizationType.cs" />
     <Compile Include="Models\SuperFast\ElasticObjectTree.cs" />
+    <Compile Include="Models\SuperFast\ExportMaster.cs" />
     <Compile Include="Models\SuperFast\SFCellExpressionNode.cs" />
     <Compile Include="Models\SuperFast\SFTemplateDTO.cs" />
     <Compile Include="Models\SuperFast\SFTimeseriesDTO.cs" />
+    <Compile Include="Models\SuperFast\StdItem.cs" />
+    <Compile Include="Models\SuperFast\STDTimeSliceDetail.cs" />
+    <Compile Include="Models\SuperFast\StdValueMeta.cs" />
+    <Compile Include="Models\SuperFast\TimeSlice.cs" />
     <Compile Include="Models\TemplateDTO.cs" />
     <Compile Include="Models\TemplateItemDTO.cs" />
     <Compile Include="Models\TimeseriesDTO.cs" />
     <Compile Include="Models\TimeseriesValues\ARDItem.cs" />
     <Compile Include="Models\TimeseriesValues\ExpressionNode.cs" />
+    <Compile Include="Models\TimeseriesValues\ExprObjectTree.cs" />
     <Compile Include="Models\TimeseriesValues\FLYTOffsets.cs" />
     <Compile Include="Models\TimeseriesValues\KPINode.cs" />
     <Compile Include="Models\TimeseriesValues\SegmentNode.cs" />

@@ -16,37 +16,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.SuperFast {
 		private readonly string connectionString;
 		private int iconum;
 		private StandardizationType dataType;
+        private string statementType;
 
-		public TemplatesHelper(string connectionString, int iconum, StandardizationType dataType) {
+		public TemplatesHelper(string connectionString, int iconum, StandardizationType dataType , string statementType) {
 			this.connectionString = connectionString;
 			this.iconum = iconum;
 			this.dataType = dataType;
+            this.statementType = statementType;
 		}
 
 		public TemplateDTO[] GetTemplates(string templateId, bool showMemoField = false) {
-			const string SQL_SDB_Templates = @"select distinct sdm.TemplateName, std.ReportTypeID, std.UpdateTypeID, std.TemplateTypeId
-    from CompanyIndustry ci 
-    Join SDBtemplateDetail std 
-        on ci.IndustryDetailID = std.IndustryDetailId
-    join DocumentSeries ds 
-        on ci.Iconum = ds.CompanyId
-    join Document d 
-        on ds.Id = d.DocumentSeriesId
-    join FDSTriPPIMap f 
-        on d.PPI = f.PPI
-    join SDBCountryGroupCountries sc 
-        on sc.CountriesIsoCountry = f.IsoCountry
-    join SDBCountryGroup sg 
-        on sc.SDBCountryGroupID = sg.Id
-        and std.SDBCountryGroupID = sg.ID
-    join SDBTemplateMaster sdm 
-        on std.SDBTemplateMasterId = sdm.Id
-where ci.Iconum = @iconum and 
-(std.ReportTypeID = isnull(@reportTypeId, std.ReportTypeID) 
-and std.UpdateTypeID = isnull(@updateTypeId, std.UpdateTypeID) and std.TemplateTypeId = isnull(@templateTypeId, std.TemplateTypeId))
-union  --temporary always show pension template
-select sdm.TemplateName, 'A', ut.id, 1 from sdbtemplatemaster sdm, updatetype ut where sdm.templatename = 'SF Full - Pension' and ut.[description] = 'Pension Update'
-and 'A' = isnull(@reportTypeId, 'A') AND ut.ID = isnull(@updateTypeId, 'N') AND 1 = isnull(@templateTypeId, 1)";
+			const string SQL_SDB_Templates = @"SELECT sm.id , sm.description,sm.ReportTypeId, sm.screentype ,   'F' 
+             FROM dbo.CompanyINdustry CI    
+                  INNER JOIN dbo.IndustryDetail ID ON ID.ID = CI.IndustryDetailID    
+                  INNER JOIN dbo.IndustryGroup IG ON IG.ID = ID.IndustryGroupID    
+                  INNER JOIN dbo.PPIIconumMap FTP ON FTP.Iconum = CI.Iconum    
+                  INNER JOIN IndustryCountryAssociation ICA ON ICA.IndustryDetailId = CI.IndustryDetailId    
+                                                               AND ICA.IsoCountryCode = FTP.IsoCountry   
+		          join SuperCore.ModelScreenAssociation msa with (nolock) on ica.ID = msa.IndustryCountryAssociationId
+				  join supercore.modelmaster mm on mm.id = msa.ModelMasterId
+                  join Supercore.ScreenMaster sm WITH (NOLOCK) ON sm.Id = msa.ScreenMasterId  
+				 -- join supercore.screentypemaster stm on stm.Id = sm.ScreenType
+             WHERE CI.Iconum = @iconum and mm.StatementTypeID = @StatementTypeID and mm.Description in ('Per Share','Pension','Legacy')
+			 and sm.ReportTypeId is not null and sm.id = isnull(@Screenmasterid,sm.id) ";
 
 			const string SQL_STD_Templates = @"select distinct sdm.TemplateName, std.ReportTypeID, std.UpdateTypeID, std.TemplateTypeId
     from CompanyIndustry ci 
@@ -79,29 +71,29 @@ and 'A' = isnull(@reportTypeId, 'A') AND ut.ID = isnull(@updateTypeId, 'N') AND 
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(this.dataType == StandardizationType.SDB ? SQL_SDB_Templates : SQL_STD_Templates, conn)) {
 					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = this.iconum });
-					if (!requestedSpecificTemplate) {
-						cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = DBNull.Value });
-						cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = DBNull.Value });
-						cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.NVarChar, 64) { Value = DBNull.Value });
-					} else {
+                    cmd.Parameters.AddWithValue("@StatementTypeID", this.statementType);
+                    if (!requestedSpecificTemplate) {
+                        cmd.Parameters.AddWithValue("@Screenmasterid", DBNull.Value);
+                    } else {
 						var templateIdToken = TemplateIdentifier.GetTemplateIdentifier(templateId);
-						cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = templateIdToken.ReportType });
-						cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = templateIdToken.UpdateType });
-						cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.Int) { Value = templateIdToken.TemplateType });
+					
+                        cmd.Parameters.AddWithValue("@Screenmasterid",templateIdToken.TemplateId);
 					}
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						templates.AddRange(
 										reader.Cast<IDataRecord>().Select(r => new SFTemplateDTO()
 										{
+                                            TemplateId = reader.GetInt32(0),
 											Id = new TemplateIdentifier() {
-												UpdateType = reader.GetString(2),
-												ReportType = reader.GetString(1),
-												TemplateType = reader.GetInt32(3)
-											}.GetToken(),
-											Name = reader.GetString(0),
-											ReportType = reader.GetString(1),
-											UpdateType = reader.GetString(2),
+                                                ReportType = reader.GetString(2),
+                                                UpdateType = reader.GetString(4),
+                                                TemplateType = reader.GetInt32(3),
+                                                TemplateId = reader.GetInt32(0)
+                                            }.GetToken(),
+											Name = reader.GetString(1),
+											ReportType = reader.GetString(2),
+											UpdateType = reader.GetString(4),
 											TemplateType = reader.GetInt32(3)
 										}));
 					}
@@ -110,42 +102,14 @@ and 'A' = isnull(@reportTypeId, 'A') AND ut.ID = isnull(@updateTypeId, 'N') AND 
 
 			if (requestedSpecificTemplate) {
 				foreach (var template in templates) {
-					template.Items = PopulateTemplateItem(TemplateIdentifier.GetTemplateIdentifier(template.Id), showMemoField);
+					template.Items = PopulateTemplateItem(template.TemplateId, showMemoField);
 				}
 			}
 			return templates.ToArray();
 		}
 
-		private List<TemplateItemDTO> PopulateTemplateItem(TemplateIdentifier templateId, bool showMemoField) {
-			const string SQL_SDB_Items = @"WITH TemplateMasterID AS
-(
-	select distinct sdm.id 
-    from CompanyIndustry ci 
-    Join SDBtemplateDetail std 
-        on ci.IndustryDetailID = std.IndustryDetailId
-    join DocumentSeries ds 
-        on ci.Iconum = ds.CompanyId
-    join Document d 
-        on ds.Id = d.DocumentSeriesId
-    join FDSTriPPIMap f 
-        on d.PPI = f.PPI
-    join SDBCountryGroupCountries sc 
-        on sc.CountriesIsoCountry = f.IsoCountry
-    join SDBCountryGroup sg 
-        on sc.SDBCountryGroupID = sg.Id
-        and std.SDBCountryGroupID = sg.ID
-    join SDBTemplateMaster sdm 
-        on std.SDBTemplateMasterId = sdm.Id
-	where ci.Iconum = @iconum
-	AND  std.ReportTypeID = @reportTypeId
-	AND std.UpdateTypeID = @updateTypeId
-	AND std.TemplateTypeId = @templateTypeId
-	UNION
-	select id from SDBTemplateMaster where TemplateName = 'SF Full - Pension' AND  'A' = @reportTypeId
-	AND 'N' = @updateTypeId
-	AND 1 = @templateTypeId
-)
-select Id, code, sdbDescription, statementTypeId, usageType, indentLevel, valueType, SecurityFlag, PITFlag, [precision]
+		private List<TemplateItemDTO> PopulateTemplateItem(int templateId, bool showMemoField) {
+			const string SQL_SDB_Items = @"select Id, code, sdbDescription, statementTypeId, usageType, indentLevel, valueType, SecurityFlag, PITFlag, [precision]
 from (
 	select s.Id, [code] = s.SDBCode, [sdbDescription] = s.Description, [statementTypeId] = st.ID, [usageType] = iut.ID, 
 		[indentLevel] = sti.SDBItemLevel, [valueType] = sit.Id, s.SecurityFlag, s.PITFlag, [precision] = s.NoDecimals, sti.SDBItemSequence
@@ -158,7 +122,8 @@ from (
 		on s.SDBitemTypeId = sit.Id
 	join ItemUsageType iut (nolock)
 		on s.ItemUsageTypeId = iut.Id
-	join TemplateMasterID tmi on tmi.id = sti.SDBTemplateMasterId
+	join supercore.screendetail sd on sd.SdbItemId = s.id
+	where sd.ScreenMasterId = @templateId
 	union
 	select s.Id, [code] = s.SDBCode, [sdbDescription] = s.Description, [statementTypeId] = st.ID, [usageType] = iut.ID, 
 		[indentLevel] = 0, [valueType] = sit.Id, s.SecurityFlag, s.PITFlag, [precision] = s.NoDecimals, sti.SDBItemSequence
@@ -217,9 +182,7 @@ order by sti.STDItemSequence asc";
 				conn.Open();
 				using (SqlCommand cmd = new SqlCommand(this.dataType == StandardizationType.SDB ? SQL_SDB_Items : SQL_STD_Items, conn)) {
 					cmd.Parameters.Add(new SqlParameter("@iconum", SqlDbType.Int) { Value = this.iconum });
-					cmd.Parameters.Add(new SqlParameter("@reportTypeId", SqlDbType.NVarChar, 64) { Value = templateId.ReportType });
-					cmd.Parameters.Add(new SqlParameter("@updateTypeId", SqlDbType.NVarChar, 64) { Value = templateId.UpdateType });
-					cmd.Parameters.Add(new SqlParameter("@templateTypeId", SqlDbType.Int) { Value = templateId.TemplateType });
+                    cmd.Parameters.AddWithValue("@templateId", templateId);
 					cmd.Parameters.Add(new SqlParameter("@showMemoField", SqlDbType.Bit) { Value = showMemoField });
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						return reader.Cast<IDataRecord>().Select(r => new TemplateItemDTO()

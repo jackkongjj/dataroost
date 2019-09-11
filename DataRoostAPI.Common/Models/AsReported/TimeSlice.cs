@@ -82,6 +82,15 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("Currency")]
 		public string Currency { get; set; }
 
+		[JsonProperty("PeriodNoteID")]
+		public byte? PeriodNoteID { get; set; }
+
+		[JsonProperty("IsSummary")]
+		public bool IsSummary { get; set; }
+
+		[JsonProperty("PeriodLength")]
+		public int PeriodLength { get; set; }
+
 		[JsonIgnore]
 		public List<SCARAPITableCell> Cells { get; set; }
 	}

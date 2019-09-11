@@ -7,12 +7,12 @@ using System.Web.Http;
 using System.Configuration;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
-
+using LogPerformance;
 using DataRoostAPI.Common.Models;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1")]
 	public class CompanyController : ApiController {
 
 		[Route("companies/")]
@@ -28,7 +28,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -46,7 +46,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -64,7 +64,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, EffortDTO>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -73,9 +73,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			iconumList = iconumList.Distinct().ToList();
 
 			CompanyHelper helper = new CompanyHelper(sfConnectionString,
-				                                         voyConnectionString,
-				                                         lionConnectionString,
-				                                         damConnectionString);
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
 			return helper.GetCompaniesEfforts(iconumList);
 		}
 
@@ -86,7 +86,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -97,7 +97,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																								 voyConnectionString,
 																								 lionConnectionString,
 																								 damConnectionString);
-			Dictionary<int, CompanyPriority> priorities = helper.GetCompanyPriority(new List<int> {iconum});
+			Dictionary<int, CompanyPriority> priorities = helper.GetCompanyPriority(new List<int> { iconum });
 			if (priorities.ContainsKey(iconum)) {
 				return priorities[iconum];
 			}
@@ -112,7 +112,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, CompanyPriority>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -126,7 +126,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 																								 damConnectionString);
 			return helper.GetCompanyPriority(iconumList);
 		}
-			
+
 		[Route("companies/{CompanyId}/efforts/")]
 		[HttpGet]
 		public EffortDTO[] QueryEfforts(string CompanyId) {
@@ -134,7 +134,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			return new EffortDTO[] { EffortDTO.Voyager(), EffortDTO.SuperCore(), EffortDTO.Kpi(), EffortDTO.Segments(), EffortDTO.AsReported() , new EffortDTO() { Name = "sfvoy_join" } };
+			return new EffortDTO[] { EffortDTO.Voyager(), EffortDTO.SuperCore(), EffortDTO.Kpi(), EffortDTO.Segments(), EffortDTO.AsReported(), new EffortDTO() { Name = "sfvoy_join" } };
 		}
 	}
 }

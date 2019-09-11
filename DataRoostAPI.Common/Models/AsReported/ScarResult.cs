@@ -13,7 +13,6 @@ namespace DataRoostAPI.Common.Models.AsReported {
 			ReturnValue["Message"] = "";
 		}
 
-
 		[JsonProperty("staticHierarchyAdjustedOrders")]
 		public List<StaticHierarchyAdjustedOrder> StaticHierarchyAdjustedOrders { get; set; }
 

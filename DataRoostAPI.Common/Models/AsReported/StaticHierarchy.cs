@@ -17,7 +17,7 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public int Id { get; set; }
 
 		[JsonProperty("companyFinancialTermId")]
-		public int CompanyFinancialTermId { get; set; }
+		public int? CompanyFinancialTermId { get; set; }
 
 		[JsonProperty("adjustedOrder")]
 		public int AdjustedOrder { get; set; }
@@ -46,7 +46,13 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		[JsonProperty("isIncomePositive")]
 		public bool IsIncomePositive { get; set; }
 
-		[JsonProperty("childrenExpandDown")]
+        [JsonProperty("isDanglingHeader")]
+        public bool IsDanglingHeader { get; set; }
+
+        [JsonProperty("DocumentSeriesID")]
+        public int DocumentSeriesId { get; set; }
+
+        [JsonProperty("childrenExpandDown")]
 		public bool ChildrenExpandDown { get; set; }
 
 		[JsonProperty("cells")]

@@ -9,13 +9,14 @@ using System.Web.Http;
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
 using CCS.Fundamentals.DataRoostAPI.Access.Segment;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 using DataRoostAPI.Common.Models;
 using DataRoostAPI.Common.Models.Segment;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies/{CompanyId}/efforts/segments")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies/{CompanyId}/efforts/segments")]
 	public class SegmentController : ApiController {
 		[Route("datatypes/")]
 		[HttpGet]
@@ -29,7 +30,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			string segconn = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
 			Access.Segment.ExportVersionHelper helper = new Access.Segment.ExportVersionHelper(segconn);
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -44,7 +45,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public Dictionary<int, Dictionary<int, SegmentsTimeSeriesDTO>> QuerySTDTemplatesTimeseries(string CompanyId, string VersionId) {
 			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -60,7 +61,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public Dictionary<string, object> GetSTDTemplatesTimeseries(string CompanyId, string VersionId, string TimeseriesId) {
 			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -76,7 +77,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpGet]
 		public List<Guid> GetDocumentId(string CompanyId, string timeSeriesId) {
 			string segConnectionString = ConfigurationManager.ConnectionStrings["SFAR-Diff"].ConnectionString;
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;

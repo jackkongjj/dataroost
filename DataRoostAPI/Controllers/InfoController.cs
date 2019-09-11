@@ -5,12 +5,14 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Web.Http;
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
 using CCS.Fundamentals.DataRoostAPI.Filters;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers
 {
-	[ExceptionHandlerFilter]
+    [CommunicationLogger]
+    [ExceptionHandlerFilter]
 	[RoutePrefix("api/v1")]
 	public class StatusController : ApiController {
 

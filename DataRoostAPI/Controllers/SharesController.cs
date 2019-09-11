@@ -6,16 +6,15 @@ using System.Net.Http;
 using System.Web.Http;
 using System.Configuration;
 using System.Web.Http.Cors;
-
 using CCS.Fundamentals.DataRoostAPI.Access;
 using CCS.Fundamentals.DataRoostAPI.Access.Company;
-
+using CCS.Fundamentals.DataRoostAPI.CommLogger;
 using DataRoostAPI.Common.Exceptions;
 using DataRoostAPI.Common.Models;
 
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-
-	[RoutePrefix("api/v1/companies")]
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/companies")]
 	public class SharesController : ApiController {
 
 		[Route("{CompanyId}/shares/latestFiscalPeriodEnd/")]
@@ -25,7 +24,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -49,7 +48,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, List<ShareClassDataDTO>>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -69,7 +68,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return null;
             }
 
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
             string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
             string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
             string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -93,7 +92,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return new Dictionary<int, List<ShareClassDataDTO>>();
             }
 
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
             string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
             string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
             string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
@@ -112,7 +111,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
