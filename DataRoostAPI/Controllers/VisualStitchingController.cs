@@ -164,8 +164,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return null;
             }
         }
+        //[Route("kpi/{DamDocumentId}/debug")]
+        [Route("kpi/debug")]
+        [HttpGet]
+        public string PostKpi()
+        {
+            try
+            {
 
-				[Route("datatreetest/{DamDocumentId}/{FileNo}")]
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                Guid DamDocumentId = new Guid();
+                var json = vsHelper.InsertKpiFake(DamDocumentId);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
+
+        [Route("datatreetest/{DamDocumentId}/{FileNo}")]
 				[HttpGet]
 				public HttpResponseMessage GetDataTreeFileNoTest(Guid DamDocumentId, int FileNo) {
 					try {

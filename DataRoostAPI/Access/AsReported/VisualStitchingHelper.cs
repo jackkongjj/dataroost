@@ -10,6 +10,7 @@ using System.Net;
 using Newtonsoft.Json;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
@@ -120,8 +121,30 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public int Id { get; set; }
             [JsonProperty("type")]
             public string Type { get; set; }
+            [JsonProperty("xbrlTableTitle")]
+            public string XbrlTableTitle { get; set; }
+            [JsonProperty("unit")]
+            public string Unit { get; set; }
+            [JsonProperty("currency")]
+            public string Currency { get; set; }
+            [JsonProperty("cells")]
+            public List<Cell> Cells { get; set; }
             [JsonProperty("rows")]
             public List<Row> Rows { get; set; }
+            [JsonProperty("cols")]
+            public List<Column> Columns { get; set; }
+            [JsonProperty("values")]
+            public List<Value> Values { get; set; }
+        }
+        public class Cell
+        {
+            [JsonProperty("rowId")]
+            public int rowId { get; set; }
+            [JsonProperty("columnId")]
+            public int columnId { get; set; }
+            [JsonProperty("offset")]
+            public string offset { get; set; }
+
         }
         public class Row
         {
@@ -132,6 +155,32 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             [JsonProperty("labelHierarhcy")]
             public List<string> LabelHierarchy { get; set; }
             
+        }
+        public class Column
+        {
+            [JsonProperty("columnId")]
+            public int Id { get; set; }
+            [JsonProperty("columnHeader")]
+            public string columnHeader { get; set; }
+
+        }
+        public class Value
+        {
+            [JsonProperty("offset")]
+            public string Offset { get; set; }
+            [JsonProperty("value")]
+            public string OriginalValue { get; set; }
+            [JsonProperty("numericValue")]
+            public string NumericValue { get; set; }
+            [JsonProperty("scaling")]
+            public string Scaling { get; set; }
+            [JsonProperty("date")]
+            public string Date { get; set; }
+            [JsonProperty("unit")]
+            public string Unit { get; set; }
+            [JsonProperty("xbrlTag")]
+            public string XbrlTag { get; set; }
+
         }
         public class Node
         {
@@ -554,5 +603,190 @@ FROM CteTables order by parentid
 
         }
 
+        public class CollectedValue
+        {
+            [JsonProperty("ItemCode")]
+            public string ItemCode { get; set; }
+            [JsonProperty("ItemName")]
+            public string ItemName { get; set; }
+            [JsonProperty("SourceLinkID")]
+            public string SourceLinkID { get; set; }
+            [JsonProperty("DataSource")]
+            public string DataSource { get; set; }
+        }
+
+        private string GetURL(string url)
+        {
+            return GetTintFile(url);
+        }
+        public string InsertKpiFake(Guid DamDocumentID)
+        {
+            string tintURL = @"http://chai-auto.factset.io/queue/bank?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
+            string collectedValueURL = @"http://chai-auto.factset.io/bank/collected?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&iconum=24530";
+
+            string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
+            string url = String.Format(urlPattern, DamDocumentID);
+            url = tintURL;
+
+            int tries = 3;
+            List<Node> nodes = new List<Node>();
+            TintInfo tintInfo = null;
+            while (tries > 0)
+            {
+                try
+                {
+                    var outputresult = GetTintFile(url);
+                    tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+                    tries = -1;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(3000);
+                    }
+
+                }
+            }
+            if (tintInfo == null)
+            {
+                return "false";
+            }
+            tries = 3;
+            CollectedValue[] collectedValues = null;
+            while (tries > 0)
+            {
+                try
+                {
+                    var outputresult = GetURL(collectedValueURL);
+                    collectedValues = Newtonsoft.Json.JsonConvert.DeserializeObject<CollectedValue[]>(outputresult);
+                    tries = -1;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+
+                }
+            }
+            if (collectedValues == null)
+            {
+                return "false";
+            }
+            StringBuilder sb = new StringBuilder();
+            StringBuilder sbDimension = new StringBuilder();
+            StringBuilder sbTableCell = new StringBuilder();
+            sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+            sb.AppendLine("BEGIN TRY");
+            sb.AppendLine("BEGIN TRAN");
+            int count = 0;
+            foreach (var table in tintInfo.Tables)
+            {
+                if (count > 0) break;
+                // Insert DocumentTable
+                bool addDocumentTable = true;
+                foreach(var cell in table.Cells)
+                {
+                    if (collectedValues.FirstOrDefault(x => x.SourceLinkID == cell.offset) != null)
+                    {
+                        if (addDocumentTable)
+                        {
+                            count = 1;
+                            string s = @"
+DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)
+Declare @DamDocument UNIQUEIDENTIFIER = '978DFE58-C4A2-E311-9B0B-1CC1DE2561D4'
+DECLARE @DocumentSeriesID INT = 2129
+DECLARE @TableTypeID INT  
+DECLARE @SfDocumentID UNIQUEIDENTIFIER 
+select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document where DAMDocumentId = @DamDocument
+DECLARE @TdColId INT
+DECLARE @TdRowId INT 
+
+select @TableTypeID = ID from TableType where Description = 'KPI' and DocumentSeriesID = @DocumentSeriesID;
+IF @TableTypeId is NULL
+BEGIN
+	INSERT Tabletype(Description, DocumentSeriesID) values ('KPI', @DocumentSeriesID)
+	select @TableTypeID = SCOPE_IDENTITY()
+END
+select * from TableType where id = @TableTypeId 
+
+DECLARE @dtID INT
+INSERT DocumentTable (DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
+VALUES (@SfDocumentID, 1, @TableTypeId, 1, 'A', 'A', -1, 0) 
+select @dtID = SCOPE_IDENTITY()
+select * from DocumentTable where ID = @dtID
+
+DECLARE  @TableDimension TABLE(ID INT, FakeID int, DimensionTypeID int, CompanyFinancialTermID int)
+DECLARE @tcID INT
+DECLARE @cftID int
+
+";
+                            sb.AppendLine(s);
+                            addDocumentTable = false;
+                        }
+                        string tdRow = @"
+
+Insert into CompanyFinancialterm
+(DocumentSeriesId, TermStatusId, Description, NormalizedFlag, EncoreTermFlag) 
+values (@DocumentSeriesID, 1, '{0}', 0, 3);
+select @cftID = scope_identity();
+
+INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
+OUTPUT inserted.id, {2}, 1, @cftID into @TableDimension
+VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
+
+";
+                        string tdCol = @"
+INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
+OUTPUT inserted.id, {2}, 2, 0 into @TableDimension
+VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
+";
+                        var row = table.Rows.FirstOrDefault(x => x.Id == cell.rowId);
+                        sb.AppendLine(string.Format(tdRow, row.Label, 1, row.Id));
+                        var col = table.Columns.FirstOrDefault(x => x.Id == cell.columnId);
+                        sb.AppendLine(string.Format(tdCol, col.columnHeader, 2, col.Id));
+
+                        string tc = @"
+SELECT @cftiD = CompanyFinancialTermID, @TdRowid = ID FROM @TableDimension WHERE FakeID = {7} and DimensionTypeID = 1;
+SELECT @TdColid = ID FROM @TableDimension WHERE FakeID = {8} and DimensionTypeID = 2;
+
+INSERT TableCell(Offset,CellDate,Value,CompanyFinancialTermID,ValueNumeric,NormalizedNegativeIndicator,ScalingFactorID,ScarUpdated,IsIncomePositive,XBRLTag,DocumentId,Label)
+VALUES ('{0}','{1}','{2}', @cftiD, '{3}', 0, '{4}', 0, 0, '{5}',@SfDocumentID, '{6}' );
+select @tcID = SCOPE_IDENTITY();
+
+INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdRowid, @tcID);
+INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdColid, @tcID);
+
+";
+
+                        var v = table.Values.FirstOrDefault(x => x.Offset == cell.offset);
+                        sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue,  v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id));
+                        // Insert Table Dimension
+                        // Insert Table Cell
+                        // Insert DimensionToCell
+                    }
+                }
+            }
+            sb.AppendLine("select 'commit'; ROLLBACK TRAN;");
+            sb.AppendLine("END TRY");
+            sb.AppendLine("BEGIN CATCH");
+            string err = @"
+       SELECT  
+            ERROR_NUMBER() AS ErrorNumber  
+            ,ERROR_SEVERITY() AS ErrorSeverity  
+            ,ERROR_STATE() AS ErrorState  
+            ,ERROR_PROCEDURE() AS ErrorProcedure  
+            ,ERROR_LINE() AS ErrorLine  
+            ,ERROR_MESSAGE() AS ErrorMessage;  
+";
+            sb.AppendLine(err);
+            sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
+            sb.AppendLine("END CATCH");
+
+            string retVal = sb.ToString();
+            return retVal;
+        }
     }
 }
