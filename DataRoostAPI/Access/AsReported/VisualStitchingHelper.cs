@@ -622,6 +622,183 @@ FROM CteTables order by parentid
         public string InsertKpiFake(Guid DamDocumentID)
         {
             string tintURL = @"http://chai-auto.factset.io/queue/bank?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
+
+            string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
+            string url = String.Format(urlPattern, DamDocumentID);
+            url = tintURL;
+
+            int tries = 3;
+            List<Node> nodes = new List<Node>();
+            TintInfo tintInfo = null;
+            while (tries > 0)
+            {
+                try
+                {
+                    var outputresult = GetTintFile(url);
+                    tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+                    tries = -1;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(3000);
+                    }
+
+                }
+            }
+            if (tintInfo == null)
+            {
+                return "false";
+            }
+            StringBuilder sb = new StringBuilder();
+            StringBuilder sbDimension = new StringBuilder();
+            StringBuilder sbTableCell = new StringBuilder();
+            sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+            sb.AppendLine("BEGIN TRY");
+            sb.AppendLine("BEGIN TRAN");
+            int count = 0;
+            foreach (var table in tintInfo.Tables)
+            {
+                if (new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
+                if (count > 0) break;
+                // Insert DocumentTable
+                bool addDocumentTable = true;
+                if (addDocumentTable)
+                {
+                    count = 1;
+                    string s = @"
+DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)
+Declare @DamDocument UNIQUEIDENTIFIER = '978DFE58-C4A2-E311-9B0B-1CC1DE2561D4'
+DECLARE @DocumentSeriesID INT = 2129
+DECLARE @TableTypeID INT  
+DECLARE @SfDocumentID UNIQUEIDENTIFIER 
+select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document where DAMDocumentId = @DamDocument
+DECLARE @TdColId INT
+DECLARE @TdRowId INT 
+DECLARE @dtsId INT 
+
+select @TableTypeID = ID from TableType where Description = 'KPI' and DocumentSeriesID = @DocumentSeriesID;
+IF @TableTypeId is NULL
+BEGIN
+	INSERT Tabletype(Description, DocumentSeriesID) values ('KPI', @DocumentSeriesID)
+	select @TableTypeID = SCOPE_IDENTITY()
+END
+select * from TableType where id = @TableTypeId 
+
+DECLARE @dtID INT
+INSERT DocumentTable (DocumentID,TableOrganizationID,TableTypeID,Consolidated,Unit,ScalingFactorID,TableIntID,ExceptShare)
+VALUES (@SfDocumentID, 1, @TableTypeId, 1, 'A', 'A', -1, 0) 
+select @dtID = SCOPE_IDENTITY()
+select * from DocumentTable where ID = @dtID
+
+DECLARE  @TableDimension TABLE(ID INT, FakeID int, DimensionTypeID int, CompanyFinancialTermID int)
+DECLARE @tcID INT
+DECLARE @cftID int
+
+";
+                    sb.AppendLine(s);
+                    addDocumentTable = false;
+                }
+                List<int> addedRow = new List<int>();
+                List<int> addedCol = new List<int>();
+                foreach (var cell in table.Cells)
+                {
+
+
+                    string tdRow = @"
+IF NOT EXISTS (SELECT 1 FROM @TableDimension WHERE FakeID = {2} and DimensionTypeID = 1)
+BEGIN
+    Insert into CompanyFinancialterm
+    (DocumentSeriesId, TermStatusId, Description, NormalizedFlag, EncoreTermFlag) 
+    values (@DocumentSeriesID, 1, '{0}', 0, 3);
+    select @cftID = scope_identity();
+
+    INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
+    OUTPUT inserted.id, {2}, 1, @cftID into @TableDimension
+    VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
+END
+";
+                    string tdCol = @"
+IF NOT EXISTS (SELECT 1 FROM @TableDimension WHERE FakeID = {2} and DimensionTypeID = 2)
+BEGIN
+    INSERT TableDimension (DocumentTableID,DimensionTypeID,Label,OrigLabel,Location,EndLocation,Parent,InsertedRow,AdjustedOrder)
+    OUTPUT inserted.id, {2}, 2, 0 into @TableDimension
+    VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
+
+  INSERT DocumentTimeSlice (DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration
+    ,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
+  VALUES (@SfDocumentID, @DocumentSeriesID, '2013-12-31', '2013-12-31', 0, 365
+    , 'XX', NULL, 'US', 'C', 0, 0, 2013, 'F', 0, 0, 0, 0, @TableTypeID);
+    select @dtsId = SCOPE_IDENTITY()
+END
+";
+
+                    string dts = @"
+IF NOT EXISTS (SELECT 1 FROM @TableDimension WHERE FakeID = {2} and DimensionTypeID = 2)
+BEGIN
+      INSERT DocumentTimeSlice (DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
+  VALUES ('9D3D42C7-6B12-42E4-9EC7-655A04E61940', 
+    OUTPUT inserted.id, {2}, 2, 0 into @TableDimension
+    VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
+END
+";
+                    var row = table.Rows.FirstOrDefault(x => x.Id == cell.rowId);
+                    if (!addedRow.Contains(row.Id))
+                    {
+                        sb.AppendLine(string.Format(tdRow, row.Label, 1, row.Id));
+                        addedRow.Add(row.Id);
+                    }
+                    var col = table.Columns.FirstOrDefault(x => x.Id == cell.columnId);
+                    if (!addedCol.Contains(col.Id))
+                    {
+                        sb.AppendLine(string.Format(tdCol, col.columnHeader, 2, col.Id));
+                        addedCol.Add(col.Id);
+                    }
+                    string tc = @"
+SELECT @cftiD = CompanyFinancialTermID, @TdRowid = ID FROM @TableDimension WHERE FakeID = {7} and DimensionTypeID = 1;
+SELECT @TdColid = ID FROM @TableDimension WHERE FakeID = {8} and DimensionTypeID = 2;
+
+INSERT TableCell(Offset,CellDate,Value,CompanyFinancialTermID,ValueNumeric,NormalizedNegativeIndicator,ScalingFactorID,ScarUpdated,IsIncomePositive,XBRLTag,DocumentId,Label)
+VALUES ('{0}','{1}','{2}', @cftiD, '{3}', 0, '{4}', 0, 0, '{5}',@SfDocumentID, '{6}' );
+select @tcID = SCOPE_IDENTITY();
+
+INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdRowid, @tcID);
+INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdColid, @tcID);
+
+INSERT DocumentTimeSliceTableCell(DocumentTimeSliceId, TableCellId) values (@dtsId, @tcID);
+";
+
+                    var v = table.Values.FirstOrDefault(x => x.Offset == cell.offset);
+                    sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue, v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id));
+                    // Insert Table Dimension
+                    // Insert Table Cell
+                    // Insert DimensionToCell
+                }
+
+            }
+            sb.AppendLine("select 'commit'; ROLLBACK TRAN;");
+            sb.AppendLine("END TRY");
+            sb.AppendLine("BEGIN CATCH");
+            string err = @"
+       SELECT  
+            ERROR_NUMBER() AS ErrorNumber  
+            ,ERROR_SEVERITY() AS ErrorSeverity  
+            ,ERROR_STATE() AS ErrorState  
+            ,ERROR_PROCEDURE() AS ErrorProcedure  
+            ,ERROR_LINE() AS ErrorLine  
+            ,ERROR_MESSAGE() AS ErrorMessage;  
+";
+            sb.AppendLine(err);
+            sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
+            sb.AppendLine("END CATCH");
+
+            string retVal = sb.ToString();
+            return retVal;
+        }
+        public string InsertKpiFakeWrong916(Guid DamDocumentID)
+        {
+            string tintURL = @"http://chai-auto.factset.io/queue/bank?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
             string collectedValueURL = @"http://chai-auto.factset.io/bank/collected?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&iconum=24530";
 
             string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
