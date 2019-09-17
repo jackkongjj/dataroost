@@ -114,6 +114,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
             [JsonProperty("tables")]
             public List<Table> Tables { get; set; }
+            [JsonProperty("timeslices")]
+            public List<TimeSlice> TimeSlices { get; set; }
         }
         public class Table
         {
@@ -135,6 +137,28 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public List<Column> Columns { get; set; }
             [JsonProperty("values")]
             public List<Value> Values { get; set; }
+        }
+        public class TimeSlice
+        {
+            public int FakeID { get; set; }
+            [JsonProperty("CompanyFiscalYear")]
+            public int CompanyFiscalYear { get; set; }
+            [JsonProperty("PeriodType")]
+            public string PeriodType { get; set; }
+            [JsonProperty("PeriodTypeId")]
+            public string PeriodTypeId { get; set; }
+            [JsonProperty("Duration")]
+            public int Duration { get; set; }
+            [JsonProperty("TimeSlicePeriodEndDate")]
+            public DateTime TimeSlicePeriodEndDate { get; set; }
+            [JsonProperty("ReportingPeriodEndDate")]
+            public DateTime ReportingPeriodEndDate { get; set; }
+            [JsonProperty("ReportType")]
+            public string ReportType { get; set; }
+            [JsonProperty("IsRecap")]
+            public bool IsRecap { get; set; }
+            [JsonProperty("Offsets")]
+            public List<string> Offsets { get; set; }
         }
         public class Cell
         {
@@ -619,6 +643,7 @@ FROM CteTables order by parentid
         {
             return GetTintFile(url);
         }
+
         public string InsertKpiFake(Guid DamDocumentID)
         {
             string tintURL = @"http://chai-auto.factset.io/queue/bank?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
@@ -635,21 +660,22 @@ FROM CteTables order by parentid
                 try
                 {
                     var outputresult = GetTintFile(url);
-                    tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+                    var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+                    tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
                     tries = -1;
                 }
                 catch (Exception ex)
                 {
                     if (--tries > 0)
                     {
-                        System.Threading.Thread.Sleep(3000);
+                        System.Threading.Thread.Sleep(6000);
                     }
 
                 }
             }
             if (tintInfo == null)
             {
-                return "false";
+                return "failed to get tint";
             }
             StringBuilder sb = new StringBuilder();
             StringBuilder sbDimension = new StringBuilder();
@@ -693,6 +719,7 @@ select @dtID = SCOPE_IDENTITY()
 select * from DocumentTable where ID = @dtID
 
 DECLARE  @TableDimension TABLE(ID INT, FakeID int, DimensionTypeID int, CompanyFinancialTermID int)
+DECLARE  @DocumentTimeSlice TABLE(ID INT, FakeID int)
 DECLARE @tcID INT
 DECLARE @cftID int
 
@@ -702,6 +729,8 @@ DECLARE @cftID int
                 }
                 List<int> addedRow = new List<int>();
                 List<int> addedCol = new List<int>();
+                List<int> addedDts = new List<int>();
+                int dtsCount = 0;
                 foreach (var cell in table.Cells)
                 {
 
@@ -726,21 +755,19 @@ BEGIN
     OUTPUT inserted.id, {2}, 2, 0 into @TableDimension
     VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
 
-  INSERT DocumentTimeSlice (DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration
-    ,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
-  VALUES (@SfDocumentID, @DocumentSeriesID, '2013-12-31', '2013-12-31', 0, 365
-    , 'XX', NULL, 'US', 'C', 0, 0, 2013, 'F', 0, 0, 0, 0, @TableTypeID);
-    select @dtsId = SCOPE_IDENTITY()
+
 END
 ";
 
                     string dts = @"
-IF NOT EXISTS (SELECT 1 FROM @TableDimension WHERE FakeID = {2} and DimensionTypeID = 2)
+IF NOT EXISTS (SELECT 1 FROM @DocumentTimeSlice WHERE FakeID = {0})
 BEGIN
-      INSERT DocumentTimeSlice (DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
-  VALUES ('9D3D42C7-6B12-42E4-9EC7-655A04E61940', 
-    OUTPUT inserted.id, {2}, 2, 0 into @TableDimension
-    VALUES (@dtID, {1}, '{0}', '{0}', 1, 2, NULL, 0, {2})
+  INSERT DocumentTimeSlice (DocumentId,DocumentSeriesId,TimeSlicePeriodEndDate,ReportingPeriodEndDate,FiscalDistance,Duration
+    ,PeriodType,AcquisitionFlag,AccountingStandard,ConsolidatedFlag,IsProForma,IsRecap,CompanyFiscalYear,ReportType,IsAmended,IsRestated,IsAutoCalc,ManualOrgSet,TableTypeID)
+OUTPUT inserted.id, {0} into @DocumentTimeSlice
+  VALUES (@SfDocumentID, @DocumentSeriesID, {1}, {2}, 0, {3}
+    , '{4}', NULL, 'US', 'C', 0, 0, {5}, 'F', 0, 0, 0, 0, @TableTypeID);
+ 
 END
 ";
                     var row = table.Rows.FirstOrDefault(x => x.Id == cell.rowId);
@@ -755,6 +782,25 @@ END
                         sb.AppendLine(string.Format(tdCol, col.columnHeader, 2, col.Id));
                         addedCol.Add(col.Id);
                     }
+                    TimeSlice u = null;
+                    foreach (var ts in tintInfo.TimeSlices)
+                    {
+                        if (ts.Offsets.Contains(cell.offset))
+                        {
+                            if (!addedDts.Contains(ts.FakeID))
+                            {
+                                ts.FakeID = ++dtsCount;
+                                string strTimeSlicePeriodEndDate = ts.TimeSlicePeriodEndDate == null ? @"NULL" : string.Format(@"'{0}'", ts.TimeSlicePeriodEndDate.ToString());
+                                string strReportingPeriodEndDate = ts.ReportingPeriodEndDate == null ? @"NULL" : string.Format(@"'{0}'", ts.ReportingPeriodEndDate.ToString());
+
+                                sb.AppendLine(string.Format(dts, dtsCount, strTimeSlicePeriodEndDate, strReportingPeriodEndDate, ts.Duration,
+                                    ts.PeriodType, ts.CompanyFiscalYear));
+                                addedDts.Add(ts.FakeID);
+                            }
+                            u = ts;
+                            break;
+                        }
+                    }
                     string tc = @"
 SELECT @cftiD = CompanyFinancialTermID, @TdRowid = ID FROM @TableDimension WHERE FakeID = {7} and DimensionTypeID = 1;
 SELECT @TdColid = ID FROM @TableDimension WHERE FakeID = {8} and DimensionTypeID = 2;
@@ -766,11 +812,12 @@ select @tcID = SCOPE_IDENTITY();
 INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdRowid, @tcID);
 INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdColid, @tcID);
 
+select @dtsId = ID From @DocumentTimeSlice where FakeID = {9};
 INSERT DocumentTimeSliceTableCell(DocumentTimeSliceId, TableCellId) values (@dtsId, @tcID);
 ";
 
                     var v = table.Values.FirstOrDefault(x => x.Offset == cell.offset);
-                    sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue, v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id));
+                    sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue, v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id, u.FakeID));
                     // Insert Table Dimension
                     // Insert Table Cell
                     // Insert DimensionToCell
