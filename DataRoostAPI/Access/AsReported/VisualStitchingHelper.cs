@@ -678,23 +678,10 @@ FROM CteTables order by parentid
                 return "failed to get tint";
             }
             StringBuilder sb = new StringBuilder();
-            StringBuilder sbDimension = new StringBuilder();
-            StringBuilder sbTableCell = new StringBuilder();
             sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
             sb.AppendLine("BEGIN TRY");
             sb.AppendLine("BEGIN TRAN");
-            int count = 0;
-            foreach (var table in tintInfo.Tables)
-            {
-                if (new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
-                if (count > 0) break;
-                // Insert DocumentTable
-                bool addDocumentTable = true;
-                if (addDocumentTable)
-                {
-                    count = 1;
-                    string s = @"
-DECLARE @ChangeResult TABLE (ChangeType VARCHAR(10), TableType varchar(50), Id INTEGER)
+            string s = @"
 Declare @DamDocument UNIQUEIDENTIFIER = '978DFE58-C4A2-E311-9B0B-1CC1DE2561D4'
 DECLARE @DocumentSeriesID INT = 2129
 DECLARE @TableTypeID INT  
@@ -724,12 +711,23 @@ DECLARE @tcID INT
 DECLARE @cftID int
 
 ";
-                    sb.AppendLine(s);
-                    addDocumentTable = false;
-                }
+            sb.AppendLine(s);
+            int count = 0;
+            List<int> addedDts = new List<int>();
+
+            foreach (var table in tintInfo.Tables)
+            {
+                if (new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
+                //if (count > 3) break;
+                // Insert DocumentTable
+                count++;
+                string reset = @"
+                DELETE FROM @TableDimension;
+
+";
+                sb.AppendLine(reset);
                 List<int> addedRow = new List<int>();
                 List<int> addedCol = new List<int>();
-                List<int> addedDts = new List<int>();
                 int dtsCount = 0;
                 foreach (var cell in table.Cells)
                 {
