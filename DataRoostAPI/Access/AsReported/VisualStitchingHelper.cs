@@ -731,7 +731,7 @@ DECLARE @cftID int
                 int dtsCount = 0;
                 foreach (var cell in table.Cells)
                 {
-
+                    if (string.IsNullOrWhiteSpace(cell.offset)) continue;
 
                     string tdRow = @"
 IF NOT EXISTS (SELECT 1 FROM @TableDimension WHERE FakeID = {2} and DimensionTypeID = 1)
@@ -815,7 +815,7 @@ INSERT DocumentTimeSliceTableCell(DocumentTimeSliceId, TableCellId) values (@dts
 ";
 
                     var v = table.Values.FirstOrDefault(x => x.Offset == cell.offset);
-                    sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue, v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id, u.FakeID));
+                    sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue ?? "0", v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id, u.FakeID));
                     // Insert Table Dimension
                     // Insert Table Cell
                     // Insert DimensionToCell
