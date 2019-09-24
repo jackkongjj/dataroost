@@ -654,6 +654,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							TimeSlice ts = temp.TimeSlices[i];
 
 							SCARAPITableCell tc = sh.Cells[i];
+							bool MTMWNotTriggerFlag = false;
 							if (ts.Cells == null) {
 								ts.Cells = new List<SCARAPITableCell>();
 							}
@@ -695,6 +696,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									if (maxdif > 0) {
 										decimal maxdifvalue = Math.Abs(maxdif * cellValue);
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff <= maxdifvalue));
+										if (ChildrenSumEqual && diff > 0 && diff <= maxdifvalue)
+											MTMWNotTriggerFlag = true;
 									} else {
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
 									}
@@ -704,7 +707,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
 									!ChildrenSumEqual &&
 											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
-
+							tc.MTMWNotTriggerFlag = MTMWNotTriggerFlag;
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
 							break;
@@ -1369,6 +1372,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							TimeSlice ts = temp.TimeSlices[i];
 
 							SCARAPITableCell tc = sh.Cells[i];
+							bool MTMWNotTriggerFlag = false;
 							if (ts.Cells == null) {
 								ts.Cells = new List<SCARAPITableCell>();
 							}
@@ -1406,6 +1410,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									if (maxdif > 0) {
 										decimal maxdifvalue = Math.Abs(maxdif * cellValue);
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff <= maxdifvalue));
+										if (ChildrenSumEqual && diff > 0 && diff <= maxdifvalue)
+											MTMWNotTriggerFlag = true;
 									} else {
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
 									}
@@ -1415,6 +1421,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
 									!ChildrenSumEqual &&
 											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
+							tc.MTMWNotTriggerFlag = MTMWNotTriggerFlag;
 
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
