@@ -644,6 +644,175 @@ FROM CteTables order by parentid
             return GetTintFile(url);
         }
 
+        public string InsertGdbFake(Guid DamDocumentID)
+        {
+            return InsertGdb(new Guid("978dfe58-c4a2-e311-9b0b-1cc1de2561d4"), 92);
+        }
+        public string InsertGdbCommit(Guid DamDocumentID, int fileId)
+        {
+            string strResult = "";
+            try
+            {
+                strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;");
+                if (strResult.Length < 20)
+                {
+                    return strResult;
+                }
+                else
+                {
+                    using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                    {
+
+                        using (SqlCommand cmd = new SqlCommand(strResult, conn))
+                        {
+                            conn.Open();
+                            using (SqlDataReader sdr = cmd.ExecuteReader())
+                            {
+                                if (sdr.Read())
+                                {
+                                    if (sdr.GetString(0) == "commit")
+                                    {
+                                        return "true";
+                                    }
+                                }
+                            }
+                        }
+                        return "error executing sql";
+                    }
+                }
+            } catch (Exception ex)
+            {
+                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", strResult + ex.Message);
+                return strResult + ex.Message;
+            }
+        }
+        public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;")
+        {
+            string tintURL = @"http://auto-tablehandler-staging.factset.io/queue/document/978dfe58-c4a2-e311-9b0b-1cc1de2561d4/92";
+
+            string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
+            string url = String.Format(urlPattern, DamDocumentID, fileId);
+            //url = tintURL;
+
+            int tries = 3;
+            TintInfo tintInfo = null;
+            while (tries > 0)
+            {
+                try
+                {
+                    var outputresult = GetTintFile(url);
+                    var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+                    tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
+                    tries = -1;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(6000);
+                    }
+
+                }
+            }
+            if (tintInfo == null)
+            {
+                return "failed to get tint";
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
+            sb.AppendLine("BEGIN TRY");
+            sb.AppendLine("BEGIN TRAN");
+            string s = @"
+Declare @DamDocument UNIQUEIDENTIFIER = '{0}'
+DECLARE @DocumentSeriesID INT
+DECLARE @TableTypeID INT  
+DECLARE @SfDocumentID UNIQUEIDENTIFIER 
+select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document where DAMDocumentId = @DamDocument
+DECLARE @gdbID int
+
+";
+            sb.AppendLine(string.Format(s, DamDocumentID.ToString()));
+            int count = 0;
+            List<int> addedDts = new List<int>();
+
+            foreach (var table in tintInfo.Tables)
+            {
+                if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
+                //if (count > 3) break;
+                // Insert DocumentTable
+                count++;
+
+                List<int> addedRow = new List<int>();
+                List<int> addedCol = new List<int>();
+                int dtsCount = 0;
+                foreach (var value in table.Values)
+                {
+                    if (string.IsNullOrWhiteSpace(value.XbrlTag) || string.IsNullOrWhiteSpace(value.Offset)) continue;
+
+                    string addGDB = @"
+SET @gdbID = null;
+select @gdbID = ID FROM GDBCodes WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
+IF @gdbID is NULL
+BEGIN
+    Insert into GDBCodes
+    (Description, Section, Industry) 
+    values ('{0}', '{1}', 'BANK');
+    select @gdbID = scope_identity();
+END
+";
+                    string addTagged = @"
+IF NOT EXISTS (SELECT 1 FROM TaggedItems WHERE Offset = '{1}' and GDBTableId = @gdbID)
+BEGIN
+    INSERT TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
+    VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}')
+
+
+END
+";
+                    string label = "";
+                    var selectedCell = table.Cells.FirstOrDefault(u => u.offset == value.Offset);
+                    if (selectedCell != null)
+                    {
+                        var row = table.Rows.FirstOrDefault(v => v.Id == selectedCell.rowId);
+                        if (row != null)
+                        {
+                            label = row.Label;
+                        }
+                        else
+                        {
+                            label = value.XbrlTag;
+                        }
+                    }
+                    else
+                    {
+                        label = value.XbrlTag;
+                    }
+                    sb.AppendLine(string.Format(addGDB, value.XbrlTag, table.Type));
+                    sb.AppendLine(string.Format(addTagged, value.XbrlTag, value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle));
+
+                }
+
+            }
+            sb.AppendLine("select 'commit';"); sb.AppendLine(successAction);
+            sb.AppendLine("END TRY");
+            sb.AppendLine("BEGIN CATCH");
+            string err = @"
+       SELECT  
+            ERROR_NUMBER() AS ErrorNumber  
+            ,ERROR_SEVERITY() AS ErrorSeverity  
+            ,ERROR_STATE() AS ErrorState  
+            ,ERROR_PROCEDURE() AS ErrorProcedure  
+            ,ERROR_LINE() AS ErrorLine  
+            ,ERROR_MESSAGE() AS ErrorMessage;  
+";
+            sb.AppendLine(err);
+            sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
+            sb.AppendLine("END CATCH");
+
+            string retVal = sb.ToString();
+            return retVal;
+        }
+
         public string InsertKpiFake(Guid DamDocumentID)
         {
             string tintURL = @"http://chai-auto.factset.io/queue/bank?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";

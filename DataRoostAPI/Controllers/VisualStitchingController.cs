@@ -185,6 +185,64 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
+        [Route("gdb/debug")]
+        [HttpGet]
+        public string PostGdbFake()
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                Guid DamDocumentId = new Guid();
+                var json = vsHelper.InsertGdbFake(DamDocumentId);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
+
+        [Route("gdb/{DamDocumentId}/{FileNo}")]
+        [HttpGet]
+        public string PostGdb(Guid DamDocumentId, int FileNo)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.InsertGdb(DamDocumentId, FileNo);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
+
+        [Route("gdb/{DamDocumentId}/{FileNo}/commit")]
+        [HttpGet]
+        public string PostGdbCommit(Guid DamDocumentId, int FileNo)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.InsertGdbCommit(DamDocumentId, FileNo);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
+
         [Route("datatreetest/{DamDocumentId}/{FileNo}")]
 				[HttpGet]
 				public HttpResponseMessage GetDataTreeFileNoTest(Guid DamDocumentId, int FileNo) {
