@@ -223,7 +223,43 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return "false";
             }
         }
+        [Route("gdb/backfill")]
+        [HttpGet]
+        public string PostGdbCommitBackfill()
+        {
+            try
+            {
 
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GdbBackfill();
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
+
+        [Route("gdb/backfill/{maxThread}")]
+        [HttpGet]
+        public string PostGdbCommitBackfillThread(int maxThread)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GdbBackfill(maxThread);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
         [Route("gdb/{DamDocumentId}/{FileNo}/commit")]
         [HttpGet]
         public string PostGdbCommit(Guid DamDocumentId, int FileNo)

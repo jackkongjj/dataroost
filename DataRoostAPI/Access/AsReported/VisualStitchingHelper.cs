@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
@@ -644,6 +645,100 @@ FROM CteTables order by parentid
             return GetTintFile(url);
         }
 
+        public string GdbBackfill(int maxThread = 10)
+        {
+            StringBuilder sb = new StringBuilder();
+            string sql = @"
+            Select top 1 * from GDBBackfill where isStart = 0 and isEnd =0;
+";
+
+            string update_start_sql = @"
+            update GDBBackfill set isStart = 1 where DocumentID = @DocumentID
+";
+            string update_end_sql = @"
+            update GDBBackfill set isEnd = 1 where DocumentID = @DocumentID
+";
+            var threadList = new List<Task>();
+            var guidList = new List<Guid>();
+            List<string> messages = new List<string>();
+
+            for (int i = 0; i < maxThread; i++)
+            {
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    Guid docID = new Guid();
+
+                    int fileId = 0;
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        conn.Open();
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                docID = sdr.GetGuid(1);
+                                fileId = sdr.GetInt32(2);
+                            }
+                            guidList.Add(docID);
+                        }
+                    }
+                    using (SqlCommand cmd = new SqlCommand(update_start_sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", docID);
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                            }
+                        }
+                    }
+                    threadList.Add(Task.Run(() => InsertGdbCommitKVP(docID, fileId)).ContinueWith(u => messages.Add(u.Result)));
+                }
+            }
+            foreach (var t in threadList)
+            {
+                t.Wait();
+            }
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                conn.Open();
+                foreach (var g in guidList)
+                {
+                    if (!messages.Contains(g.ToString()))
+                    {
+                        continue;
+                    }
+                    using (SqlCommand cmd = new SqlCommand(update_end_sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@DocumentID", g);
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                            }
+                        }
+                    }
+                    sb.Append(g.ToString() + ",");
+                }
+            }
+            foreach (var v in messages)
+            {
+                sb.Append(v + "*");
+            }
+            return sb.ToString();
+        }
+        private string InsertGdbCommitKVP(Guid guid, int i)
+        {
+            var r = InsertGdbCommit(guid, i);
+            if (r == "true")
+            {
+                return guid.ToString();
+            }
+            else
+            {
+                return r;
+            }
+        }
         public string InsertGdbFake(Guid DamDocumentID)
         {
             return InsertGdb(new Guid("978dfe58-c4a2-e311-9b0b-1cc1de2561d4"), 92);
@@ -665,6 +760,7 @@ FROM CteTables order by parentid
 
                         using (SqlCommand cmd = new SqlCommand(strResult, conn))
                         {
+                            cmd.CommandTimeout = 120;
                             conn.Open();
                             using (SqlDataReader sdr = cmd.ExecuteReader())
                             {
@@ -683,7 +779,7 @@ FROM CteTables order by parentid
             } catch (Exception ex)
             {
                 AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", strResult + ex.Message);
-                return strResult + ex.Message;
+                return ex.Message;
             }
         }
         public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;")
@@ -694,7 +790,7 @@ FROM CteTables order by parentid
             string url = String.Format(urlPattern, DamDocumentID, fileId);
             //url = tintURL;
 
-            int tries = 3;
+            int tries = 10;
             TintInfo tintInfo = null;
             while (tries > 0)
             {
@@ -709,7 +805,7 @@ FROM CteTables order by parentid
                 {
                     if (--tries > 0)
                     {
-                        System.Threading.Thread.Sleep(6000);
+                        System.Threading.Thread.Sleep(20000);
                     }
 
                 }
@@ -737,7 +833,7 @@ DECLARE @gdbID int
 
             foreach (var table in tintInfo.Tables)
             {
-                if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
+            //    if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
                 //if (count > 3) break;
                 // Insert DocumentTable
                 count++;
@@ -761,7 +857,7 @@ BEGIN
 END
 ";
                     string addTagged = @"
-IF NOT EXISTS (SELECT 1 FROM TaggedItems WHERE Offset = '{1}' and GDBTableId = @gdbID)
+IF NOT EXISTS (SELECT 1 FROM TaggedItems WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
 BEGIN
     INSERT TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
     VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}')
@@ -787,8 +883,8 @@ END
                     {
                         label = value.XbrlTag;
                     }
-                    sb.AppendLine(string.Format(addGDB, value.XbrlTag, table.Type));
-                    sb.AppendLine(string.Format(addTagged, value.XbrlTag, value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle));
+                    sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
+                    sb.AppendLine(string.Format(addTagged, value.XbrlTag.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
 
                 }
 
