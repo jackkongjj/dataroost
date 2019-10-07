@@ -241,6 +241,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return "false";
             }
         }
+        [Route("gdb/backfill/retry")]
+        [HttpGet]
+        public string PostGdbCommitBackfillRetry()
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GdbBackfill(1, true);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
 
         [Route("gdb/backfill/{maxThread}")]
         [HttpGet]

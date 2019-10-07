@@ -645,33 +645,40 @@ FROM CteTables order by parentid
             return GetTintFile(url);
         }
 
-        public string GdbBackfill(int maxThread = 10)
+        public string GdbBackfill(int maxThread = 10, bool retry = false)
         {
             StringBuilder sb = new StringBuilder();
             string sql = @"
             Select top 1 * from GDBBackfill where isStart = 0 and isEnd =0;
 ";
-
+            string sql_retry = @"
+            Select top 1 * from GDBBackfill where isStart = 1 and isEnd =0;
+";
             string update_start_sql = @"
             update GDBBackfill set isStart = 1 where DocumentID = @DocumentID
 ";
             string update_end_sql = @"
             update GDBBackfill set isEnd = 1 where DocumentID = @DocumentID
 ";
+            if (retry)
+            {
+                sql = sql_retry;
+            }
             var threadList = new List<Task>();
             var guidList = new List<Guid>();
             List<string> messages = new List<string>();
-
-            for (int i = 0; i < maxThread; i++)
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
             {
-                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                conn.Open();
+
+                for (int i = 0; i < maxThread; i++)
                 {
+
                     Guid docID = new Guid();
 
                     int fileId = 0;
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
                     {
-                        conn.Open();
                         using (SqlDataReader sdr = cmd.ExecuteReader())
                         {
                             while (sdr.Read())
@@ -790,7 +797,7 @@ FROM CteTables order by parentid
             string url = String.Format(urlPattern, DamDocumentID, fileId);
             //url = tintURL;
 
-            int tries = 10;
+            int tries = 100;
             TintInfo tintInfo = null;
             while (tries > 0)
             {
@@ -805,7 +812,7 @@ FROM CteTables order by parentid
                 {
                     if (--tries > 0)
                     {
-                        System.Threading.Thread.Sleep(20000);
+                        System.Threading.Thread.Sleep(2000);
                     }
 
                 }
@@ -824,7 +831,7 @@ DECLARE @DocumentSeriesID INT
 DECLARE @TableTypeID INT  
 DECLARE @SfDocumentID UNIQUEIDENTIFIER 
 select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document where DAMDocumentId = @DamDocument
-DECLARE @gdbID int
+ 
 
 ";
             sb.AppendLine(string.Format(s, DamDocumentID.ToString()));
@@ -865,6 +872,7 @@ BEGIN
 
 END
 ";
+                    string addSprocGdb = @"EXEC GdbUpdateCodes @DamDocument, '{0}', '{1}', '{2}', '{3}', '{4}', '{5}'";
                     string label = "";
                     var selectedCell = table.Cells.FirstOrDefault(u => u.offset == value.Offset);
                     if (selectedCell != null)
@@ -883,8 +891,8 @@ END
                     {
                         label = value.XbrlTag;
                     }
-                    sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
-                    sb.AppendLine(string.Format(addTagged, value.XbrlTag.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
+                    //sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
+                    sb.AppendLine(string.Format(addSprocGdb, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''"),  value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
 
                 }
 
