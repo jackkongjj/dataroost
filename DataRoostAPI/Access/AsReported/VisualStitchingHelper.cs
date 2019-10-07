@@ -760,7 +760,7 @@ FROM CteTables order by parentid
 
                         using (SqlCommand cmd = new SqlCommand(strResult, conn))
                         {
-                            cmd.CommandTimeout = 120;
+                            cmd.CommandTimeout = 600;
                             conn.Open();
                             using (SqlDataReader sdr = cmd.ExecuteReader())
                             {
@@ -779,7 +779,7 @@ FROM CteTables order by parentid
             } catch (Exception ex)
             {
                 AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", strResult + ex.Message);
-                return ex.Message;
+                return "InsertGdbCommit" + ex.Message;
             }
         }
         public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;")
