@@ -385,5 +385,7 @@ end
 		public int StaticHierarchyID { get; set; }
 		[JsonProperty("documentTimeSliceID")]
 		public int DocumentTimeSliceID { get; set; }
+		[JsonProperty("MTMWNotTriggerFlag")]
+		public bool MTMWNotTriggerFlag { get; set; }
 	}
 }

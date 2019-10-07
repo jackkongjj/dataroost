@@ -654,6 +654,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							TimeSlice ts = temp.TimeSlices[i];
 
 							SCARAPITableCell tc = sh.Cells[i];
+							bool MTMWNotTriggerFlag = false;
 							if (ts.Cells == null) {
 								ts.Cells = new List<SCARAPITableCell>();
 							}
@@ -695,6 +696,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									if (maxdif > 0) {
 										decimal maxdifvalue = Math.Abs(maxdif * cellValue);
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff <= maxdifvalue));
+										if (ChildrenSumEqual && diff > 0 && diff <= maxdifvalue)
+											MTMWNotTriggerFlag = true;
 									} else {
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
 									}
@@ -704,7 +707,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
 									!ChildrenSumEqual &&
 											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
-
+							tc.MTMWNotTriggerFlag = MTMWNotTriggerFlag;
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
 							break;
@@ -1369,6 +1372,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							TimeSlice ts = temp.TimeSlices[i];
 
 							SCARAPITableCell tc = sh.Cells[i];
+							bool MTMWNotTriggerFlag = false;
 							if (ts.Cells == null) {
 								ts.Cells = new List<SCARAPITableCell>();
 							}
@@ -1406,6 +1410,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									if (maxdif > 0) {
 										decimal maxdifvalue = Math.Abs(maxdif * cellValue);
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff <= maxdifvalue));
+										if (ChildrenSumEqual && diff > 0 && diff <= maxdifvalue)
+											MTMWNotTriggerFlag = true;
 									} else {
 										ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
 									}
@@ -1415,6 +1421,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
 									!ChildrenSumEqual &&
 											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
+							tc.MTMWNotTriggerFlag = MTMWNotTriggerFlag;
 
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
@@ -6492,6 +6499,8 @@ from #tmptimeslices ts
 
 
 		public ScarResult FlipSign(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+
+			decimal difrate = getDifVariance(DocumentId, false);
 			const string SQL_UpdateFlipIncomeFlag = @"
 
 UPDATE TableCell  set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END
@@ -6563,7 +6572,7 @@ WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
-DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit, MTMWNotTrigger bit)
 
 DELETE FROM MTMWErrorTypeTableCell 
 WHERE TableCellid in(
@@ -6575,13 +6584,13 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForLPV
+EXEC SCARGetTableCellMTMWCalcTest @CellsForLPV, @difrate
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
 
 INSERT @SHCellsError 
-SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.CellValue <> 1 THEN 0 ELSE 1 END,CASE WHEN mtmw.CellValue = 2 THEN 1 ELSE 0 END
 from @SHCellsLPV lpv
 FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
 
@@ -6609,7 +6618,8 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
-				sh.id as 'StaticHierarchyId'
+				sh.id as 'StaticHierarchyId',
+        lpv.MTMWNotTrigger
 FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
 JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
@@ -6636,6 +6646,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
+					cmd.Parameters.AddWithValue("@difrate", difrate);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
@@ -6681,6 +6692,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
 									cell.MTMWValidationFlag = reader.GetBoolean(29);
 									adjustedOrder = reader.GetInt32(31);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								} else {
 									cell = new SCARAPITableCell
 									{
@@ -6695,7 +6707,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.DocumentTimeSliceID = reader.GetInt32(30);
 									adjustedOrder = reader.GetInt32(31);
 									cell.StaticHierarchyID = reader.GetInt32(36);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								}
+
 								result.ChangedCells.Add(cell);
 
 							} else {
@@ -6711,8 +6725,9 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 		}
 
 		public ScarResult FlipChildren(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			decimal difrate = getDifVariance(DocumentId, false);
 			const string query = @"
-DECLARE @TargetSHID int;
+			DECLARE @TargetSHID int;
 
 SELECT top 1 @TargetSHID = sh.id
   FROM  StaticHierarchy sh WITH (NOLOCK)
@@ -6819,10 +6834,9 @@ Select StaticHierarchyID, DocumentTimeSliceID
 FROM @ParentCells
 WHERE TableCellID is not null
 
-
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
-DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit,MTMWNotTrigger bit)
 
 DELETE FROM MTMWErrorTypeTableCell 
 WHERE TableCellid in(
@@ -6833,13 +6847,13 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 )
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForLPV
+EXEC SCARGetTableCellMTMWCalcTest @CellsForLPV, @difrate
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
 
 INSERT @SHCellsError 
-SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.CellValue <> 1 THEN 0 ELSE 1 END,CASE WHEN mtmw.CellValue = 2 THEN 1 ELSE 0 END
 from @SHCellsLPV lpv
 FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
 
@@ -6866,7 +6880,7 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
-				sh.id as 'StaticHierarchyId'
+				sh.id as 'StaticHierarchyId',lpv.MTMWNotTrigger
 FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
 JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
@@ -6874,8 +6888,7 @@ LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinanc
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
 LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
- 
+ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc; 
 ";
 			ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
@@ -6888,7 +6901,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
-
+					cmd.Parameters.AddWithValue("@difrate", difrate);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
 						int level = reader.GetInt32(0);
@@ -6933,6 +6946,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
 									cell.MTMWValidationFlag = reader.GetBoolean(29);
 									adjustedOrder = reader.GetInt32(31);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								} else {
 									cell = new SCARAPITableCell
 									{
@@ -6947,6 +6961,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.DocumentTimeSliceID = reader.GetInt32(30);
 									adjustedOrder = reader.GetInt32(31);
 									cell.StaticHierarchyID = reader.GetInt32(36);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								}
 								result.ChangedCells.Add(cell);
 
@@ -6964,8 +6979,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 		}
 
 		public ScarResult FlipHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			decimal difrate = getDifVariance(DocumentId, false);
 			const string query = @"
-
 DECLARE @TargetSHID int;
 
 SELECT top 1 @TargetSHID = sh.id
@@ -7049,7 +7064,7 @@ WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
-DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit,MTMWNotTrigger bit)
 
 DELETE FROM MTMWErrorTypeTableCell 
 WHERE TableCellid in(
@@ -7060,13 +7075,13 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 )
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForLPV
+EXEC SCARGetTableCellMTMWCalcTest @CellsForLPV, @difrate
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
 
 INSERT @SHCellsError 
-SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.CellValue <> 1 THEN 0 ELSE 1 END,CASE WHEN mtmw.CellValue = 2 THEN 1 ELSE 0 END
 from @SHCellsLPV lpv
 FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
 
@@ -7093,7 +7108,7 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
-				sh.id as 'StaticHierarchyId'
+				sh.id as 'StaticHierarchyId',lpv.MTMWNotTrigger
 FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
 JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
@@ -7101,8 +7116,7 @@ LEFT JOIN vw_SCARDocumentTimeSliceTableCell tc WITH (NOLOCK) ON tc.CompanyFinanc
 JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSliceID = dts.ID
 LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
-ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
- 
+ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc; 
 
 ";
 			ScarResult result = new ScarResult();
@@ -7116,6 +7130,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
+					cmd.Parameters.AddWithValue("@difrate", difrate);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
@@ -7161,6 +7176,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
 									cell.MTMWValidationFlag = reader.GetBoolean(29);
 									adjustedOrder = reader.GetInt32(31);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								} else {
 									cell = new SCARAPITableCell
 									{
@@ -7175,6 +7191,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.DocumentTimeSliceID = reader.GetInt32(30);
 									adjustedOrder = reader.GetInt32(31);
 									cell.StaticHierarchyID = reader.GetInt32(36);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								}
 								result.ChangedCells.Add(cell);
 
@@ -7192,8 +7209,8 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 		}
 
 		public ScarResult FlipChildrenHistorical(string CellId, Guid DocumentId, int iconum, int TargetStaticHierarchyID) {
+			decimal difrate = getDifVariance(DocumentId, false);
 			const string query = @"
-
 DECLARE @TargetSHID int;
 SELECT top 1 @TargetSHID = sh.id
   FROM  StaticHierarchy sh WITH (NOLOCK)
@@ -7277,7 +7294,6 @@ AS
 INSERT @ParentCells
 select StaticHierarchyID, DocumentTimeSliceID, TableCellID from  cte_sh where IsRoot = 0
 
-
 INSERT @CellsForLPV
 Select StaticHierarchyID, DocumentTimeSliceID 
 FROM @ParentCells
@@ -7293,7 +7309,7 @@ WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
-DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit,MTMWNotTrigger bit)
 
 DELETE FROM MTMWErrorTypeTableCell 
 WHERE TableCellid in(
@@ -7304,13 +7320,13 @@ JOIN vw_SCARDocumentTimeSliceTableCell tc ON e.DocumentTimeSliceID = tc.Document
 )
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForLPV
+EXEC SCARGetTableCellMTMWCalcTest @CellsForLPV, @difrate
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
 
 INSERT @SHCellsError 
-SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.CellValue <> 1 THEN 0 ELSE 1 END,CASE WHEN mtmw.CellValue = 2 THEN 1 ELSE 0 END
 from @SHCellsLPV lpv
 FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
 
@@ -7328,7 +7344,6 @@ SELECT MAX(level)
 FROM cte_level
 GROUP BY SHRootID
 
-
 SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.PeriodTypeID, tc.CellPeriodCount, tc.PeriodLength, tc.CellDay, 
 				tc.CellMonth, tc.CellYear, tc.CellDate, tc.Value, ISNULL(tc.CompanyFinancialTermID, sh.CompanyFinancialTermId), ISNULL(tc.ValueNumeric, dbo.GetTableCellDisplayValue(lpv.StaticHierarchyID, lpv.DocumentTimeSliceID)), tc.NormalizedNegativeIndicator, 
 				tc.ScalingFactorID, tc.AsReportedScalingFactor, tc.Currency, tc.CurrencyCode, tc.Cusip, tc.ScarUpdated, tc.IsIncomePositive, 
@@ -7338,7 +7353,7 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
-				sh.id as 'StaticHierarchyId'
+				sh.id as 'StaticHierarchyId',lpv.MTMWNotTrigger
 FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
 JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
@@ -7347,7 +7362,7 @@ JOIN @SHCellsError lpv ON lpv.StaticHierarchyID = sh.ID AND lpv.DocumentTimeSlic
 LEFT JOIN ScalingFactor sf WITH (NOLOCK) ON tc.ScalingFactorID = sf.ID
 WHERE (d.ID = @DocumentID OR d.ArdExportFlag = 1 OR d.ExportFlag = 1 OR d.IsDocSetupCompleted = 1)
 ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriodEndDate desc, d.PublicationDateTime desc;
- 
+
 ";
 			ScarResult result = new ScarResult();
 			result.CellToDTS = new Dictionary<SCARAPITableCell, int>();
@@ -7360,6 +7375,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
+					cmd.Parameters.AddWithValue("@difrate", difrate);
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
@@ -7405,6 +7421,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
 									cell.MTMWValidationFlag = reader.GetBoolean(29);
 									adjustedOrder = reader.GetInt32(31);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								} else {
 									cell = new SCARAPITableCell
 									{
@@ -7419,6 +7436,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.DocumentTimeSliceID = reader.GetInt32(30);
 									adjustedOrder = reader.GetInt32(31);
 									cell.StaticHierarchyID = reader.GetInt32(36);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								}
 								result.ChangedCells.Add(cell);
 
@@ -8382,7 +8400,7 @@ and tc.CompanyFinancialTermID in
 		}
 
 		public List<SCARAPITableCell> GetLPVChangeCells(string CellId, Guid DocumentId) {
-
+			decimal difrate = getDifVariance(DocumentId, false);
 			const string SQL_CellIDs = @"
 select A.ID from Tablecell A WITH(NOLOCK), tableCell B WITH(NOLOCK)
 where B.ID = @cellid and A.CellYear = B.CellYear and A.CellMonth = B.CellMonth and A.CellDay = B.CellDay 
@@ -8459,16 +8477,16 @@ WHERE TableCellID is not null
 
 DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, ChildrenSum decimal(28,5), CellValue decimal(28,5))
 DECLARE @SHCellsLPV TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit)
-DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit)
+DECLARE @SHCellsError TABLE(StaticHierarchyID int, DocumentTimeSliceID int, LPVFail bit, MTMWFail bit,MTMWNotTrigger bit)
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @CellsForLPV
+EXEC SCARGetTableCellMTMWCalcTest @CellsForLPV,@difrate
 
 INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
 
 INSERT @SHCellsError 
-SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.CellValue <> 1 THEN 0 ELSE 1 END,CASE WHEN mtmw.CellValue = 2 THEN 1 ELSE 0 END
 from @SHCellsLPV lpv
 FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
 
@@ -8496,7 +8514,8 @@ SELECT distinct 'x', ISNULL(tc.TableCellID,0), tc.Offset, tc.CellPeriodType, tc.
 				(select metc.MTMWErrorTypeId from MTMWErrorTypeTableCell metc (nolock) where tc.TableCellId = metc.TableCellId), 
 				lpv.LPVFail, lpv.MTMWFail,
 				dts.Id, sh.AdjustedOrder, dts.Duration, dts.TimeSlicePeriodEndDate, dts.ReportingPeriodEndDate, d.PublicationDateTime,
-				sh.id as 'StaticHierarchyId'
+				sh.id as 'StaticHierarchyId',
+        lpv.MTMWNotTrigger   
 FROM StaticHierarchy sh WITH (NOLOCK)
 JOIN dbo.DocumentTimeSlice dts WITH(NOLOCK) ON dts.DocumentSeriesId = @DocumentSeriesId
 JOIN Document d WITH (NOLOCK) on dts.DocumentID = d.ID
@@ -8517,7 +8536,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
-
+					
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							cftid = reader.GetInt32(0);
@@ -8532,6 +8551,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@CFTID", cftid);
+					cmd.Parameters.AddWithValue("@difrate", difrate);
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						int adjustedOrder = 0;
 						while (reader.Read()) {
@@ -8571,6 +8591,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
 									cell.MTMWValidationFlag = reader.GetBoolean(29);
 									adjustedOrder = reader.GetInt32(31);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								} else {
 									cell = new SCARAPITableCell
 									{
@@ -8585,6 +8606,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 									cell.DocumentTimeSliceID = reader.GetInt32(30);
 									adjustedOrder = reader.GetInt32(31);
 									cell.StaticHierarchyID = reader.GetInt32(36);
+									cell.MTMWNotTriggerFlag = reader.GetBoolean(37);
 								}
 								ret.Add(cell);
 							} else {
@@ -8947,6 +8969,7 @@ WHERE d.ID = @SFDocumentID
 		}
 
 		public bool GetMtmwTableCells(int iconum, Guid DocumentId) {
+			decimal difrate = getDifVariance(DocumentId, false);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 
 
@@ -8986,11 +9009,11 @@ DECLARE @SHCellsMTMW TABLE(StaticHierarchyID int, DocumentTimeSliceID int, Child
 
 
 INSERT INTO @SHCellsMTMW
-EXEC SCARGetTableCellMTMWCalc @SHCells
+EXEC SCARGetTableCellMTMWCalcTest @SHCells,@difrate
 
 select StaticHierarchyID, DocumentTimeSliceID from @SHCellsMTMW
 WHERE ChildrenSum is not null
-AND ChildrenSum <> CellValue
+AND CellValue = 1
 
 ";//I hate this query, it is so bad
 
@@ -9005,6 +9028,9 @@ AND ChildrenSum <> CellValue
 				using (SqlCommand cmd = new SqlCommand(CellsQuery, conn)) {
 					cmd.Parameters.AddWithValue("@GuessedIconum", iconum);
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
+					cmd.Parameters.AddWithValue("@difrate", difrate);
+
+					
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						CommunicationLogger.LogEvent("GetMtmwTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
