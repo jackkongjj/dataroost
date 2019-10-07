@@ -250,7 +250,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.GdbBackfill(1, true);
+                var json = vsHelper.GdbBackfill(5, true);
                 return json;
             }
             catch (Exception ex)

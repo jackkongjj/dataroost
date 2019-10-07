@@ -755,6 +755,12 @@ FROM CteTables order by parentid
             string strResult = "";
             try
             {
+                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Start", DamDocumentID.ToString());
+            }
+            catch
+            { }
+            try
+            {
                 strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;");
                 if (strResult.Length < 20)
                 {
@@ -785,7 +791,12 @@ FROM CteTables order by parentid
                 }
             } catch (Exception ex)
             {
-                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", strResult + ex.Message);
+                string inner = "";
+                if (ex.InnerException != null)
+                {
+                    inner = ex.InnerException.Message;
+                }
+                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", DamDocumentID.ToString() + ex.Message + ex.StackTrace);
                 return "InsertGdbCommit" + ex.Message;
             }
         }
@@ -822,7 +833,6 @@ FROM CteTables order by parentid
                 return "failed to get tint";
             }
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;");
             sb.AppendLine("BEGIN TRY");
             sb.AppendLine("BEGIN TRAN");
             string s = @"
@@ -830,7 +840,7 @@ Declare @DamDocument UNIQUEIDENTIFIER = '{0}'
 DECLARE @DocumentSeriesID INT
 DECLARE @TableTypeID INT  
 DECLARE @SfDocumentID UNIQUEIDENTIFIER 
-select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document where DAMDocumentId = @DamDocument
+select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document WITH (NOLOCK) where DAMDocumentId = @DamDocument
  
 
 ";
@@ -854,7 +864,7 @@ select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document wh
 
                     string addGDB = @"
 SET @gdbID = null;
-select @gdbID = ID FROM GDBCodes WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
+select @gdbID = ID FROM GDBCodes  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
 IF @gdbID is NULL
 BEGIN
     Insert into GDBCodes
@@ -864,7 +874,7 @@ BEGIN
 END
 ";
                     string addTagged = @"
-IF NOT EXISTS (SELECT 1 FROM TaggedItems WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
+IF NOT EXISTS (SELECT 1 FROM TaggedItems WITH (NOLOCK) WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
 BEGIN
     INSERT TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
     VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}')
