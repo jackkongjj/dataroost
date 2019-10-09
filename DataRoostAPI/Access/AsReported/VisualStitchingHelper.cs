@@ -245,9 +245,13 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                     outputresult = streamReader.ReadToEnd();
                 }
             }
-            else
+            else if (response.StatusCode == HttpStatusCode.Accepted)
             {
                 throw new Exception("call failed");
+            }
+            else
+            {
+                throw new FileNotFoundException("call failed");
             }
             return outputresult;
 
@@ -646,7 +650,15 @@ FROM CteTables order by parentid
         }
 
         static bool _gdbOnOff = false;
-        public string GdbBackfillOnOff()
+        public string GdbBackfillOff()
+        {
+            if (_gdbOnOff)
+            {
+                _gdbOnOff = !_gdbOnOff;
+            }
+            return _gdbOnOff.ToString();
+        }
+        public string GdbBackfillOn()
         {
             if (!_gdbOnOff)
             {
@@ -659,7 +671,6 @@ FROM CteTables order by parentid
             }
             else
             {
-                _gdbOnOff = !_gdbOnOff;
                 return _gdbOnOff.ToString();
             }
         }
@@ -769,22 +780,22 @@ FROM CteTables order by parentid
         }
         public string InsertGdbCommit(Guid DamDocumentID, int fileId, int tries = 100)
         {
+            StringBuilder psb = new StringBuilder();
+            psb.AppendLine("StartCommit." + DateTime.UtcNow.ToString());
             string strResult = "";
+
             try
             {
-                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Start", DamDocumentID.ToString());
-            }
-            catch
-            { }
-            try
-            {
+                psb.AppendLine("Ln794." + DateTime.UtcNow.ToString());
                 strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;", tries);
+                psb.AppendLine("Ln796." + DateTime.UtcNow.ToString());
                 if (strResult.Length < 20)
                 {
                     return strResult;
                 }
                 else
                 {
+                    psb.AppendLine("Ln803." + DateTime.UtcNow.ToString());
                     using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                     {
 
@@ -792,17 +803,32 @@ FROM CteTables order by parentid
                         {
                             cmd.CommandTimeout = 600;
                             conn.Open();
+                            psb.AppendLine("Ln811." + DateTime.UtcNow.ToString());
                             using (SqlDataReader sdr = cmd.ExecuteReader())
                             {
+                                psb.AppendLine("Ln814." + DateTime.UtcNow.ToString());
                                 if (sdr.Read())
                                 {
                                     if (sdr.GetString(0) == "commit")
                                     {
+                                        psb.AppendLine("Ln819." + DateTime.UtcNow.ToString());
+                                        try
+                                        {
+                                            AsReportedTemplateHelper.SendEmail("InsertGdb Outer performance", psb.ToString());
+                                        }
+                                        catch
+                                        { }
                                         return "true";
                                     }
                                 }
                             }
                         }
+                        try
+                        {
+                            AsReportedTemplateHelper.SendEmail("InsertGdb Outer performance", psb.ToString());
+                        }
+                        catch
+                        { }
                         return "error executing sql";
                     }
                 }
@@ -813,12 +839,15 @@ FROM CteTables order by parentid
                 {
                     inner = ex.InnerException.Message;
                 }
-                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", DamDocumentID.ToString() + ex.Message + ex.StackTrace);
+                psb.AppendLine("Ln842." + DateTime.UtcNow.ToString());
+                AsReportedTemplateHelper.SendEmail("InsertGdbCommit Failure", DamDocumentID.ToString() + ex.Message + ex.StackTrace + psb.ToString());
                 return "InsertGdbCommit" + ex.Message;
             }
         }
         public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;", int tries = 100)
         {
+            StringBuilder psb = new StringBuilder();
+            psb.AppendLine("Start." + DateTime.UtcNow.ToString());
             string tintURL = @"http://auto-tablehandler-staging.factset.io/queue/document/978dfe58-c4a2-e311-9b0b-1cc1de2561d4/92";
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
@@ -831,20 +860,27 @@ FROM CteTables order by parentid
             {
                 try
                 {
+                    psb.AppendLine("Ln849." + DateTime.UtcNow.ToString());
                     var outputresult = GetTintFile(url);
+                    psb.AppendLine("Ln851." + DateTime.UtcNow.ToString());
                     var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
                     tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
                     tries = -1;
+                }
+                catch (FileNotFoundException ex)
+                {
+                    tries = 0;
                 }
                 catch (Exception ex)
                 {
                     if (--tries > 0)
                     {
-                        System.Threading.Thread.Sleep(2000);
+                        System.Threading.Thread.Sleep(4000);
                     }
 
                 }
             }
+            psb.AppendLine("Ln869." + DateTime.UtcNow.ToString());
             if (tintInfo == null)
             {
                 return "failed to get tint";
@@ -905,7 +941,7 @@ Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle from @TaggedIt
             sb.AppendLine(string.Format(s, DamDocumentID.ToString()));
             int count = 0;
             List<int> addedDts = new List<int>();
-
+            psb.AppendLine("Ln930." + DateTime.UtcNow.ToString());
             foreach (var table in tintInfo.Tables)
             {
             //    if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
@@ -922,7 +958,7 @@ Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle from @TaggedIt
 
                     string addGDB = @"
 SET @gdbID = null;
-select @gdbID = ID FROM GDBCodes  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
+select TOP 1 @gdbID = ID FROM GDBCodes  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
 IF @gdbID is NULL
 BEGIN
     Insert into @GDBCodes
@@ -965,6 +1001,7 @@ END
                 }
 
             }
+            psb.AppendLine("Ln990." + DateTime.UtcNow.ToString());
             sb.AppendLine(wrapup);
             sb.AppendLine("select 'commit';");
             sb.AppendLine(successAction);
@@ -984,6 +1021,13 @@ END
             sb.AppendLine("END CATCH");
 
             string retVal = sb.ToString();
+            psb.AppendLine("Ln1010." + DateTime.UtcNow.ToString());
+            try
+            {
+                AsReportedTemplateHelper.SendEmail("InsertGdb Inner performance", psb.ToString());
+            }
+            catch
+            { }
             return retVal;
         }
 

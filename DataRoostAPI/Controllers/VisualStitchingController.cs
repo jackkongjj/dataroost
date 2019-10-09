@@ -223,16 +223,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return "false";
             }
         }
-        [Route("gdb/backfill/onoff")]
+        [Route("gdb/backfill/on")]
         [HttpGet]
-        public string PostGdbCommitBackfillOnOff()
+        public string PostGdbCommitBackfillOn()
         {
             try
             {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.GdbBackfillOnOff();
+                var json = vsHelper.GdbBackfillOn();
                 return json;
             }
             catch (Exception ex)
@@ -241,7 +241,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return "false";
             }
         }
+        [Route("gdb/backfill/off")]
+        [HttpGet]
+        public string PostGdbCommitBackfillOff()
+        {
+            try
+            {
 
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GdbBackfillOff();
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
         [Route("gdb/backfill")]
         [HttpGet]
         public string PostGdbCommitBackfill()
