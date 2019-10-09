@@ -45,7 +45,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
                 {
                     cmd.Parameters.AddWithValue("id", id);
                     using (var reader = cmd.ExecuteReader())
-                    { 
+                    {
                         while (reader.Read())
                             sb.Append(reader.GetString(0));
                     }
@@ -179,7 +179,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public string Label { get; set; }
             [JsonProperty("labelHierarhcy")]
             public List<string> LabelHierarchy { get; set; }
-            
+
         }
         public class Column
         {
@@ -220,14 +220,14 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public List<Node> Nodes { get; set; }
         }
 
-				public class ReactNode {
-					[JsonProperty("id")]
-					public int Id { get; set; }
-					[JsonProperty("title")]
-					public string Title { get; set; }
-					[JsonProperty("children")]
-					public List<ReactNode> Nodes { get; set; }
-				}
+        public class ReactNode {
+            [JsonProperty("id")]
+            public int Id { get; set; }
+            [JsonProperty("title")]
+            public string Title { get; set; }
+            [JsonProperty("children")]
+            public List<ReactNode> Nodes { get; set; }
+        }
 
 
         private string GetTintFile(string url)
@@ -253,63 +253,63 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
         }
 
-				private List<ReactNode> GetAngularTreeTest(TintInfo result) {
-					List<ReactNode> nodes = new List<ReactNode>();
-					string[] big3Table = { "BS", "IS", "CF" };
-					foreach (var table in result.Tables) {
-						if (!big3Table.Contains(table.Type.ToUpper()))
-							continue;
-						ReactNode t = new ReactNode();
-						nodes.Add(t);
-						t.Id = table.Id;
-						t.Title = table.Type;
-						t.Nodes = new List<ReactNode>();
-						Stack<ReactNode> stack = new Stack<ReactNode>();
-						stack.Push(t);
+        private List<ReactNode> GetAngularTreeTest(TintInfo result) {
+            List<ReactNode> nodes = new List<ReactNode>();
+            string[] big3Table = { "BS", "IS", "CF" };
+            foreach (var table in result.Tables) {
+                if (!big3Table.Contains(table.Type.ToUpper()))
+                    continue;
+                ReactNode t = new ReactNode();
+                nodes.Add(t);
+                t.Id = table.Id;
+                t.Title = table.Type;
+                t.Nodes = new List<ReactNode>();
+                Stack<ReactNode> stack = new Stack<ReactNode>();
+                stack.Push(t);
 
-						foreach (var row in table.Rows) {
-							int i = 0;
-							foreach (var labelAtlevel in row.LabelHierarchy) {
-								i++;
-								if (stack.Count <= i) {
-									break;
-								}
-								if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel) {
-									while (stack.Count > i && stack.Count > 1) {
-										stack.Pop();
-									}
-								}
-							}
-							var lastRoot = stack.Peek();
-							var endLabel = row.LabelHierarchy.Last();
-							i = 0;
-							int j = 0; // insert
-							foreach (var labelAtlevel in row.LabelHierarchy) {
-								i++;
-								if (stack.Count > i) {
-									continue;
-								}
-								if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel) {
-									ReactNode r = new ReactNode();
-									r.Id = -1;
-									r.Title = labelAtlevel;
-									r.Nodes = new List<ReactNode>();
-									lastRoot.Nodes.Add(r);
-									lastRoot = r;
-									stack.Push(r);
-								} else {
-									ReactNode r = new ReactNode();
-									r.Id = row.Id;
-									r.Title = endLabel;
-									r.Nodes = new List<ReactNode>();
-									lastRoot.Nodes.Add(r);
-								}
-							}
+                foreach (var row in table.Rows) {
+                    int i = 0;
+                    foreach (var labelAtlevel in row.LabelHierarchy) {
+                        i++;
+                        if (stack.Count <= i) {
+                            break;
+                        }
+                        if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel) {
+                            while (stack.Count > i && stack.Count > 1) {
+                                stack.Pop();
+                            }
+                        }
+                    }
+                    var lastRoot = stack.Peek();
+                    var endLabel = row.LabelHierarchy.Last();
+                    i = 0;
+                    int j = 0; // insert
+                    foreach (var labelAtlevel in row.LabelHierarchy) {
+                        i++;
+                        if (stack.Count > i) {
+                            continue;
+                        }
+                        if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel) {
+                            ReactNode r = new ReactNode();
+                            r.Id = -1;
+                            r.Title = labelAtlevel;
+                            r.Nodes = new List<ReactNode>();
+                            lastRoot.Nodes.Add(r);
+                            lastRoot = r;
+                            stack.Push(r);
+                        } else {
+                            ReactNode r = new ReactNode();
+                            r.Id = row.Id;
+                            r.Title = endLabel;
+                            r.Nodes = new List<ReactNode>();
+                            lastRoot.Nodes.Add(r);
+                        }
+                    }
 
-						}
-					}
-					return nodes;
-				}
+                }
+            }
+            return nodes;
+        }
 
 
         private List<Node> GetAngularTree(TintInfo result)
@@ -413,7 +413,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             }
             return JsonConvert.SerializeObject(nodes);
         }
- 
+
         public string GetDataTree(Guid DamDocumentID, int fileNo)
         {
 
@@ -447,30 +447,30 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             return JsonConvert.SerializeObject(nodes);
         }
 
-				public string GetDataTreeTest(Guid DamDocumentID, int fileNo) {
+        public string GetDataTreeTest(Guid DamDocumentID, int fileNo) {
 
-					string urlPattern = @"http://auto-tablehandler-dev.factset.io/queue/document/{0}/{1}";
-					string url = String.Format(urlPattern, DamDocumentID, fileNo);
-					int tries = 3;
-					List<ReactNode> nodes = new List<ReactNode>();
+            string urlPattern = @"http://auto-tablehandler-dev.factset.io/queue/document/{0}/{1}";
+            string url = String.Format(urlPattern, DamDocumentID, fileNo);
+            int tries = 3;
+            List<ReactNode> nodes = new List<ReactNode>();
 
-					while (tries > 0) {
-						try {
-							var outputresult = GetTintFile(url);
-							var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
-							nodes = GetAngularTreeTest(result);
-							tries = 0;
-						} catch (Exception ex) {
-							if (--tries > 0) {
-								System.Threading.Thread.Sleep(1000);
-							} else {
-								return JsonConvert.SerializeObject(new List<ReactNode>());
-							}
+            while (tries > 0) {
+                try {
+                    var outputresult = GetTintFile(url);
+                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
+                    nodes = GetAngularTreeTest(result);
+                    tries = 0;
+                } catch (Exception ex) {
+                    if (--tries > 0) {
+                        System.Threading.Thread.Sleep(1000);
+                    } else {
+                        return JsonConvert.SerializeObject(new List<ReactNode>());
+                    }
 
-						}
-					}
-					return JsonConvert.SerializeObject(nodes);
-				}
+                }
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
 
 
         public string GetSegmentTree(string treeName)
@@ -537,12 +537,12 @@ FROM CteTables order by parentid
             }
             catch (Exception ex)
             {
-                List<Node>errorNodes = new List<Node>();
-                Node errorNode = new Node() { Id = 0, Title = "Error", Nodes = new List<Node>()};
+                List<Node> errorNodes = new List<Node>();
+                Node errorNode = new Node() { Id = 0, Title = "Error", Nodes = new List<Node>() };
                 errorNodes.Add(errorNode);
                 return JsonConvert.SerializeObject(errorNodes);
             }
-          
+
         }
         public class TreeViewJSNode
         {
@@ -645,7 +645,26 @@ FROM CteTables order by parentid
             return GetTintFile(url);
         }
 
-        public string GdbBackfill(int maxThread = 10, bool retry = false)
+        static bool _gdbOnOff = false;
+        public string GdbBackfillOnOff()
+        {
+            if (!_gdbOnOff)
+            {
+                _gdbOnOff = !_gdbOnOff;
+                while (_gdbOnOff)
+                {
+                    GdbBackfill(1, false, 1800);
+                }
+                return "";
+            }
+            else
+            {
+                _gdbOnOff = !_gdbOnOff;
+                return _gdbOnOff.ToString();
+            }
+        }
+
+        public string GdbBackfill(int maxThread = 10, bool retry = false, int tries = 100)
         {
             StringBuilder sb = new StringBuilder();
             string sql = @"
@@ -667,13 +686,11 @@ FROM CteTables order by parentid
             var threadList = new List<Task>();
             var guidList = new List<Guid>();
             List<string> messages = new List<string>();
-            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            for (int i = 0; i < maxThread; i++)
             {
-                conn.Open();
-
-                for (int i = 0; i < maxThread; i++)
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
-
+                    conn.Open();
                     Guid docID = new Guid();
 
                     int fileId = 0;
@@ -699,7 +716,7 @@ FROM CteTables order by parentid
                             }
                         }
                     }
-                    threadList.Add(Task.Run(() => InsertGdbCommitKVP(docID, fileId)).ContinueWith(u => messages.Add(u.Result)));
+                    threadList.Add(Task.Run(() => InsertGdbCommitKVP(docID, fileId, tries)).ContinueWith(u => messages.Add(u.Result)));
                 }
             }
             foreach (var t in threadList)
@@ -734,9 +751,9 @@ FROM CteTables order by parentid
             }
             return sb.ToString();
         }
-        private string InsertGdbCommitKVP(Guid guid, int i)
+        private string InsertGdbCommitKVP(Guid guid, int i, int tries = 100)
         {
-            var r = InsertGdbCommit(guid, i);
+            var r = InsertGdbCommit(guid, i, tries);
             if (r == "true")
             {
                 return guid.ToString();
@@ -750,7 +767,7 @@ FROM CteTables order by parentid
         {
             return InsertGdb(new Guid("978dfe58-c4a2-e311-9b0b-1cc1de2561d4"), 92);
         }
-        public string InsertGdbCommit(Guid DamDocumentID, int fileId)
+        public string InsertGdbCommit(Guid DamDocumentID, int fileId, int tries = 100)
         {
             string strResult = "";
             try
@@ -761,7 +778,7 @@ FROM CteTables order by parentid
             { }
             try
             {
-                strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;");
+                strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;", tries);
                 if (strResult.Length < 20)
                 {
                     return strResult;
@@ -800,7 +817,7 @@ FROM CteTables order by parentid
                 return "InsertGdbCommit" + ex.Message;
             }
         }
-        public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;")
+        public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;", int tries = 100)
         {
             string tintURL = @"http://auto-tablehandler-staging.factset.io/queue/document/978dfe58-c4a2-e311-9b0b-1cc1de2561d4/92";
 
@@ -808,7 +825,7 @@ FROM CteTables order by parentid
             string url = String.Format(urlPattern, DamDocumentID, fileId);
             //url = tintURL;
 
-            int tries = 100;
+            //int tries = 100;
             TintInfo tintInfo = null;
             while (tries > 0)
             {
@@ -841,9 +858,50 @@ DECLARE @DocumentSeriesID INT
 DECLARE @TableTypeID INT  
 DECLARE @SfDocumentID UNIQUEIDENTIFIER 
 select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document WITH (NOLOCK) where DAMDocumentId = @DamDocument
- 
 
+DECLARE @GDBCodes TABLE (
+    [FakeId] [bigint] IDENTITY(1,1) NOT NULL,
+	[Description] [varchar](4096) NULL,
+    [Section] [varchar](32) NULL,
+    [Industry] [varchar](256) NULL
+	);
+
+DECLARE @TaggedItems TABLE (
+	[DocumentId] [uniqueidentifier] NULL,
+	[XBRLTag] [varchar](4096) NULL,
+	[Offset] [varchar](50) NULL,
+	[Value] [nvarchar](500) NULL,
+	[Label] [varchar](4096) NULL,
+	[GDBTableId] [bigint] NULL,
+	[XBRLTitle] [varchar](4096) NULL
+	);
+
+DECLARE @MatchingID TABLE(
+[RealId] [bigint] NOT NULL,
+[FakeId] [bigint] NOT NULL
+);
+
+DECLARE @gdbID INT;
 ";
+
+            string wrapup = @"
+ MERGE INTO GDBCodes USING @GDBCodes AS temp ON 1 = 0
+WHEN NOT MATCHED THEN
+    INSERT (Description, Section, Industry)
+    VALUES (temp.Description, temp.Section, temp.Industry)
+    OUTPUT inserted.id, temp.FakeID
+    INTO @MatchingID (RealID, FakeID);
+
+UPDATE  ti 
+SET ti.GDBTableID = m.realID
+FROM @TaggedItems ti 
+JOIN @MatchingID m on ti.GDBTableId = m.fakeID
+
+
+INSERT TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
+Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle from @TaggedItems
+";
+
             sb.AppendLine(string.Format(s, DamDocumentID.ToString()));
             int count = 0;
             List<int> addedDts = new List<int>();
@@ -851,7 +909,7 @@ select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document WI
             foreach (var table in tintInfo.Tables)
             {
             //    if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
-                //if (count > 3) break;
+                //if (count > 2) break;
                 // Insert DocumentTable
                 count++;
 
@@ -867,7 +925,7 @@ SET @gdbID = null;
 select @gdbID = ID FROM GDBCodes  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
 IF @gdbID is NULL
 BEGIN
-    Insert into GDBCodes
+    Insert into @GDBCodes
     (Description, Section, Industry) 
     values ('{0}', '{1}', 'BANK');
     select @gdbID = scope_identity();
@@ -876,7 +934,7 @@ END
                     string addTagged = @"
 IF NOT EXISTS (SELECT 1 FROM TaggedItems WITH (NOLOCK) WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
 BEGIN
-    INSERT TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
+    INSERT @TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
     VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}')
 
 
@@ -901,13 +959,15 @@ END
                     {
                         label = value.XbrlTag;
                     }
-                    //sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
-                    sb.AppendLine(string.Format(addSprocGdb, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''"),  value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
+                    sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
+                    sb.AppendLine(string.Format(addTagged, value.XbrlTag.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
 
                 }
 
             }
-            sb.AppendLine("select 'commit';"); sb.AppendLine(successAction);
+            sb.AppendLine(wrapup);
+            sb.AppendLine("select 'commit';");
+            sb.AppendLine(successAction);
             sb.AppendLine("END TRY");
             sb.AppendLine("BEGIN CATCH");
             string err = @"

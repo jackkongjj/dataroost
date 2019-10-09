@@ -223,6 +223,25 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return "false";
             }
         }
+        [Route("gdb/backfill/onoff")]
+        [HttpGet]
+        public string PostGdbCommitBackfillOnOff()
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GdbBackfillOnOff();
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return "false";
+            }
+        }
+
         [Route("gdb/backfill")]
         [HttpGet]
         public string PostGdbCommitBackfill()
@@ -230,7 +249,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             try
             {
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.GdbBackfill();
                 return json;
@@ -248,7 +267,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             try
             {
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.GdbBackfill(5, true);
                 return json;
@@ -267,7 +286,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             try
             {
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.GdbBackfill(maxThread);
                 return json;
