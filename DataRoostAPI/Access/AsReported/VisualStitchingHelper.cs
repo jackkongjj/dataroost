@@ -852,29 +852,60 @@ FROM CteTables order by parentid
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
             string url = String.Format(urlPattern, DamDocumentID, fileId);
+            bool isTryCached = false;
+            string cachedURL = "";
+            try
+            {
+                cachedURL = System.Web.HttpContext.Current.Request.QueryString["result_url"];
+                if (!string.IsNullOrEmpty(cachedURL))
+                {
+                    isTryCached = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                string debug = ex.Message;
+            }
             //url = tintURL;
-
             //int tries = 100;
             TintInfo tintInfo = null;
             while (tries > 0)
             {
                 try
                 {
-                    psb.AppendLine("Ln849." + DateTime.UtcNow.ToString());
-                    var outputresult = GetTintFile(url);
-                    psb.AppendLine("Ln851." + DateTime.UtcNow.ToString());
+                    string outputresult = "";
+                    if (isTryCached)
+                    {
+                        psb.AppendLine("Ln847." + DateTime.UtcNow.ToString());
+                        outputresult = GetTintFile(cachedURL);
+                        psb.AppendLine("Ln848." + DateTime.UtcNow.ToString());
+                    }
+                    else
+                    {
+                        psb.AppendLine("Ln849." + DateTime.UtcNow.ToString());
+                        outputresult = GetTintFile(url);
+                        psb.AppendLine("Ln851." + DateTime.UtcNow.ToString());
+                    }
                     var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
                     tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
                     tries = -1;
                 }
                 catch (FileNotFoundException ex)
                 {
-                    tries = 0;
+                    if (isTryCached)
+                    {
+                        isTryCached = false;
+                    }
+                    else
+                    {
+                        tries = 0;
+                    }
                 }
                 catch (Exception ex)
                 {
                     if (--tries > 0)
                     {
+                        isTryCached = false;
                         System.Threading.Thread.Sleep(4000);
                     }
 
@@ -995,6 +1026,7 @@ END
                     {
                         label = value.XbrlTag;
                     }
+                    label = Truncate(label, 4000);
                     sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
                     sb.AppendLine(string.Format(addTagged, value.XbrlTag.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
 
@@ -1029,6 +1061,12 @@ END
             catch
             { }
             return retVal;
+        }
+        public static String Truncate(String input, int maxLength)
+        {
+            if (input.Length > maxLength)
+                return input.Substring(0, maxLength);
+            return input;
         }
 
         public string InsertKpiFake(Guid DamDocumentID)
