@@ -781,7 +781,7 @@ FROM CteTables order by parentid
         public string InsertGdbCommit(Guid DamDocumentID, int fileId, int tries = 100)
         {
             StringBuilder psb = new StringBuilder();
-            psb.AppendLine("StartCommit." + DateTime.UtcNow.ToString());
+            psb.AppendLine("StartCommit. " + DamDocumentID.ToString() + " " + DateTime.UtcNow.ToString());
             string strResult = "";
 
             try
@@ -847,7 +847,7 @@ FROM CteTables order by parentid
         public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;", int tries = 100)
         {
             StringBuilder psb = new StringBuilder();
-            psb.AppendLine("Start." + DateTime.UtcNow.ToString());
+            psb.AppendLine("Start. " + DamDocumentID.ToString() + " " + DateTime.UtcNow.ToString());
             string tintURL = @"http://auto-tablehandler-staging.factset.io/queue/document/978dfe58-c4a2-e311-9b0b-1cc1de2561d4/92";
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
