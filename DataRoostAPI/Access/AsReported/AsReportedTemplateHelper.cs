@@ -340,6 +340,21 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return isSuccessful;
 		}
 
+		public void RemoveMTMWErrorTypeTableCell(List<int> cellids) {
+			if (cellids.Count == 0)
+				return;
+
+			String q1 = "DELETE FROM dbo.MTMWErrorTypeTableCell WHERE TableCellid in ({0})";
+			var inclause = string.Join(",", cellids);
+			String query = string.Format(q1, inclause);
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				conn.Open();
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					cmd.ExecuteNonQuery();
+				}
+			}
+		}
+
 		public ScarProductViewResult GetProductView(int iconum, string TemplateName, Guid DamDocumentID, string reverseRepresentation, string filterPeriod, string filterRecap, string filterYear) {
 			if (!IsHierarchyMetaTypesLoaded()) {
 				return null;
@@ -649,6 +664,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							break;
 						}
 					}
+					List<int> cellids = new List<int>();
 					for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
@@ -708,11 +724,14 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									!ChildrenSumEqual &&
 											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
 							tc.MTMWNotTriggerFlag = MTMWNotTriggerFlag;
+							if (tc.MTMWNotTriggerFlag)
+								cellids.Add(tc.ID);
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
 							break;
 						}
 					}
+					RemoveMTMWErrorTypeTableCell(cellids);
 				}
 				#endregion
 				temp.StaticHierarchies = StaticHierarchies.OrderBy(s => HierarchyMetaOrderPreference.IndexOf(s.StaticHierarchyMetaType)).ThenBy(x => x.AdjustedOrder).Where(x => !string.IsNullOrWhiteSpace(x.StaticHierarchyMetaType)).ToList();
@@ -1367,6 +1386,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						}
 					}
 					sb.AppendLine("Calculate Sh Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+					List<int> cellids = new List<int>();
 					for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
@@ -1422,12 +1442,14 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 									!ChildrenSumEqual &&
 											!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
 							tc.MTMWNotTriggerFlag = MTMWNotTriggerFlag;
-
+							if (tc.MTMWNotTriggerFlag)
+								cellids.Add(tc.ID);
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
 							break;
 						}
 					}
+					RemoveMTMWErrorTypeTableCell(cellids);
 				}
 				sb.AppendLine("Finished." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 			} catch (Exception ex) {
@@ -8536,7 +8558,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					conn.Open();
 					cmd.Parameters.AddWithValue("@DocumentID ", DocumentId);
 					cmd.Parameters.AddWithValue("@cellid", CellId);
-					
+
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						while (reader.Read()) {
 							cftid = reader.GetInt32(0);
@@ -9030,7 +9052,7 @@ AND CellValue = 1
 					cmd.Parameters.AddWithValue("@DocumentID", DocumentId);
 					cmd.Parameters.AddWithValue("@difrate", difrate);
 
-					
+
 
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						CommunicationLogger.LogEvent("GetMtmwTableCells", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
