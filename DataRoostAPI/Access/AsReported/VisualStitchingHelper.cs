@@ -888,6 +888,10 @@ FROM CteTables order by parentid
                     }
                     var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
                     tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
+                    if (tintInfo == null)
+                    {
+                        throw new Exception("failed to get tint 1");
+                    }
                     tries = -1;
                 }
                 catch (FileNotFoundException ex)
