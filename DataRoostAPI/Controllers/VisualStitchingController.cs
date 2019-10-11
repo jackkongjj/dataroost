@@ -286,7 +286,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.GdbBackfill(5, true);
+                var json = vsHelper.GdbBackfill(1, true);
                 return json;
             }
             catch (Exception ex)
@@ -320,7 +320,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         {
             try
             {
-
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.InsertGdbCommit(DamDocumentId, FileNo);
