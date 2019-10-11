@@ -851,7 +851,7 @@ FROM CteTables order by parentid
             string tintURL = @"http://auto-tablehandler-staging.factset.io/queue/document/978dfe58-c4a2-e311-9b0b-1cc1de2561d4/92";
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
-            string url = String.Format(urlPattern, DamDocumentID, fileId).ToUpper();
+            string url = String.Format(urlPattern, DamDocumentID.ToString().ToUpper(), fileId);
             bool isTryCached = false;
             string cachedURL = "";
             try
