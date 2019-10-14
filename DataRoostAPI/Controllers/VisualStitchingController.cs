@@ -370,7 +370,35 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return null;
             }
         }
-
+        [Route("gdb/{sdbCode}")]
+        [HttpGet]
+        public HttpResponseMessage GetSDBCode(string sdbCode)
+        {
+            try
+            {
+                long sdb;
+                if (!long.TryParse(sdbCode, out sdb))
+                {
+                    throw new Exception("bad SDBCode");
+                }
+                //long sdb = long.Parse(sdbCode);
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetGDBCode(sdb);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json) , System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent("", System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
         public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }

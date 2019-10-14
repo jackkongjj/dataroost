@@ -12,6 +12,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using FactSet.Data.SqlClient;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
@@ -1438,6 +1439,72 @@ INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdColid, @tcID);
 
             string retVal = sb.ToString();
             return retVal;
+        }
+
+        public class SDBNode
+        {
+            [JsonProperty("id")]
+            public long Id { get; set; }
+            [JsonProperty("xbrlTag")]
+            public string XbrlTag { get; set; }
+            [JsonProperty("count")]
+            public int Count { get; set; }
+            [JsonProperty("totalcount")]
+            public int TotalCount { get; set; }
+        }
+        public List<SDBNode> GetGDBCode(long sdbcode)
+        {
+            string sql = @"
+select h.itemcode, ti.XBRLTag, count(distinct ti.DocumentId)
+from history h with (nolock)
+join SDBItem sdb with (nolock) on h.itemcode = sdb.sdbcode
+left join TaggedItems ti with (nolock) on ti.DocumentId = h.DamDocumentId and h.offset = ti.offset
+where h.ItemCode = @sdbcode
+group by h.ItemCode, ti.XBRLTag
+order by count(distinct ti.DocumentId) desc
+";
+            List<SDBNode> nodes = new List<SDBNode>();
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                conn.Open();
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@sdbcode", sdbcode);
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            SDBNode node = new SDBNode();
+                            string id = sdr.GetStringSafe(0);
+                            long sdb;
+                            if (!long.TryParse(id, out sdb))
+                            {
+                                continue;
+                            }
+                            node.Id = sdb;
+                            string xbrltag = sdr.GetStringSafe(1);
+                            if (string.IsNullOrWhiteSpace(xbrltag))
+                            {
+                                xbrltag = "NULL";
+                            }
+                            node.XbrlTag = xbrltag;
+                            node.Count = sdr.GetInt32(2);
+                            nodes.Add(node);
+                        }
+                    }
+                }
+            }
+            int totalCount = 0;
+            foreach (var n in nodes)
+            {
+                totalCount += n.Count;
+            }
+            foreach (var n in nodes)
+            {
+                n.TotalCount = totalCount;
+            }
+            return nodes;
         }
     }
 }
