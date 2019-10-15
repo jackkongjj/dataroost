@@ -1452,6 +1452,19 @@ INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdColid, @tcID);
             [JsonProperty("totalcount")]
             public int TotalCount { get; set; }
         }
+        public class SDBValueNode
+        {
+            [JsonProperty("companyName")]
+            public string CompanyName { get; set; }
+            [JsonProperty("iconum")]
+            public string Iconum { get; set; }
+            [JsonProperty("xbrlTag")]
+            public string XbrlTag { get; set; }
+            [JsonProperty("count")]
+            public string MaxValue { get; set; }
+            [JsonProperty("totalcount")]
+            public string DocumentId { get; set; }
+        }
         public List<SDBNode> GetGDBCode(long sdbcode)
         {
             string sql = @"
@@ -1505,6 +1518,130 @@ order by count(distinct ti.DocumentId) desc
                 n.TotalCount = totalCount;
             }
             return nodes;
+        }
+        public DataTable GetGDBCodeGrid(long sdbcode)
+        {
+            string sql = @"
+exec GDBGetCodes @sdbcode
+";
+            List<SDBNode> nodes = new List<SDBNode>();
+            List<SDBValueNode> valuenodes = new List<SDBValueNode>();
+            DataTable table = new DataTable();
+            DataRow countRow = null;
+
+
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                conn.Open();
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@sdbcode", sdbcode);
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        DataColumn column = new DataColumn();
+                        column.DataType = Type.GetType("System.String");
+                        column.ColumnName = "Name";
+                        table.Columns.Add(column);
+                        while (sdr.Read())
+                        {
+                            SDBNode node = new SDBNode();
+                            long sdb = sdr.GetInt64(1);
+                            //long sdb;
+                            //if (!long.TryParse(id, out sdb))
+                            //{
+                            //    continue;
+                            //}
+                            node.Id = sdb;
+                            string xbrltag = sdr.GetStringSafe(2);
+                            if (string.IsNullOrWhiteSpace(xbrltag))
+                            {
+                                xbrltag = "NULL";
+                            }
+                            node.XbrlTag = xbrltag;
+                            node.Count = sdr.GetInt32(3);
+                            nodes.Add(node);
+                            column = new DataColumn();
+                            column.DataType = System.Type.GetType("System.String");
+                            column.ColumnName = xbrltag;
+                            table.Columns.Add(column);
+                        }
+                        sdr.NextResult();
+                        int totalColumn = nodes.Count;
+
+                        //for (int u = 0; u < totalColumn; u++)
+                        //{
+                        //    DataColumn column;
+
+                        //    // Create new DataColumn, set DataType, ColumnName and add to DataTable.    
+                        //    column = new DataColumn();
+                        //    column.DataType = System.Type.GetType("System.String");
+                        //    column.ColumnName = u.ToString();
+                        //    table.Columns.Add(column);
+                        //}
+                        DataRow row = table.NewRow();
+                        DataRow row2 = table.NewRow();
+                        countRow = row2;
+                        row["Name"] = "";
+                        for (int u = 0; u < totalColumn; u++)
+                        {
+                            row[nodes[u].XbrlTag] = nodes[u].XbrlTag;
+                            row2[nodes[u].XbrlTag] = string.Format("{0}/{1}", nodes[u].Count, nodes[u].TotalCount);
+                        }
+                        table.Rows.Add(row);
+                        table.Rows.Add(row2);
+                        while (sdr.Read())
+                        {
+                            SDBValueNode node = new SDBValueNode();
+                            node.CompanyName = sdr.GetStringSafe(0);
+                            node.Iconum = sdr.GetInt32(1).ToString();
+                            node.DocumentId = sdr.GetGuid(2).ToString();
+                            node.XbrlTag = sdr.GetStringSafe(3);
+                            node.MaxValue = sdr.GetStringSafe(4);
+                            if (valuenodes.FirstOrDefault(x => x.Iconum == node.Iconum) == null)
+                            {
+                                row = table.NewRow();
+                                row["Name"] = node.CompanyName;
+                                for (int u = 2; u <= totalColumn; u++)
+                                {
+                                    row[u] = "";
+                                }
+                                table.Rows.Add(row);
+                            }
+                            valuenodes.Add(node);
+                            row = null;
+                            foreach(DataRow r in table.Rows)
+                            {
+                                if (r["Name"].ToString() == node.CompanyName)
+                                {
+                                    row = r;
+                                    break;
+                                }
+                            }
+                            if (row != null)
+                            {
+                                row[node.XbrlTag] = node.MaxValue;
+
+                            }
+                            //DataColumn column = table.Columns.IndexOf(node.XbrlTag)
+
+                        }
+
+                    } 
+                }
+            }
+            int totalCount = 0;
+            foreach (var n in nodes)
+            {
+                totalCount += n.Count;
+            }
+            foreach (var n in nodes)
+            {
+                countRow[n.XbrlTag] = string.Format("{0}/{1}", n.Count, totalCount);
+            }
+
+            return table;
         }
     }
 }
