@@ -1583,7 +1583,8 @@ exec GDBGetCodes @sdbcode
                         DataRow row = table.NewRow();
                         DataRow row2 = table.NewRow();
                         countRow = row2;
-                        row["Name"] = "";
+                        row["Name"] = "XBRL";
+                        row2["Name"] = "COUNT";
                         for (int u = 0; u < totalColumn; u++)
                         {
                             row[nodes[u].XbrlTag] = nodes[u].XbrlTag;
@@ -1603,7 +1604,7 @@ exec GDBGetCodes @sdbcode
                             {
                                 row = table.NewRow();
                                 row["Name"] = node.CompanyName;
-                                for (int u = 2; u <= totalColumn; u++)
+                                for (int u = 1; u <= totalColumn; u++)
                                 {
                                     row[u] = "";
                                 }
