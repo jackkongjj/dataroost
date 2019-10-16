@@ -7483,7 +7483,7 @@ INSERT INTO @SHCellsLPV
 EXEC SCARGetTableCellLikePeriod_ByTableCell @CellsForLPV, @DocumentID
 
 INSERT @SHCellsError 
-SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0), CASE WHEN mtmw.ChildrenSum <> mtmw.CellValue THEN 1 ELSE 0 END
+SELECT ISNULL(lpv.StaticHierarchyID, mtmw.StaticHierarchyID), ISNULL(lpv.DocumentTimeSliceID, mtmw.DocumentTimeSliceID), ISNULL(lpv.LPVFail, 0),  CASE WHEN mtmw.CellValue <> 1 THEN 0 ELSE 1 END,CASE WHEN mtmw.CellValue = 2 THEN 1 ELSE 0 END
 from @SHCellsLPV lpv
 FULL OUTER JOIN @SHCellsMTMW mtmw ON lpv.StaticHierarchyID = mtmw.StaticHierarchyID and  lpv.DocumentTimeSliceID = mtmw.DocumentTimeSliceID
 
