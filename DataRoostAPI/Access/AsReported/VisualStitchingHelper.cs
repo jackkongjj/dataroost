@@ -1644,5 +1644,140 @@ exec GDBGetCodes @sdbcode
 
             return table;
         }
+
+        public DataTable GetGDBCodeGridForIconum(long sdbcode, int iconum, Guid? DocumentID = null)
+        {
+            string sql = @"
+exec GDBGetCodesForIconum @sdbcode, @iconum, @documentId
+";
+            List<SDBNode> nodes = new List<SDBNode>();
+            List<SDBValueNode> valuenodes = new List<SDBValueNode>();
+            DataTable table = new DataTable();
+            DataRow countRow = null;
+
+
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                conn.Open();
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@sdbcode", sdbcode);
+                    cmd.Parameters.AddWithValue("@iconum", iconum);
+                    if (DocumentID.HasValue)
+                    {
+                      cmd.Parameters.AddWithValue("@documentId", DocumentID.Value);
+                    }
+                    else
+                    {
+                      cmd.Parameters.AddWithValue("@documentId", DBNull.Value);
+                    }
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        DataColumn column = new DataColumn();
+                        column.DataType = Type.GetType("System.String");
+                        column.ColumnName = "Name";
+                        table.Columns.Add(column);
+                        while (sdr.Read())
+                        {
+                            SDBNode node = new SDBNode();
+                            long sdb = sdr.GetInt64(1);
+                            //long sdb;
+                            //if (!long.TryParse(id, out sdb))
+                            //{
+                            //    continue;
+                            //}
+                            node.Id = sdb;
+                            string xbrltag = sdr.GetStringSafe(2);
+                            if (string.IsNullOrWhiteSpace(xbrltag))
+                            {
+                                xbrltag = "NULL";
+                            }
+                            node.XbrlTag = xbrltag;
+                            node.Count = sdr.GetInt32(3);
+                            nodes.Add(node);
+                            column = new DataColumn();
+                            column.DataType = System.Type.GetType("System.String");
+                            column.ColumnName = xbrltag;
+                            table.Columns.Add(column);
+                        }
+                        sdr.NextResult();
+                        int totalColumn = nodes.Count;
+
+                        //for (int u = 0; u < totalColumn; u++)
+                        //{
+                        //    DataColumn column;
+
+                        //    // Create new DataColumn, set DataType, ColumnName and add to DataTable.    
+                        //    column = new DataColumn();
+                        //    column.DataType = System.Type.GetType("System.String");
+                        //    column.ColumnName = u.ToString();
+                        //    table.Columns.Add(column);
+                        //}
+                        DataRow row = table.NewRow();
+                        DataRow row2 = table.NewRow();
+                        countRow = row2;
+                        row["Name"] = "XBRL";
+                        row2["Name"] = "COUNT";
+                        for (int u = 0; u < totalColumn; u++)
+                        {
+                            row[nodes[u].XbrlTag] = nodes[u].XbrlTag;
+                            row2[nodes[u].XbrlTag] = string.Format("{0}/{1}", nodes[u].Count, nodes[u].TotalCount);
+                        }
+                        table.Rows.Add(row);
+                        table.Rows.Add(row2);
+                        while (sdr.Read())
+                        {
+                            SDBValueNode node = new SDBValueNode();
+                            node.CompanyName = sdr.GetStringSafe(0);
+                            node.Iconum = sdr.GetInt32(1).ToString();
+                            node.DocumentId = sdr.GetGuid(2).ToString();
+                            node.XbrlTag = sdr.GetStringSafe(3);
+                            node.MaxValue = sdr.GetStringSafe(4);
+                            if (valuenodes.FirstOrDefault(x => x.DocumentId == node.DocumentId) == null)
+                            {
+                                row = table.NewRow();
+                                row["Name"] = string.Format("{0} ({1})", node.CompanyName, node.DocumentId);
+                                for (int u = 1; u <= totalColumn; u++)
+                                {
+                                    row[u] = "";
+                                }
+                                table.Rows.Add(row);
+                            }
+                            valuenodes.Add(node);
+                            row = null;
+                            foreach (DataRow r in table.Rows)
+                            {
+                                if (r["Name"].ToString() == string.Format("{0} ({1})", node.CompanyName, node.DocumentId))
+                                {
+                                    row = r;
+                                    break;
+                                }
+                            }
+                            if (row != null)
+                            {
+                                row[node.XbrlTag] = node.MaxValue;
+
+                            }
+                            //DataColumn column = table.Columns.IndexOf(node.XbrlTag)
+
+                        }
+
+                    }
+                }
+            }
+            int totalCount = 0;
+            foreach (var n in nodes)
+            {
+                totalCount += n.Count;
+            }
+            foreach (var n in nodes)
+            {
+                countRow[n.XbrlTag] = string.Format("{0}/{1}", n.Count, totalCount);
+            }
+
+            return table;
+        }
     }
 }
