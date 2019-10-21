@@ -932,7 +932,7 @@ DECLARE @SfDocumentID UNIQUEIDENTIFIER
 select @SfDocumentID = ID, @DocumentSeriesID = DocumentSeriesID from Document WITH (NOLOCK) where DAMDocumentId = @DamDocument
 
 DECLARE @GDBCodes TABLE (
-    [FakeId] [bigint] IDENTITY(1,1) NOT NULL,
+    [FakeId] [bigint] IDENTITY(-1,-1) NOT NULL,
 	[Description] [varchar](4096) NULL,
     [Section] [varchar](32) NULL,
     [Industry] [varchar](256) NULL
@@ -997,6 +997,10 @@ SET @gdbID = null;
 select TOP 1 @gdbID = ID FROM GDBCodes  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
 IF @gdbID is NULL
 BEGIN
+    select TOP 1 @gdbID = FakeId FROM @GDBCodes WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
+END
+IF @gdbID is NULL
+BEGIN
     Insert into @GDBCodes
     (Description, Section, Industry) 
     values ('{0}', '{1}', 'BANK');
@@ -1034,7 +1038,6 @@ END
                     label = Truncate(label, 4000);
                     sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
                     sb.AppendLine(string.Format(addTagged, value.XbrlTag.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
-
                 }
 
             }
