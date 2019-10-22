@@ -1832,7 +1832,6 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             var expression = sdr.GetStringSafe(0);
                             var noOfGDB = sdr.GetInt32(1);
                             var occurence = sdr.GetInt32(2);
-                            string xbrltag = sdr.GetStringSafe(2);
                             DataRow row = table.NewRow();
                             row["Expression"] = expression;
                             row["NoOfGDBs"] = noOfGDB.ToString();
