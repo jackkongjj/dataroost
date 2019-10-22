@@ -1782,5 +1782,68 @@ exec GDBGetCodesForIconum @sdbcode, @iconum, @documentId
 
             return table;
         }
+
+        public DataTable GetGDBCountForIconum(long sdbcode, int? iconum = null)
+        {
+            string sql = @"
+exec GDBGetCodesForIconum @sdbcode, @iconum
+";
+            List<SDBNode> nodes = new List<SDBNode>();
+            List<SDBValueNode> valuenodes = new List<SDBValueNode>();
+            DataTable table = new DataTable();
+            DataRow countRow = null;
+
+
+
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                conn.Open();
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@sdbcode", sdbcode);
+                    if (iconum.HasValue)
+                    {
+                        cmd.Parameters.AddWithValue("@iconum", iconum);
+                    }
+                    else
+                    {
+                        cmd.Parameters.AddWithValue("@iconum", DBNull.Value);
+                    }
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        DataColumn column = new DataColumn();
+                        column.DataType = Type.GetType("System.String");
+                        column.ColumnName = "Expression";
+                        table.Columns.Add(column);
+
+                        DataColumn column2 = new DataColumn();
+                        column2.DataType = Type.GetType("System.String");
+                        column2.ColumnName = "NoOfGDBs";
+                        table.Columns.Add(column2);
+
+                        DataColumn column3 = new DataColumn();
+                        column3.DataType = Type.GetType("System.String");
+                        column3.ColumnName = "Occurrence";
+                        table.Columns.Add(column3);
+
+                        while (sdr.Read())
+                        {
+                            var expression = sdr.GetStringSafe(0);
+                            var noOfGDB = sdr.GetInt32(1);
+                            var occurence = sdr.GetInt32(2);
+                            string xbrltag = sdr.GetStringSafe(2);
+                            DataRow row = table.NewRow();
+                            row["Expression"] = expression;
+                            row["NoOfGDBs"] = noOfGDB.ToString();
+                            row["Occurrence"] = occurence.ToString();
+                            table.Rows.Add(row);
+                        }
+
+                    }
+                }
+            }
+            return table;
+        }
     }
 }
