@@ -1786,7 +1786,7 @@ exec GDBGetCodesForIconum @sdbcode, @iconum, @documentId
         public DataTable GetGDBCountForIconum(long sdbcode, int? iconum = null)
         {
             string sql = @"
-exec GDBGetCodesForIconum @sdbcode, @iconum
+exec GDBGetCountForIconum @sdbcode, @iconum
 ";
             List<SDBNode> nodes = new List<SDBNode>();
             List<SDBValueNode> valuenodes = new List<SDBValueNode>();
