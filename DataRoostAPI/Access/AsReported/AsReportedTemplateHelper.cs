@@ -6445,6 +6445,7 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID and n.TimeSlicePeriod
 
 select distinct ts.*
 from #tmptimeslices ts 
+where ts.TableTypeID <> -1 
 ";
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
