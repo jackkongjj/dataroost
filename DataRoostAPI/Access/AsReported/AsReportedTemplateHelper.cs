@@ -160,19 +160,23 @@ where d.companyId = @companyId
 			}
 			CommunicationLogger.LogEvent("CreateStaticHierarchyForTemplate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 			return temp;
-		}
+        }
 
 
-		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId) {
-			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
-			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
-			newFormat.TimeSlices = oldFormat.TimeSlices;
-			return newFormat;
-		}
+        public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId, int? Years = null)
+        {
+            ScarResult newFormat = new ScarResult();
+            AsReportedTemplate oldFormat = Years != null && Years.HasValue ? 
+                                            GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId, Years.Value) :
+                                            GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId); ;
+
+            newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
+            newFormat.TimeSlices = oldFormat.TimeSlices;
+            return newFormat;
+        }
 
 
-		public class MetaData {
+        public class MetaData {
 			[JsonProperty("industry")]
 			public string industry { get; set; }
 			[JsonProperty("fisicalYearEndMonth")]
@@ -1039,7 +1043,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return ret;
 		}
 
-		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
+		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId, int? Years = null) {
 			decimal maxdif = getDifVariance(DocumentId, false);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -1049,7 +1053,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			try {
 				sb.AppendLine("Start." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				string query_sproc = @"SCARGetTemplate";
+				string query_sproc = @"SCARGetTemplateByDate";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -1066,6 +1070,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						cmd.Parameters.Add("@iconum", SqlDbType.Int).Value = iconum;
 						cmd.Parameters.Add("@templateName", SqlDbType.VarChar).Value = TemplateName;
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = DocumentId;
+                        if (Years.HasValue)
+                            cmd.Parameters.Add("@NumYears", SqlDbType.Int).Value = Years;
 						conn.Open();
 						sb.AppendLine("ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 						//using (DataTable dt = new DataTable()) {
