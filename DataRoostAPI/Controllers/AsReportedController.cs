@@ -194,51 +194,43 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				result += "error";
 			}
 			return result;
-        }
+		}
 
-        [Route("templates/{TemplateName}/{DocumentId}")]
-        [HttpGet]
-        public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId)
-        {
-            try
-            {
-                int iconum = PermId.PermId2Iconum(CompanyId);
-                if (TemplateName == null)
-                    return null;
+		[Route("templates/{TemplateName}/{DocumentId}")]
+		[HttpGet]
+		public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null)
+					return null;
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-                return null;
-            }
-        }
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
 
-        [Route("templates/{TemplateName}/{DocumentId}/{Years}")]
-        [HttpGet]
-        public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId, int? Years)
-        {
-            try
-            {
-                int iconum = PermId.PermId2Iconum(CompanyId);
-                if (TemplateName == null || !Years.HasValue)
-                    return null;
+		[Route("templates/{TemplateName}/{DocumentId}/{Years}")]
+		[HttpGet]
+		public ScarResult GetTemplate(string CompanyId, string TemplateName, Guid DocumentId, int? Years) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null || !Years.HasValue)
+					return null;
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId, Years.Value);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
-                return null;
-            }
-        }
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				return helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId, Years.Value);
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
 
-        public static void CopyTo(System.IO.Stream src, System.IO.Stream dest) {
+		public static void CopyTo(System.IO.Stream src, System.IO.Stream dest) {
 			byte[] bytes = new byte[4096];
 
 			int cnt;
@@ -441,8 +433,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		[HttpPut]
 		public ScarResult EditHierarchyLabel(string CompanyId, int id, StringInput input) {
 			try {
-                if (input == null || string.IsNullOrEmpty(input.StringData))
-                    return null;
+				if (input == null || string.IsNullOrEmpty(input.StringData))
+					return null;
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.UpdateStaticHierarchyLabel(id, input.StringData);
