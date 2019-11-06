@@ -163,9 +163,12 @@ where d.companyId = @companyId
 		}
 
 
-		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId) {
+		public ScarResult GetTemplateInScarResult(int iconum, string TemplateName, Guid DocumentId, int? Years = null) {
 			ScarResult newFormat = new ScarResult();
-			AsReportedTemplate oldFormat = GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId);
+			AsReportedTemplate oldFormat = Years != null && Years.HasValue ?
+																			GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId, Years.Value) :
+																			GetTemplateWithSqlDataReader(iconum, TemplateName, DocumentId); ;
+
 			newFormat.StaticHierarchies = oldFormat.StaticHierarchies;
 			newFormat.TimeSlices = oldFormat.TimeSlices;
 			return newFormat;
@@ -1039,7 +1042,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			return ret;
 		}
 
-		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId) {
+		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId, int? Years = null) {
 			decimal maxdif = getDifVariance(DocumentId, false);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -1049,7 +1052,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
 			try {
 				sb.AppendLine("Start." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
-				string query_sproc = @"SCARGetTemplate";
+				string query_sproc = @"SCARGetTemplateByDate";
 				temp.StaticHierarchies = new List<StaticHierarchy>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> BlankCells = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
 				Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>> CellLookup = new Dictionary<SCARAPITableCell, Tuple<StaticHierarchy, int>>();
@@ -1066,6 +1069,8 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 						cmd.Parameters.Add("@iconum", SqlDbType.Int).Value = iconum;
 						cmd.Parameters.Add("@templateName", SqlDbType.VarChar).Value = TemplateName;
 						cmd.Parameters.Add("@DocumentID", SqlDbType.UniqueIdentifier).Value = DocumentId;
+						if (Years.HasValue)
+							cmd.Parameters.Add("@NumYears", SqlDbType.Int).Value = Years;
 						conn.Open();
 						sb.AppendLine("ConnOpen." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 						//using (DataTable dt = new DataTable()) {
@@ -6444,8 +6449,7 @@ LEFT JOIN #nonempty n on a.DamDocumentID = n.DamDocumentID and n.TimeSlicePeriod
  order by a.CellDate desc
 
 select distinct ts.*
-from #tmptimeslices ts 
-where ts.TableTypeID <> -1 
+from #tmptimeslices ts
 ";
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
@@ -6798,7 +6802,8 @@ SELECT tc.ID
 from TableCell tc 
 join StaticHierarchy sh on sh.CompanyFinancialTermId  = tc.CompanyFinancialTermID
 join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.ID
-where sh.ParentID = @TargetSHID and dtstc.DocumentTimeSliceId = @CurrentTimeSliceID
+join StaticHierarchy psh on psh.id = sh.ParentID
+where (sh.ParentID = @TargetSHID or (psh.IsDanglingHeader = 0 and psh.ParentID = @TargetSHID)) and dtstc.DocumentTimeSliceId = @CurrentTimeSliceID
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
@@ -7154,7 +7159,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
 					cmd.Parameters.AddWithValue("@difrate", difrate);
-
+					cmd.CommandTimeout = 180;
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
 						int level = reader.GetInt32(0);
@@ -7274,7 +7279,8 @@ INSERT @SHCells([TableCellID])
 SELECT tc.ID
 from TableCell tc 
 join StaticHierarchy sh on sh.CompanyFinancialTermId  = tc.CompanyFinancialTermID
-where sh.ParentID = @TargetSHID
+join StaticHierarchy psh on psh.id = sh.ParentID
+where (sh.ParentID = @TargetSHID or (psh.IsDanglingHeader = 0 and psh.ParentID = @TargetSHID))
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
@@ -7399,7 +7405,7 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 					cmd.Parameters.AddWithValue("@cellid", CellId);
 					cmd.Parameters.AddWithValue("@Iconum", iconum);
 					cmd.Parameters.AddWithValue("@difrate", difrate);
-
+					cmd.CommandTimeout = 180;
 					using (SqlDataReader reader = cmd.ExecuteReader()) {
 						reader.Read();
 						int level = reader.GetInt32(0);
@@ -7433,12 +7439,12 @@ ORDER BY dts.TimeSlicePeriodEndDate desc, dts.Duration desc, dts.ReportingPeriod
 										Cusip = reader.GetStringSafe(19)
 									};
 									cell.ScarUpdated = reader.GetBoolean(20);
-									cell.IsIncomePositive = reader.GetBoolean(21);
+									cell.IsIncomePositive = reader.IsDBNull(21) ? true : reader.GetBoolean(21);
 									cell.XBRLTag = reader.GetStringSafe(22);
 									//cell.UpdateStampUTC = reader.GetNullable<DateTime>(23);
 									cell.DocumentID = reader.IsDBNull(23) ? Guid.Empty : reader.GetGuid(23);
 									cell.Label = reader.GetStringSafe(24);
-									cell.ScalingFactorValue = reader.GetDouble(25);
+									cell.ScalingFactorValue = reader.IsDBNull(25) ? 1.0 : reader.GetDouble(25);
 									cell.ARDErrorTypeId = reader.GetNullable<int>(26);
 									cell.MTMWErrorTypeId = reader.GetNullable<int>(27);
 									cell.LikePeriodValidationFlag = reader.GetBoolean(28);
