@@ -231,6 +231,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
+                sfConnectionString = @"Application Name=DataRoostBackfill;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.GdbBackfillOn();
                 return json;
@@ -249,6 +250,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR-backfill"].ToString();
+                sfConnectionString = @"Application Name=DataRoostBackfill;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.GdbBackfillOff();
                 return json;
