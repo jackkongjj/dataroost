@@ -237,7 +237,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             request.ContentType = "application/json";
             request.Timeout = 120000;
             request.Method = "GET";
-            var response = (HttpWebResponse)request.GetResponse();
+            HttpWebResponse response = null;
+            try
+            {
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            catch
+            {
+                throw new FileNotFoundException("call failed");
+            }
             string outputresult = null;
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -246,7 +254,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                     outputresult = streamReader.ReadToEnd();
                 }
             }
-            else if (response.StatusCode == HttpStatusCode.Accepted)
+            else if (response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.ServiceUnavailable)
             {
                 throw new Exception("call failed");
             }
@@ -854,7 +862,7 @@ FROM CteTables order by parentid
             tintURL = @"http://chai-auto.factset.io/bank/abs?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
-            urlPattern = @"http://chai-auto.factset.io/queue/bank?source_document_id={0}&source_file_id={1}&iconum=0";
+            urlPattern = @"http://chai-auto.factset.io/bank/abs?source_document_id={0}&source_file_id={1}&iconum=0";
             string url = String.Format(urlPattern, DamDocumentID.ToString().ToUpper(), fileId);
             bool isTryCached = false;
             string cachedURL = "";
@@ -891,7 +899,7 @@ FROM CteTables order by parentid
                     }
                     var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
                     tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
-                    if (tintInfo == null || (tintInfo.Tables.Count <= 0 && tintInfo.TimeSlices.Count <=0))
+                    if (tintInfo == null)
                     {
                         throw new Exception("failed to get tint 1");
                     }
@@ -919,7 +927,7 @@ FROM CteTables order by parentid
                 }
             }
             psb.AppendLine("Ln869." + DateTime.UtcNow.ToString());
-            if (tintInfo == null || (tintInfo.Tables.Count <= 0 && tintInfo.TimeSlices.Count <= 0))
+            if (tintInfo == null)
             {
                 return "failed to get tint";
             }
