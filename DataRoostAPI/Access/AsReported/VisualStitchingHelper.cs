@@ -891,7 +891,7 @@ FROM CteTables order by parentid
                     }
                     var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
                     tintInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult, settings);
-                    if (tintInfo == null || tintInfo.Tables.Count <= 0)
+                    if (tintInfo == null || (tintInfo.Tables.Count <= 0 && tintInfo.TimeSlices.Count <=0))
                     {
                         throw new Exception("failed to get tint 1");
                     }
@@ -919,7 +919,7 @@ FROM CteTables order by parentid
                 }
             }
             psb.AppendLine("Ln869." + DateTime.UtcNow.ToString());
-            if (tintInfo == null || tintInfo.Tables.Count <= 0)
+            if (tintInfo == null || (tintInfo.Tables.Count <= 0 && tintInfo.TimeSlices.Count <= 0))
             {
                 return "failed to get tint";
             }
