@@ -946,6 +946,7 @@ DECLARE @TaggedItems TABLE (
 	[DocumentId] [uniqueidentifier] NULL,
 	[XBRLTag] [varchar](4096) NULL,
 	[Offset] [varchar](50) NULL,
+    [CellDate] datetime NULL,
 	[Value] [nvarchar](500) NULL,
 	[Label] [varchar](4096) NULL,
 	[GDBTableId] [bigint] NULL,
@@ -975,8 +976,8 @@ FROM @TaggedItems ti
 JOIN @MatchingID m on ti.GDBTableId = m.fakeID
 
 
-INSERT GDBTaggedItems_1106 (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle,ColumnHeader)
-Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle,ColumnHeader from @TaggedItems
+INSERT GDBTaggedItems_1106 (DocumentId,XBRLTag,Offset,CellDate, Value,Label,GDBTableId,XBRLTitle,ColumnHeader)
+Select DocumentId,XBRLTag,Offset,CellDate, Value,Label,GDBTableId,XBRLTitle,ColumnHeader from @TaggedItems
 ";
 
             sb.AppendLine(string.Format(s, DamDocumentID.ToString()));
@@ -1015,8 +1016,8 @@ END
                     string addTagged = @"
 IF NOT EXISTS (SELECT 1 FROM GDBTaggedItems_1106 WITH (NOLOCK) WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
 BEGIN
-    INSERT @TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle, ColumnHeader)
-    VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}', '{5}')
+    INSERT @TaggedItems (DocumentId,XBRLTag,Offset,CellDate,Value,Label,GDBTableId,XBRLTitle, ColumnHeader)
+    VALUES (@DamDocument, '{0}', '{1}', {2}, '{3}', '{4}', @gdbID, '{5}', '{6}')
 
 
 END
@@ -1061,8 +1062,18 @@ END
                     {
                         xbrlTableTitle = "";
                     }
+                    string cellDate = value.Date;
+                    DateTime dateTime;
+                    if (string.IsNullOrWhiteSpace(cellDate) && !DateTime.TryParse(cellDate, out dateTime))
+                    {
+                        cellDate = "NULL";
+                    }
+                    else
+                    {
+                        cellDate = "'" + cellDate + "'";
+                    }
                     sb.AppendLine(string.Format(addGDB, xbrl.Replace("'", "''"), table.Type.Replace("'", "''")));
-                    sb.AppendLine(string.Format(addTagged, xbrl.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), xbrlTableTitle.Replace("'", "''"), columnHeader.Replace(";", "''")));
+                    sb.AppendLine(string.Format(addTagged, xbrl.Replace("'", "''"), value.Offset, cellDate, value.OriginalValue, label.Replace("'", "''"), xbrlTableTitle.Replace("'", "''"), columnHeader.Replace(";", "''")));
                 }
 
             }
