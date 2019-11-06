@@ -847,11 +847,15 @@ FROM CteTables order by parentid
         }
         public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;", int tries = 100)
         {
+
             StringBuilder psb = new StringBuilder();
             psb.AppendLine("Start. " + DamDocumentID.ToString() + " " + DateTime.UtcNow.ToString());
             string tintURL = @"http://auto-tablehandler-staging.factset.io/queue/document/978dfe58-c4a2-e311-9b0b-1cc1de2561d4/92";
+            tintURL = @"http://chai-auto.factset.io/bank/abs?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
+            urlPattern = @"http://chai-auto.factset.io/bank/abs?source_document_id={0}&source_file_id={1}&iconum=0";
+            if (tries > 3) tries = 3;
             string url = String.Format(urlPattern, DamDocumentID.ToString().ToUpper(), fileId);
             bool isTryCached = false;
             string cachedURL = "";
@@ -945,7 +949,8 @@ DECLARE @TaggedItems TABLE (
 	[Value] [nvarchar](500) NULL,
 	[Label] [varchar](4096) NULL,
 	[GDBTableId] [bigint] NULL,
-	[XBRLTitle] [varchar](4096) NULL
+	[XBRLTitle] [varchar](4096) NULL,
+	[ColumnHeader] [varchar](4096) NULL
 	);
 
 DECLARE @MatchingID TABLE(
@@ -957,7 +962,7 @@ DECLARE @gdbID INT;
 ";
 
             string wrapup = @"
- MERGE INTO GDBCodes USING @GDBCodes AS temp ON 1 = 0
+ MERGE INTO GDBCodes_1106 USING @GDBCodes AS temp ON 1 = 0
 WHEN NOT MATCHED THEN
     INSERT (Description, Section, Industry)
     VALUES (temp.Description, temp.Section, temp.Industry)
@@ -970,8 +975,8 @@ FROM @TaggedItems ti
 JOIN @MatchingID m on ti.GDBTableId = m.fakeID
 
 
-INSERT TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
-Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle from @TaggedItems
+INSERT GDBTaggedItems_1106 (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle,ColumnHeader)
+Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle,ColumnHeader from @TaggedItems
 ";
 
             sb.AppendLine(string.Format(s, DamDocumentID.ToString()));
@@ -990,11 +995,11 @@ Select DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle from @TaggedIt
                 int dtsCount = 0;
                 foreach (var value in table.Values)
                 {
-                    if (string.IsNullOrWhiteSpace(value.XbrlTag) || string.IsNullOrWhiteSpace(value.Offset)) continue;
+                    if (string.IsNullOrWhiteSpace(value.Offset)) continue;
 
                     string addGDB = @"
 SET @gdbID = null;
-select TOP 1 @gdbID = ID FROM GDBCodes  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
+select TOP 1 @gdbID = ID FROM GDBCodes_1106  WITH (NOLOCK) WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
 IF @gdbID is NULL
 BEGIN
     select TOP 1 @gdbID = FakeId FROM @GDBCodes WHERE Description = '{0}' and Section = '{1}' and Industry = 'Bank';
@@ -1008,10 +1013,10 @@ BEGIN
 END
 ";
                     string addTagged = @"
-IF NOT EXISTS (SELECT 1 FROM TaggedItems WITH (NOLOCK) WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
+IF NOT EXISTS (SELECT 1 FROM GDBTaggedItems_1106 WITH (NOLOCK) WHERE DocumentId = @DamDocument and XBRLTag ='{0}' and  Offset = '{1}' and GDBTableId = @gdbID)
 BEGIN
-    INSERT @TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle)
-    VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}')
+    INSERT @TaggedItems (DocumentId,XBRLTag,Offset,Value,Label,GDBTableId,XBRLTitle, ColumnHeader)
+    VALUES (@DamDocument, '{0}', '{1}', '{2}', '{3}', @gdbID, '{4}', '{5}')
 
 
 END
@@ -1036,8 +1041,28 @@ END
                         label = value.XbrlTag;
                     }
                     label = Truncate(label, 4000);
-                    sb.AppendLine(string.Format(addGDB, value.XbrlTag.Replace("'", "''"), table.Type.Replace("'", "''")));
-                    sb.AppendLine(string.Format(addTagged, value.XbrlTag.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), table.XbrlTableTitle.Replace("'", "''")));
+                    string columnHeader = "";
+                    if (selectedCell != null)
+                    {
+                        var col = table.Columns.FirstOrDefault(v => v.Id == selectedCell.columnId);
+                        if (col != null)
+                        {
+                            columnHeader = col.columnHeader;
+                        }
+                    }
+                    columnHeader = Truncate(columnHeader, 4000);
+                    string xbrl = value.XbrlTag;
+                    if (string.IsNullOrWhiteSpace(xbrl))
+                    {
+                        xbrl = "";
+                    }
+                    string xbrlTableTitle = table.XbrlTableTitle;
+                    if (string.IsNullOrWhiteSpace(xbrlTableTitle))
+                    {
+                        xbrlTableTitle = "";
+                    }
+                    sb.AppendLine(string.Format(addGDB, xbrl.Replace("'", "''"), table.Type.Replace("'", "''")));
+                    sb.AppendLine(string.Format(addTagged, xbrl.Replace("'", "''"), value.Offset, value.OriginalValue, label.Replace("'", "''"), xbrlTableTitle.Replace("'", "''"), columnHeader.Replace(";", "''")));
                 }
 
             }
@@ -1072,6 +1097,10 @@ END
         }
         public static String Truncate(String input, int maxLength)
         {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                input = "";
+            }
             if (input.Length > maxLength)
                 return input.Substring(0, maxLength);
             return input;
