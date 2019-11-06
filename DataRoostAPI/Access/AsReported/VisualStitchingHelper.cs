@@ -688,10 +688,10 @@ FROM CteTables order by parentid
         {
             StringBuilder sb = new StringBuilder();
             string sql = @"
-            Select top 1 * from GDBBackfill where isStart = 0 and isEnd =0;
+            Select top 1 documentid, fileid, iconum from GDBBackfill where isStart = 0 and isEnd =0;
 ";
             string sql_retry = @"
-            Select top 1 * from GDBBackfill where isStart = 1 and isEnd =0;
+            Select top 1 documentid, fileid, iconum from GDBBackfill where isStart = 1 and isEnd =0;
 ";
             string update_start_sql = @"
             update GDBBackfill set isStart = 1 where DocumentID = @DocumentID
@@ -714,14 +714,17 @@ FROM CteTables order by parentid
                     Guid docID = new Guid();
 
                     int fileId = 0;
+                    int iconum = 0;
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
                     {
                         using (SqlDataReader sdr = cmd.ExecuteReader())
                         {
                             while (sdr.Read())
                             {
-                                docID = sdr.GetGuid(1);
-                                fileId = sdr.GetInt32(2);
+                                docID = sdr.GetGuid(0);
+                                fileId = sdr.GetInt32(1);
+                                iconum = sdr.GetInt32(2);
+
                             }
                             guidList.Add(docID);
                         }
@@ -736,7 +739,7 @@ FROM CteTables order by parentid
                             }
                         }
                     }
-                    threadList.Add(Task.Run(() => InsertGdbCommitKVP(docID, fileId, tries)).ContinueWith(u => messages.Add(u.Result)));
+                    threadList.Add(Task.Run(() => InsertGdbCommitKVP(docID, fileId, tries, iconum)).ContinueWith(u => messages.Add(u.Result)));
                 }
             }
             foreach (var t in threadList)
@@ -771,9 +774,9 @@ FROM CteTables order by parentid
             }
             return sb.ToString();
         }
-        private string InsertGdbCommitKVP(Guid guid, int i, int tries = 100)
+        private string InsertGdbCommitKVP(Guid guid, int i, int tries = 100, int iconum = 0)
         {
-            var r = InsertGdbCommit(guid, i, tries);
+            var r = InsertGdbCommit(guid, i, tries, iconum);
             if (r == "true")
             {
                 return guid.ToString();
@@ -787,7 +790,7 @@ FROM CteTables order by parentid
         {
             return InsertGdb(new Guid("978dfe58-c4a2-e311-9b0b-1cc1de2561d4"), 92);
         }
-        public string InsertGdbCommit(Guid DamDocumentID, int fileId, int tries = 100)
+        public string InsertGdbCommit(Guid DamDocumentID, int fileId, int tries = 100, int iconum = 0)
         {
             StringBuilder psb = new StringBuilder();
             psb.AppendLine("StartCommit. " + DamDocumentID.ToString() + " " + DateTime.UtcNow.ToString());
@@ -796,7 +799,7 @@ FROM CteTables order by parentid
             try
             {
                 psb.AppendLine("Ln794." + DateTime.UtcNow.ToString());
-                strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;", tries);
+                strResult = InsertGdb(DamDocumentID, fileId, "COMMIT TRAN;", tries, iconum);
                 psb.AppendLine("Ln796." + DateTime.UtcNow.ToString());
                 if (strResult.Length < 20)
                 {
@@ -853,7 +856,7 @@ FROM CteTables order by parentid
                 return "InsertGdbCommit" + ex.Message;
             }
         }
-        public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;", int tries = 100)
+        public string InsertGdb(Guid DamDocumentID, int fileId, string successAction = "ROLLBACK TRAN;", int tries = 100, int iconum = 0)
         {
 
             StringBuilder psb = new StringBuilder();
@@ -862,8 +865,8 @@ FROM CteTables order by parentid
             tintURL = @"http://chai-auto.factset.io/bank/abs?source_document_id=978dfe58-c4a2-e311-9b0b-1cc1de2561d4&source_file_id=76&iconum=24530";
 
             string urlPattern = @"http://auto-tablehandler-staging.factset.io/queue/document/{0}/{1}";
-            urlPattern = @"http://chai-auto.factset.io/bank/abs?source_document_id={0}&source_file_id={1}&iconum=0";
-            string url = String.Format(urlPattern, DamDocumentID.ToString().ToUpper(), fileId);
+            urlPattern = @"http://chai-auto.factset.io/bank/abs?source_document_id={0}&source_file_id={1}&iconum={2}";
+            string url = String.Format(urlPattern, DamDocumentID.ToString().ToUpper(), fileId, iconum);
             bool isTryCached = false;
             string cachedURL = "";
             try
