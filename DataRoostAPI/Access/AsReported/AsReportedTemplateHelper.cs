@@ -6802,8 +6802,7 @@ SELECT tc.ID
 from TableCell tc 
 join StaticHierarchy sh on sh.CompanyFinancialTermId  = tc.CompanyFinancialTermID
 join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.ID
-join StaticHierarchy psh on psh.id = sh.ParentID
-where (sh.ParentID = @TargetSHID or (psh.IsDanglingHeader = 0 and psh.ParentID = @TargetSHID)) and dtstc.DocumentTimeSliceId = @CurrentTimeSliceID
+where sh.ParentID = @TargetSHID and dtstc.DocumentTimeSliceId = @CurrentTimeSliceID
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
@@ -7279,8 +7278,7 @@ INSERT @SHCells([TableCellID])
 SELECT tc.ID
 from TableCell tc 
 join StaticHierarchy sh on sh.CompanyFinancialTermId  = tc.CompanyFinancialTermID
-join StaticHierarchy psh on psh.id = sh.ParentID
-where (sh.ParentID = @TargetSHID or (psh.IsDanglingHeader = 0 and psh.ParentID = @TargetSHID))
+where sh.ParentID = @TargetSHID
  
 UPDATE tc 
 set IsIncomePositive = CASE WHEN IsIncomePositive = 1 THEN 0 ELSE 1 END																
