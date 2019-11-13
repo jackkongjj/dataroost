@@ -849,16 +849,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("cells/{id}/children/historical/flipsign/{DocumentId}/")]
+		[Route("cells/{cellidorshid}/children/historical/flipsign/{DocumentId}/")]
 		[HttpPut]
-		public ScarResult FlipChildrenHistorical(string CompanyId, string id, Guid DocumentId, ScarInput input) {
+		public ScarResult FlipChildrenHistorical(string CompanyId, string cellidorshid, Guid DocumentId, ScarInput input) {
 			try {
 				int iconum = PermId.PermId2Iconum(CompanyId);
 				//if (input == null || input.TargetStaticHierarchyID == 0)
 				//	return null;
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-				return helper.FlipChildrenHistorical(id, DocumentId, iconum, 0);
+				int targetshid = 0;
+				if (cellidorshid.StartsWith("S")) {
+					targetshid = Int32.Parse(cellidorshid.Substring(1));
+					cellidorshid = "0";
+				}
+				return helper.FlipChildrenHistorical(cellidorshid, DocumentId, iconum, targetshid);
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;
