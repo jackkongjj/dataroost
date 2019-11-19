@@ -65,7 +65,6 @@ namespace LogPerformance
                                         );
                         if (result.IsValid)
                         {
-                            Logger.Error("document inserted");
                             return;
                         }
                         else
