@@ -22,7 +22,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
 				MailMessage message = new MailMessage();
 				message.From = mailFrom;
-				var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
+				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
 				var leo = new MailAddress("lchang@factset.com", "Leo");
 				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
 				var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
