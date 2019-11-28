@@ -289,6 +289,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("templates/{TemplateName}/{DocumentId}/{Years}/zipped")]
+		[HttpGet]
+		public HttpResponseMessage GetTemplateZipped(string CompanyId, string TemplateName, Guid DocumentId, int? Years) {
+			try {
+				int iconum = PermId.PermId2Iconum(CompanyId);
+				if (TemplateName == null || !Years.HasValue)
+					return null;
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+				var r = helper.GetTemplateInScarResult(iconum, TemplateName, DocumentId, Years.Value);
+				var json = Newtonsoft.Json.JsonConvert.SerializeObject(r);
+				var zip = Zip(json);
+				HttpResponseMessage httpmsg = new HttpResponseMessage();
+				httpmsg.Content = new ByteArrayContent(zip);
+				httpmsg.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+				return httpmsg;
+			} catch (Exception ex) {
+				LogError(ex, string.Format(PingMessage() + "CompanyId:{0}, TemplateName: {1}, DocumentId: {2}", CompanyId, TemplateName, DocumentId));
+				return null;
+			}
+		}
+
 
 
 		[Route("templates/{TemplateName}/{DocumentId}")]
