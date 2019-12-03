@@ -15,15 +15,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 	[RoutePrefix("api/v1")]
 	public class CompanyController : ApiController {
 
-		[Route("documents/{documentid}")]
+		[Route("documents/{documentid}/{iconum}")]
 		[HttpGet]
-		public object GetCompany(String documentid) {
+		public object GetCompany(String documentid, String iconum) {
 			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
 			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
-			return helper.GetCompanyByDamID(documentid);
+			return helper.GetCompanyByDamID(documentid, iconum);
 		}
 
 		[Route("companies/")]

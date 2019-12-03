@@ -31,7 +31,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			_damConnectionString = damConnectionString;
 		}
 
-		public object GetCompanyByDamID(String damid) {
+		public object GetCompanyByDamID(String damid, String iconum) {
 			string query = @"select d.PPI, f.Iconum, f.Firm_Name, ig.IndustryGroupCode, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate
 from document as d
 	join DocumentSeries as ds on d.DocumentSeriesID = ds.id
@@ -42,12 +42,13 @@ from document as d
 	left join IndustryDetail id on id.id = ci.IndustryDetailID
 	left join IndustryGroup ig on ig.ID = id.IndustryGroupID
 	left join ReportType r on r.id = d.reporttypeid
-where DAMDocumentId =  @damid
+where DAMDocumentId =  @damid and f.Iconum=@iconum
 	  ";
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				using (SqlCommand cmd = new SqlCommand(query, conn)) {
 					conn.Open();
 					cmd.Parameters.AddWithValue("@damid", damid);
+					cmd.Parameters.AddWithValue("@iconum", iconum);
 
 					using (SqlDataReader sdr = cmd.ExecuteReader()) {
 						if (sdr.Read()) {
