@@ -1329,6 +1329,16 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 				}
 				CommunicationLogger.LogEvent("GetTemplateWithSqlDataReader", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
+                List<StaticHierarchy> DanglingHeaders= new List<StaticHierarchy>();
+                DanglingHeaders = StaticHierarchies.Where(x => x.IsDanglingHeader == true).ToList();
+                foreach(StaticHierarchy dh in DanglingHeaders) {
+                    List<StaticHierarchy> ChildList;
+                    if (dh.ParentID != null) {
+                        ChildList = SHChildLookup[dh.ParentID.AsInt32()];
+                        ChildList.InsertRange(ChildList.IndexOf(dh), SHChildLookup[dh.Id]);
+                        ChildList.Remove(dh);
+                    }                    
+                }
 				sb.AppendLine("Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
 					sb.AppendLine("Calculate Sh." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
