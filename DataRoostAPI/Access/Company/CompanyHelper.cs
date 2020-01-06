@@ -17,13 +17,59 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 
 		private readonly string _damConnectionString;
 		private readonly string _lionConnectionString;
-		private readonly string _sfConnectionString;		
+		private readonly string _sfConnectionString;
 
-		public CompanyHelper(string sfConnectionString,	string lionConnectionString, string damConnectionString) {
-			_sfConnectionString = sfConnectionString;			
+		public CompanyHelper(string sfConnectionString, string lionConnectionString, string damConnectionString) {
+			_sfConnectionString = sfConnectionString;
 			_lionConnectionString = lionConnectionString;
 			_damConnectionString = damConnectionString;
 		}
+
+		public object GetCompanyByDamID(String damid, String iconum) {
+			string query = @"select d.PPI, f.Iconum, f.Firm_Name, ig.IndustryGroupCode, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate
+from document as d
+	join DocumentSeries as ds on d.DocumentSeriesID = ds.id
+	left join FilerMst f on f.Iconum = ds.CompanyID
+	left join FilerTypes t on t.Code = f.Filer_Type
+	left join Countries c on c.iso_country = f.ISO_Country
+	left join CompanyIndustry ci on ci.Iconum = f.Iconum
+	left join IndustryDetail id on id.id = ci.IndustryDetailID
+	left join IndustryGroup ig on ig.ID = id.IndustryGroupID
+	left join ReportType r on r.id = d.reporttypeid
+where DAMDocumentId =  @damid and f.Iconum=@iconum
+	  ";
+			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+				using (SqlCommand cmd = new SqlCommand(query, conn)) {
+					conn.Open();
+					cmd.Parameters.AddWithValue("@damid", damid);
+					cmd.Parameters.AddWithValue("@iconum", iconum);
+
+					using (SqlDataReader sdr = cmd.ExecuteReader()) {
+						if (sdr.Read()) {
+							var ret = new
+							{
+								PPI = sdr.GetStringSafe(0),
+								Iconum = sdr.GetInt32(1),
+								Firm_Name = sdr.GetStringSafe(2),
+								Profile = sdr.GetStringSafe(3),
+								CompanyPriority = 0,
+								Country_Name = sdr.GetStringSafe(4),
+								DAMDocumentId = sdr.GetGuid(5),
+								ReportType = sdr.GetStringSafe(6),
+								ReportDate = sdr.GetDateTimeSafe(7)
+							};
+							return ret;
+						}
+					}
+				}
+			}
+
+			return null;
+
+		}
+
+
+
 
 		public CompanyDTO GetCompany(int iconum) {
 
@@ -172,7 +218,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 						shareClasses.Remove(rootShareClass);
 					}
 				}
-			}			
+			}
 			return companyShareClasses;
 		}
 
@@ -252,7 +298,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 								PPI = sdr.GetStringSafe(14),
 								Id = sdr.GetStringSafe(15),
 								PermId = sdr.GetStringSafe(15),
-                                TypeOfShare = sdr.GetStringSafe(16)
+								TypeOfShare = sdr.GetStringSafe(16)
 							};
 							if (!companyShareClasses.ContainsKey(iconum)) {
 								companyShareClasses.Add(iconum, new List<ShareClassDataDTO>());
@@ -295,36 +341,36 @@ ORDER BY ChangeDate DESC";
 		}
 
 		public Dictionary<int, List<ShareClassDataDTO>> GetCompanyShareClassData(List<int> iconums, DateTime? reportDate, DateTime? since) {
-            try {
-                DateTime startTime = DateTime.Now;
-                Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
-                Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);                
-                List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
-                // Supercore data is SecPermId based
-                if (superfastIconums.Count > 0) {
-                    SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-                    Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
-                        superfastShares.GetLatestCompanyFPEShareData(superfastIconums, reportDate, since);
-                    foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in superfastShareData) {
-                        int iconum = keyValuePair.Key;
-                        Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
-                        if (companyShareClassData.ContainsKey(iconum)) {
-                            List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-                            foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-                                List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-                                if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
-                                    securityItemList = superfastSecurityItems[shareClass.PermId];
-                                }
-                                shareClass.ShareClassData = securityItemList;
-                            }
-                        }
-                    }
-                }                
-                return companyShareClassData;
-            }catch(Exception ex) {                
-                LogException(ex, string.Join(",", iconums));
-                throw ex;
-            }
+			try {
+				DateTime startTime = DateTime.Now;
+				Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
+				Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
+				List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
+				// Supercore data is SecPermId based
+				if (superfastIconums.Count > 0) {
+					SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
+					Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
+							superfastShares.GetLatestCompanyFPEShareData(superfastIconums, reportDate, since);
+					foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in superfastShareData) {
+						int iconum = keyValuePair.Key;
+						Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
+						if (companyShareClassData.ContainsKey(iconum)) {
+							List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+							foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+								List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+								if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
+									securityItemList = superfastSecurityItems[shareClass.PermId];
+								}
+								shareClass.ShareClassData = securityItemList;
+							}
+						}
+					}
+				}
+				return companyShareClassData;
+			} catch (Exception ex) {
+				LogException(ex, string.Join(",", iconums));
+				throw ex;
+			}
 		}
 
 		/// <summary>
@@ -336,45 +382,45 @@ ORDER BY ChangeDate DESC";
 		/// <param name="since"></param>
 		/// <returns></returns>
 		public Dictionary<int, List<ShareClassDataDTO>> GetAllShareClassData(List<int> iconums, string stdCode, DateTime? reportDate, DateTime? since) {
-            try {
-                Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
-                Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);                
-                List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();                
+			try {
+				Dictionary<int, List<ShareClassDataDTO>> companyShareClassData = GetCompanyShareClasses(iconums);
+				Dictionary<int, EffortDTO> companyEfforts = GetCompaniesEfforts(iconums);
+				List<int> superfastIconums = companyEfforts.Where(kvp => kvp.Value.Name == EffortDTO.SuperCore().Name).Select(kvp => kvp.Key).ToList();
 
-                // Supercore data is SecPermId based
-                if (superfastIconums.Count > 0) {
-                    SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
-                    Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
-                            superfastShares.GetAllFpeShareDataForStdCode(superfastIconums, stdCode, reportDate, since);
-                    foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in superfastShareData) {
-                        int iconum = keyValuePair.Key;
-                        Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
-                        if (companyShareClassData.ContainsKey(iconum)) {
-                            List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
-                            foreach (ShareClassDataDTO shareClass in shareClassDataList) {
-                                List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
-                                if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
-                                    foreach (var item in superfastSecurityItems[shareClass.PermId]) {
-                                        securityItemList.Add(item);
-                                    }
-                                }
-                                shareClass.ShareClassData = securityItemList;
-                            }
-                        }
-                    }
-                }                
-                return companyShareClassData;
-            }catch(Exception ex) {
-                LogException(ex, string.Join(",", iconums));
-                throw ex;
-            }
+				// Supercore data is SecPermId based
+				if (superfastIconums.Count > 0) {
+					SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
+					Dictionary<int, Dictionary<string, List<ShareClassDataItem>>> superfastShareData =
+									superfastShares.GetAllFpeShareDataForStdCode(superfastIconums, stdCode, reportDate, since);
+					foreach (KeyValuePair<int, Dictionary<string, List<ShareClassDataItem>>> keyValuePair in superfastShareData) {
+						int iconum = keyValuePair.Key;
+						Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = keyValuePair.Value;
+						if (companyShareClassData.ContainsKey(iconum)) {
+							List<ShareClassDataDTO> shareClassDataList = companyShareClassData[iconum];
+							foreach (ShareClassDataDTO shareClass in shareClassDataList) {
+								List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
+								if (shareClass.PermId != null && superfastSecurityItems.ContainsKey(shareClass.PermId) && superfastSecurityItems[shareClass.PermId] != null) {
+									foreach (var item in superfastSecurityItems[shareClass.PermId]) {
+										securityItemList.Add(item);
+									}
+								}
+								shareClass.ShareClassData = securityItemList;
+							}
+						}
+					}
+				}
+				return companyShareClassData;
+			} catch (Exception ex) {
+				LogException(ex, string.Join(",", iconums));
+				throw ex;
+			}
 		}
 
 		// TODO: change this to point to shares instead of voyager and superfast
 		public IEnumerable<ShareClassDataDTO> GetCurrentCompanyShareClassData(int iconum) {
 			List<ShareClassDataDTO> shareClassDataList = new List<ShareClassDataDTO>();
 			IEnumerable<ShareClassDTO> shareClasses = GetCompanyShareClasses(iconum);
-			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);						
+			SuperFastSharesHelper superfastShares = new SuperFastSharesHelper(_sfConnectionString);
 			Dictionary<string, List<ShareClassDataItem>> superfastSecurityItems = superfastShares.GetCurrentShareDataItems(iconum);
 			foreach (ShareClassDTO shareClass in shareClasses) {
 				List<ShareClassDataItem> securityItemList = new List<ShareClassDataItem>();
@@ -400,11 +446,11 @@ ORDER BY ChangeDate DESC";
 			foreach (int iconum in companies) {
 				//table.Rows.Add(iconum);
 				effortDictionary.Add(iconum, EffortDTO.SuperCore());
-			}            
-            return effortDictionary;
-		}        
+			}
+			return effortDictionary;
+		}
 
-        public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {
+		public Dictionary<int, CompanyPriority> GetCompanyPriority(List<int> iconums) {
 			Dictionary<int, CompanyPriority> priorities = new Dictionary<int, CompanyPriority>();
 			Dictionary<int, decimal?> absolutePriorities = GetAbsolutePriority(iconums);
 			Dictionary<int, int?> priorityBuckets = GetPriorityBucket(iconums);
@@ -563,26 +609,26 @@ ORDER BY ChangeDate DESC";
 			return result;
 		}
 
-        private void LogException(Exception ex, string exMeta = null) {
-            var EnvStackTrace = String.Join("<br/>", Environment.StackTrace.Replace("\r", "").Split('\n').Where(x => x.Contains("CurrentShares")));
-            if (!string.IsNullOrEmpty(exMeta))
-                EnvStackTrace += "<br/><br/>ExceptionMeta: " + exMeta;
-            SendEmail(ex.Message + "<br/>" + ex.StackTrace + "<br/><br/>" + EnvStackTrace);
-        }
+		private void LogException(Exception ex, string exMeta = null) {
+			var EnvStackTrace = String.Join("<br/>", Environment.StackTrace.Replace("\r", "").Split('\n').Where(x => x.Contains("CurrentShares")));
+			if (!string.IsNullOrEmpty(exMeta))
+				EnvStackTrace += "<br/><br/>ExceptionMeta: " + exMeta;
+			SendEmail(ex.Message + "<br/>" + ex.StackTrace + "<br/><br/>" + EnvStackTrace);
+		}
 
-        private void SendEmail(string body) {
+		private void SendEmail(string body) {
 
-            var EnvStackTrace = String.Join("<br/>", Environment.StackTrace.Replace("\r", "").Split('\n').Where(x => x.Contains("CurrentShares")));
-            SmtpClient mySMTP = new SmtpClient("mail.factset.com");
-            MailAddress mailFrom = new MailAddress("CIE.CurrentShares.Support@factset.com", "CIE Current Shares Support");
-            MailMessage message = new MailMessage();
-            message.From = mailFrom;
-            message.To.Add(new MailAddress("apatil@factset.com", "Abhijeet Patil"));
-            message.Subject = "Current Shares Logger";
-            message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
-            message.Body = body;
-            message.IsBodyHtml = true;
-            mySMTP.Send(message);
-        }
-    }
+			var EnvStackTrace = String.Join("<br/>", Environment.StackTrace.Replace("\r", "").Split('\n').Where(x => x.Contains("CurrentShares")));
+			SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+			MailAddress mailFrom = new MailAddress("CIE.CurrentShares.Support@factset.com", "CIE Current Shares Support");
+			MailMessage message = new MailMessage();
+			message.From = mailFrom;
+			message.To.Add(new MailAddress("apatil@factset.com", "Abhijeet Patil"));
+			message.Subject = "Current Shares Logger";
+			message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+			message.Body = body;
+			message.IsBodyHtml = true;
+			mySMTP.Send(message);
+		}
+	}
 }
