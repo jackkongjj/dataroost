@@ -219,6 +219,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
             [JsonProperty("nodes")]
             public List<Node> Nodes { get; set; }
+            [JsonProperty("documents")]
+            public List<string> Documents { get; set; }
+
         }
 
         public class ReactNode {
@@ -324,27 +327,79 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             return nodes;
         }
 
-
-        private List<Node> GetAngularTree(TintInfo result)
+        public string GetDataTree()
         {
+
+            int tries = 1;
+            List<Node> nodes = new List<Node>();
+
+            while (tries > 0)
+            {
+                try
+                {
+                    nodes = GetAngularTree();
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<Node>());
+                    }
+
+                }
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
+        private List<Node> GetAngularTree()
+        {
+            const string query = @"
+SELECT  [Id]
+      ,[Label]
+  FROM [ffdocumenthistory].[dbo].[GDBClusters_1203] order by id
+			";
+                List<Node> allNodes = new List<Node>();
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var n = new Node();
+                                n.Id = (int)sdr.GetInt64(0);
+                                n.Title = sdr.GetString(1);
+                                n.Nodes = new List<Node>();
+                                allNodes.Add(n);
+                            }
+                        }
+                    }
+                }
             List<Node> nodes = new List<Node>();
             string[] big3Table = { "BS", "IS", "CF" };
-            foreach (var table in result.Tables)
+            bool first = false;
+            if (true)
             {
-                if (!big3Table.Contains(table.Type.ToUpper()))
-                    continue;
                 Node t = new Node();
                 nodes.Add(t);
-                t.Id = table.Id;
-                t.Title = table.Type;
+                t.Id = 0;
+                t.Title = "AVG-BS";
                 t.Nodes = new List<Node>();
                 Stack<Node> stack = new Stack<Node>();
                 stack.Push(t);
 
-                foreach (var row in table.Rows)
+                foreach (var row in allNodes)
                 {
                     int i = 0;
-                    foreach (var labelAtlevel in row.LabelHierarchy)
+                    var labelHierarchy = row.Title.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var labelAtlevel in labelHierarchy)
                     {
                         i++;
                         if (stack.Count <= i)
@@ -360,10 +415,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                         }
                     }
                     var lastRoot = stack.Peek();
-                    var endLabel = row.LabelHierarchy.Last();
+                    var endLabel = labelHierarchy.Last();
                     i = 0;
                     int j = 0; // insert
-                    foreach (var labelAtlevel in row.LabelHierarchy)
+                    foreach (var labelAtlevel in labelHierarchy)
                     {
                         i++;
                         if (stack.Count > i)
@@ -387,105 +442,121 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                             r.Title = endLabel;
                             r.Nodes = new List<Node>();
                             lastRoot.Nodes.Add(r);
+                            lastRoot = r;
+                            stack.Push(r);
                         }
                     }
 
                 }
             }
+            foreach (var n in nodes)
+            {
+                nodeDocuments(n);
+            }
             return nodes;
         }
-        public string GetDataTreeFake(Guid DamDocumentID)
+
+ 
+        private Dictionary<long, List<Guid>> documentCluster = new Dictionary<long, List<Guid>>();
+        private Dictionary<long, List<Guid>> initDocumentCluster()
         {
-
-            //string url =  @"http://auto-tablehandler-dev.factset.io/document/43c9a57f-9b11-e811-80f1-8cdcd4af21e4/38";
-            string urlPattern = @"http://auto-tablehandler-dev.factset.io/document/{0}/0";
-            string testURL = @"http://auto-tablehandler-dev.factset.io/queue/document/dd17a130-682b-e711-80ea-8cdcd4af21e4/31";
-            string url = String.Format(urlPattern, DamDocumentID);
-            url = testURL;
-
-            int tries = 3;
-            List<Node> nodes = new List<Node>();
-
-            while (tries > 0)
+            documentCluster = new Dictionary<long, List<Guid>>();
+            try
             {
-                try
-                {
-                    var outputresult = GetTintFile(url);
-                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
-                    nodes = GetAngularTree(result);
-                    tries = 0;
-                }
-                catch (Exception ex)
-                {
-                    if (--tries > 0)
-                    {
-                        System.Threading.Thread.Sleep(1000);
-                    }
+                const string query = @"
+SELECT distinct code.GDBClusterID , item.DocumentId
+  FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
+  JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
+ where code.GDBClusterID is not null
+ order by GDBClusterID
+			";
 
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetInt64(0);
+                                if (!documentCluster.ContainsKey(id))
+                                {
+                                    documentCluster.Add(id, new List<Guid>());
+                                }
+                                var g = sdr.GetGuid(1);
+                                documentCluster[id].Add(g);
+                            }
+                        }
+                    }
                 }
             }
-            return JsonConvert.SerializeObject(nodes);
+            catch
+            {
+            }
+            return documentCluster;
         }
-
-        public string GetDataTree(Guid DamDocumentID, int fileNo)
+        private Node nodeDocuments(Node n)
         {
-
-            string urlPattern = @"http://auto-tablehandler-dev.factset.io/queue/document/{0}/{1}";
-            string url = String.Format(urlPattern, DamDocumentID, fileNo);
-            int tries = 3;
-            List<Node> nodes = new List<Node>();
-
-            while (tries > 0)
+            if (n.Documents == null)
             {
-                try
-                {
-                    var outputresult = GetTintFile(url);
-                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
-                    nodes = GetAngularTree(result);
-                    tries = 0;
-                }
-                catch (Exception ex)
-                {
-                    if (--tries > 0)
-                    {
-                        System.Threading.Thread.Sleep(1000);
-                    }
-                    else
-                    {
-                        return JsonConvert.SerializeObject(new List<Node>());
-                    }
-
-                }
+                n.Documents = new List<string>();
             }
-            return JsonConvert.SerializeObject(nodes);
-        }
+            if (documentCluster == null || documentCluster.Count < 1)
+            {
+                initDocumentCluster();
+            }
+//            try
+//            {
+//                const string query = @"
+//SELECT distinct item.DocumentId
+//  FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
+//  JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
+//  where code.GDBClusterID = @clusterID
+//			";
+//                List<Node> allNodes = new List<Node>();
+//                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+//                {
+//                    using (SqlCommand cmd = new SqlCommand(query, conn))
+//                    {
+//                        conn.Open();
+//                        cmd.Parameters.AddWithValue("@clusterID", n.Id);
+//                        using (SqlDataReader sdr = cmd.ExecuteReader())
+//                        {
+//                            while (sdr.Read())
+//                            {
+//                                var g = sdr.GetGuid(0);
+//                                n.Documents.Add(g);
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//            catch
+//            {
+//            }
 
-        public string GetDataTreeTest(Guid DamDocumentID, int fileNo) {
-
-            string urlPattern = @"http://auto-tablehandler-dev.factset.io/queue/document/{0}/{1}";
-            string url = String.Format(urlPattern, DamDocumentID, fileNo);
-            int tries = 3;
-            List<ReactNode> nodes = new List<ReactNode>();
-
-            while (tries > 0) {
-                try {
-                    var outputresult = GetTintFile(url);
-                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<TintInfo>(outputresult);
-                    nodes = GetAngularTreeTest(result);
-                    tries = 0;
-                } catch (Exception ex) {
-                    if (--tries > 0) {
-                        System.Threading.Thread.Sleep(1000);
-                    } else {
-                        return JsonConvert.SerializeObject(new List<ReactNode>());
-                    }
+            if (documentCluster.ContainsKey(n.Id))
+            {
+                n.Documents.Add(n.Title);
+                foreach (var d in documentCluster[n.Id])
+                {
+                    n.Documents.Add(d.ToString());
 
                 }
+                n.Title += string.Format(" ({0})", documentCluster[n.Id].Count);
             }
-            return JsonConvert.SerializeObject(nodes);
+            else
+            {
+                n.Title += string.Format(" (Cid: {0})", n.Id);
+            }
+            foreach (var child in n.Nodes)
+            {
+                nodeDocuments(child);
+            }
+            return n;
         }
-
-
         public string GetSegmentTree(string treeName)
         {
             const string query = @"
