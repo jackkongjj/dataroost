@@ -1556,6 +1556,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				List<int> cellids = helper.GetSibilingTableCells(unstitchInput.TargetStaticHierarchyID, unstitchInput.DocumentTimeSliceIDs);
 				UnStitchResult ret = helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
+				/*
 				Dictionary<int, SCARAPITableCell> map = new Dictionary<int, SCARAPITableCell>();
 				foreach (int cellid in cellids) {
 					List<SCARAPITableCell> list = helper.GetLPVChangeCells("" + cellid, DocumentId);
@@ -1567,6 +1568,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					}
 					//ret.ChangedCells.AddRange(helper.GetLPVChangeCells("" + cellid, DocumentId));
 				}
+				*/
 				return ret;
 				//return helper.UnstitchStaticHierarchy(unstitchInput.TargetStaticHierarchyID, DocumentId, iconum, unstitchInput.DocumentTimeSliceIDs);
 			} catch (Exception ex) {

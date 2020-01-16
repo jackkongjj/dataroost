@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
 using CCS.Fundamentals.DataRoostAPI.CommLogger;
+using System.Diagnostics;
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class AsReportedTemplateHelper {
 
@@ -641,6 +642,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
 						ch.Level = sh.Level + 1;
 					}
+					/*
 					for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
@@ -654,7 +656,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							if (correctTs != null && correctTs.Cells.FirstOrDefault(x => x.ID == tc.ID) == null) {
 								correctTs.Cells.Add(tc);
 							}
-							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+							//List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
 							bool hasValidChild = false;
 							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
@@ -667,6 +669,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							break;
 						}
 					}
+					*/
 					List<int> cellids = new List<int>();
 					for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
@@ -1043,6 +1046,12 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 		}
 
 		public AsReportedTemplate GetTemplateWithSqlDataReader(int iconum, string TemplateName, Guid DocumentId, int? Years = null) {
+			/*
+			Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
+			Debug.AutoFlush = true;
+			Debug.Indent();
+			DateTime stime = DateTime.Now;
+			*/
 			decimal maxdif = getDifVariance(DocumentId, false);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
@@ -1106,6 +1115,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							};
 							while (reader.Read()) {
 								sb.AppendLine("Read." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+
 								StaticHierarchy shs = new StaticHierarchy
 								{
 									Id = reader.GetInt32(ordinals.StaticHierarchyID),
@@ -1128,6 +1138,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								shs.DocumentSeriesId = reader.GetInt32(ordinals.DocumentSeriesID);
 								shs.StaticHierarchyMetaType = reader.GetString(ordinals.StaticHierarchyMetaType);
 								shs.TableTypeDescription = reader.GetString(ordinals.TableTypeDescription);
+
 								sb.AppendLine("shsCell." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 								shs.Cells = new List<SCARAPITableCell>();
 								sb.AppendLine("Shid: " + shs.Id.ToString() + " utc" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
@@ -1154,8 +1165,12 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							int adjustedOrder = 0;
 							#region read CellsQuery
 							sb.AppendLine("Cell2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
+							int cc = StaticHierarchies.Count();
+		
+							int cout = 0;
 							while (reader.Read()) {
-								if (shix >= StaticHierarchies.Count())
+								cout++;
+								if (shix >= cc)
 									break;
 								if (reader.GetInt64(29) == 1) {
 									SCARAPITableCell cell;
@@ -1198,6 +1213,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 										adjustedOrder = reader.GetInt32(28);
 										cell.CompanyFinancialTermID = reader.GetNullable<int>(34);
 									}
+
 									if (adjustedOrder < 0) {
 										var negSh = StaticHierarchies.FirstOrDefault(x => x.CompanyFinancialTermId == cell.CompanyFinancialTermID && x.AdjustedOrder < 0);
 										if (negSh == null) continue;
@@ -1212,11 +1228,10 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 										} else {
 											throw new Exception();
 										}
-
 									} else {
 										while (adjustedOrder != StaticHierarchies[shix].AdjustedOrder) {
 											shix++;
-											if (shix >= StaticHierarchies.Count())
+											if (shix >= cc)
 												break;
 										}
 										var currSh = StaticHierarchies.FirstOrDefault(x => x.AdjustedOrder == adjustedOrder && x.CompanyFinancialTermId == cell.CompanyFinancialTermID);
@@ -1228,7 +1243,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 										//	if (shix >= StaticHierarchies.Count())
 										//		break;
 										//}
-										if (shix >= StaticHierarchies.Count())
+										if (shix >= cc)
 											break;
 										if (cell.ID == 0) {
 											BlankCells.Add(cell, new Tuple<StaticHierarchy, int>(currSh, currSh.Cells.Count));
@@ -1309,7 +1324,6 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
 							}
 							#endregion
-
 							reader.NextResult();
 							sb.AppendLine("IsSummary." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 							while (reader.Read()) {
@@ -1328,17 +1342,16 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					#endregion
 				}
 				CommunicationLogger.LogEvent("GetTemplateWithSqlDataReader", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-
-                List<StaticHierarchy> DanglingHeaders= new List<StaticHierarchy>();
-                DanglingHeaders = StaticHierarchies.Where(x => x.IsDanglingHeader == true).ToList();
-                foreach(StaticHierarchy dh in DanglingHeaders) {
-                    List<StaticHierarchy> ChildList;
-                    if (dh.ParentID != null) {
-                        ChildList = SHChildLookup[dh.ParentID.AsInt32()];
-                        ChildList.InsertRange(ChildList.IndexOf(dh), SHChildLookup[dh.Id]);
-                        ChildList.Remove(dh);
-                    }                    
-                }
+				List<StaticHierarchy> DanglingHeaders = new List<StaticHierarchy>();
+				DanglingHeaders = StaticHierarchies.Where(x => x.IsDanglingHeader == true).ToList();
+				foreach (StaticHierarchy dh in DanglingHeaders) {
+					List<StaticHierarchy> ChildList;
+					if (dh.ParentID != null) {
+						ChildList = SHChildLookup[dh.ParentID.AsInt32()];
+						ChildList.InsertRange(ChildList.IndexOf(dh), SHChildLookup[dh.Id]);
+						ChildList.Remove(dh);
+					}
+				}
 				sb.AppendLine("Calculate." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 				foreach (StaticHierarchy sh in StaticHierarchies) {//Finds likeperiod validation failures. Currently failing with virtual cells
 					sb.AppendLine("Calculate Sh." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
@@ -1348,6 +1361,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 					foreach (StaticHierarchy ch in SHChildLookup[sh.Id]) {
 						ch.Level = sh.Level + 1;
 					}
+					/*
 					for (int i = 0; i < sh.Cells.Count; i++) {
 						try {
 							TimeSlice ts = temp.TimeSlices[i];
@@ -1357,49 +1371,19 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								ts.Cells = new List<SCARAPITableCell>();
 							}
 							ts.Cells.Add(tc);
-							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+							//List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
 
 							bool hasValidChild = false;
 							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
 							if (hasValidChild && tc.ID == 0 && !tc.ValueNumeric.HasValue && !tc.VirtualValueNumeric.HasValue && !IsSummaryLookup.ContainsKey(ts.Id)) {
 								tc.VirtualValueNumeric = calcChildSum;
 							}
-
-
-							//bool whatever = false;
-							//decimal cellValue = CalculateCellValue(tc, BlankCells, SHChildLookup, IsSummaryLookup, ref whatever, temp.TimeSlices);
-
-							//List<int> sortedLessThanPubDate = matches.Where(m2 => temp.TimeSlices[m2].PublicationDate < temp.TimeSlices[i].PublicationDate).OrderByDescending(c => temp.TimeSlices[c].PublicationDate).ToList();
-
-							//if (LPV(BlankCells, CellLookup, SHChildLookup, IsSummaryLookup, sh, tc, matches, ref whatever, cellValue, sortedLessThanPubDate, temp.TimeSlices)
-							//) {
-							//	tc.LikePeriodValidationFlag = true;
-							//	tc.StaticHierarchyID = sh.Id;
-							//	tc.DocumentTimeSliceID = ts.Id;
-							//}
-
-							//bool ChildrenSumEqual = false;
-							//if (!tc.ValueNumeric.HasValue || !hasValidChild)
-							//	ChildrenSumEqual = true;
-							//else {
-							//	decimal diff = cellValue - calcChildSum;
-							//	diff = Math.Abs(diff);
-
-							//	if (tc.ScalingFactorValue == 1.0)
-							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.01m));
-							//	else
-							//		ChildrenSumEqual = tc.ValueNumeric.HasValue && ((diff == 0) || (diff < 0.1m && Math.Abs(cellValue) > 100));
-							//}
-
-							//tc.MTMWValidationFlag = tc.ValueNumeric.HasValue && SHChildLookup[sh.Id].Count > 0 &&
-							//		!ChildrenSumEqual &&
-							//				!tc.MTMWErrorTypeId.HasValue && sh.UnitTypeId != 2;
-
 						} catch (Exception ex) {
 							Console.WriteLine(ex.Message);
 							break;
 						}
 					}
+					*/
 					sb.AppendLine("Calculate Sh Cells." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 					List<int> cellids = new List<int>();
 					for (int i = 0; i < sh.Cells.Count; i++) {
@@ -8009,7 +7993,7 @@ END CATCH
 				CommunicationLogger.LogEvent("StitchStaticHierarchiesNoCheck", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
 			}
-
+			/*
 			foreach (SCARAPITableCell cell in res.StaticHierarchy.Cells) {
 				decimal value = (cell.ValueNumeric.HasValue ? cell.ValueNumeric.Value : 0) * (cell.IsIncomePositive ? 1 : -1) * (decimal)cell.ScalingFactorValue;
 				decimal sum = 0;
@@ -8022,7 +8006,7 @@ END CATCH
 				}
 				cell.MTMWValidationFlag = value != sum && any;
 			}
-
+			
 			//TODO: Optimize
 			Dictionary<int, Dictionary<int, bool>> ParentMTMW = new Dictionary<int, Dictionary<int, bool>>();
 			foreach (CellMTMWComponent comp in res.ParentCellChangeComponents.Where(c => c.RootDocumentTimeSliceID == c.DocumentTimeSliceID && c.RootStaticHierarchyID == c.StaticHierarchyID)) {
@@ -8042,7 +8026,7 @@ END CATCH
 				ParentMTMW[comp.StaticHierarchyID].Add(comp.DocumentTimeSliceID, any && val != sum);
 			}
 			res.ParentMTMWChanges = ParentMTMW;
-
+			*/
 			return res;
 		}
 
@@ -8329,7 +8313,7 @@ END CATCH
 						}
 
 						sdr.NextResult();
-
+						/*
 						CellChangeComponents = sdr.Cast<IDataRecord>().Select(r => new CellMTMWComponent()
 						{
 							StaticHierarchyID = r.GetInt32(0),
@@ -8342,14 +8326,13 @@ END CATCH
 							RootDocumentTimeSliceID = r.GetInt32(7)
 						}
 						).ToList();
+						*/
 					}
 				}
 				CommunicationLogger.LogEvent("UnstitchStaticHierarchyNoCheck", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
 			}
-
-
-
+			/*
 			Dictionary<Tuple<int, int>, decimal> CellValueMap = new Dictionary<Tuple<int, int>, decimal>();
 
 			foreach (CellMTMWComponent comp in CellChangeComponents) {
@@ -8369,7 +8352,7 @@ END CATCH
 			foreach (StaticHierarchy sh in res.StaticHierarchies) {
 				sh.Level = SHLevels[sh.Id];
 			}
-
+			*/
 			return res;
 		}
 
