@@ -221,6 +221,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public List<Node> Nodes { get; set; }
             [JsonProperty("documents")]
             public List<string> Documents { get; set; }
+            [JsonIgnore]
+            public string Childrentitle { get; set; }
 
         }
 
@@ -497,7 +499,52 @@ SELECT distinct code.GDBClusterID , item.DocumentId
             }
             return documentCluster;
         }
-        private Node nodeDocuments(Node n)
+        private Dictionary<Guid, List<string>> tickerCluster = new Dictionary<Guid, List<string>>();
+        private Dictionary<Guid, List<string>> initTickerCluster()
+        {
+            tickerCluster = new Dictionary<Guid, List<string>>();
+            try
+            {
+                const string query = @"
+SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
+  FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
+  JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
+  JOIN Document d on d.DAMDocumentId = item.DocumentId
+  JOIN DocumentSeries ds on d.DocumentSeriesID = ds.ID
+  JOIN FilerMst f on f.Iconum = ds.CompanyID
+ where code.GDBClusterID is not null
+ group by item.DocumentId
+			";
+
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetGuid(0);
+                                if (!tickerCluster.ContainsKey(id))
+                                {
+                                    tickerCluster.Add(id, new List<string>());
+                                }
+                                var g = sdr.GetStringSafe(1);
+                                var h = sdr.GetStringSafe(2);
+                                tickerCluster[id].Add(g);
+                                tickerCluster[id].Add(h);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return tickerCluster;
+        }
+        private Node nodeDocuments(Node n, string hiearchy = "")
         {
             if (n.Documents == null)
             {
@@ -506,46 +553,29 @@ SELECT distinct code.GDBClusterID , item.DocumentId
             if (documentCluster == null || documentCluster.Count < 1)
             {
                 initDocumentCluster();
+                initTickerCluster();
             }
-//            try
-//            {
-//                const string query = @"
-//SELECT distinct item.DocumentId
-//  FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
-//  JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
-//  where code.GDBClusterID = @clusterID
-//			";
-//                List<Node> allNodes = new List<Node>();
-//                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
-//                {
-//                    using (SqlCommand cmd = new SqlCommand(query, conn))
-//                    {
-//                        conn.Open();
-//                        cmd.Parameters.AddWithValue("@clusterID", n.Id);
-//                        using (SqlDataReader sdr = cmd.ExecuteReader())
-//                        {
-//                            while (sdr.Read())
-//                            {
-//                                var g = sdr.GetGuid(0);
-//                                n.Documents.Add(g);
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//            catch
-//            {
-//            }
-
+            var nTitle = n.Title;
+            if (string.IsNullOrWhiteSpace(n.Childrentitle))
+            {
+                n.Childrentitle = "";
+            }
+            n.Childrentitle += nTitle;
             if (documentCluster.ContainsKey(n.Id))
             {
-                n.Documents.Add(n.Title);
                 foreach (var d in documentCluster[n.Id])
                 {
                     n.Documents.Add(d.ToString());
+                    if (tickerCluster.ContainsKey(d))
+                    {
+                        n.Documents.AddRange(tickerCluster[d]);
+                    }
+
 
                 }
+                n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
                 n.Title += string.Format(" ({0})", documentCluster[n.Id].Count);
+
             }
             else
             {
@@ -553,10 +583,27 @@ SELECT distinct code.GDBClusterID , item.DocumentId
             }
             foreach (var child in n.Nodes)
             {
-                nodeDocuments(child);
+                nodeDocuments(child, string.Format("{0}[{1}]", hiearchy, nTitle));
             }
+            //foreach (var child in n.Nodes)
+            //{
+            //    n.Childrentitle += childrenTitle(child);
+            //}
             return n;
         }
+
+        public string childrenTitle(Node n, string hiearchy = "")
+        {
+            string s = "";
+            foreach (var child in n.Nodes)
+            {
+                //n.Childrentitle += childrenTitle(child);
+                s += n.Childrentitle;
+            }
+            s += n.Title;
+            return s;
+        }
+
         public string GetSegmentTree(string treeName)
         {
             const string query = @"
