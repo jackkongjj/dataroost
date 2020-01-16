@@ -839,9 +839,6 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							count = tc_count;
 						}
 					}
-
-
-
 				}
 				c.Currency = TransformProductViewCurrency(c);
 				string periodType = tablecells.Where(tt => tt.PeriodLength == result).Select(x => x.PeriodTypeID).FirstOrDefault();
@@ -1166,10 +1163,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 							#region read CellsQuery
 							sb.AppendLine("Cell2." + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture));
 							int cc = StaticHierarchies.Count();
-		
-							int cout = 0;
 							while (reader.Read()) {
-								cout++;
 								if (shix >= cc)
 									break;
 								if (reader.GetInt64(29) == 1) {
@@ -5384,11 +5378,11 @@ OUTPUT $action, 'StaticHierarchy', inserted.Id, inserted.AdjustedOrder INTO @Cha
 			string cleanup_sql = @"
 exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup {0};
 ";
-            string redStarSlotting_sql = @"
+			string redStarSlotting_sql = @"
 exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 ";
-            Guid DocumentID = new Guid();
-            private JArray _jarray;
+			Guid DocumentID = new Guid();
+			private JArray _jarray;
 			public JsonToSQLStaticHierarchy(JToken jToken)
 				: base("") {
 				if (jToken == null) {
@@ -5454,16 +5448,16 @@ exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
-                            DocumentID = elem["DocumentID"].AsGuid();
+							DocumentID = elem["DocumentID"].AsGuid();
 						}
 					} catch (System.Exception ex) {
 						sb.AppendLine(@"/*" + ex.Message + elem["action"].ToString() + @"*/");
 					}
 				}
 
-                if(!(DocumentID == Guid.Empty)) {
-                    sb.AppendLine(string.Format(redStarSlotting_sql, DocumentID.ToString()));
-                }
+				if (!(DocumentID == Guid.Empty)) {
+					sb.AppendLine(string.Format(redStarSlotting_sql, DocumentID.ToString()));
+				}
 				if (!string.IsNullOrEmpty(tableTypeId)) {
 					sb.AppendLine(string.Format(cleanup_sql, tableTypeId));
 				}
@@ -5480,7 +5474,7 @@ exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 				CommunicationLogger.LogEvent("JsonToSQLStaticHierarchy.Translate", "DataRoost", starttime, DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 				return result;
 			}
-            
+
 			public string TranslateInsert() {
 				string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 				if (_jarray == null) return "";
@@ -5778,7 +5772,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				var dimensionToCel = json["DimensionToCell"];
 				var documentTimeSlice = json["DocumentTimeSlice"];
 				var documentTimeSliceTableCell = json["DocumentTimeSliceTableCell"];
-                var documentID = json["DocumentId"];
+				var documentID = json["DocumentId"];
 				sb.AppendLine(new JsonToSQLCompanyFinancialTerm(cft).Translate());
 				sb.AppendLine(new JsonToSQLStaticHierarchy(shs).Translate());
 				sb.AppendLine(new JsonToSQLTableDimension(dtid, tabledimension).Translate());
@@ -5807,30 +5801,29 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							List<object> aList = new List<object>();
 
-                            while (reader.Read()) {
-                                var firstfield = "";
-                                try {
-                                    firstfield = reader.GetStringSafe(0);
-                                } catch {
-                                }
-                                if (firstfield == "ChangeResult") {
-                                    var changeType = reader.GetStringSafe(1);
-                                    var tableType = reader.GetStringSafe(2);
-                                    var Id = reader.GetInt32(3);
-                                    var Info = -1;
-                                    try {
-                                        Info = reader.GetInt32(4);
-                                    } catch (Exception ex) {
+							while (reader.Read()) {
+								var firstfield = "";
+								try {
+									firstfield = reader.GetStringSafe(0);
+								} catch {
+								}
+								if (firstfield == "ChangeResult") {
+									var changeType = reader.GetStringSafe(1);
+									var tableType = reader.GetStringSafe(2);
+									var Id = reader.GetInt32(3);
+									var Info = -1;
+									try {
+										Info = reader.GetInt32(4);
+									} catch (Exception ex) {
 
-                                    }
+									}
 
-                                    var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
-                                    aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
-                                }
-                                else {
-                                    reader.NextResult();
-                                }
-                             }
+									var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
+									aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
+								} else {
+									reader.NextResult();
+								}
+							}
 							if (reader.NextResult() && reader.Read()) {
 								if (reader.GetStringSafe(0) == "commit") {
 									result.ReturnValue["Success"] = "T";
@@ -5838,7 +5831,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 									result.ReturnValue["Success"] = "F";
 								}
 							}
-						result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
+							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
 						}
 					}
 				}
