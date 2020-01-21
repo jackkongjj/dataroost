@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using FactSet.Data.SqlClient;
+using System.Text.RegularExpressions;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
@@ -357,6 +358,58 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             }
             return JsonConvert.SerializeObject(nodes);
         }
+        public static string DeepCleanString(string str)
+        {
+            string result = str.ToLower();
+ 
+            string[] remlabelWords = result.Split(' ');
+            for (int i = 0; i < remlabelWords.Count(); i++)
+            {
+                var ii = new Regex(@"ii$");
+                var ies = new Regex(@"ies$");
+                var es = new Regex(@"(s|x|ch|sh)es$");
+                var s = new Regex(@"([a-z]){3,}s$");
+                var leases = new Regex(@"leases$");
+                var less = new Regex(@"less");
+                if (remlabelWords[i] == "radii")
+                {
+                    remlabelWords[i] = "radius";
+                }
+                else if (ii.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"ii$", "us");
+                }
+                else if (leases.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"leases$", "lease");
+                }
+                else if (less.IsMatch(remlabelWords[i]))
+                {
+                }
+                else if (ies.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"ies$", "y");
+                }
+                else if (es.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"es$", "");
+                }
+                else if (s.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"s$", "");
+                }
+                //spelling.Text = remlabelWords[i];
+                //spelling.SpellCheck();
+                //if (!oSpell.TestWord(remlabelWords[i]))
+                //{
+                //    remlabelWords[i] = "";
+                //}
+            }
+            result = string.Join(" ", remlabelWords.Where(x => x.Length >= 1 && !string.IsNullOrWhiteSpace(x)).ToList());// && !_stops.ContainsKey(c.ToLower())));
+
+            return result;
+
+        }
         private List<Node> GetAngularTree()
         {
             const string query = @"
@@ -400,7 +453,8 @@ SELECT  [Id]
                 foreach (var row in allNodes)
                 {
                     int i = 0;
-                    var labelHierarchy = row.Title.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    var cleanedRowTitle = DeepCleanString(row.Title);
+                    var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
                     foreach (var labelAtlevel in labelHierarchy)
                     {
                         i++;
@@ -419,23 +473,38 @@ SELECT  [Id]
                     var lastRoot = stack.Peek();
                     var endLabel = labelHierarchy.Last();
                     i = 0;
-                    int j = 0; // insert
+                    int j = 0;  
                     foreach (var labelAtlevel in labelHierarchy)
                     {
-                        i++;
+                        i++; 
                         if (stack.Count > i)
-                        {
+                        {// count to the last common level. 
                             continue;
                         }
                         if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
                         {
-                            Node r = new Node();
-                            r.Id = -1;
-                            r.Title = labelAtlevel;
-                            r.Nodes = new List<Node>();
-                            lastRoot.Nodes.Add(r);
-                            lastRoot = r;
-                            stack.Push(r);
+                            var currentRoot = stack.Peek();
+                            bool found = false;
+                            foreach (var m in currentRoot.Nodes)
+                            {
+                                if (m.Title == labelAtlevel)
+                                {
+                                    lastRoot = m;
+                                    stack.Push(m);
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found)
+                            {
+                                Node r = new Node();
+                                r.Id = -1;
+                                r.Title = labelAtlevel;
+                                r.Nodes = new List<Node>();
+                                lastRoot.Nodes.Add(r);
+                                lastRoot = r;
+                                stack.Push(r);
+                            }
                         }
                         else
                         {
@@ -455,7 +524,12 @@ SELECT  [Id]
             {
                 nodeDocuments(n);
             }
-            return nodes;
+            List<Node> newTree = new List<Node>();
+            foreach (var n in nodes.First().Nodes)
+            {
+                newTree.Add(n);
+            }
+            return newTree;
         }
 
  
