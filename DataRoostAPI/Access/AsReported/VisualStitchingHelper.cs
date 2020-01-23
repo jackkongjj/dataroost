@@ -533,14 +533,15 @@ SELECT  [Id]
         }
 
  
-        private Dictionary<long, List<Guid>> documentCluster = new Dictionary<long, List<Guid>>();
-        private Dictionary<long, List<Guid>> initDocumentCluster()
+        private Dictionary<long, List<Tuple<Guid, string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string>>>();
+
+        private Dictionary<long, List<Tuple<Guid, string>>> initDocumentCluster()
         {
-            documentCluster = new Dictionary<long, List<Guid>>();
+            documentCluster = new Dictionary<long, List<Tuple<Guid, string>>>();
             try
             {
                 const string query = @"
-SELECT distinct code.GDBClusterID , item.DocumentId
+SELECT distinct code.GDBClusterID , item.DocumentId, item.label
   FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
   JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
  where code.GDBClusterID is not null
@@ -559,10 +560,11 @@ SELECT distinct code.GDBClusterID , item.DocumentId
                                 var id = sdr.GetInt64(0);
                                 if (!documentCluster.ContainsKey(id))
                                 {
-                                    documentCluster.Add(id, new List<Guid>());
+                                    documentCluster.Add(id, new List<Tuple<Guid, string>>());
                                 }
                                 var g = sdr.GetGuid(1);
-                                documentCluster[id].Add(g);
+                                var h = sdr.GetStringSafe(2);
+                                documentCluster[id].Add(new Tuple<Guid, string>(g, h));
                             }
                         }
                     }
@@ -580,7 +582,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId
             try
             {
                 const string query = @"
-SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
+SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker) 
   FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
   JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
   JOIN Document d on d.DAMDocumentId = item.DocumentId
@@ -637,14 +639,30 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
             n.Childrentitle += nTitle;
             if (documentCluster.ContainsKey(n.Id))
             {
+
                 foreach (var d in documentCluster[n.Id])
                 {
-                    n.Documents.Add(d.ToString());
-                    if (tickerCluster.ContainsKey(d))
-                    {
-                        n.Documents.AddRange(tickerCluster[d]);
-                    }
+                    var doc = new List<string>();
 
+                    string z = "";
+                    string y = "";
+                    //doc.Add(d.ToString());
+                    if (tickerCluster.ContainsKey(d.Item1))
+                    {
+                        //foreach(var t in tickerCluster[d.Item1])
+                        //{
+                        //    doc.Add(t);
+
+                        //}
+                        z = tickerCluster[d.Item1][0];
+                        y = tickerCluster[d.Item1][1];
+
+
+                    }
+                    //doc.Add(d.Item2);
+                    //n.Documents.Add(doc);
+                    Tuple<string, string, Guid, string> tuple = new Tuple<string, string, Guid, string>(y, d.Item2, d.Item1, z);
+                    n.Documents.Add(tuple.ToString());
 
                 }
                 n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
