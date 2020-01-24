@@ -220,6 +220,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
             [JsonProperty("nodes")]
             public List<Node> Nodes { get; set; }
+            [JsonIgnore]
+            public List<Tuple<string, string, string, Guid, string>> DocumentTuples { get; set; }
             [JsonProperty("documents")]
             public List<string> Documents { get; set; }
             [JsonIgnore]
@@ -627,6 +629,10 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
             {
                 n.Documents = new List<string>();
             }
+            if (n.DocumentTuples == null)
+            {
+                n.DocumentTuples = new List<Tuple<string, string, string, Guid, string>>();
+            }
             if (documentCluster == null || documentCluster.Count < 1)
             {
                 initDocumentCluster();
@@ -663,11 +669,20 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
                     Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(y,  d.Item2, d.Item3, d.Item1, z);
-                    n.Documents.Add(tuple.ToString());
+                    n.DocumentTuples.Add(tuple);
 
                 }
+                foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1))
+                {
+                    n.Documents.Add(dt.ToString());
+                }
                 n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
-                n.Title += string.Format(" ({0})", documentCluster[n.Id].Count);
+                var set = new HashSet<Guid>();
+                foreach (var g in documentCluster[n.Id])
+                {
+                    set.Add(g.Item1);
+                }
+                n.Title += string.Format(" ({0})", set.Count);
 
             }
             else
