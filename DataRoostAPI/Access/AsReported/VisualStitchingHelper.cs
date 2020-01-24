@@ -533,15 +533,15 @@ SELECT  [Id]
         }
 
  
-        private Dictionary<long, List<Tuple<Guid, string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string>>>();
+        private Dictionary<long, List<Tuple<Guid, string,string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
 
-        private Dictionary<long, List<Tuple<Guid, string>>> initDocumentCluster()
+        private Dictionary<long, List<Tuple<Guid, string,string>>> initDocumentCluster()
         {
-            documentCluster = new Dictionary<long, List<Tuple<Guid, string>>>();
+            documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
             try
             {
                 const string query = @"
-SELECT distinct code.GDBClusterID , item.DocumentId, item.label
+SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
   FROM [ffdocumenthistory].[dbo].[GDBCodes_1203] code
   JOIN [ffdocumenthistory].[dbo].[GDBTaggedItems_1203] item on code.id = item.GDBTableId
  where code.GDBClusterID is not null
@@ -560,11 +560,12 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label
                                 var id = sdr.GetInt64(0);
                                 if (!documentCluster.ContainsKey(id))
                                 {
-                                    documentCluster.Add(id, new List<Tuple<Guid, string>>());
+                                    documentCluster.Add(id, new List<Tuple<Guid, string,string>>());
                                 }
                                 var g = sdr.GetGuid(1);
                                 var h = sdr.GetStringSafe(2);
-                                documentCluster[id].Add(new Tuple<Guid, string>(g, h));
+                                var i = sdr.GetStringSafe(3);
+                                documentCluster[id].Add(new Tuple<Guid, string, string>(g, h, i));
                             }
                         }
                     }
@@ -661,7 +662,7 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
                     }
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
-                    Tuple<string, string, Guid, string> tuple = new Tuple<string, string, Guid, string>(y, d.Item2, d.Item1, z);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(y,  d.Item2, d.Item3, d.Item1, z);
                     n.Documents.Add(tuple.ToString());
 
                 }
