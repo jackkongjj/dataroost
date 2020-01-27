@@ -5412,7 +5412,7 @@ exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 							deleted_ids.Add(elem["obj"]["ID"].AsValue());
 						} else if (elem["action"].ToString() == "update") {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+								elem["obj"]["CompanyFinancialTerm"].Equals(JValue.CreateNull()) ? "null": elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
 								elem["obj"]["AdjustedOrder"].AsValue(),
 								elem["obj"]["TableType"]["ID"].AsValue(),
 								elem["obj"]["Description"].AsString(),
@@ -5431,7 +5431,7 @@ exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 							}
 						} else if (elem["action"].ToString() == "insert") {
 							sb.AppendLine(string.Format(merge_sql, 0,
-								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+                                elem["obj"]["CompanyFinancialTerm"].Equals(JValue.CreateNull()) ? "null" : elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
 								elem["obj"]["AdjustedOrder"].AsValue(),
 								elem["obj"]["TableType"]["ID"].AsValue(),
 								elem["obj"]["Description"].AsString(),
@@ -5484,7 +5484,7 @@ exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 					try {
 						if (elem["action"].ToString() == "insert" || elem["action"].ToString() == null) {
 							sb.AppendLine(string.Format(merge_sql, elem["obj"]["ID"].AsValue(),
-								elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
+                                elem["obj"]["CompanyFinancialTerm"].Equals(JValue.CreateNull()) ? "null" : elem["obj"]["CompanyFinancialTerm"]["ID"].AsValue(),
 								elem["obj"]["AdjustedOrder"].AsValue(),
 								elem["obj"]["TableType"]["ID"].AsValue(),
 								elem["obj"]["Description"].AsString(),
