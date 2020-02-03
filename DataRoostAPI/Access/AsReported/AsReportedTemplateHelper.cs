@@ -5802,31 +5802,33 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							List<object> aList = new List<object>();
 
-							while (reader.NextResult() && reader.Read()) {
-								var firstfield = "";
-								try {
-									firstfield = reader.GetStringSafe(0);
-								} catch {
-								}
-								if (firstfield == "ChangeResult") {
-									var changeType = reader.GetStringSafe(1);
-									var tableType = reader.GetStringSafe(2);
-									var Id = reader.GetInt32(3);
-									var Info = -1;
-									try {
-										Info = reader.GetInt32(4);
-									} catch (Exception ex) {
+							while (reader.NextResult()) {
+                                while (reader.Read()) { 
+								    var firstfield = "";
+								    try {
+									    firstfield = reader.GetStringSafe(0);
+								    } catch {
+								    }
+								    if (firstfield == "ChangeResult") {
+									    var changeType = reader.GetStringSafe(1);
+									    var tableType = reader.GetStringSafe(2);
+									    var Id = reader.GetInt32(3);
+									    var Info = -1;
+									    try {
+										    Info = reader.GetInt32(4);
+									    } catch (Exception ex) {
 
-									}
+									    }
 
-								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
-								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
-								} else if (firstfield == "Final"){
-									if (reader.GetStringSafe(1) == "commit") {
-									    result.ReturnValue["Success"] = "T";
-								    } else {
-									    result.ReturnValue["Success"] = "F";
-								    }                                    
+								    var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
+								    aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
+								    } else if (firstfield == "Final"){
+									    if (reader.GetStringSafe(1) == "commit") {
+									        result.ReturnValue["Success"] = "T";
+								        } else {
+									        result.ReturnValue["Success"] = "F";
+								        }                                    
+                                    }
                                 }
 							}
                         result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
