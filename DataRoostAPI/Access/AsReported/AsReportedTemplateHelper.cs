@@ -5781,11 +5781,12 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 				sb.AppendLine(new JsonToSQLDocumentTimeSlice(documentTimeSlice).Translate());
 				sb.AppendLine(new JsonToSQLDocumentTimeSliceTableCell(documentTimeSliceTableCell).Translate());
 				sb.AppendLine(new JsonToSQLDocumentTable(documentTable).Translate());
-				sb.AppendLine("select 'ChangeResult', * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
+                sb.AppendLine("select '' "); // adding this so the read loop works.
+                sb.AppendLine("select 'ChangeResult', * from @ChangeResult; DECLARE @totalInsert int, @totalUpdate int; ");
 				sb.AppendLine("select @totalInsert = count(*) from @ChangeResult where ChangeType = 'INSERT';");
 				sb.AppendLine("select @totalUpdate = count(*) from @ChangeResult where ChangeType = 'UPDATE'; ");
 				sb.AppendLine();
-				sb.AppendLine(string.Format("IF (@totalInsert + @totalUpdate = ({0} + {1})) BEGIN select 'commit'; COMMIT TRAN END ELSE BEGIN select 'rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
+				sb.AppendLine(string.Format("IF (@totalInsert + @totalUpdate = ({0} + {1})) BEGIN select 'Final','commit'; COMMIT TRAN END ELSE BEGIN select 'Final','rollback'; ROLLBACK TRAN END", totalInsert, totalUpdates));
 				sb.AppendLine("END TRY");
 				sb.AppendLine("BEGIN CATCH");
 				sb.AppendLine("select 'rollback'; ROLLBACK TRAN;");
@@ -5801,7 +5802,7 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 						using (SqlDataReader reader = cmd.ExecuteReader()) {
 							List<object> aList = new List<object>();
 
-							while (reader.Read()) {
+							while (reader.NextResult() && reader.Read()) {
 								var firstfield = "";
 								try {
 									firstfield = reader.GetStringSafe(0);
@@ -5818,22 +5819,19 @@ OUTPUT $action, 'DocumentTable', inserted.Id,0 INTO @ChangeResult;
 
 									}
 
-									var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
-									aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
-								} else {
-									reader.NextResult();
-								}
+								var returnStatus2 = new { returnDetails = "", isError = false, mainId = Guid.Empty, eventId = default(Guid) };
+								aList.Add(new { ChangeType = changeType, TableType = tableType, Id = Id, Info = Info });
+								} else if (firstfield == "Final"){
+									if (reader.GetStringSafe(1) == "commit") {
+									    result.ReturnValue["Success"] = "T";
+								    } else {
+									    result.ReturnValue["Success"] = "F";
+								    }                                    
+                                }
 							}
-							if (reader.NextResult() && reader.Read()) {
-								if (reader.GetStringSafe(0) == "commit") {
-									result.ReturnValue["Success"] = "T";
-								} else {
-									result.ReturnValue["Success"] = "F";
-								}
-							}
-							result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
-						}
-					}
+                        result.ReturnValue["Message"] = Newtonsoft.Json.JsonConvert.SerializeObject(aList, Newtonsoft.Json.Formatting.Indented);
+                        }
+                    }
 				}
 			} catch (Exception ex) {
 				result.ReturnValue["DebugMessage"] += ex.Message;
