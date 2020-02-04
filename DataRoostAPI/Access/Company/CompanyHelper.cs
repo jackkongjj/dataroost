@@ -76,7 +76,19 @@ from document as d
 	left join ReportType r on r.id = d.reporttypeid
 where DAMDocumentId =  @damid and f.Iconum=@iconum
 	  ";
-			string query1 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, dts.DAMDocumentId, r.Description,d.DocumentDate 
+			string query1 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate
+from document as d (nolock)
+join DocumentSeries as ds (nolock) on d.DocumentSeriesID = ds.id
+join FilerMst f (nolock) on f.Iconum = ds.CompanyID
+join FilerTypes t (nolock) on t.Code = f.Filer_Type
+join Countries c (nolock) on c.iso_country = f.ISO_Country
+join CompanyIndustry ci (nolock) on ci.Iconum = f.Iconum
+join IndustryDetail id (nolock) on id.id = ci.IndustryDetailID
+join IndustryGroup ig (nolock) on ig.ID = id.IndustryGroupID
+join ReportType r (nolock) on r.id = d.reporttypeid
+where f.Iconum=@iconum and DAMDocumentId=@damid 
+	  ";
+			string query2 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, dts.DAMDocumentId, r.Description,d.DocumentDate 
 from supercore.documenttimeslice dts (nolock)
 join document as d (nolock) on d.DAMDocumentId = dts.DamDocumentID
 join documentseries ds (nolock) on ds.id = dts.DocumentSeriesID
@@ -89,18 +101,6 @@ join IndustryDetail id (nolock) on id.id = ica.IndustryDetailId
 join IndustryGroup ig (nolock) on ig.ID = id.IndustryGroupID
 join ReportType r (nolock) on r.id = d.reporttypeid
 where dts.DamDocumentID=@damid and ds.CompanyID=@iconum
-	  ";
-			string query2 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate
-from document as d (nolock)
-join DocumentSeries as ds (nolock) on d.DocumentSeriesID = ds.id
-join FilerMst f (nolock) on f.Iconum = ds.CompanyID
-join FilerTypes t (nolock) on t.Code = f.Filer_Type
-join Countries c (nolock) on c.iso_country = f.ISO_Country
-join CompanyIndustry ci (nolock) on ci.Iconum = f.Iconum
-join IndustryDetail id (nolock) on id.id = ci.IndustryDetailID
-join IndustryGroup ig (nolock) on ig.ID = id.IndustryGroupID
-join ReportType r (nolock) on r.id = d.reporttypeid
-where f.Iconum=@iconum and DAMDocumentId=@damid 
 	  ";
 			string query3 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate 
 from Document d (nolock)
