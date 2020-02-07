@@ -31,6 +31,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.Company {
 			_damConnectionString = damConnectionString;
 		}
 
+		public object querySeq(String[] querys, String damid, String iconum) {
+			foreach (String query in querys) {
+				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
+					using (SqlCommand cmd = new SqlCommand(query, conn)) {
+						conn.Open();
+						cmd.Parameters.AddWithValue("@damid", damid);
+						cmd.Parameters.AddWithValue("@iconum", iconum);
+
+						using (SqlDataReader sdr = cmd.ExecuteReader()) {
+							if (sdr.Read()) {
+								var ret = new
+								{
+									PPI = sdr.GetStringSafe(0),
+									Iconum = sdr.GetInt32(1),
+									Firm_Name = sdr.GetStringSafe(2),
+									Profile = sdr.GetStringSafe(3),
+									CompanyPriority = 0,
+									Country_Name = sdr.GetStringSafe(4),
+									DAMDocumentId = sdr.GetGuid(5),
+									ReportType = sdr.GetStringSafe(6),
+									ReportDate = sdr.GetDateTimeSafe(7)
+								};
+								return ret;
+							}
+						}
+					}
+				}
+			}
+			return null;
+		}
+
+
 		public object GetCompanyByDamID(String damid, String iconum) {
 			string query = @"select d.PPI, f.Iconum, f.Firm_Name, ig.IndustryGroupCode, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate
 from document as d
@@ -44,38 +76,47 @@ from document as d
 	left join ReportType r on r.id = d.reporttypeid
 where DAMDocumentId =  @damid and f.Iconum=@iconum
 	  ";
-			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
-				using (SqlCommand cmd = new SqlCommand(query, conn)) {
-					conn.Open();
-					cmd.Parameters.AddWithValue("@damid", damid);
-					cmd.Parameters.AddWithValue("@iconum", iconum);
+			string query1 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate
+from document as d (nolock)
+join DocumentSeries as ds (nolock) on d.DocumentSeriesID = ds.id
+join FilerMst f (nolock) on f.Iconum = ds.CompanyID
+join FilerTypes t (nolock) on t.Code = f.Filer_Type
+join Countries c (nolock) on c.iso_country = f.ISO_Country
+join CompanyIndustry ci (nolock) on ci.Iconum = f.Iconum
+join IndustryDetail id (nolock) on id.id = ci.IndustryDetailID
+join IndustryGroup ig (nolock) on ig.ID = id.IndustryGroupID
+join ReportType r (nolock) on r.id = d.reporttypeid
+where f.Iconum=@iconum and DAMDocumentId=@damid 
+	  ";
+			string query2 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, dts.DAMDocumentId, r.Description,d.DocumentDate 
+from supercore.documenttimeslice dts (nolock)
+join document as d (nolock) on d.DAMDocumentId = dts.DamDocumentID
+join documentseries ds (nolock) on ds.id = dts.DocumentSeriesID
+join FilerMst f (nolock) on f.Iconum = ds.CompanyID
+join FilerTypes t (nolock) on t.Code = f.Filer_Type
+join Countries c (nolock) on c.iso_country = f.ISO_Country
+join Supercore.TimeSlice (nolock) ts on ts.id = dts.timesliceid
+join IndustryCountryAssociation (nolock) ica on ica.id = ts.IndustryCountryAssociationID
+join IndustryDetail id (nolock) on id.id = ica.IndustryDetailId
+join IndustryGroup ig (nolock) on ig.ID = id.IndustryGroupID
+join ReportType r (nolock) on r.id = d.reporttypeid
+where dts.DamDocumentID=@damid and ds.CompanyID=@iconum
+	  ";
+			string query3 = @"select d.PPI, f.Iconum, f.Firm_Name, ig.Description, c.name_long, d.DAMDocumentId, r.Description,d.DocumentDate 
+from Document d (nolock)
+join documentseries ds (nolock) on ds.id = d.DocumentSeriesID
+join FilerMst f (nolock) on f.Iconum = ds.CompanyID
+join FilerTypes t (nolock) on t.Code = f.Filer_Type
+join Countries c (nolock) on c.iso_country = f.ISO_Country
+join companyindustry ci (nolock) on ci.Iconum = ds.CompanyID
+join IndustryDetail id (nolock) on id.id = ci.IndustryDetailID
+join IndustryGroup ig (nolock) on ig.ID = id.IndustryGroupID
+join ReportType r (nolock) on r.id = d.reporttypeid
+where ds.CompanyID=@iconum 
+	  ";
 
-					using (SqlDataReader sdr = cmd.ExecuteReader()) {
-						if (sdr.Read()) {
-							var ret = new
-							{
-								PPI = sdr.GetStringSafe(0),
-								Iconum = sdr.GetInt32(1),
-								Firm_Name = sdr.GetStringSafe(2),
-								Profile = sdr.GetStringSafe(3),
-								CompanyPriority = 0,
-								Country_Name = sdr.GetStringSafe(4),
-								DAMDocumentId = sdr.GetGuid(5),
-								ReportType = sdr.GetStringSafe(6),
-								ReportDate = sdr.GetDateTimeSafe(7)
-							};
-							return ret;
-						}
-					}
-				}
-			}
-
-			return null;
-
+			return querySeq(new String[] { query1, query2, query3 }, damid, iconum);
 		}
-
-
-
 
 		public CompanyDTO GetCompany(int iconum) {
 
