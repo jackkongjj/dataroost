@@ -571,8 +571,8 @@ SELECT  [Id]
         private List<Node> GetAngularTreePostGres()
         {
             const string query = @"
-SELECT  Id,Label, count
-  FROM cluster_name_tree_207 where count > 1 order by id
+SELECT  Id,Label, 0
+  FROM cluster_name_tree  order by id
 			";
             List<Node> allNodes = new List<Node>();
 
@@ -614,6 +614,8 @@ SELECT  Id,Label, count
                     int i = 0;
                     var cleanedRowTitle = DeepCleanString(row.Title);
                     var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (labelHierarchy.Length == 0)
+                        continue;
                     foreach (var labelAtlevel in labelHierarchy)
                     {
                         i++;
@@ -687,10 +689,22 @@ SELECT  Id,Label, count
                 PGNodeDocument(n);
             }
             List<Node> newTree = new List<Node>();
+            Node unknown = new Node();
+            unknown.Id = 0;
+            unknown.Title = "Unknown";
+            unknown.Nodes = new List<Node>();
             foreach (var n in nodes.First().Nodes)
             {
-                newTree.Add(n);
+                if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total asset"))
+                {
+                    newTree.Add(n);
+                }
+                else
+                {
+                    unknown.Nodes.Add(n);
+                }
             }
+            newTree.Add(unknown);
             return newTree;
         }
 
@@ -786,7 +800,7 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
         {
             if (n.ParentId.HasValue)
             {
-                n.Title += string.Format(" ({0})", n.ParentId);
+                //n.Title += string.Format(" ({0})", n.ParentId);
             }
             foreach (var child in n.Nodes)
             {
