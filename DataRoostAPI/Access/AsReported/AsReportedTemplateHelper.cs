@@ -1994,6 +1994,8 @@ delete from dbo.ARTimeSliceDerivationMeta where StaticHierarchyID in (SELECT Sta
 delete from dbo.ARTimeSliceDerivationMetaNodes where StaticHierarchyID in (SELECT StaticHierarchyID FROM @SHIDS);
 DELETE FROM StaticHierarchySecurity WHERE StaticHierarchyId in (SELECT StaticHierarchyID FROM @SHIDS);
 DELETE FROM StaticHierarchy WHERE Id in (SELECT StaticHierarchyID FROM @SHIDS);
+
+exec prcUpd_FFDocHist_UpdateStaticHierarchy_Cleanup @TableTypeId;
 SELECT StaticHierarchyID FROM @SHIDS
 ";
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
