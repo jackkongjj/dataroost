@@ -565,7 +565,7 @@ SELECT  [Id]
 
         public static string PGConnectionString()
         {
-            return "Host=ip-172-31-81-139.manager.factset.io;Port=5432;Username=ubqXRZAeTPybOH;Password=GZ6wBe42UMwemfY84UFHH6g0WD;Database=dpNeBDaEKMr8P6;sslmode=Require;Trust Server Certificate=true;";
+            return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
         }
 
         private List<Node> GetAngularTreePostGres()
@@ -686,7 +686,7 @@ SELECT  Id,Label, 0
             //return nodes;
             foreach (var n in nodes)
             {
-                PGNodeDocument(n);
+                PGnodeDocuments2(n);
             }
             List<Node> newTree = new List<Node>();
             Node unknown = new Node();
@@ -709,6 +709,8 @@ SELECT  Id,Label, 0
         }
 
         private Dictionary<long, List<Tuple<Guid, string,string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
+        private Dictionary<long, List<Tuple<Guid, string, string, string>>> pgdocumentCluster;
+        private Dictionary<long, List<Tuple<Guid, string>>> pgdocumentCluster2;
 
         private Dictionary<long, List<Tuple<Guid, string,string>>> initDocumentCluster()
         {
@@ -751,7 +753,90 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
             }
             return documentCluster;
         }
+
+        private Dictionary<long, List<Tuple<Guid, string, string, string>>> initPgDocumentCluster()
+        {
+            pgdocumentCluster = new Dictionary<long, List<Tuple<Guid, string, string, string>>>();
+            try
+            {
+                const string query = @"
+select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
+ order by cluster_id
+			";
+
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetInt64(0);
+                                if (!pgdocumentCluster.ContainsKey(id))
+                                {
+                                    pgdocumentCluster.Add(id, new List<Tuple<Guid, string, string, string>>());
+                                }
+                                var g = sdr.GetGuid(1);
+                                var h = sdr.GetStringSafe(2);
+                                var i = sdr.GetStringSafe(3);
+                                var j = sdr.GetStringSafe(4);
+                                pgdocumentCluster[id].Add(new Tuple<Guid, string, string, string>(g, h, i, j));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var s = ex.Message;
+            }
+            return pgdocumentCluster;
+        }
+        private Dictionary<long, List<Tuple<Guid, string>>> initPgDocumentCluster2()
+        {
+            pgdocumentCluster2 = new Dictionary<long, List<Tuple<Guid, string>>>();
+            try
+            {
+                const string query = @"
+  SELECT DISTINCT t.cluster_id,
+    t.document_id
+   FROM norm_name_tree t
+	 where t.cluster_id is not null
+			";
+
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetInt64(0);
+                                if (!pgdocumentCluster2.ContainsKey(id))
+                                {
+                                    pgdocumentCluster2.Add(id, new List<Tuple<Guid, string>>());
+                                }
+                                var g = sdr.GetGuid(1);
+                                var h = "";
+
+                                pgdocumentCluster2[id].Add(new Tuple<Guid, string>(g, h));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var s = ex.Message;
+            }
+            return pgdocumentCluster2;
+        }
         private Dictionary<Guid, List<string>> tickerCluster = new Dictionary<Guid, List<string>>();
+        private Dictionary<Guid, List<string>> pgtickerCluster;
         private Dictionary<Guid, List<string>> initTickerCluster()
         {
             tickerCluster = new Dictionary<Guid, List<string>>();
@@ -796,6 +881,42 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
             }
             return tickerCluster;
         }
+
+        private Dictionary<Guid, List<string>> initPgTickerCluster()
+        {
+            pgtickerCluster = new Dictionary<Guid, List<string>>();
+            try
+            {
+                const string query = @"
+select * from vw_documents_iconums
+			";
+
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetGuid(0);
+                                if (!tickerCluster.ContainsKey(id))
+                                {
+                                    pgtickerCluster.Add(id, new List<string>());
+                                }
+                                var g = sdr.GetInt32(1).ToString();
+                                pgtickerCluster[id].Add(g);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return pgtickerCluster;
+        }
         private Node PGNodeDocument(Node n)
         {
             if (n.ParentId.HasValue)
@@ -806,6 +927,129 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
             {
                 PGNodeDocument(child);
             }
+            return n;
+        }
+        private Node PGnodeDocuments2(Node n, string hiearchy = "")
+        {
+            if (n.Documents == null)
+            {
+                n.Documents = new List<string>();
+            }
+            if (n.DocumentTuples == null)
+            {
+                n.DocumentTuples = new List<Tuple<string, string, string, Guid, string>>();
+            }
+            if (pgdocumentCluster == null)
+            {
+                initPgDocumentCluster();
+            }
+            if (pgdocumentCluster2 == null)
+            {
+                initPgDocumentCluster2();
+            }
+            if (pgtickerCluster == null)
+            {
+                initPgTickerCluster();
+
+            }
+            var nTitle = n.Title;
+            if (string.IsNullOrWhiteSpace(n.Childrentitle))
+            {
+                n.Childrentitle = "";
+            }
+            n.Childrentitle += nTitle;
+            if (pgdocumentCluster.ContainsKey(n.Id))
+            { // n.id is ClusterID
+
+                foreach (var d in pgdocumentCluster[n.Id])
+                {
+                    var doc = new List<string>();
+
+                    string z = "";
+                    string y = "";
+                    //doc.Add(d.ToString());
+                    if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+                    {
+                        //foreach(var t in tickerCluster[d.Item1])
+                        //{
+                        //    doc.Add(t);
+
+                        //}
+                        z = pgtickerCluster[d.Item1][0]; // iconum
+                        //y = pgtickerCluster[d.Item1][1]; // was ticker
+
+
+                    }
+                    //doc.Add(d.Item2);
+                    //n.Documents.Add(doc);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(d.Item4, d.Item2, d.Item3, d.Item1, z);
+                    n.DocumentTuples.Add(tuple);
+
+                }
+                foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1))
+                {
+                    n.Documents.Add(dt.ToString());
+                }
+                n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
+                var set = new HashSet<Guid>();
+                foreach (var g in pgdocumentCluster[n.Id])
+                {
+                    set.Add(g.Item1);
+                }
+                n.Title += string.Format(" ({0})", set.Count);
+
+            }
+            else if (pgdocumentCluster2.ContainsKey(n.Id))
+            {
+                foreach (var d in pgdocumentCluster2[n.Id])
+                {
+                    var doc = new List<string>();
+
+                    string z = "";
+                    string y = "";
+                    //doc.Add(d.ToString());
+                    if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+                    {
+                        //foreach(var t in tickerCluster[d.Item1])
+                        //{
+                        //    doc.Add(t);
+
+                        //}
+                        z = pgtickerCluster[d.Item1][0]; // iconum
+                        //y = pgtickerCluster[d.Item1][1]; // was ticker
+
+
+                    }
+                    //doc.Add(d.Item2);
+                    //n.Documents.Add(doc);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("", d.Item2, "", d.Item1, z);
+                    n.DocumentTuples.Add(tuple);
+
+                }
+                foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1))
+                {
+                    n.Documents.Add(dt.ToString());
+                }
+                n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
+                var set = new HashSet<Guid>();
+                foreach (var g in pgdocumentCluster2[n.Id])
+                {
+                    set.Add(g.Item1);
+                }
+                n.Title += string.Format(" ({0})", set.Count);
+            }
+            else
+            {
+                n.Title += string.Format(" (Cid: {0})", n.Id);
+            }
+            foreach (var child in n.Nodes)
+            {
+                PGnodeDocuments2(child, string.Format("{0}[{1}]", hiearchy, nTitle));
+            }
+            //foreach (var child in n.Nodes)
+            //{
+            //    n.Childrentitle += childrenTitle(child);
+            //}
             return n;
         }
         private Node nodeDocuments(Node n, string hiearchy = "")
