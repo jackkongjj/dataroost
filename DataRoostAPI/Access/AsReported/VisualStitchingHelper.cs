@@ -760,10 +760,19 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
             try
             {
                 const string query = @"
-select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
- order by cluster_id
+ SELECT DISTINCT t.cluster_id,
+    t.document_id,
+    f.raw_row_label,
+    f.value,
+    p.item_code
+   FROM norm_name_tree t
+     JOIN norm_name_tree_flat f ON t.id = f.id
+     JOIN prod_bank_data p ON f.document_id = p.document_id AND f.item_offset::text = p.item_offset::text AND f.iconum = p.iconum
+  WHERE t.cluster_id IS NOT NULL
+  ORDER BY t.cluster_id;
 			";
-
+                //select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
+                // order by cluster_id
                 using (var conn = new NpgsqlConnection(PGConnectionString()))
                 {
                     using (var cmd = new NpgsqlCommand(query, conn))
