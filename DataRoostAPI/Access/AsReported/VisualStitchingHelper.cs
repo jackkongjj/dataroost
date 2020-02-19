@@ -991,7 +991,8 @@ select * from vw_documents_iconums
                     }
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
-                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(d.Item4, d.Item2, d.Item3, d.Item1, z);
+                    // Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("SDB: " + d.Item4, d.Item2, d.Item3, d.Item1, "Iconum: " + z);
                     n.DocumentTuples.Add(tuple);
 
                 }
@@ -1000,13 +1001,15 @@ select * from vw_documents_iconums
                     n.Documents.Add(dt.ToString());
                 }
                 n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
-                var set = new HashSet<Guid>();
-                foreach (var g in pgdocumentCluster[n.Id])
+                if (pgdocumentCluster.ContainsKey(n.Id))
                 {
-                    set.Add(g.Item1);
+                    var set = new HashSet<Guid>();
+                    foreach (var g in pgdocumentCluster2[n.Id])
+                    {
+                        set.Add(g.Item1);
+                    }
+                    n.Title += string.Format(" ({0})", set.Count);
                 }
-                n.Title += string.Format(" ({0})", set.Count);
-
             }
             else if (pgdocumentCluster2.ContainsKey(n.Id))
             {
@@ -1031,7 +1034,7 @@ select * from vw_documents_iconums
                     }
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
-                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("", d.Item2, "", d.Item1, z);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("Missing", d.Item2, "Missing", d.Item1, "Iconum: " + z);
                     n.DocumentTuples.Add(tuple);
 
                 }
@@ -1049,7 +1052,7 @@ select * from vw_documents_iconums
             }
             else
             {
-                n.Title += string.Format(" (Cid: {0})", n.Id);
+                //n.Title += string.Format(" (Cid: {0})", n.Id);
             }
             foreach (var child in n.Nodes)
             {
