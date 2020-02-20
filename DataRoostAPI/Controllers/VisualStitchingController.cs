@@ -168,6 +168,29 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return null;
             }
         }
+        [Route("datatree/v3/{DamDocumentId}/{FileNo}")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTreeFileNoV3(Guid DamDocumentId, int FileNo)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetPostGresDataTree3();
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
         //[Route("datatree/{DamDocumentId}/debug")]
         //[HttpGet]
         //public HttpResponseMessage GetDataTreeFake(Guid DamDocumentId)

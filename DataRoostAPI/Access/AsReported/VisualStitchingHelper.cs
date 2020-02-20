@@ -388,6 +388,35 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             }
             return JsonConvert.SerializeObject(nodes);
         }
+
+        public string GetPostGresDataTree3()
+        {
+
+            int tries = 1;
+            List<Node> nodes = new List<Node>();
+
+            while (tries > 0)
+            {
+                try
+                {
+                    nodes = GetAngularTreePostGres3();
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<Node>());
+                    }
+
+                }
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
         public static string DeepCleanString(string str)
         {
             string result = str.ToLower();
@@ -696,6 +725,146 @@ SELECT  Id,Label, 0
             foreach (var n in nodes.First().Nodes)
             {
                 if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total asset"))
+                {
+                    newTree.Add(n);
+                }
+                else
+                {
+                    unknown.Nodes.Add(n);
+                }
+            }
+            newTree.Add(unknown);
+            return newTree;
+        }
+
+        private List<Node> GetAngularTreePostGres3()
+        {
+            const string query = @"
+SELECT  Id,Label, 0
+  FROM cluster_name_tree_filtered  order by id
+			";
+            List<Node> allNodes = new List<Node>();
+
+            using (var conn = new NpgsqlConnection(PGConnectionString()))
+            {
+                using (var cmd = new NpgsqlCommand(query, conn))
+                {
+                    conn.Open();
+
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            var n = new Node();
+                            n.Id = (int)sdr.GetInt64(0);
+                            n.Title = sdr.GetString(1);
+                            n.ParentId = sdr.GetInt32(2); // count, NOT parentid
+                            n.Nodes = new List<Node>();
+                            allNodes.Add(n);
+                        }
+                    }
+                }
+            }
+            List<Node> nodes = new List<Node>();
+            string[] big3Table = { "BS", "IS", "CF" };
+            bool first = false;
+            if (true)
+            {
+                Node t = new Node();
+                nodes.Add(t);
+                t.Id = 0;
+                t.Title = "AVG-BS";
+                t.Nodes = new List<Node>();
+                Stack<Node> stack = new Stack<Node>();
+                stack.Push(t);
+
+                foreach (var row in allNodes)
+                {
+                    int i = 0;
+                    var cleanedRowTitle = DeepCleanString(row.Title);
+                    var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (labelHierarchy.Length == 0)
+                        continue;
+                    foreach (var labelAtlevel in labelHierarchy)
+                    {
+                        i++;
+                        if (stack.Count <= i)
+                        {
+                            break;
+                        }
+                        if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel)
+                        {
+                            while (stack.Count > i && stack.Count > 1)
+                            {
+                                stack.Pop();
+                            }
+                        }
+                    }
+                    var lastRoot = stack.Peek();
+                    var endLabel = labelHierarchy.Last();
+                    i = 0;
+                    int j = 0;
+                    foreach (var labelAtlevel in labelHierarchy)
+                    {
+                        i++;
+                        if (stack.Count > i)
+                        {// count to the last common level. 
+                            continue;
+                        }
+                        if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
+                        {
+                            var currentRoot = stack.Peek();
+                            bool found = false;
+                            foreach (var m in currentRoot.Nodes)
+                            {
+                                if (m.Title == labelAtlevel)
+                                {
+                                    lastRoot = m;
+                                    stack.Push(m);
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found)
+                            {
+                                Node r = new Node();
+                                r.Id = -1;
+                                r.Title = labelAtlevel;
+                                r.ParentId = row.ParentId;
+                                r.Nodes = new List<Node>();
+                                lastRoot.Nodes.Add(r);
+                                lastRoot = r;
+                                stack.Push(r);
+                            }
+                        }
+                        else
+                        {
+                            Node r = new Node();
+                            r.Id = row.Id;
+                            r.Title = endLabel;
+                            r.ParentId = row.ParentId;
+                            r.Nodes = new List<Node>();
+                            lastRoot.Nodes.Add(r);
+                            lastRoot = r;
+                            stack.Push(r);
+                        }
+                    }
+
+                }
+            }
+
+            List<Node> newTree = new List<Node>();
+            Node unknown = new Node();
+            unknown.Id = 0;
+            unknown.Title = "Unknown";
+            unknown.Nodes = new List<Node>();
+            foreach (var n in nodes.First().Nodes)
+            {
+                if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total asset"))
+                {
+                    newTree.Add(n);
+                }
+                else if (n.Title.StartsWith("asset") || n.Title.StartsWith("liability and shareholder equity") || n.Title.StartsWith("total asset"))
                 {
                     newTree.Add(n);
                 }
