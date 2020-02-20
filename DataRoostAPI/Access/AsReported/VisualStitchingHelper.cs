@@ -781,7 +781,7 @@ SELECT  Id,Label, 0
                 foreach (var row in allNodes)
                 {
                     int i = 0;
-                    var cleanedRowTitle = DeepCleanString(row.Title);
+                    var cleanedRowTitle = row.Title;
                     var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
                     if (labelHierarchy.Length == 0)
                         continue;
@@ -860,7 +860,7 @@ SELECT  Id,Label, 0
             unknown.Nodes = new List<Node>();
             foreach (var n in nodes.First().Nodes)
             {
-                if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total asset"))
+                if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total assets") || n.Title.StartsWith("total liabilities and"))
                 {
                     newTree.Add(n);
                 }
