@@ -1052,7 +1052,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 			decimal maxdif = getDifVariance(DocumentId, false);
 			var sw = System.Diagnostics.Stopwatch.StartNew();
 			Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell> CellMap = new Dictionary<Tuple<StaticHierarchy, TimeSlice>, SCARAPITableCell>();
-			Dictionary<Tuple<DateTime, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string>, List<int>>();//int is index into timeslices for fast lookup
+			Dictionary<Tuple<DateTime, string, string>, List<int>> TimeSliceMap = new Dictionary<Tuple<DateTime, string, string>, List<int>>();//int is index into timeslices for fast lookup
 
 			AsReportedTemplate temp = new AsReportedTemplate();
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -1292,7 +1292,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
 								TimeSlices.Add(slice);
 
-								Tuple<DateTime, string> tup = new Tuple<DateTime, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType);//TODO: Is this sufficient for Like Period?
+								Tuple<DateTime, string, string> tup = new Tuple<DateTime, string, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType, slice.ReportType);//TODO: Is this sufficient for Like Period?
 								if (!TimeSliceMap.ContainsKey(tup)) {
 									TimeSliceMap.Add(tup, new List<int>());
 								}
@@ -1390,7 +1390,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								ts.Cells = new List<SCARAPITableCell>();
 							}
 							ts.Cells.Add(tc);
-							List<int> matches = TimeSliceMap[new Tuple<DateTime, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType)].Where(j => sh.Cells[j] != tc).ToList();
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType, ts.ReportType)].Where(j => sh.Cells[j] != tc).ToList();
 
 							bool hasValidChild = false;
 							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
