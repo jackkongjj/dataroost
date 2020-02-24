@@ -388,6 +388,7 @@
     <Compile Include="Controllers\VisualStitchingController.cs" />
     <Compile Include="Controllers\VoyagerController.cs" />
     <Compile Include="Filters\ExceptionHandlerFilter.cs" />
+    <Compile Include="Helpers\fn.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>

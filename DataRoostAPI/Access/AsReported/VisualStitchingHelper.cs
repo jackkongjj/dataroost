@@ -9,11 +9,11 @@ using NpgsqlTypes;
 using System.Net;
 using Newtonsoft.Json;
 using System.Linq;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using FactSet.Data.SqlClient;
 using System.Text.RegularExpressions;
+using CCS.Fundamentals.DataRoostAPI.Helpers;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
@@ -242,7 +242,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             [JsonProperty("clustered_parent_id")]
             public long? ClusteredParentId { get; set; }
 
-            [JsonProperty("nodes")]
+            [JsonIgnore]
             public List<NameTreeNode> Nodes { get; set; }
             [JsonProperty("hash_id")]
             public string HashId { get; set; }
@@ -977,114 +977,22 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                     }
                 }
             }
+            foreach (var row in allNodes)
+            {
+                if (!string.IsNullOrWhiteSpace(row.ClusteredNodeLabel))
+                {
+                    var hiearchy = fn.Hierarchy(row.ClusteredNodeLabel);
+                    var parentLabel = fn.RevCdr(hiearchy) + fn.Unbox(fn.RevCar(hiearchy));
+                    var parent = allNodes.FirstOrDefault(x => x.ClusteredNodeLabel == parentLabel);
+                    if (parent != null)
+                    {
+                        row.ClusteredParentId = parent.ClusteredId;
+                    }
+                }
+            }
             return allNodes;
-            List<NameTreeNode> nodes = new List<NameTreeNode>();
-            string[] big3Table = { "BS", "IS", "CF" };
-            bool first = false;
-            //if (true)
-            //{
-            //    NameTreeNode t = new NameTreeNode();
-            //    nodes.Add(t);
-            //    t.Id = 0;
-            //    t.Title = "AVG-BS";
-            //    t.Nodes = new List<NameTreeNode>();
-            //    Stack<NameTreeNode> stack = new Stack<NameTreeNode>();
-            //    stack.Push(t);
-
-            //    foreach (var row in allNodes)
-            //    {
-            //        int i = 0;
-            //        var cleanedRowTitle = DeepCleanString(row.Title);
-            //        var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
-            //        if (labelHierarchy.Length == 0)
-            //            continue;
-            //        foreach (var labelAtlevel in labelHierarchy)
-            //        {
-            //            i++;
-            //            if (stack.Count <= i)
-            //            {
-            //                break;
-            //            }
-            //            if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel)
-            //            {
-            //                while (stack.Count > i && stack.Count > 1)
-            //                {
-            //                    stack.Pop();
-            //                }
-            //            }
-            //        }
-            //        var lastRoot = stack.Peek();
-            //        var endLabel = labelHierarchy.Last();
-            //        i = 0;
-            //        int j = 0;
-            //        foreach (var labelAtlevel in labelHierarchy)
-            //        {
-            //            i++;
-            //            if (stack.Count > i)
-            //            {// count to the last common level. 
-            //                continue;
-            //            }
-            //            if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
-            //            {
-            //                var currentRoot = stack.Peek();
-            //                bool found = false;
-            //                foreach (var m in currentRoot.Nodes)
-            //                {
-            //                    if (m.Title == labelAtlevel)
-            //                    {
-            //                        lastRoot = m;
-            //                        stack.Push(m);
-            //                        found = true;
-            //                        break;
-            //                    }
-            //                }
-            //                if (!found)
-            //                {
-            //                    NameTreeNode r = new NameTreeNode();
-            //                    r.Id = -1;
-            //                    r.Title = labelAtlevel;
-            //                    r.ParentId = row.ParentId;
-            //                    r.Nodes = new List<NameTreeNode>();
-            //                    lastRoot.Nodes.Add(r);
-            //                    lastRoot = r;
-            //                    stack.Push(r);
-            //                }
-            //            }
-            //            else
-            //            {
-            //                NameTreeNode r = new NameTreeNode();
-            //                r.Id = row.Id;
-            //                r.Title = endLabel;
-            //                r.ParentId = row.ParentId;
-            //                r.Nodes = new List<NameTreeNode>();
-            //                lastRoot.Nodes.Add(r);
-            //                lastRoot = r;
-            //                stack.Push(r);
-            //            }
-            //        }
-
-            //    }
-            //}
- 
-            //List<NameTreeNode> newTree = new List<NameTreeNode>();
-            //NameTreeNode unknown = new NameTreeNode();
-            //unknown.Id = 0;
-            //unknown.Title = "Unknown";
-            //unknown.Nodes = new List<NameTreeNode>();
-            //foreach (var n in nodes.First().Nodes)
-            //{
-            //    if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total asset"))
-            //    {
-            //        newTree.Add(n);
-            //    }
-            //    else
-            //    {
-            //        unknown.Nodes.Add(n);
-            //    }
-            //}
-            //newTree.Add(unknown);
-            //return newTree;
         }
+       
         private Dictionary<long, List<Tuple<Guid, string,string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
         private Dictionary<long, List<Tuple<Guid, string, string, string>>> pgdocumentCluster;
         private Dictionary<long, List<Tuple<Guid, string>>> pgdocumentCluster2;
