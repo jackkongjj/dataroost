@@ -229,6 +229,28 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
         }
 
+        public class NameTreeNode
+        {
+            [JsonProperty("id")]
+            public long Id { get; set; }
+            [JsonProperty("clustered_id")]
+            public long? ClusteredId { get; set; }
+            [JsonProperty("as_reported_label")]
+            public string AsReportedNodeLabel { get; set; }
+            [JsonProperty("clustered_label")]
+            public string ClusteredNodeLabel { get; set; }
+            [JsonProperty("clustered_parent_id")]
+            public long? ClusteredParentId { get; set; }
+
+            [JsonProperty("nodes")]
+            public List<NameTreeNode> Nodes { get; set; }
+            [JsonProperty("hash_id")]
+            public string HashId { get; set; }
+            [JsonProperty("offset")]
+            public string Offset { get; set; }
+
+        }
+
         public class ReactNode {
             [JsonProperty("id")]
             public int Id { get; set; }
@@ -877,6 +899,192 @@ SELECT  Id,Label, 0
             return newTree;
         }
 
+
+        public string GetNameTree(Guid DamDocumentId)
+        {
+
+            int tries = 1;
+            List<NameTreeNode> nodes = new List<NameTreeNode>();
+
+            while (tries > 0)
+            {
+                try
+                {
+                    nodes = GetNameTreePostGres(DamDocumentId);
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<NameTreeNode>());
+                    }
+
+                }
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
+
+        private List<NameTreeNode> GetNameTreePostGres(Guid DamDocumentId)
+        {
+            const string query = @"
+ select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
+	 tc.item_offset as offset, tc.hash_id, tcf.Iconum 
+    from norm_name_tree tc
+    join norm_table t
+        on tc.norm_table_id = t.id
+    join norm_name_tree_flat tcf
+        on tc.Id = tcf.Id
+    left join cluster_name_tree c
+        on c.Id = tc.Cluster_id
+where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <> ''
+    and tc.document_id = '{0}'
+	order by tc.id
+			";
+            List<NameTreeNode> allNodes = new List<NameTreeNode>();
+
+            using (var conn = new NpgsqlConnection(PGConnectionString()))
+            {
+                using (var cmd = new NpgsqlCommand(string.Format(query, DamDocumentId.ToString()), conn))
+                {
+                    conn.Open();
+
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            var n = new NameTreeNode();
+                            // 0th = id per value
+                            // 1st = cluster label
+                            // 2nd = cluster code
+                            // 3rd = as reported raw label
+                            // 4th = as reported cleaned label, not used
+                            // 5th = offset
+                            // 6th = Hashid
+                            n.Id = sdr.GetInt64(0);
+                            n.ClusteredNodeLabel = sdr.GetStringSafe(1);
+                            n.ClusteredId = sdr.GetNullable<long>(2);
+                            n.AsReportedNodeLabel = sdr.GetStringSafe(3);
+                            n.Offset = sdr.GetStringSafe(5);
+                            n.HashId = sdr.GetStringSafe(6);
+                            n.Nodes = new List<NameTreeNode>();
+                            allNodes.Add(n);
+                        }
+                    }
+                }
+            }
+            return allNodes;
+            List<NameTreeNode> nodes = new List<NameTreeNode>();
+            string[] big3Table = { "BS", "IS", "CF" };
+            bool first = false;
+            //if (true)
+            //{
+            //    NameTreeNode t = new NameTreeNode();
+            //    nodes.Add(t);
+            //    t.Id = 0;
+            //    t.Title = "AVG-BS";
+            //    t.Nodes = new List<NameTreeNode>();
+            //    Stack<NameTreeNode> stack = new Stack<NameTreeNode>();
+            //    stack.Push(t);
+
+            //    foreach (var row in allNodes)
+            //    {
+            //        int i = 0;
+            //        var cleanedRowTitle = DeepCleanString(row.Title);
+            //        var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+            //        if (labelHierarchy.Length == 0)
+            //            continue;
+            //        foreach (var labelAtlevel in labelHierarchy)
+            //        {
+            //            i++;
+            //            if (stack.Count <= i)
+            //            {
+            //                break;
+            //            }
+            //            if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel)
+            //            {
+            //                while (stack.Count > i && stack.Count > 1)
+            //                {
+            //                    stack.Pop();
+            //                }
+            //            }
+            //        }
+            //        var lastRoot = stack.Peek();
+            //        var endLabel = labelHierarchy.Last();
+            //        i = 0;
+            //        int j = 0;
+            //        foreach (var labelAtlevel in labelHierarchy)
+            //        {
+            //            i++;
+            //            if (stack.Count > i)
+            //            {// count to the last common level. 
+            //                continue;
+            //            }
+            //            if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
+            //            {
+            //                var currentRoot = stack.Peek();
+            //                bool found = false;
+            //                foreach (var m in currentRoot.Nodes)
+            //                {
+            //                    if (m.Title == labelAtlevel)
+            //                    {
+            //                        lastRoot = m;
+            //                        stack.Push(m);
+            //                        found = true;
+            //                        break;
+            //                    }
+            //                }
+            //                if (!found)
+            //                {
+            //                    NameTreeNode r = new NameTreeNode();
+            //                    r.Id = -1;
+            //                    r.Title = labelAtlevel;
+            //                    r.ParentId = row.ParentId;
+            //                    r.Nodes = new List<NameTreeNode>();
+            //                    lastRoot.Nodes.Add(r);
+            //                    lastRoot = r;
+            //                    stack.Push(r);
+            //                }
+            //            }
+            //            else
+            //            {
+            //                NameTreeNode r = new NameTreeNode();
+            //                r.Id = row.Id;
+            //                r.Title = endLabel;
+            //                r.ParentId = row.ParentId;
+            //                r.Nodes = new List<NameTreeNode>();
+            //                lastRoot.Nodes.Add(r);
+            //                lastRoot = r;
+            //                stack.Push(r);
+            //            }
+            //        }
+
+            //    }
+            //}
+ 
+            //List<NameTreeNode> newTree = new List<NameTreeNode>();
+            //NameTreeNode unknown = new NameTreeNode();
+            //unknown.Id = 0;
+            //unknown.Title = "Unknown";
+            //unknown.Nodes = new List<NameTreeNode>();
+            //foreach (var n in nodes.First().Nodes)
+            //{
+            //    if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total asset"))
+            //    {
+            //        newTree.Add(n);
+            //    }
+            //    else
+            //    {
+            //        unknown.Nodes.Add(n);
+            //    }
+            //}
+            //newTree.Add(unknown);
+            //return newTree;
+        }
         private Dictionary<long, List<Tuple<Guid, string,string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
         private Dictionary<long, List<Tuple<Guid, string, string, string>>> pgdocumentCluster;
         private Dictionary<long, List<Tuple<Guid, string>>> pgdocumentCluster2;
