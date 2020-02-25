@@ -1067,7 +1067,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     p.item_code
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
-     JOIN prod_bank_data p ON f.document_id = p.document_id AND f.item_offset::text = p.item_offset::text AND f.iconum = p.iconum
+     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND (f.item_offset::text = p.item_offset::text OR p.item_offset = '')   AND f.iconum = p.iconum
   WHERE t.cluster_id IS NOT NULL
   ORDER BY t.cluster_id;
 			";
@@ -1292,7 +1292,12 @@ select * from vw_documents_iconums
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
                     // Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
-                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("SDB: " + d.Item4, d.Item2, d.Item3, d.Item1, "Iconum: " + z);
+                    var sdb = "x";
+                    if (!string.IsNullOrWhiteSpace(d.Item4))
+                    {
+                        sdb = "SDB: " + d.Item4;
+                    }
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(sdb, d.Item2, d.Item3 ?? "NA", d.Item1, "Iconum: " + z);
                     n.DocumentTuples.Add(tuple);
 
                 }
@@ -1334,7 +1339,7 @@ select * from vw_documents_iconums
                     }
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
-                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("Missing", d.Item2, "Missing", d.Item1, "Iconum: " + z);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("y ", d.Item2, "Missing", d.Item1, "Iconum: " + z);
                     n.DocumentTuples.Add(tuple);
 
                 }
