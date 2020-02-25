@@ -237,6 +237,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public long? ClusteredId { get; set; }
             [JsonProperty("as_reported_label")]
             public string AsReportedNodeLabel { get; set; }
+            [JsonProperty("as_reported_value")]
+            public string AsReportedValue { get; set; }
+            [JsonProperty("as_reported_numeric_value")]
+            public decimal? AsReportedNumericValue { get; set; }
             [JsonProperty("clustered_label")]
             public string ClusteredNodeLabel { get; set; }
             [JsonProperty("clustered_parent_id")]
@@ -248,7 +252,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public string HashId { get; set; }
             [JsonProperty("offset")]
             public string Offset { get; set; }
-
+            [JsonProperty("document_id")]
+            public Guid DocumentID { get; set; }
+            [JsonProperty("iconum")]
+            public int? Iconum { get; set; }
         }
 
         public class ReactNode {
@@ -933,7 +940,7 @@ SELECT  Id,Label, 0
         {
             const string query = @"
  select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
-	 tc.item_offset as offset, tc.hash_id, tcf.Iconum 
+	 tcf.value, tcf.numeric_value, tc.item_offset as offset, tc.hash_id, tc.document_id, tcf.Iconum 
     from norm_name_tree tc
     join norm_table t
         on tc.norm_table_id = t.id
@@ -963,14 +970,22 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                             // 2nd = cluster code
                             // 3rd = as reported raw label
                             // 4th = as reported cleaned label, not used
-                            // 5th = offset
-                            // 6th = Hashid
+                            // 5th = as reported value
+                            // 6th = as reported numeric value
+                            // 7th = offset
+                            // 8th = Hashid
+                            // 9th = Document ID
+                            // 10th = Iconum
                             n.Id = sdr.GetInt64(0);
                             n.ClusteredNodeLabel = sdr.GetStringSafe(1);
                             n.ClusteredId = sdr.GetNullable<long>(2);
                             n.AsReportedNodeLabel = sdr.GetStringSafe(3);
-                            n.Offset = sdr.GetStringSafe(5);
-                            n.HashId = sdr.GetStringSafe(6);
+                            n.AsReportedValue = sdr.GetStringSafe(5);
+                            n.AsReportedNumericValue = sdr.GetNullable<decimal>(6);
+                            n.Offset = sdr.GetStringSafe(7);
+                            n.HashId = sdr.GetStringSafe(8);
+                            n.DocumentID = sdr.GetGuid(9);
+                            n.Iconum = sdr.GetNullable<int>(10);
                             n.Nodes = new List<NameTreeNode>();
                             allNodes.Add(n);
                         }
