@@ -769,8 +769,8 @@ SELECT  Id,Label, 0
         private List<Node> GetAngularTreePostGres3()
         {
             const string query = @"
-SELECT  Id,Label, 0
-  FROM cluster_name_tree_filtered  order by id
+SELECT  Id,Label, iconum_count
+  FROM cluster_name_tree_new where iconum_count > 1 order by id
 			";
             List<Node> allNodes = new List<Node>();
 
