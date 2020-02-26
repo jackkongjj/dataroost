@@ -881,7 +881,10 @@ SELECT  Id,Label, iconum_count
 
                 }
             }
-
+            foreach (var n in nodes)
+            {
+                PGnodeDocuments2(n);
+            }
             List<Node> newTree = new List<Node>();
             Node unknown = new Node();
             unknown.Id = 0;
@@ -1060,7 +1063,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
             try
             {
                 const string query = @"
- SELECT DISTINCT t.cluster_id,
+ SELECT DISTINCT t.cluster_id_new,
     t.document_id,
     f.raw_row_label,
     f.value,
@@ -1068,8 +1071,8 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
      LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND (f.item_offset::text = p.item_offset::text OR p.item_offset = '')   AND f.iconum = p.iconum
-  WHERE t.cluster_id IS NOT NULL
-  ORDER BY t.cluster_id;
+  WHERE t.cluster_id_new IS NOT NULL
+  ORDER BY t.cluster_id_new;
 			";
                 //select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
                 // order by cluster_id
@@ -1109,10 +1112,10 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
             try
             {
                 const string query = @"
-  SELECT DISTINCT t.cluster_id,
+  SELECT DISTINCT t.cluster_id_new,
     t.document_id
    FROM norm_name_tree t
-	 where t.cluster_id is not null
+	 where t.cluster_id_new is not null
 			";
 
                 using (var conn = new NpgsqlConnection(PGConnectionString()))
@@ -1270,37 +1273,37 @@ select * from vw_documents_iconums
             if (pgdocumentCluster.ContainsKey(n.Id))
             { // n.id is ClusterID
 
-                foreach (var d in pgdocumentCluster[n.Id])
-                {
-                    var doc = new List<string>();
+                //foreach (var d in pgdocumentCluster[n.Id])
+                //{
+                //    var doc = new List<string>();
 
-                    string z = "";
-                    string y = "";
-                    //doc.Add(d.ToString());
-                    if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
-                    {
-                        //foreach(var t in tickerCluster[d.Item1])
-                        //{
-                        //    doc.Add(t);
+                //    string z = "";
+                //    string y = "";
+                //    //doc.Add(d.ToString());
+                //    if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+                //    {
+                //        //foreach(var t in tickerCluster[d.Item1])
+                //        //{
+                //        //    doc.Add(t);
 
-                        //}
-                        z = pgtickerCluster[d.Item1][0]; // iconum
-                        //y = pgtickerCluster[d.Item1][1]; // was ticker
+                //        //}
+                //        z = pgtickerCluster[d.Item1][0]; // iconum
+                //        //y = pgtickerCluster[d.Item1][1]; // was ticker
 
 
-                    }
-                    //doc.Add(d.Item2);
-                    //n.Documents.Add(doc);
-                    // Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
-                    var sdb = "x";
-                    if (!string.IsNullOrWhiteSpace(d.Item4))
-                    {
-                        sdb = "SDB: " + d.Item4;
-                    }
-                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(sdb, d.Item2, d.Item3 ?? "NA", d.Item1, "Iconum: " + z);
-                    n.DocumentTuples.Add(tuple);
+                //    }
+                //    //doc.Add(d.Item2);
+                //    //n.Documents.Add(doc);
+                //    // Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
+                //    var sdb = "x";
+                //    if (!string.IsNullOrWhiteSpace(d.Item4))
+                //    {
+                //        sdb = "SDB: " + d.Item4;
+                //    }
+                //    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(sdb, d.Item2, d.Item3 ?? "NA", d.Item1, "Iconum: " + z);
+                //    n.DocumentTuples.Add(tuple);
 
-                }
+                //}
                 foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1))
                 {
                     n.Documents.Add(dt.ToString());
