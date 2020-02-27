@@ -770,7 +770,7 @@ SELECT  Id,Label, 0
         {
             const string query = @"
 SELECT  Id,Label, iconum_count
-  FROM cluster_name_tree_new where iconum_count > 1 order by id
+  FROM popular_name_tree_new where iconum_count > 1 order by id
 			";
             List<Node> allNodes = new List<Node>();
 
