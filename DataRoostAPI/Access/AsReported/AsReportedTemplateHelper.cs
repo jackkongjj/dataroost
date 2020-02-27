@@ -1292,7 +1292,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 
 								TimeSlices.Add(slice);
 
-								Tuple<DateTime, string, string> tup = new Tuple<DateTime, string, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType, slice.ReportType);//TODO: Is this sufficient for Like Period?
+                                Tuple<DateTime, string, string> tup = new Tuple<DateTime, string, string>(slice.TimeSlicePeriodEndDate, slice.PeriodType, slice.ReportType.Equals('P') ? "Prelim":"Final");//TODO: Is this sufficient for Like Period?
 								if (!TimeSliceMap.ContainsKey(tup)) {
 									TimeSliceMap.Add(tup, new List<int>());
 								}
@@ -1390,7 +1390,7 @@ order by CONVERT(varchar, DATEPART(yyyy, tc.CellDate)) desc
 								ts.Cells = new List<SCARAPITableCell>();
 							}
 							ts.Cells.Add(tc);
-							List<int> matches = TimeSliceMap[new Tuple<DateTime, string, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType, ts.ReportType)].Where(j => sh.Cells[j] != tc).ToList();
+							List<int> matches = TimeSliceMap[new Tuple<DateTime, string, string>(ts.TimeSlicePeriodEndDate, ts.PeriodType, ts.ReportType.Equals('P')? "Prelim" : "Final")].Where(j => sh.Cells[j] != tc).ToList();
 
 							bool hasValidChild = false;
 							decimal calcChildSum = CalculateChildSum(tc, CellLookup, SHChildLookup, IsSummaryLookup, ref hasValidChild, temp.TimeSlices);
