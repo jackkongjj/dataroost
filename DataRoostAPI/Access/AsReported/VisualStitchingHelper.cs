@@ -1067,12 +1067,21 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     t.document_id,
     f.raw_row_label,
     f.value,
-    p.item_code, t.item_offset
+    p.item_code, t.item_offset 
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
-     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND (f.item_offset::text = p.item_offset::text OR p.item_offset = '')   AND f.iconum = p.iconum
+     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND  f.item_offset::text = p.item_offset::text    AND f.iconum = p.iconum
   WHERE t.cluster_id_new IS NOT NULL
-  ORDER BY t.cluster_id_new;
+  union
+   SELECT DISTINCT t.cluster_id_new,
+    t.document_id,
+    f.raw_row_label,
+    f.value,
+    p.item_code, t.item_offset 
+   FROM norm_name_tree t
+     JOIN norm_name_tree_flat f ON t.id = f.id
+     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id    AND f.iconum = p.iconum
+  WHERE t.cluster_id_new IS NOT NULL and p.item_offset = '';
 			";
                 //select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
                 // order by cluster_id
