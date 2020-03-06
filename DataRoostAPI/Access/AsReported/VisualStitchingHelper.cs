@@ -1067,7 +1067,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     t.document_id,
     f.raw_row_label,
     f.value,
-    p.item_code
+    p.item_code, t.item_offset
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
      LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND (f.item_offset::text = p.item_offset::text OR p.item_offset = '')   AND f.iconum = p.iconum
@@ -1093,6 +1093,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
                                 var g = sdr.GetGuid(1);
                                 var h = sdr.GetStringSafe(2);
                                 var i = sdr.GetStringSafe(3);
+                                i = sdr.GetStringSafe(5);
                                 var j = sdr.GetStringSafe(4);
                                 pgdocumentCluster[id].Add(new Tuple<Guid, string, string, string>(g, h, i, j));
                             }
