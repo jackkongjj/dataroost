@@ -988,7 +988,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			try {
 				if (input == null)
 					return new ScarResult();
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
 				return helper.AddMissingValueValidation(cftId, timesliceId, DocumentId, input.StringData);
 			} catch (Exception ex) {
