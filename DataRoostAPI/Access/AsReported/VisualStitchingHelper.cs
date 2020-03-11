@@ -256,6 +256,26 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public Guid DocumentID { get; set; }
             [JsonProperty("iconum")]
             public int? Iconum { get; set; }
+            [JsonProperty("cleaned_row_label")]
+            public string CleanedRowLabel { get; set; }
+            [JsonProperty("cleaned_column_label")]
+            public string CleanedColumnLabel { get; set; }
+            [JsonProperty("context")]
+            public string Context { get; set; }
+            [JsonProperty("cell_date")]
+            public DateTime CellDate { get; set; }
+            [JsonProperty("period_length")]
+            public int PeriodLength { get; set; }
+            [JsonProperty("period_type")]
+            public string PeriodType { get; set; }
+            [JsonProperty("interim_type")]
+            public string InterimType { get; set; }
+            [JsonProperty("scaling")]
+            public string Scaling { get; set; }
+            [JsonProperty("currency")]
+            public string Currency { get; set; }
+            [JsonProperty("numeric_value")]
+            public string NumericValue { get; set; }
         }
 
         public class ReactNode {
@@ -944,6 +964,8 @@ SELECT  Id,Label, iconum_count
             const string query = @"
  select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
 	 tcf.value, tcf.numeric_value, tc.item_offset as offset, tc.hash_id, tc.document_id, tcf.Iconum 
+	 ,tcf.cleaned_row_label, tcf.cleaned_column_label, array_to_string(tcf.context, ','), tcf.cell_date, tcf.period_length, tcf.period_type
+	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value
     from norm_name_tree tc
     join norm_table t
         on tc.norm_table_id = t.id
@@ -969,16 +991,11 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                         {
                             var n = new NameTreeNode();
                             // 0th = id per value
-                            // 1st = cluster label
-                            // 2nd = cluster code
-                            // 3rd = as reported raw label
-                            // 4th = as reported cleaned label, not used
                             // 5th = as reported value
-                            // 6th = as reported numeric value
-                            // 7th = offset
-                            // 8th = Hashid
-                            // 9th = Document ID
                             // 10th = Iconum
+                            // 11th = CLeaned row label
+                            // 16th = peiord type
+                            // 17 = interim type
                             n.Id = sdr.GetInt64(0);
                             n.ClusteredNodeLabel = sdr.GetStringSafe(1);
                             n.ClusteredId = sdr.GetNullable<long>(2);
@@ -989,6 +1006,26 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                             n.HashId = sdr.GetStringSafe(8);
                             n.DocumentID = sdr.GetGuid(9);
                             n.Iconum = sdr.GetNullable<int>(10);
+                            n.CleanedRowLabel = sdr.GetStringSafe(11);
+                            n.CleanedColumnLabel = sdr.GetStringSafe(12);
+                            n.Context = sdr.GetStringSafe(13);
+                            n.CellDate = sdr.GetDateTime(14);
+                            n.PeriodLength = sdr.GetInt32(15);
+                            n.PeriodType = sdr.GetStringSafe(16);
+                            n.InterimType = sdr.GetStringSafe(17);
+                            n.Scaling = sdr.GetStringSafe(18);
+                            n.Currency = sdr.GetStringSafe(19);
+                            var numeric = sdr.GetNullable<decimal>(20);
+                            if (numeric == null)
+                            {
+                                n.NumericValue = "";
+
+                            }
+                            else
+                            {
+                                n.NumericValue = numeric.Value.ToString();
+
+                            }
                             n.Nodes = new List<NameTreeNode>();
                             allNodes.Add(n);
                         }
