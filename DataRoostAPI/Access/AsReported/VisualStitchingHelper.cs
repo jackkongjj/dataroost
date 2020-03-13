@@ -263,9 +263,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             [JsonProperty("context")]
             public string Context { get; set; }
             [JsonProperty("cell_date")]
-            public DateTime CellDate { get; set; }
+            public DateTime? CellDate { get; set; }
             [JsonProperty("period_length")]
-            public int PeriodLength { get; set; }
+            public int? PeriodLength { get; set; }
             [JsonProperty("period_type")]
             public string PeriodType { get; set; }
             [JsonProperty("interim_type")]
@@ -276,6 +276,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public string Currency { get; set; }
             [JsonProperty("numeric_value")]
             public string NumericValue { get; set; }
+            [JsonProperty("norm_table_id")]
+            public int NormTableId { get; set; }
+            [JsonProperty("norm_table_description")]
+            public string NormTableDescription { get; set; }
         }
 
         public class ReactNode {
@@ -965,7 +969,7 @@ SELECT  Id,Label, iconum_count
  select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
 	 tcf.value, tcf.numeric_value, tc.item_offset as offset, tc.hash_id, tc.document_id, tcf.Iconum 
 	 ,tcf.cleaned_row_label, tcf.cleaned_column_label, array_to_string(tcf.context, ','), tcf.cell_date, tcf.period_length, tcf.period_type
-	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value
+	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value, t.id, t.label
     from norm_name_tree tc
     join norm_table t
         on tc.norm_table_id = t.id
@@ -973,9 +977,9 @@ SELECT  Id,Label, iconum_count
         on tc.Id = tcf.Id
     left join cluster_name_tree c
         on c.Id = tc.Cluster_id
-where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <> ''
+where coalesce(TRIM(tc.item_offset), '') <> ''
     and tc.document_id = '{0}'
-	order by tc.id
+	order by t.id, tc.id
 			";
             List<NameTreeNode> allNodes = new List<NameTreeNode>();
 
@@ -1009,8 +1013,8 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                             n.CleanedRowLabel = sdr.GetStringSafe(11);
                             n.CleanedColumnLabel = sdr.GetStringSafe(12);
                             n.Context = sdr.GetStringSafe(13);
-                            n.CellDate = sdr.GetDateTime(14);
-                            n.PeriodLength = sdr.GetInt32(15);
+                            n.CellDate = sdr.GetNullable<DateTime>(14);
+                            n.PeriodLength = sdr.GetNullable<int>(15);
                             n.PeriodType = sdr.GetStringSafe(16);
                             n.InterimType = sdr.GetStringSafe(17);
                             n.Scaling = sdr.GetStringSafe(18);
@@ -1026,6 +1030,8 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                                 n.NumericValue = numeric.Value.ToString();
 
                             }
+                            n.NormTableId = sdr.GetInt32(21);
+                            n.NormTableDescription = sdr.GetStringSafe(22);
                             n.Nodes = new List<NameTreeNode>();
                             allNodes.Add(n);
                         }
@@ -1038,7 +1044,7 @@ where t.label = 'Average Balance Sheet' and coalesce(TRIM(tc.item_offset), '') <
                 {
                     var hiearchy = fn.Hierarchy(row.ClusteredNodeLabel);
                     var parentLabel = fn.RevCdr(hiearchy) + fn.Unbox(fn.RevCar(hiearchy));
-                    var parent = allNodes.FirstOrDefault(x => x.ClusteredNodeLabel == parentLabel);
+                    var parent = allNodes.FirstOrDefault(x => x.ClusteredNodeLabel == parentLabel && x.NormTableId == row.NormTableId);
                     if (parent != null)
                     {
                         row.ClusteredParentId = parent.ClusteredId;
