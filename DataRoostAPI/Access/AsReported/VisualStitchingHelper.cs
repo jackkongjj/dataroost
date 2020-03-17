@@ -260,6 +260,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public string CleanedRowLabel { get; set; }
             [JsonProperty("cleaned_column_label")]
             public string CleanedColumnLabel { get; set; }
+            [JsonProperty("final_label")]
+            public string FinalLabel { get; set; }
             [JsonProperty("context")]
             public string Context { get; set; }
             [JsonProperty("cell_date")]
@@ -969,7 +971,7 @@ SELECT  Id,Label, iconum_count
  select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
 	 tcf.value, tcf.numeric_value, tc.item_offset as offset, tc.hash_id, tc.document_id, tcf.Iconum 
 	 ,tcf.cleaned_row_label, tcf.cleaned_column_label, array_to_string(tcf.context, ','), tcf.cell_date, tcf.period_length, tcf.period_type
-	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value, t.id, t.label
+	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value, t.id, t.label, tc.final_label
     from norm_name_tree tc
     join norm_table t
         on tc.norm_table_id = t.id
@@ -1032,6 +1034,7 @@ where coalesce(TRIM(tc.item_offset), '') <> ''
                             }
                             n.NormTableId = sdr.GetInt32(21);
                             n.NormTableDescription = sdr.GetStringSafe(22);
+                            n.FinalLabel = sdr.GetStringSafe(23);
                             n.Nodes = new List<NameTreeNode>();
                             allNodes.Add(n);
                         }
