@@ -365,10 +365,8 @@ end
 
 		[JsonProperty("displayValue")]
 		public decimal?
-			DisplayValue
-		{
-			get
-			{
+			DisplayValue {
+			get {
 				if (ValueNumeric.HasValue) {
 					if (!VirtualValueNumeric.HasValue)
 						return TableCell.getDecimal(ValueNumeric.Value, ScalingFactorValue, IsIncomePositive);
