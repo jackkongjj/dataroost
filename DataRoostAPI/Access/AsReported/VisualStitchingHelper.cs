@@ -820,7 +820,8 @@ SELECT  Id,Label, iconum_count, comment
 								r.Id = -1;
 								r.Title = labelAtlevel;
 								r.ParentId = row.ParentId;
-								r.Nodes = new List<Node>();
+                                r.Comment = row.Comment;
+                                r.Nodes = new List<Node>();
 								lastRoot.Nodes.Add(r);
 								lastRoot = r;
 								stack.Push(r);
@@ -830,6 +831,7 @@ SELECT  Id,Label, iconum_count, comment
 							r.Id = row.Id;
 							r.Title = endLabel;
 							r.ParentId = row.ParentId;
+                            r.Comment = row.Comment;
 							r.Nodes = new List<Node>();
 							lastRoot.Nodes.Add(r);
 							lastRoot = r;
