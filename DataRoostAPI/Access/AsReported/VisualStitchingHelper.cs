@@ -197,7 +197,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public List<Tuple<string, string, string, Guid, string>> DocumentTuples { get; set; }
 			[JsonProperty("documents")]
 			public List<string> Documents { get; set; }
-			[JsonIgnore]
+            [JsonProperty("comment")]
+            public string Comment { get; set; }
+            [JsonIgnore]
 			public string Childrentitle { get; set; }
 
 		}
@@ -742,7 +744,7 @@ SELECT  Id,Label, 0
 
 		private List<Node> GetAngularTreePostGres3() {
 			const string query = @"
-SELECT  Id,Label, iconum_count
+SELECT  Id,Label, iconum_count, comment
   FROM popular_name_tree_new where iconum_count > 1 order by id
 			";
 			List<Node> allNodes = new List<Node>();
@@ -757,7 +759,8 @@ SELECT  Id,Label, iconum_count
 							n.Id = (int)sdr.GetInt64(0);
 							n.Title = sdr.GetString(1);
 							n.ParentId = sdr.GetInt32(2); // count, NOT parentid
-							n.Nodes = new List<Node>();
+                            n.Comment = sdr.GetStringSafe(3);
+                            n.Nodes = new List<Node>();
 							allNodes.Add(n);
 						}
 					}
