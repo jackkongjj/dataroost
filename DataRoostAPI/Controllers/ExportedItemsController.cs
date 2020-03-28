@@ -20,7 +20,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		                                       DateTime? endDate = null,
 																					 [FromUri] string itemCodes = null,
 																					 [FromUri] string countries = null) {
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DateTime endDateTime = DateTime.UtcNow;
 			if (endDate != null) {
@@ -34,7 +34,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (countries != null) {
 				countryList = new List<string>(countries.Split(','));
 			}
-
+            // below function are referring the outdated Queries.. need to reassess if this is being used anywhere
 			ExportedItemsHelper superfastHelper = new ExportedItemsHelper(sfConnectionString);
 			ExportedItem[] superfastExportedItems = superfastHelper.GetExportedItems(standardizationType,
 			                                                                         itemCodeList,
@@ -58,7 +58,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		                                            DateTime startDate,
 		                                            DateTime? endDate = null,
 		                                            [FromUri] string countries = null) {
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 			DateTime endDateTime = DateTime.UtcNow;
 			if (endDate != null) {
@@ -68,8 +68,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			if (countries != null) {
 				countryList = new List<string>(countries.Split(','));
 			}
-
-			ExportedItemsHelper superfastHelper = new ExportedItemsHelper(sfConnectionString);
+            // below function are referring the outdated Queries.. need to reassess if this is being used anywhere
+            ExportedItemsHelper superfastHelper = new ExportedItemsHelper(sfConnectionString);
 			ExportedItem[] superfastExportedItems = superfastHelper.GetAllExportedShareItems(standardizationType,
 			                                                                                 startDate,
 			                                                                                 endDateTime,

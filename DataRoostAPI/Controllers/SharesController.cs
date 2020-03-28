@@ -24,14 +24,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 			List<int> iconumList = new List<int> {iconum};
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			Dictionary<int, List<ShareClassDataDTO>> iconumDictionary = helper.GetCompanyShareClassData(iconumList, reportDate, since);
 			if (!iconumDictionary.ContainsKey(iconum)) {
 				throw new MissingIconumException(iconum);
@@ -47,14 +48,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, List<ShareClassDataDTO>>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			List<int> iconums = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
 			iconums = iconums.Distinct().ToList();
 
-		    CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+		    CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString,
+		        damConnectionString);
 			return helper.GetCompanyShareClassData(iconums, reportDate, since);
 		}
 
@@ -65,14 +68,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return null;
             }
 
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;            
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
+            string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
             string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
             string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
             int iconum = PermId.PermId2Iconum(companyId);
             List<int> iconumList = new List<int> { iconum };
 
-            CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+            CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
             Dictionary<int, List<ShareClassDataDTO>> iconumDictionary = helper.GetAllShareClassData(iconumList, stdCode, reportDate, since);
             if (!iconumDictionary.ContainsKey(iconum)) {
                 throw new MissingIconumException(iconum);
@@ -88,14 +92,15 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return new Dictionary<int, List<ShareClassDataDTO>>();
             }
 
-            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;            
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
+            string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
             string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
             string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
             List<int> iconums = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
             iconums = iconums.Distinct().ToList();
 
-            CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+            CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
             return helper.GetAllShareClassData(iconums, stdCode, reportDate, since);
         }
 
@@ -106,13 +111,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-PantheonReadOnly"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			return helper.GetCurrentCompanyShareClassData(iconum).ToArray();
 		}
 	}

@@ -11,17 +11,18 @@ using LogPerformance;
 using DataRoostAPI.Common.Models;
 using CCS.Fundamentals.DataRoostAPI.CommLogger;
 namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-    [CommunicationLogger]
-    [RoutePrefix("api/v1")]
+	[CommunicationLogger]
+	[RoutePrefix("api/v1")]
 	public class CompanyController : ApiController {
 
 		[Route("documents/{documentid}/{iconum}")]
 		[HttpGet]
 		public object GetCompany(String documentid, String iconum) {
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			return helper.GetCompanyByDamID(documentid, iconum);
 		}
 
@@ -38,13 +39,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			return new CompanyDTO[] { helper.GetCompany(iconum) };
 		}
 
@@ -55,13 +57,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
 			return helper.GetCompanyEffort(iconum);
 		}
 
@@ -72,13 +75,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, EffortDTO>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			List<int> iconumList = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
 			iconumList = iconumList.Distinct().ToList();
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
 			return helper.GetCompaniesEfforts(iconumList);
 		}
 
@@ -89,13 +97,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return null;
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			int iconum = PermId.PermId2Iconum(CompanyId);
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
 			Dictionary<int, CompanyPriority> priorities = helper.GetCompanyPriority(new List<int> { iconum });
 			if (priorities.ContainsKey(iconum)) {
 				return priorities[iconum];
@@ -111,14 +123,18 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				return new Dictionary<int, CompanyPriority>();
 			}
 
-			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ConnectionString;			
+			string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+			string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
 			string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
 			string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
 
 			List<int> iconumList = companyIds.Select(companyId => PermId.PermId2Iconum(companyId)).ToList();
 			iconumList = iconumList.Distinct().ToList();
 
-			CompanyHelper helper = new CompanyHelper(sfConnectionString, lionConnectionString, damConnectionString);
+			CompanyHelper helper = new CompanyHelper(sfConnectionString,
+																								 voyConnectionString,
+																								 lionConnectionString,
+																								 damConnectionString);
 			return helper.GetCompanyPriority(iconumList);
 		}
 

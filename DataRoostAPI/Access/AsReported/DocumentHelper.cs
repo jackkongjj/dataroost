@@ -131,7 +131,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+																				AND ( d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 																				AND d.ReportTypeID = @reportType
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
@@ -141,7 +141,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+																				AND ( d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
@@ -432,7 +432,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+																				AND ( d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 																				AND d.ReportTypeID = @reportType
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
@@ -442,7 +442,7 @@ and YEAR(d.DocumentDate) in (select top 4 Yr from @Years where Diff in (0,1,2,3,
 																			FROM DocumentSeries s
 																					JOIN Document d ON d.DocumentSeriesID = s.Id
 																			WHERE s.CompanyID = @iconum
-																				AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+																				AND (d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 																				AND d.DocumentDate >= @startDate
 																				AND d.DocumentDate <= @endDate
 																			ORDER BY d.DocumentDate DESC";
@@ -512,7 +512,7 @@ FROM DocumentSeries s
 JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
 AND d.ReportTypeID = @reportType
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+AND (d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, @DocDate) ";
 			const string queryWithoutReportType =
 								@"declare @DocDate datetime
@@ -523,7 +523,7 @@ SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DA
 FROM DocumentSeries s
 JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
+AND (d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1)
 and d.DocumentDate between dateadd(Year, -1.1, @DocDate) and dateadd(Year, 1.1, @DocDate) ";
 			string query = null;
 			if (string.IsNullOrEmpty(reportType)) {
@@ -595,7 +595,7 @@ SELECT d.DocumentDate, d.PublicationDateTime, d.ReportTypeID, d.FormTypeID, d.DA
 FROM DocumentSeries s
 JOIN Document d ON d.DocumentSeriesID = s.Id
 WHERE s.CompanyID = @iconum
-AND (d.ExportFlag = 1 OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1) 
+AND (OR d.ArdExportFlag = 1 OR d.IsDocSetUpCompleted = 1) 
 and d.DocumentDate  between
 ";
 			if (years > 0) {

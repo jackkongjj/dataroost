@@ -65,7 +65,7 @@ namespace LogPerformance
                                         );
                         if (result.IsValid)
                         {
-                           return;
+                            return;
                         }
                         else
                         {
