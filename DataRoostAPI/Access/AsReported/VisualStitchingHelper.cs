@@ -260,10 +260,18 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			[JsonProperty("numeric_value")]
 			public string NumericValue { get; set; }
 			[JsonProperty("norm_table_id")]
-			public int NormTableId { get; set; }
+			public int? NormTableId { get; set; }
 			[JsonProperty("norm_table_description")]
 			public string NormTableDescription { get; set; }
-		}
+            [JsonProperty("raw_row_id")]
+            public int? RawRowId { get; set; }
+            [JsonProperty("adjusted_row_id")]
+            public int? AdjustedRowId { get; set; }
+            [JsonProperty("raw_col_id")]
+            public int? RawColId { get; set; }
+            [JsonProperty("raw_table_id")]
+            public int? RawTableId { get; set; }
+        }
 
 		public class ReactNode {
 			[JsonProperty("id")]
@@ -889,7 +897,7 @@ SELECT  Id,Label, iconum_count, comment
  select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
 	 tcf.value, tcf.numeric_value, tc.item_offset as offset, tc.hash_id, tc.document_id, tcf.Iconum 
 	 ,tcf.cleaned_row_label, tcf.cleaned_column_label, array_to_string(tcf.context, ','), tcf.cell_date, tcf.period_length, tcf.period_type
-	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value, t.id, t.label, tc.final_label
+	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value, t.id, t.label, tc.final_label, tcf.row_id, tcf.adjusted_row_id, tcf.col_id, tcf.table_id
     from norm_name_tree tc
     join norm_table t
         on tc.norm_table_id = t.id
@@ -943,10 +951,14 @@ where coalesce(TRIM(tc.item_offset), '') <> ''
 								n.NumericValue = numeric.Value.ToString();
 
 							}
-							n.NormTableId = sdr.GetInt32(21);
+							n.NormTableId = sdr.GetNullable<int>(21);
 							n.NormTableDescription = sdr.GetStringSafe(22);
 							n.FinalLabel = sdr.GetStringSafe(23);
-							n.Nodes = new List<NameTreeNode>();
+                            n.RawRowId = sdr.GetNullable<int>(24);
+                            n.AdjustedRowId = sdr.GetNullable<int>(25);
+                            n.RawColId = sdr.GetNullable<int>(26);
+                            n.RawTableId = sdr.GetNullable<int>(27);
+                            n.Nodes = new List<NameTreeNode>();
 							allNodes.Add(n);
 						}
 					}
