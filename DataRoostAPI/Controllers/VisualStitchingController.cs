@@ -15,59 +15,69 @@ using System.Net.NetworkInformation;
 using LogPerformance;
 using CCS.Fundamentals.DataRoostAPI.CommLogger;
 
-namespace CCS.Fundamentals.DataRoostAPI.Controllers {
-	[CommunicationLogger]
-	[RoutePrefix("api/v1/visualstitching")]
-	public class VisualStitchingController : ApiController {
-		public static void SendEmail(string subject, string emailBody) {
-			try {
-				SmtpClient mySMTP = new SmtpClient("mail.factset.com");
-				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
-				MailMessage message = new MailMessage();
-				message.From = mailFrom;
-				var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
-				var leo = new MailAddress("lchang@factset.com", "Leo");
-				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
-				var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
-				var rohan = new MailAddress("rthankachan@factset.com", "Rohan Jacob");
-				message.To.Add(ljiang);
-				//message.To.Add(vsaxena);
-				//message.To.Add(adam);
-				//message.To.Add(leo);
-				//message.To.Add(rohan);
-				message.Subject = subject + " from " + Environment.MachineName;
-				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
-				message.Body = emailBody;
-				message.IsBodyHtml = true;
-				mySMTP.Send(message);
-			} catch { }
-		}
+namespace CCS.Fundamentals.DataRoostAPI.Controllers
+{
+    [CommunicationLogger]
+    [RoutePrefix("api/v1/visualstitching")]
+    public class VisualStitchingController : ApiController
+    {
+        public static void SendEmail(string subject, string emailBody)
+        {
+            try
+            {
+                SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+                MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
+                MailMessage message = new MailMessage();
+                message.From = mailFrom;
+                var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
+                var leo = new MailAddress("lchang@factset.com", "Leo");
+                var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
+                var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
+                var rohan = new MailAddress("rthankachan@factset.com", "Rohan Jacob");
+                message.To.Add(ljiang);
+                //message.To.Add(vsaxena);
+                //message.To.Add(adam);
+                //message.To.Add(leo);
+                //message.To.Add(rohan);
+                message.Subject = subject + " from " + Environment.MachineName;
+                message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+                message.Body = emailBody;
+                message.IsBodyHtml = true;
+                mySMTP.Send(message);
+            }
+            catch { }
+        }
 
-		private void LogError(Exception ex, string extra = "") {
-			string msg = ex.Message + ex.StackTrace;
-			if (ex.InnerException != null)
-				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
-			SendEmail("DataRoost Exception", msg + extra);
-		}
+        private void LogError(Exception ex, string extra = "")
+        {
+            string msg = ex.Message + ex.StackTrace;
+            if (ex.InnerException != null)
+                msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
+            SendEmail("DataRoost Exception", msg + extra);
+        }
 
-		[Route("json/id/{id}")]
-		[HttpGet]
-		public HttpResponseMessage GetDocument(int id) {
-			try {
+        [Route("json/id/{id}")]
+        [HttpGet]
+        public HttpResponseMessage GetDocument(int id)
+        {
+            try
+            {
 
-				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
-				var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				var json = vsHelper.GetJson(id);
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetJson(id);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
                 };
-            } catch (Exception ex) {
-				LogError(ex);
-				return null;
-			}
-		}
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
 
         [Route("json/{hashkey}")]
         [HttpGet]
@@ -168,6 +178,107 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 return null;
             }
         }
+        [Route("datatree/v3/{DamDocumentId}/{FileNo}")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTreeFileNoV3(Guid DamDocumentId, int FileNo)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetPostGresDataTree3();
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("datatree/v3/profile/")]
+        [HttpGet]
+        public HttpResponseMessage GetDataTreeProfile()
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetPostGresDataTreeProfile();
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("datatree/v3/profile/{name}")]
+        [HttpPost]
+        public HttpResponseMessage SaveDataTreeProfile(String name, StringInput input)
+        {
+            try
+            {
+
+                if (input == null)
+                    return null;
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+                String jsonstr = input.StringData;
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.SetPostGresDataTreeProfile(name, jsonstr);
+                var ret = new Dictionary<string, string>();
+                ret["data"] = json;
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(ret), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        [Route("name-tree-api/{DamDocumentId}")]
+        [HttpGet]
+        public HttpResponseMessage GetNameTree(Guid DamDocumentId)
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.GetNameTree(DamDocumentId);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
         //[Route("datatree/{DamDocumentId}/debug")]
         //[HttpGet]
         //public HttpResponseMessage GetDataTreeFake(Guid DamDocumentId)
@@ -359,23 +470,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
-    //    [Route("datatreetest/{DamDocumentId}/{FileNo}")]
-				//[HttpGet]
-				//public HttpResponseMessage GetDataTreeFileNoTest(Guid DamDocumentId, int FileNo) {
-				//	try {
+        //    [Route("datatreetest/{DamDocumentId}/{FileNo}")]
+        //[HttpGet]
+        //public HttpResponseMessage GetDataTreeFileNoTest(Guid DamDocumentId, int FileNo) {
+        //	try {
 
-				//		string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
-				//		var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				//		var json = vsHelper.GetDataTreeTest(DamDocumentId, FileNo);
-				//		return new HttpResponseMessage()
-				//		{
-				//			Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
-				//		};
-				//	} catch (Exception ex) {
-				//		LogError(ex);
-				//		return null;
-				//	}
-				//}
+        //		string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDocumentHistory"].ToString();
+        //		var vsHelper = new VisualStitchingHelper(sfConnectionString);
+        //		var json = vsHelper.GetDataTreeTest(DamDocumentId, FileNo);
+        //		return new HttpResponseMessage()
+        //		{
+        //			Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        //		};
+        //	} catch (Exception ex) {
+        //		LogError(ex);
+        //		return null;
+        //	}
+        //}
         [Route("nametree/{segment}")]
         [HttpGet]
         public HttpResponseMessage GetNameTree(string segment)
@@ -414,7 +525,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 var json = vsHelper.GetGDBCode(sdb);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json) , System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
                 };
             }
             catch (Exception ex)
@@ -552,32 +663,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 };
             }
         }
-        public class StitchInput {
-			public int TargetStaticHierarchyID { get; set; }
-			public List<int> StitchingStaticHierarchyIDs { get; set; }
-		}
+        public class StitchInput
+        {
+            public int TargetStaticHierarchyID { get; set; }
+            public List<int> StitchingStaticHierarchyIDs { get; set; }
+        }
 
-		public class UnStitchInput {
-			public int TargetStaticHierarchyID { get; set; }
-			public List<int> DocumentTimeSliceIDs { get; set; }
-		}
+        public class UnStitchInput
+        {
+            public int TargetStaticHierarchyID { get; set; }
+            public List<int> DocumentTimeSliceIDs { get; set; }
+        }
 
-		public class ScarInput {
-			public int TargetStaticHierarchyID { get; set; }
-			public List<int> StitchingStaticHierarchyIDs { get; set; }
-		}
+        public class ScarInput
+        {
+            public int TargetStaticHierarchyID { get; set; }
+            public List<int> StitchingStaticHierarchyIDs { get; set; }
+        }
 
-		public class ScarStringListInput {
-			public string StringData { get; set; }
-			public List<int> StaticHierarchyIDs { get; set; }
-		}
+        public class ScarStringListInput
+        {
+            public string StringData { get; set; }
+            public List<int> StaticHierarchyIDs { get; set; }
+        }
 
 
-		public class StringInput {
-			public string StringData { get; set; }
-		}
-		public class StringDictionary {
-			public Dictionary<string, string> StringData { get; set; }
-		}
-	}
+        public class StringInput
+        {
+            public string StringData { get; set; }
+        }
+        public class StringDictionary
+        {
+            public Dictionary<string, string> StringData { get; set; }
+        }
+    }
 }

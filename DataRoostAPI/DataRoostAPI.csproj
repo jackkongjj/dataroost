@@ -393,6 +393,7 @@
     </Compile>
     <Compile Include="Filters\CommunicationLogger.cs" />
     <Compile Include="Helpers\ExprStoreClient.cs" />
+    <Compile Include="Helpers\fn.cs" />
     <Compile Include="Helpers\PantheonHelper.cs" />
     <Compile Include="Helpers\StringExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

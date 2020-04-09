@@ -9,11 +9,11 @@ using NpgsqlTypes;
 using System.Net;
 using Newtonsoft.Json;
 using System.Linq;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using FactSet.Data.SqlClient;
 using System.Text.RegularExpressions;
+using CCS.Fundamentals.DataRoostAPI.Helpers;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
 {
@@ -33,13 +33,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
         }
 
         private string factsetIOconnString = "Host=ip-172-31-81-210.manager.factset.io;Port=32791;Username=uyQKYrcTSrnnqB;Password=NoCLf_xBeXiB0UXZjhZUNg7Zx8;Database=di8UFb70sJdA5e;sslmode=Require;Trust Server Certificate=true;";
-        private string connString = "Host=ffautomation-dev-postgres.c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=ffautomation_writer_user;Password=qyp0nMeA;Database=postgres;"; // sslmode=Require;Trust Server Certificate=true;
-
+        private string connString = "Host=ffnametree.cluster-ccr4dwxpskgi.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedb_admin_user;Password=5Ls75tj6;Database=nametreedb;sslmode=Require;Trust Server Certificate=true;";
+    
         public string GetJson(int id)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             using (
-                var conn = new NpgsqlConnection(connString))
+                    var conn = new NpgsqlConnection(connString))
             {
                 conn.Open();
                 // Retrieve all rows
@@ -59,7 +59,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             using (
-                var conn = new NpgsqlConnection(connString))
+                    var conn = new NpgsqlConnection(connString))
             {
                 conn.Open();
                 // Retrieve all rows
@@ -90,7 +90,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             try
             {
                 using (
-                    var conn = new NpgsqlConnection(connString))
+                        var conn = new NpgsqlConnection(connString))
                 {
                     conn.Open();
                     // Retrieve all rows
@@ -224,12 +224,86 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             public List<Tuple<string, string, string, Guid, string>> DocumentTuples { get; set; }
             [JsonProperty("documents")]
             public List<string> Documents { get; set; }
+            [JsonProperty("comment")]
+            public string Comment { get; set; }
             [JsonIgnore]
             public string Childrentitle { get; set; }
 
         }
 
-        public class ReactNode {
+        public class Profile
+        {
+            [JsonProperty("name")]
+            public string Name { get; set; }
+            [JsonProperty("json")]
+            public string Json { get; set; }
+        }
+
+        public class NameTreeNode
+        {
+            [JsonProperty("id")]
+            public long Id { get; set; }
+            [JsonProperty("clustered_id")]
+            public long? ClusteredId { get; set; }
+            [JsonProperty("as_reported_label")]
+            public string AsReportedNodeLabel { get; set; }
+            [JsonProperty("as_reported_value")]
+            public string AsReportedValue { get; set; }
+            [JsonProperty("as_reported_numeric_value")]
+            public decimal? AsReportedNumericValue { get; set; }
+            [JsonProperty("clustered_label")]
+            public string ClusteredNodeLabel { get; set; }
+            [JsonProperty("clustered_parent_id")]
+            public long? ClusteredParentId { get; set; }
+
+            [JsonIgnore]
+            public List<NameTreeNode> Nodes { get; set; }
+            [JsonProperty("hash_id")]
+            public string HashId { get; set; }
+            [JsonProperty("offset")]
+            public string Offset { get; set; }
+            [JsonProperty("document_id")]
+            public Guid DocumentID { get; set; }
+            [JsonProperty("iconum")]
+            public int? Iconum { get; set; }
+            [JsonProperty("cleaned_row_label")]
+            public string CleanedRowLabel { get; set; }
+            [JsonProperty("cleaned_column_label")]
+            public string CleanedColumnLabel { get; set; }
+            [JsonProperty("final_label")]
+            public string FinalLabel { get; set; }
+            [JsonProperty("context")]
+            public string Context { get; set; }
+            [JsonProperty("cell_date")]
+            public DateTime? CellDate { get; set; }
+            [JsonProperty("period_length")]
+            public int? PeriodLength { get; set; }
+            [JsonProperty("period_type")]
+            public string PeriodType { get; set; }
+            [JsonProperty("interim_type")]
+            public string InterimType { get; set; }
+            [JsonProperty("scaling")]
+            public string Scaling { get; set; }
+            [JsonProperty("currency")]
+            public string Currency { get; set; }
+            [JsonProperty("numeric_value")]
+            public string NumericValue { get; set; }
+            [JsonProperty("norm_table_id")]
+            public int? NormTableId { get; set; }
+            [JsonProperty("norm_table_description")]
+            public string NormTableDescription { get; set; }
+            [JsonProperty("raw_row_id")]
+            public int? RawRowId { get; set; }
+            [JsonProperty("adjusted_row_id")]
+            public int? AdjustedRowId { get; set; }
+            [JsonProperty("raw_col_id")]
+            public int? RawColId { get; set; }
+            [JsonProperty("raw_table_id")]
+            public int? RawTableId { get; set; }
+        }
+
+        public class ReactNode
+        {
             [JsonProperty("id")]
             public int Id { get; set; }
             [JsonProperty("title")]
@@ -274,10 +348,12 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
         }
 
-        private List<ReactNode> GetAngularTreeTest(TintInfo result) {
+        private List<ReactNode> GetAngularTreeTest(TintInfo result)
+        {
             List<ReactNode> nodes = new List<ReactNode>();
             string[] big3Table = { "BS", "IS", "CF" };
-            foreach (var table in result.Tables) {
+            foreach (var table in result.Tables)
+            {
                 if (!big3Table.Contains(table.Type.ToUpper()))
                     continue;
                 ReactNode t = new ReactNode();
@@ -288,15 +364,20 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                 Stack<ReactNode> stack = new Stack<ReactNode>();
                 stack.Push(t);
 
-                foreach (var row in table.Rows) {
+                foreach (var row in table.Rows)
+                {
                     int i = 0;
-                    foreach (var labelAtlevel in row.LabelHierarchy) {
+                    foreach (var labelAtlevel in row.LabelHierarchy)
+                    {
                         i++;
-                        if (stack.Count <= i) {
+                        if (stack.Count <= i)
+                        {
                             break;
                         }
-                        if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel) {
-                            while (stack.Count > i && stack.Count > 1) {
+                        if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel)
+                        {
+                            while (stack.Count > i && stack.Count > 1)
+                            {
                                 stack.Pop();
                             }
                         }
@@ -305,12 +386,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                     var endLabel = row.LabelHierarchy.Last();
                     i = 0;
                     int j = 0; // insert
-                    foreach (var labelAtlevel in row.LabelHierarchy) {
+                    foreach (var labelAtlevel in row.LabelHierarchy)
+                    {
                         i++;
-                        if (stack.Count > i) {
+                        if (stack.Count > i)
+                        {
                             continue;
                         }
-                        if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel) {
+                        if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
+                        {
                             ReactNode r = new ReactNode();
                             r.Id = -1;
                             r.Title = labelAtlevel;
@@ -318,7 +402,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
                             lastRoot.Nodes.Add(r);
                             lastRoot = r;
                             stack.Push(r);
-                        } else {
+                        }
+                        else
+                        {
                             ReactNode r = new ReactNode();
                             r.Id = row.Id;
                             r.Title = endLabel;
@@ -388,10 +474,96 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
             }
             return JsonConvert.SerializeObject(nodes);
         }
+
+        public string GetPostGresDataTree3()
+        {
+
+            int tries = 1;
+            List<Node> nodes = new List<Node>();
+
+            while (tries > 0)
+            {
+                try
+                {
+                    nodes = GetAngularTreePostGres3();
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<Node>());
+                    }
+
+                }
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
+
+        public string SetPostGresDataTreeProfile(String name, String jsonstr)
+        {
+            String query = @"UPDATE cluster_name_tree_profile SET json='{1}' WHERE name='{0}';
+		INSERT INTO cluster_name_tree_profile (name, json)
+       SELECT '{0}', '{1}'
+       WHERE NOT EXISTS (SELECT 1 FROM cluster_name_tree_profile WHERE name='{0}');";
+            String qq = string.Format(query, name, jsonstr);
+            try
+            {
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(string.Format(query, name, jsonstr), conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return "Fail";
+            }
+
+            return "Success";
+        }
+        public string GetPostGresDataTreeProfile()
+        {
+
+            int tries = 1;
+            List<Profile> profiles = new List<Profile>();
+
+            while (tries > 0)
+            {
+                try
+                {
+                    profiles = GetProfilePostGres();
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<Node>());
+                    }
+
+                }
+            }
+            return JsonConvert.SerializeObject(profiles);
+        }
+
         public static string DeepCleanString(string str)
         {
             string result = str.ToLower();
- 
+
             string[] remlabelWords = result.Split(' ');
             for (int i = 0; i < remlabelWords.Count(); i++)
             {
@@ -447,26 +619,26 @@ SELECT  [Id]
       ,[Label]
   FROM [ffdocumenthistory].[dbo].[GDBClusters_1203] order by id
 			";
-                List<Node> allNodes = new List<Node>();
-                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            List<Node> allNodes = new List<Node>();
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        conn.Open();
+                    conn.Open();
 
-                        using (SqlDataReader sdr = cmd.ExecuteReader())
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
                         {
-                            while (sdr.Read())
-                            {
-                                var n = new Node();
-                                n.Id = (int)sdr.GetInt64(0);
-                                n.Title = sdr.GetString(1);
-                                n.Nodes = new List<Node>();
-                                allNodes.Add(n);
-                            }
+                            var n = new Node();
+                            n.Id = (int)sdr.GetInt64(0);
+                            n.Title = sdr.GetString(1);
+                            n.Nodes = new List<Node>();
+                            allNodes.Add(n);
                         }
                     }
                 }
+            }
             List<Node> nodes = new List<Node>();
             string[] big3Table = { "BS", "IS", "CF" };
             bool first = false;
@@ -503,10 +675,10 @@ SELECT  [Id]
                     var lastRoot = stack.Peek();
                     var endLabel = labelHierarchy.Last();
                     i = 0;
-                    int j = 0;  
+                    int j = 0;
                     foreach (var labelAtlevel in labelHierarchy)
                     {
-                        i++; 
+                        i++;
                         if (stack.Count > i)
                         {// count to the last common level. 
                             continue;
@@ -565,7 +737,34 @@ SELECT  [Id]
 
         public static string PGConnectionString()
         {
-            return "Host=ip-172-31-81-139.manager.factset.io;Port=5432;Username=ubqXRZAeTPybOH;Password=GZ6wBe42UMwemfY84UFHH6g0WD;Database=dpNeBDaEKMr8P6;sslmode=Require;Trust Server Certificate=true;";
+            return "Host=ffnametree.cluster-ccr4dwxpskgi.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedb_admin_user;Password=5Ls75tj6;Database=nametreedb;sslmode=Require;Trust Server Certificate=true;";
+        }
+
+        private List<Profile> GetProfilePostGres()
+        {
+            const string query = @"
+				SELECT name,json FROM cluster_name_tree_profile
+			";
+            List<Profile> allProfiles = new List<Profile>();
+            using (var conn = new NpgsqlConnection(PGConnectionString()))
+            {
+                using (var cmd = new NpgsqlCommand(query, conn))
+                {
+                    conn.Open();
+
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            var n = new Profile();
+                            n.Name = sdr.GetString(0);
+                            n.Json = sdr.GetString(1);
+                            allProfiles.Add(n);
+                        }
+                    }
+                }
+            }
+            return allProfiles;
         }
 
         private List<Node> GetAngularTreePostGres()
@@ -686,7 +885,7 @@ SELECT  Id,Label, 0
             //return nodes;
             foreach (var n in nodes)
             {
-                PGNodeDocument(n);
+                PGnodeDocuments2(n);
             }
             List<Node> newTree = new List<Node>();
             Node unknown = new Node();
@@ -708,11 +907,285 @@ SELECT  Id,Label, 0
             return newTree;
         }
 
-        private Dictionary<long, List<Tuple<Guid, string,string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
-
-        private Dictionary<long, List<Tuple<Guid, string,string>>> initDocumentCluster()
+        private List<Node> GetAngularTreePostGres3()
         {
-            documentCluster = new Dictionary<long, List<Tuple<Guid, string,string>>>();
+            const string query = @"
+SELECT  Id,Label, iconum_count, comment
+  FROM popular_name_tree_new where iconum_count > 1 order by id
+			";
+            List<Node> allNodes = new List<Node>();
+
+            using (var conn = new NpgsqlConnection(PGConnectionString()))
+            {
+                using (var cmd = new NpgsqlCommand(query, conn))
+                {
+                    conn.Open();
+
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            var n = new Node();
+                            n.Id = (int)sdr.GetInt64(0);
+                            n.Title = sdr.GetString(1);
+                            n.ParentId = sdr.GetInt32(2); // count, NOT parentid
+                            n.Comment = sdr.GetStringSafe(3);
+                            n.Nodes = new List<Node>();
+                            allNodes.Add(n);
+                        }
+                    }
+                }
+            }
+            List<Node> nodes = new List<Node>();
+            string[] big3Table = { "BS", "IS", "CF" };
+            bool first = false;
+            if (true)
+            {
+                Node t = new Node();
+                nodes.Add(t);
+                t.Id = 0;
+                t.Title = "AVG-BS";
+                t.Nodes = new List<Node>();
+                Stack<Node> stack = new Stack<Node>();
+                stack.Push(t);
+
+                foreach (var row in allNodes)
+                {
+                    int i = 0;
+                    var cleanedRowTitle = row.Title;
+                    var labelHierarchy = cleanedRowTitle.Replace("[", "").Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (labelHierarchy.Length == 0)
+                        continue;
+                    foreach (var labelAtlevel in labelHierarchy)
+                    {
+                        i++;
+                        if (stack.Count <= i)
+                        {
+                            break;
+                        }
+                        if (stack.ElementAt(stack.Count - i - 1).Title != labelAtlevel)
+                        {
+                            while (stack.Count > i && stack.Count > 1)
+                            {
+                                stack.Pop();
+                            }
+                        }
+                    }
+                    var lastRoot = stack.Peek();
+                    var endLabel = labelHierarchy.Last();
+                    i = 0;
+                    int j = 0;
+                    foreach (var labelAtlevel in labelHierarchy)
+                    {
+                        i++;
+                        if (stack.Count > i)
+                        {// count to the last common level. 
+                            continue;
+                        }
+                        if (stack.Peek().Title != labelAtlevel && labelAtlevel != endLabel)
+                        {
+                            var currentRoot = stack.Peek();
+                            bool found = false;
+                            foreach (var m in currentRoot.Nodes)
+                            {
+                                if (m.Title == labelAtlevel)
+                                {
+                                    lastRoot = m;
+                                    stack.Push(m);
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found)
+                            {
+                                Node r = new Node();
+                                r.Id = -1;
+                                r.Title = labelAtlevel;
+                                r.ParentId = row.ParentId;
+                                r.Comment = row.Comment;
+                                r.Nodes = new List<Node>();
+                                lastRoot.Nodes.Add(r);
+                                lastRoot = r;
+                                stack.Push(r);
+                            }
+                        }
+                        else
+                        {
+                            Node r = new Node();
+                            r.Id = row.Id;
+                            r.Title = endLabel;
+                            r.ParentId = row.ParentId;
+                            r.Comment = row.Comment;
+                            r.Nodes = new List<Node>();
+                            lastRoot.Nodes.Add(r);
+                            lastRoot = r;
+                            stack.Push(r);
+                        }
+                    }
+
+                }
+            }
+            foreach (var n in nodes)
+            {
+                PGnodeDocuments2(n);
+            }
+            List<Node> newTree = new List<Node>();
+            Node unknown = new Node();
+            unknown.Id = 0;
+            unknown.Title = "Unknown";
+            unknown.Nodes = new List<Node>();
+            foreach (var n in nodes.First().Nodes)
+            {
+                if (n.Title.StartsWith("total asset") || n.Title.StartsWith("total liability and shareholder equity") || n.Title.StartsWith("total assets") || n.Title.StartsWith("total liabilities and"))
+                {
+                    newTree.Add(n);
+                }
+                else if (n.Title.StartsWith("asset") || n.Title.StartsWith("liability and shareholder equity") || n.Title.StartsWith("total asset"))
+                {
+                    newTree.Add(n);
+                }
+                else
+                {
+                    unknown.Nodes.Add(n);
+                }
+            }
+            newTree.Add(unknown);
+            return newTree;
+        }
+
+
+        public string GetNameTree(Guid DamDocumentId)
+        {
+
+            int tries = 1;
+            List<NameTreeNode> nodes = new List<NameTreeNode>();
+
+            while (tries > 0)
+            {
+                try
+                {
+                    nodes = GetNameTreePostGres(DamDocumentId);
+                    tries = 0;
+                }
+                catch (Exception ex)
+                {
+                    if (--tries > 0)
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        return JsonConvert.SerializeObject(new List<NameTreeNode>());
+                    }
+
+                }
+            }
+            return JsonConvert.SerializeObject(nodes);
+        }
+
+        private List<NameTreeNode> GetNameTreePostGres(Guid DamDocumentId)
+        {
+            const string query = @"
+ select tc.id, c.Label AS stdlabel, c.Id AS stdCode, tcf.raw_row_label, tcf.cleaned_row_label,
+	 tcf.value, tcf.numeric_value, tc.item_offset as offset, tc.hash_id, tc.document_id, tcf.Iconum 
+	 ,tcf.cleaned_row_label, tcf.cleaned_column_label, array_to_string(tcf.context, ','), tcf.cell_date, tcf.period_length, tcf.period_type
+	 ,tcf.interim_type, tcf.scaling, tcf.currency, tcf.numeric_value, t.id, t.label, tc.final_label, tcf.row_id, tcf.adjusted_row_id, tcf.col_id, tcf.table_id
+    from norm_name_tree tc
+    join norm_table t
+        on tc.norm_table_id = t.id
+    join norm_name_tree_flat tcf
+        on tc.Id = tcf.Id
+    left join cluster_name_tree c
+        on c.Id = tc.Cluster_id
+where coalesce(TRIM(tc.item_offset), '') <> ''
+    and tc.document_id = '{0}'
+	order by t.id, tc.id
+			";
+            List<NameTreeNode> allNodes = new List<NameTreeNode>();
+
+            using (var conn = new NpgsqlConnection(PGConnectionString()))
+            {
+                using (var cmd = new NpgsqlCommand(string.Format(query, DamDocumentId.ToString()), conn))
+                {
+                    conn.Open();
+
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            var n = new NameTreeNode();
+                            // 0th = id per value
+                            // 5th = as reported value
+                            // 10th = Iconum
+                            // 11th = CLeaned row label
+                            // 16th = peiord type
+                            // 17 = interim type
+                            n.Id = sdr.GetInt64(0);
+                            n.ClusteredNodeLabel = sdr.GetStringSafe(1);
+                            n.ClusteredId = sdr.GetNullable<long>(2);
+                            n.AsReportedNodeLabel = sdr.GetStringSafe(3);
+                            n.AsReportedValue = sdr.GetStringSafe(5);
+                            n.AsReportedNumericValue = sdr.GetNullable<decimal>(6);
+                            n.Offset = sdr.GetStringSafe(7);
+                            n.HashId = sdr.GetStringSafe(8);
+                            n.DocumentID = sdr.GetGuid(9);
+                            n.Iconum = sdr.GetNullable<int>(10);
+                            n.CleanedRowLabel = sdr.GetStringSafe(11);
+                            n.CleanedColumnLabel = sdr.GetStringSafe(12);
+                            n.Context = sdr.GetStringSafe(13);
+                            n.CellDate = sdr.GetNullable<DateTime>(14);
+                            n.PeriodLength = sdr.GetNullable<int>(15);
+                            n.PeriodType = sdr.GetStringSafe(16);
+                            n.InterimType = sdr.GetStringSafe(17);
+                            n.Scaling = sdr.GetStringSafe(18);
+                            n.Currency = sdr.GetStringSafe(19);
+                            var numeric = sdr.GetNullable<decimal>(20);
+                            if (numeric == null)
+                            {
+                                n.NumericValue = "";
+
+                            }
+                            else
+                            {
+                                n.NumericValue = numeric.Value.ToString();
+
+                            }
+                            n.NormTableId = sdr.GetNullable<int>(21);
+                            n.NormTableDescription = sdr.GetStringSafe(22);
+                            n.FinalLabel = sdr.GetStringSafe(23);
+                            n.RawRowId = sdr.GetNullable<int>(24);
+                            n.AdjustedRowId = sdr.GetNullable<int>(25);
+                            n.RawColId = sdr.GetNullable<int>(26);
+                            n.RawTableId = sdr.GetNullable<int>(27);
+                            n.Nodes = new List<NameTreeNode>();
+                            allNodes.Add(n);
+                        }
+                    }
+                }
+            }
+            foreach (var row in allNodes)
+            {
+                if (!string.IsNullOrWhiteSpace(row.ClusteredNodeLabel))
+                {
+                    var hiearchy = fn.Hierarchy(row.ClusteredNodeLabel);
+                    var parentLabel = fn.RevCdr(hiearchy) + fn.Unbox(fn.RevCar(hiearchy));
+                    var parent = allNodes.FirstOrDefault(x => x.ClusteredNodeLabel == parentLabel && x.NormTableId == row.NormTableId);
+                    if (parent != null)
+                    {
+                        row.ClusteredParentId = parent.ClusteredId;
+                    }
+                }
+            }
+            return allNodes;
+        }
+
+        private Dictionary<long, List<Tuple<Guid, string, string>>> documentCluster = new Dictionary<long, List<Tuple<Guid, string, string>>>();
+        private Dictionary<long, List<Tuple<Guid, string, string, string>>> pgdocumentCluster;
+        private Dictionary<long, List<Tuple<Guid, string>>> pgdocumentCluster2;
+
+        private Dictionary<long, List<Tuple<Guid, string, string>>> initDocumentCluster()
+        {
+            documentCluster = new Dictionary<long, List<Tuple<Guid, string, string>>>();
             try
             {
                 const string query = @"
@@ -735,7 +1208,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
                                 var id = sdr.GetInt64(0);
                                 if (!documentCluster.ContainsKey(id))
                                 {
-                                    documentCluster.Add(id, new List<Tuple<Guid, string,string>>());
+                                    documentCluster.Add(id, new List<Tuple<Guid, string, string>>());
                                 }
                                 var g = sdr.GetGuid(1);
                                 var h = sdr.GetStringSafe(2);
@@ -751,7 +1224,109 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
             }
             return documentCluster;
         }
+
+        private Dictionary<long, List<Tuple<Guid, string, string, string>>> initPgDocumentCluster()
+        {
+            pgdocumentCluster = new Dictionary<long, List<Tuple<Guid, string, string, string>>>();
+            try
+            {
+                const string query = @"
+ SELECT DISTINCT t.cluster_id_new,
+    t.document_id,
+    f.raw_row_label,
+    f.value,
+    p.item_code, t.item_offset 
+   FROM norm_name_tree t
+     JOIN norm_name_tree_flat f ON t.id = f.id
+     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND  f.item_offset::text = p.item_offset::text    AND f.iconum = p.iconum
+  WHERE t.cluster_id_new IS NOT NULL
+  union
+   SELECT DISTINCT t.cluster_id_new,
+    t.document_id,
+    f.raw_row_label,
+    f.value,
+    p.item_code, t.item_offset 
+   FROM norm_name_tree t
+     JOIN norm_name_tree_flat f ON t.id = f.id
+     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id    AND f.iconum = p.iconum
+  WHERE t.cluster_id_new IS NOT NULL and p.item_offset = '';
+			";
+                //select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
+                // order by cluster_id
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetInt64(0);
+                                if (!pgdocumentCluster.ContainsKey(id))
+                                {
+                                    pgdocumentCluster.Add(id, new List<Tuple<Guid, string, string, string>>());
+                                }
+                                var g = sdr.GetGuid(1);
+                                var h = sdr.GetStringSafe(2);
+                                var i = sdr.GetStringSafe(3);
+                                i = sdr.GetStringSafe(5);
+                                var j = sdr.GetStringSafe(4);
+                                pgdocumentCluster[id].Add(new Tuple<Guid, string, string, string>(g, h, i, j));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var s = ex.Message;
+            }
+            return pgdocumentCluster;
+        }
+        private Dictionary<long, List<Tuple<Guid, string>>> initPgDocumentCluster2()
+        {
+            pgdocumentCluster2 = new Dictionary<long, List<Tuple<Guid, string>>>();
+            try
+            {
+                const string query = @"
+  SELECT DISTINCT t.cluster_id_new,
+    t.document_id
+   FROM norm_name_tree t
+	 where t.cluster_id_new is not null
+			";
+
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetInt64(0);
+                                if (!pgdocumentCluster2.ContainsKey(id))
+                                {
+                                    pgdocumentCluster2.Add(id, new List<Tuple<Guid, string>>());
+                                }
+                                var g = sdr.GetGuid(1);
+                                var h = "";
+
+                                pgdocumentCluster2[id].Add(new Tuple<Guid, string>(g, h));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var s = ex.Message;
+            }
+            return pgdocumentCluster2;
+        }
         private Dictionary<Guid, List<string>> tickerCluster = new Dictionary<Guid, List<string>>();
+        private Dictionary<Guid, List<string>> pgtickerCluster;
         private Dictionary<Guid, List<string>> initTickerCluster()
         {
             tickerCluster = new Dictionary<Guid, List<string>>();
@@ -796,6 +1371,42 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
             }
             return tickerCluster;
         }
+
+        private Dictionary<Guid, List<string>> initPgTickerCluster()
+        {
+            pgtickerCluster = new Dictionary<Guid, List<string>>();
+            try
+            {
+                const string query = @"
+select * from vw_documents_iconums
+			";
+
+                using (var conn = new NpgsqlConnection(PGConnectionString()))
+                {
+                    using (var cmd = new NpgsqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                var id = sdr.GetGuid(0);
+                                if (!tickerCluster.ContainsKey(id))
+                                {
+                                    pgtickerCluster.Add(id, new List<string>());
+                                }
+                                var g = sdr.GetInt32(1).ToString();
+                                pgtickerCluster[id].Add(g);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return pgtickerCluster;
+        }
         private Node PGNodeDocument(Node n)
         {
             if (n.ParentId.HasValue)
@@ -806,6 +1417,137 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
             {
                 PGNodeDocument(child);
             }
+            return n;
+        }
+        private Node PGnodeDocuments2(Node n, string hiearchy = "")
+        {
+            if (n.Documents == null)
+            {
+                n.Documents = new List<string>();
+            }
+            if (n.DocumentTuples == null)
+            {
+                n.DocumentTuples = new List<Tuple<string, string, string, Guid, string>>();
+            }
+            if (pgdocumentCluster == null)
+            {
+                initPgDocumentCluster();
+            }
+            if (pgdocumentCluster2 == null)
+            {
+                initPgDocumentCluster2();
+            }
+            if (pgtickerCluster == null)
+            {
+                initPgTickerCluster();
+
+            }
+            var nTitle = n.Title;
+            if (string.IsNullOrWhiteSpace(n.Childrentitle))
+            {
+                n.Childrentitle = "";
+            }
+            n.Childrentitle += nTitle;
+            if (pgdocumentCluster.ContainsKey(n.Id))
+            { // n.id is ClusterID
+
+                foreach (var d in pgdocumentCluster[n.Id])
+                {
+                    var doc = new List<string>();
+
+                    string z = "";
+                    string y = "";
+                    //doc.Add(d.ToString());
+                    if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+                    {
+                        //foreach(var t in tickerCluster[d.Item1])
+                        //{
+                        //    doc.Add(t);
+
+                        //}
+                        z = pgtickerCluster[d.Item1][0]; // iconum
+                                                         //y = pgtickerCluster[d.Item1][1]; // was ticker
+
+
+                    }
+                    //doc.Add(d.Item2);
+                    //n.Documents.Add(doc);
+                    // Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
+                    var sdb = "x";
+                    if (!string.IsNullOrWhiteSpace(d.Item4))
+                    {
+                        sdb = "SDB: " + d.Item4;
+                    }
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(sdb, d.Item2, d.Item3 ?? "NA", d.Item1, "Iconum: " + z);
+                    n.DocumentTuples.Add(tuple);
+
+                }
+                foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1))
+                {
+                    n.Documents.Add(dt.ToString());
+                }
+                n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
+                if (pgdocumentCluster.ContainsKey(n.Id))
+                {
+                    var set = new HashSet<Guid>();
+                    foreach (var g in pgdocumentCluster2[n.Id])
+                    {
+                        set.Add(g.Item1);
+                    }
+                    n.Title += string.Format(" ({0})", set.Count);
+                }
+            }
+            else if (pgdocumentCluster2.ContainsKey(n.Id))
+            {
+                foreach (var d in pgdocumentCluster2[n.Id])
+                {
+                    var doc = new List<string>();
+
+                    string z = "";
+                    string y = "";
+                    //doc.Add(d.ToString());
+                    if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+                    {
+                        //foreach(var t in tickerCluster[d.Item1])
+                        //{
+                        //    doc.Add(t);
+
+                        //}
+                        z = pgtickerCluster[d.Item1][0]; // iconum
+                                                         //y = pgtickerCluster[d.Item1][1]; // was ticker
+
+
+                    }
+                    //doc.Add(d.Item2);
+                    //n.Documents.Add(doc);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("y ", d.Item2, "Missing", d.Item1, "Iconum: " + z);
+                    n.DocumentTuples.Add(tuple);
+
+                }
+                foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1))
+                {
+                    n.Documents.Add(dt.ToString());
+                }
+                n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
+                var set = new HashSet<Guid>();
+                foreach (var g in pgdocumentCluster2[n.Id])
+                {
+                    set.Add(g.Item1);
+                }
+                n.Title += string.Format(" ({0})", set.Count);
+            }
+            else
+            {
+                //n.Title += string.Format(" (Cid: {0})", n.Id);
+            }
+            foreach (var child in n.Nodes)
+            {
+                PGnodeDocuments2(child, string.Format("{0}[{1}]", hiearchy, nTitle));
+            }
+            //foreach (var child in n.Nodes)
+            //{
+            //    n.Childrentitle += childrenTitle(child);
+            //}
             return n;
         }
         private Node nodeDocuments(Node n, string hiearchy = "")
@@ -853,7 +1595,7 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
                     }
                     //doc.Add(d.Item2);
                     //n.Documents.Add(doc);
-                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(y,  d.Item2, d.Item3, d.Item1, z);
+                    Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(y, d.Item2, d.Item3, d.Item1, z);
                     n.DocumentTuples.Add(tuple);
 
                 }
@@ -1239,8 +1981,7 @@ FROM CteTables order by parentid
                                         {
                                             AsReportedTemplateHelper.SendEmail("InsertGdb Outer performance", psb.ToString());
                                         }
-                                        catch
-                                        { }
+                                        catch { }
                                         return "true";
                                     }
                                 }
@@ -1250,12 +1991,12 @@ FROM CteTables order by parentid
                         {
                             AsReportedTemplateHelper.SendEmail("InsertGdb Outer performance", psb.ToString());
                         }
-                        catch
-                        { }
+                        catch { }
                         return "error executing sql";
                     }
                 }
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 string inner = "";
                 if (ex.InnerException != null)
@@ -1406,7 +2147,7 @@ Select DocumentId,XBRLTag,Offset,CellDate, Value,Label,GDBTableId,XBRLTitle,Colu
             psb.AppendLine("Ln930." + DateTime.UtcNow.ToString());
             foreach (var table in tintInfo.Tables)
             {
-            //    if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
+                //    if (!new string[] { "IS", "BS", "CF" }.Contains(table.Type)) continue;
                 //if (count > 2) break;
                 // Insert DocumentTable
                 count++;
@@ -1522,8 +2263,7 @@ END
             {
                 AsReportedTemplateHelper.SendEmail("InsertGdb Inner performance", psb.ToString());
             }
-            catch
-            { }
+            catch { }
             return retVal;
         }
         public static String Truncate(String input, int maxLength)
@@ -1685,7 +2425,7 @@ END
                                 string strReportingPeriodEndDate = ts.ReportingPeriodEndDate == null ? @"NULL" : string.Format(@"'{0}'", ts.ReportingPeriodEndDate.ToString());
 
                                 sb.AppendLine(string.Format(dts, dtsCount, strTimeSlicePeriodEndDate, strReportingPeriodEndDate, ts.Duration,
-                                    ts.PeriodType, ts.CompanyFiscalYear));
+                                        ts.PeriodType, ts.CompanyFiscalYear));
                                 addedDts.Add(ts.FakeID);
                             }
                             u = ts;
@@ -1802,7 +2542,7 @@ INSERT DocumentTimeSliceTableCell(DocumentTimeSliceId, TableCellId) values (@dts
                 if (count > 0) break;
                 // Insert DocumentTable
                 bool addDocumentTable = true;
-                foreach(var cell in table.Cells)
+                foreach (var cell in table.Cells)
                 {
                     if (collectedValues.FirstOrDefault(x => x.SourceLinkID == cell.offset) != null)
                     {
@@ -1877,7 +2617,7 @@ INSERT DimensionToCell(TableDimensionID, TableCellID) VALUES (@TdColid, @tcID);
 ";
 
                         var v = table.Values.FirstOrDefault(x => x.Offset == cell.offset);
-                        sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue,  v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id));
+                        sb.AppendLine(string.Format(tc, v.Offset, v.Date, v.OriginalValue, v.NumericValue, v.Scaling, v.XbrlTag, row.Label, row.Id, col.Id));
                         // Insert Table Dimension
                         // Insert Table Cell
                         // Insert DimensionToCell
@@ -2075,7 +2815,7 @@ exec GDBGetCodes @sdbcode
                             }
                             valuenodes.Add(node);
                             row = null;
-                            foreach(DataRow r in table.Rows)
+                            foreach (DataRow r in table.Rows)
                             {
                                 if (r["Name"].ToString() == node.CompanyName)
                                 {
@@ -2092,7 +2832,7 @@ exec GDBGetCodes @sdbcode
 
                         }
 
-                    } 
+                    }
                 }
             }
             int totalCount = 0;
@@ -2130,11 +2870,11 @@ exec GDBGetCodesForIconum @sdbcode, @iconum, @documentId
                     cmd.Parameters.AddWithValue("@iconum", iconum);
                     if (DocumentID.HasValue)
                     {
-                      cmd.Parameters.AddWithValue("@documentId", DocumentID.Value);
+                        cmd.Parameters.AddWithValue("@documentId", DocumentID.Value);
                     }
                     else
                     {
-                      cmd.Parameters.AddWithValue("@documentId", DBNull.Value);
+                        cmd.Parameters.AddWithValue("@documentId", DBNull.Value);
                     }
                     using (SqlDataReader sdr = cmd.ExecuteReader())
                     {
