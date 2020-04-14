@@ -742,8 +742,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
 
-		//TODO: Add IsSummary
-		[Route("timeSlice/{id}")]
+        [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}/{histDocumentId}/{histFileId}")]
+        [HttpGet]
+        public TimeSlice GetAutoStitchedTimeSlice(string CompanyId, Guid currDocumentId, int currFileId, Guid histDocumentId, int histFileId)
+        {
+            try
+            {
+                int iconum = PermId.PermId2Iconum(CompanyId);
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.GetAutostitchedTimeSlice(currFileId);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+        //TODO: Add IsSummary
+        [Route("timeSlice/{id}")]
 		[HttpGet]
 		public TimeSlice GetTimeSlice(string CompanyId, int id) {
 			try {

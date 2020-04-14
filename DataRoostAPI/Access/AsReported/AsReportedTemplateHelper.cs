@@ -2754,7 +2754,171 @@ END CATCH
 			//return response;
 		}
 
-		public TimeSlice GetTimeSlice(int id) {
+        private string GetWebRequest(string url)
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.ContentType = "application/json";
+            request.Timeout = 120000;
+            request.Method = "GET";
+            HttpWebResponse response = null;
+            try
+            {
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            catch
+            {
+                throw new FileNotFoundException("call failed");
+            }
+            string outputresult = null;
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                using (var streamReader = new StreamReader(response.GetResponseStream()))
+                {
+                    outputresult = streamReader.ReadToEnd();
+                }
+            }
+            else if (response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+            {
+                throw new Exception("call failed");
+            }
+            else
+            {
+                throw new FileNotFoundException("call failed");
+            }
+            return outputresult;
+
+        }
+
+        public class AutoStitch
+        {
+            [JsonProperty("currentDocumentId")]
+            public string CurrentDocumentId { get; set; }
+            [JsonProperty("historicalDocumentId")]
+            public string HistoricalDocumentId { get; set; }
+            [JsonProperty("links")]
+            public List<AutoStitchLink> Links { get; set; }
+        }
+        public class AutoStitchLink
+        {
+            [JsonProperty("confidenceScore")]
+            public double ConfidenceScore { get; set; }
+            [JsonProperty("historicalOffsets")]
+            public List<string> HistoricalOffsets { get; set; }
+            [JsonProperty("currentOffsets")]
+            public List<string> CurrentOffsets { get; set; }
+        }
+        public TimeSlice GetAutostitchedTimeSlice(int id)
+        {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
+select distinct top 1 dts.*
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+WHERE 
+  tc.Offset = 'o1007379|l7|r0' 
+and d.DAMDocumentId = '61212c7d-7453-e811-80f1-8cdcd4af21e4'
+and ltrim(isnull(tc.Offset, '')) <> ''
+";
+
+            string queryByCell = @"
+select top 1 tc.id, tc.CellDate
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+WHERE 
+  tc.Offset = 'o1007379|l7|r0' 
+and d.DAMDocumentId = '61212c7d-7453-e811-80f1-8cdcd4af21e4'
+and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
+";
+            string autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            var outputresult = GetWebRequest(autostitchingurl);
+            if (string.IsNullOrWhiteSpace(outputresult))
+            {
+                return null;
+            }
+            var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+            var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);
+            if (autostitchInfo == null)
+            {
+                throw new Exception("failed to get auto stitch result");
+            }
+            TimeSlice slice = null;
+            foreach (var link in autostitchInfo.Links)
+            {
+                if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
+                {
+                    continue;
+                }
+                var joined = String.Join(",", link.HistoricalOffsets);
+
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        cmd.Parameters.AddWithValue("@id", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            reader.Read();
+                            slice = new TimeSlice
+                            {
+                                Id = reader.GetInt32(0),
+                                DocumentId = reader.GetGuid(1),
+                                DocumentSeriesId = reader.GetInt32(2),
+                                TimeSlicePeriodEndDate = reader.GetDateTime(3),
+                                ReportingPeriodEndDate = reader.GetDateTime(4),
+                                FiscalDistance = reader.GetInt32(5),
+                                Duration = reader.GetInt32(6),
+                                PeriodType = reader.GetStringSafe(7),
+                                AcquisitionFlag = reader.GetStringSafe(8),
+                                AccountingStandard = reader.GetStringSafe(9),
+                                ConsolidatedFlag = reader.GetStringSafe(10),
+                                IsProForma = reader.GetBoolean(11),
+                                IsRecap = reader.GetBoolean(12),
+                                CompanyFiscalYear = reader.GetDecimal(13),
+                                ReportType = reader.GetStringSafe(14),
+                                IsAmended = reader.GetBoolean(15),
+                                IsRestated = reader.GetBoolean(16),
+                                IsAutoCalc = reader.GetBoolean(17),
+                                ManualOrgSet = reader.GetBoolean(18),
+                                TableTypeID = reader.GetInt32(19)
+                            };
+
+
+                            break;
+                        }
+                    }
+                }
+            }
+            if (slice == null)
+            {
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(queryByCell, conn))
+                    {
+                        conn.Open();
+                        cmd.Parameters.AddWithValue("@id", id);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            reader.Read();
+                            slice = new TimeSlice
+                            {
+                                Id = reader.GetInt32(0),
+                                ReportingPeriodEndDate = reader.GetDateTime(1),
+                                Currency = "TABLECELL",
+                                TableTypeID = -1
+                            };
+
+
+                            //break;
+                        }
+                    }
+                }
+            }
+            return slice;
+        }
+        public TimeSlice GetTimeSlice(int id) {
 			string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
 			string query = @"SELECT * FROM dbo.DocumentTimeSlice WITH (NOLOCK) WHERE ID = @id";
 
