@@ -2817,8 +2817,8 @@ FROM TableCell tc
 	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
 	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
 WHERE 
-  tc.Offset = 'o1007379|l7|r0' 
-and d.DAMDocumentId = '61212c7d-7453-e811-80f1-8cdcd4af21e4'
+  tc.Offset in (@offsets)
+and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> ''
 ";
 
@@ -2827,8 +2827,8 @@ select top 1 tc.id, tc.CellDate
 FROM TableCell tc 
 	join Document d on tc.DocumentId = d.ID
 WHERE 
-  tc.Offset = 'o1007379|l7|r0' 
-and d.DAMDocumentId = '61212c7d-7453-e811-80f1-8cdcd4af21e4'
+  tc.Offset in (@offsets)
+and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
 ";
             string autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
@@ -2843,21 +2843,24 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             {
                 throw new Exception("failed to get auto stitch result");
             }
+            string docId = "61212c7d-7453-e811-80f1-8cdcd4af21e4";
             TimeSlice slice = null;
+            string joined = "";
             foreach (var link in autostitchInfo.Links)
             {
                 if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
                 {
                     continue;
                 }
-                var joined = String.Join(",", link.HistoricalOffsets);
+                joined = String.Join(",", link.HistoricalOffsets);
 
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         conn.Open();
-                        cmd.Parameters.AddWithValue("@id", id);
+                        cmd.Parameters.AddWithValue("@offsets", joined);
+                        cmd.Parameters.AddWithValue("@docId", docId);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             reader.Read();
@@ -2898,7 +2901,8 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                     using (SqlCommand cmd = new SqlCommand(queryByCell, conn))
                     {
                         conn.Open();
-                        cmd.Parameters.AddWithValue("@id", id);
+                        cmd.Parameters.AddWithValue("@offsets", joined);
+                        cmd.Parameters.AddWithValue("@docId", docId);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             reader.Read();
@@ -2910,7 +2914,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                                 TableTypeID = -1
                             };
 
-
+                            // if need more detail, call http://localhost:61581/api/v1/companies/28054/efforts/asreported/cells/1055408969
                             //break;
                         }
                     }
