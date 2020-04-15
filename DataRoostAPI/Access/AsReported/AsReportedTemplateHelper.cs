@@ -2822,7 +2822,9 @@ END CATCH
         }
         public TimeSlice GetAutostitchedTimeSliceCurrent(int iconum, Guid currDocId, int currFileId)
         {
-            string url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";
+            string test_url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";
+            string url_pattern = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/{1}/Iconum/{0}/FileId/{2}/file";
+            var url = string.Format(url_pattern, iconum, currDocId, currFileId);
             var outputresult = GetWebRequest(url);
             if (string.IsNullOrWhiteSpace(outputresult))
             {
@@ -2834,7 +2836,6 @@ END CATCH
             {
                 throw new Exception("failed to get auto stitch result");
             }
-            string docId = "61212c7d-7453-e811-80f1-8cdcd4af21e4";
             var hisDocId = new Guid(autostitchInfo.DocumentId);
             return GetAutostitchedTimeSlice(iconum, currDocId, currFileId, hisDocId, autostitchInfo.FileId);
         }
@@ -2863,7 +2864,9 @@ WHERE
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
 ";
-            string autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
+            string autostitchingurl = string.Format(url_pattern, iconum, currDocId, currFileId, hisDocId, hisFileId);
             var outputresult = GetWebRequest(autostitchingurl);
             if (string.IsNullOrWhiteSpace(outputresult))
             {
@@ -2928,7 +2931,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             }
             TimeSlice slice = null;
             string joined = "";
-            hisDocId = new Guid("61212c7d-7453-e811-80f1-8cdcd4af21e4");
+            var test_hisDocId = new Guid("61212c7d-7453-e811-80f1-8cdcd4af21e4");
             foreach (var link in autostitchInfo.Links)
             {
                 if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
