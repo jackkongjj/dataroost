@@ -2859,7 +2859,7 @@ select top 1 tc.id, tc.CellDate
 FROM TableCell tc 
 	join Document d on tc.DocumentId = d.ID
 WHERE 
-  tc.Offset in (@offsets)
+  tc.Offset in ({0})
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
 ";
@@ -2874,8 +2874,10 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
   ""links"": [
     {
       ""historicalOffsets"": [
+
+        ""o10497|l1|r6"",
         ""o1007379|l7|r0"",
-        ""o102714|l9|r0""
+        ""o3506746|l5|r0""
       ],
       ""confidenceScore"": 1.0,
       ""currentOffsets"": [
@@ -2924,25 +2926,25 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             {
                 throw new Exception("failed to get auto stitch result");
             }
-            string docId = "61212c7d-7453-e811-80f1-8cdcd4af21e4";
             TimeSlice slice = null;
             string joined = "";
+            hisDocId = new Guid("61212c7d-7453-e811-80f1-8cdcd4af21e4");
             foreach (var link in autostitchInfo.Links)
             {
                 if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
                 {
                     continue;
                 }
-
-                //joined = String.Join(",", link.HistoricalOffsets);
-                joined = link.HistoricalOffsets.Aggregate((a, b) => ("'" + a + "','" + b + "'")).ToString();
+                var formatted = link.HistoricalOffsets.Select(x => string.Format("'{0}'", x));
+                joined = String.Join(",", formatted);
+                //joined = link.HistoricalOffsets.Aggregate((a, b) => ("'" + a + "','" + b + "'")).ToString();
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
                     using (SqlCommand cmd = new SqlCommand(string.Format(query, joined), conn))
                     {
                         conn.Open();
                         //cmd.Parameters.AddWithValue("@offsets", joined);
-                        cmd.Parameters.AddWithValue("@docId", docId);
+                        cmd.Parameters.AddWithValue("@docId", hisDocId);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -2951,6 +2953,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                                 slice = new TimeSlice
                                 {
                                     Id = reader.GetInt32(0),
+                                    DamDocumentId = hisDocId,
                                     DocumentId = reader.GetGuid(1),
                                     DocumentSeriesId = reader.GetInt32(2),
                                     TimeSlicePeriodEndDate = reader.GetDateTime(3),
@@ -2984,22 +2987,22 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             {
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
-                    using (SqlCommand cmd = new SqlCommand(queryByCell, conn))
+                    using (SqlCommand cmd = new SqlCommand(string.Format(queryByCell, joined), conn))
                     {
                         conn.Open();
-                        cmd.Parameters.AddWithValue("@offsets", joined);
-                        cmd.Parameters.AddWithValue("@docId", docId);
+                        cmd.Parameters.AddWithValue("@docId", hisDocId);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
-                            reader.Read();
-                            slice = new TimeSlice
+                            if (reader.Read())
                             {
-                                Id = reader.GetInt32(0),
-                                ReportingPeriodEndDate = reader.GetDateTime(1),
-                                Currency = "TABLECELL",
-                                TableTypeID = -1
-                            };
-
+                                slice = new TimeSlice
+                                {
+                                    Id = reader.GetInt32(0),
+                                    ReportingPeriodEndDate = reader.GetDateTime(1),
+                                    Currency = "TABLECELL",
+                                    TableTypeID = -1
+                                };
+                            }
                             // if need more detail, call http://localhost:61581/api/v1/companies/28054/efforts/asreported/cells/1055408969
                             //break;
                         }
