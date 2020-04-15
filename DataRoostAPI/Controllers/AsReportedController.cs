@@ -741,6 +741,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+        [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}")]
+        [HttpGet]
+        public TimeSlice GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId)
+        {
+            try
+            {
+                int iconum = PermId.PermId2Iconum(CompanyId);
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                return helper.GetAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
 
         [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}/{histDocumentId}/{histFileId}")]
         [HttpGet]
@@ -752,7 +770,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetAutostitchedTimeSlice(currFileId);
+                return helper.GetAutostitchedTimeSlice(iconum, currDocumentId, currFileId, histDocumentId, histFileId);
             }
             catch (Exception ex)
             {

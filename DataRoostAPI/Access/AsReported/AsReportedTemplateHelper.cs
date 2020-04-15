@@ -2807,7 +2807,37 @@ END CATCH
             [JsonProperty("currentOffsets")]
             public List<string> CurrentOffsets { get; set; }
         }
-        public TimeSlice GetAutostitchedTimeSlice(int id)
+
+        public class DocumentRoot
+        {
+
+            [JsonProperty("documentId")]
+            public string DocumentId { get; set; }
+            [JsonProperty("fileid")]
+            public int FileId { get; set; }
+            [JsonProperty("rootid")]
+            public int RootId { get; set; }
+        }
+        public TimeSlice GetAutostitchedTimeSliceCurrent(int iconum, Guid currDocId, int currFileId)
+        {
+            string url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";
+            var outputresult = GetWebRequest(url);
+            if (string.IsNullOrWhiteSpace(outputresult))
+            {
+                return null;
+            }
+            var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+            var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<DocumentRoot>(outputresult, settings);
+            if (autostitchInfo == null)
+            {
+                throw new Exception("failed to get auto stitch result");
+            }
+            string docId = "61212c7d-7453-e811-80f1-8cdcd4af21e4";
+            var hisDocId = new Guid(autostitchInfo.DocumentId);
+            return GetAutostitchedTimeSlice(iconum, currDocId, currFileId, hisDocId, autostitchInfo.FileId);
+        }
+
+        public TimeSlice GetAutostitchedTimeSlice(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId)
         {
             string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string query = @"
