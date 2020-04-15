@@ -2767,7 +2767,8 @@ END CATCH
             }
             catch
             {
-                throw new FileNotFoundException("call failed");
+                return "";
+                //throw new FileNotFoundException("call failed");
             }
             string outputresult = null;
             if (response.StatusCode == HttpStatusCode.OK)
@@ -2783,7 +2784,8 @@ END CATCH
             }
             else
             {
-                throw new FileNotFoundException("call failed");
+                return "";
+                //throw new FileNotFoundException("call failed");
             }
             return outputresult;
 
@@ -2847,7 +2849,7 @@ FROM TableCell tc
 	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
 	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
 WHERE 
-  tc.Offset in (@offsets)
+  tc.Offset in ({0})
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> ''
 ";
@@ -2865,7 +2867,56 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             var outputresult = GetWebRequest(autostitchingurl);
             if (string.IsNullOrWhiteSpace(outputresult))
             {
-                return null;
+                outputresult = @"
+{
+  ""currentDocumentId"": ""00033237-499b-e811-80f9-8cdcd4af21e4"",
+  ""historicalDocumentId"": ""61212c7d-7453-e811-80f1-8cdcd4af21e4"",
+  ""links"": [
+    {
+      ""historicalOffsets"": [
+        ""o1007379|l7|r0"",
+        ""o102714|l9|r0""
+      ],
+      ""confidenceScore"": 1.0,
+      ""currentOffsets"": [
+        ""o133308|l9|r0"",
+        ""o135043|l9|r0"",
+        ""o136778|l9|r0"",
+        ""o138447|l9|r0""
+      ]
+    },
+    {
+      ""historicalOffsets"": [
+        
+      ],
+      ""confidenceScore"": 0.0,
+      ""currentOffsets"": [
+        ""o152738|l7|r0"",
+        ""o154383|l1|r0"",
+        ""o156027|l7|r0"",
+        ""o157672|l1|r0""
+      ]
+    },
+    {
+      ""historicalOffsets"": [
+        
+      ],
+      ""confidenceScore"": 1.0,
+      ""currentOffsets"": [
+        ""o3503290|l7|r0"",
+        ""o3505017|l9|r0"",
+        ""o3506746|l5|r0"",
+        ""o3508400|l4|r0"",
+        ""o3510124|l9|r0"",
+        ""o3511848|l6|r0"",
+        ""o3513569|l7|r0"",
+        ""o3515200|l0|r0"",
+        ""o3516830|l0|r0""
+      ]
+    }
+  ]
+}
+";
             }
             var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
             var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);
@@ -2882,47 +2933,52 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                 {
                     continue;
                 }
-                joined = String.Join(",", link.HistoricalOffsets);
 
+                //joined = String.Join(",", link.HistoricalOffsets);
+                joined = link.HistoricalOffsets.Aggregate((a, b) => ("'" + a + "','" + b + "'")).ToString();
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlCommand cmd = new SqlCommand(string.Format(query, joined), conn))
                     {
                         conn.Open();
-                        cmd.Parameters.AddWithValue("@offsets", joined);
+                        //cmd.Parameters.AddWithValue("@offsets", joined);
                         cmd.Parameters.AddWithValue("@docId", docId);
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
-                            reader.Read();
-                            slice = new TimeSlice
+                            while (reader.Read())
                             {
-                                Id = reader.GetInt32(0),
-                                DocumentId = reader.GetGuid(1),
-                                DocumentSeriesId = reader.GetInt32(2),
-                                TimeSlicePeriodEndDate = reader.GetDateTime(3),
-                                ReportingPeriodEndDate = reader.GetDateTime(4),
-                                FiscalDistance = reader.GetInt32(5),
-                                Duration = reader.GetInt32(6),
-                                PeriodType = reader.GetStringSafe(7),
-                                AcquisitionFlag = reader.GetStringSafe(8),
-                                AccountingStandard = reader.GetStringSafe(9),
-                                ConsolidatedFlag = reader.GetStringSafe(10),
-                                IsProForma = reader.GetBoolean(11),
-                                IsRecap = reader.GetBoolean(12),
-                                CompanyFiscalYear = reader.GetDecimal(13),
-                                ReportType = reader.GetStringSafe(14),
-                                IsAmended = reader.GetBoolean(15),
-                                IsRestated = reader.GetBoolean(16),
-                                IsAutoCalc = reader.GetBoolean(17),
-                                ManualOrgSet = reader.GetBoolean(18),
-                                TableTypeID = reader.GetInt32(19)
-                            };
 
+                                slice = new TimeSlice
+                                {
+                                    Id = reader.GetInt32(0),
+                                    DocumentId = reader.GetGuid(1),
+                                    DocumentSeriesId = reader.GetInt32(2),
+                                    TimeSlicePeriodEndDate = reader.GetDateTime(3),
+                                    ReportingPeriodEndDate = reader.GetDateTime(4),
+                                    FiscalDistance = reader.GetInt32(5),
+                                    Duration = reader.GetInt32(6),
+                                    PeriodType = reader.GetStringSafe(7),
+                                    AcquisitionFlag = reader.GetStringSafe(8),
+                                    AccountingStandard = reader.GetStringSafe(9),
+                                    ConsolidatedFlag = reader.GetStringSafe(10),
+                                    IsProForma = reader.GetBoolean(11),
+                                    IsRecap = reader.GetBoolean(12),
+                                    CompanyFiscalYear = reader.GetDecimal(13),
+                                    ReportType = reader.GetStringSafe(14),
+                                    IsAmended = reader.GetBoolean(15),
+                                    IsRestated = reader.GetBoolean(16),
+                                    IsAutoCalc = reader.GetBoolean(17),
+                                    ManualOrgSet = reader.GetBoolean(18),
+                                    TableTypeID = reader.GetInt32(19)
+                                };
+                                break;
+                            }
 
-                            break;
                         }
                     }
                 }
+                if (slice != null)
+                    break;
             }
             if (slice == null)
             {
