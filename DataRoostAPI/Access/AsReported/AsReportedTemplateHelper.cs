@@ -2820,6 +2820,201 @@ END CATCH
             [JsonProperty("rootid")]
             public int RootId { get; set; }
         }
+
+        public TimeSlice PostAutostitchedTimeSliceCurrent(int iconum, Guid currDocId, int currFileId, List<string> offsets)
+        {
+            string test_url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";
+            string url_pattern = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/{1}/Iconum/{0}/FileId/{2}/file";
+            var url = string.Format(url_pattern, iconum, currDocId, currFileId);
+            var outputresult = GetWebRequest(url);
+            if (string.IsNullOrWhiteSpace(outputresult))
+            {
+                return null;
+            }
+            var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+            var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<DocumentRoot>(outputresult, settings);
+            if (autostitchInfo == null)
+            {
+                throw new Exception("failed to get auto stitch result");
+            }
+            var hisDocId = new Guid(autostitchInfo.DocumentId);
+            return PostAutostitchedTimeSlice(iconum, currDocId, currFileId, hisDocId, autostitchInfo.FileId, offsets);
+        }
+
+        public TimeSlice PostAutostitchedTimeSlice(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
+        {
+            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            string query = @"
+select distinct top 1 dts.*
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+WHERE 
+  tc.Offset in ({0})
+and d.DAMDocumentId = @docId
+and ltrim(isnull(tc.Offset, '')) <> ''
+";
+
+            string queryByCell = @"
+select top 1 tc.id, tc.CellDate
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+WHERE 
+  tc.Offset in ({0})
+and d.DAMDocumentId = @docId
+and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
+";
+            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
+            string autostitchingurl = string.Format(url_pattern, iconum, currDocId, currFileId, hisDocId, hisFileId);
+            var outputresult = GetWebRequest(autostitchingurl);
+            if (string.IsNullOrWhiteSpace(outputresult))
+            {
+                outputresult = @"
+{
+  ""currentDocumentId"": ""00033237-499b-e811-80f9-8cdcd4af21e4"",
+  ""historicalDocumentId"": ""61212c7d-7453-e811-80f1-8cdcd4af21e4"",
+  ""links"": [
+    {
+      ""historicalOffsets"": [
+
+        ""o10497|l1|r6"",
+        ""o1007379|l7|r0"",
+        ""o3506746|l5|r0""
+      ],
+      ""confidenceScore"": 1.0,
+      ""currentOffsets"": [
+        ""o133308|l9|r0"",
+        ""o135043|l9|r0"",
+        ""o136778|l9|r0"",
+        ""o138447|l9|r0""
+      ]
+    },
+    {
+      ""historicalOffsets"": [
+        
+      ],
+      ""confidenceScore"": 0.0,
+      ""currentOffsets"": [
+        ""o152738|l7|r0"",
+        ""o154383|l1|r0"",
+        ""o156027|l7|r0"",
+        ""o157672|l1|r0""
+      ]
+    },
+    {
+      ""historicalOffsets"": [
+        
+      ],
+      ""confidenceScore"": 1.0,
+      ""currentOffsets"": [
+        ""o3503290|l7|r0"",
+        ""o3505017|l9|r0"",
+        ""o3506746|l5|r0"",
+        ""o3508400|l4|r0"",
+        ""o3510124|l9|r0"",
+        ""o3511848|l6|r0"",
+        ""o3513569|l7|r0"",
+        ""o3515200|l0|r0"",
+        ""o3516830|l0|r0""
+      ]
+    }
+  ]
+}
+";
+            }
+            var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+            var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);
+            if (autostitchInfo == null)
+            {
+                throw new Exception("failed to get auto stitch result");
+            }
+            TimeSlice slice = null;
+            string joined = "";
+            var test_hisDocId = new Guid("61212c7d-7453-e811-80f1-8cdcd4af21e4");
+            foreach (var link in autostitchInfo.Links)
+            {
+                if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
+                {
+                    continue;
+                }
+                var formatted = link.HistoricalOffsets.Select(x => string.Format("'{0}'", x));
+                joined = String.Join(",", formatted);
+                //joined = link.HistoricalOffsets.Aggregate((a, b) => ("'" + a + "','" + b + "'")).ToString();
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Format(query, joined), conn))
+                    {
+                        conn.Open();
+                        //cmd.Parameters.AddWithValue("@offsets", joined);
+                        cmd.Parameters.AddWithValue("@docId", hisDocId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+
+                                slice = new TimeSlice
+                                {
+                                    Id = reader.GetInt32(0),
+                                    DamDocumentId = hisDocId,
+                                    DocumentId = reader.GetGuid(1),
+                                    DocumentSeriesId = reader.GetInt32(2),
+                                    TimeSlicePeriodEndDate = reader.GetDateTime(3),
+                                    ReportingPeriodEndDate = reader.GetDateTime(4),
+                                    FiscalDistance = reader.GetInt32(5),
+                                    Duration = reader.GetInt32(6),
+                                    PeriodType = reader.GetStringSafe(7),
+                                    AcquisitionFlag = reader.GetStringSafe(8),
+                                    AccountingStandard = reader.GetStringSafe(9),
+                                    ConsolidatedFlag = reader.GetStringSafe(10),
+                                    IsProForma = reader.GetBoolean(11),
+                                    IsRecap = reader.GetBoolean(12),
+                                    CompanyFiscalYear = reader.GetDecimal(13),
+                                    ReportType = reader.GetStringSafe(14),
+                                    IsAmended = reader.GetBoolean(15),
+                                    IsRestated = reader.GetBoolean(16),
+                                    IsAutoCalc = reader.GetBoolean(17),
+                                    ManualOrgSet = reader.GetBoolean(18),
+                                    TableTypeID = reader.GetInt32(19)
+                                };
+                                break;
+                            }
+
+                        }
+                    }
+                }
+                if (slice != null)
+                    break;
+            }
+            if (slice == null)
+            {
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Format(queryByCell, joined), conn))
+                    {
+                        conn.Open();
+                        cmd.Parameters.AddWithValue("@docId", hisDocId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                slice = new TimeSlice
+                                {
+                                    Id = reader.GetInt32(0),
+                                    ReportingPeriodEndDate = reader.GetDateTime(1),
+                                    Currency = "TABLECELL",
+                                    TableTypeID = -1
+                                };
+                            }
+                            // if need more detail, call http://localhost:61581/api/v1/companies/28054/efforts/asreported/cells/1055408969
+                            //break;
+                        }
+                    }
+                }
+            }
+            return slice;
+        }
         public TimeSlice GetAutostitchedTimeSliceCurrent(int iconum, Guid currDocId, int currFileId)
         {
             string test_url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";

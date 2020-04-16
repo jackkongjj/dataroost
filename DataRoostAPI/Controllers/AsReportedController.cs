@@ -742,8 +742,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		}
 
         [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}")]
-        [HttpGet]
-        public TimeSlice GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId)
+        [HttpPost]
+        public TimeSlice GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
         {
             try
             {
