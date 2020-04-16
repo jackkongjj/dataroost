@@ -2939,6 +2939,23 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                 {
                     continue;
                 }
+                if (link.CurrentOffsets == null || link.CurrentOffsets.Count == 0)
+                {
+                    continue;
+                }
+                bool isfound = false;
+                foreach (var o in offsets)
+                {
+                    if (link.CurrentOffsets.Contains(o))
+                    {
+                        isfound = true;
+                        break; 
+                    }
+                }
+                if (!isfound)
+                {
+                    continue;
+                }
                 var formatted = link.HistoricalOffsets.Select(x => string.Format("'{0}'", x));
                 joined = String.Join(",", formatted);
                 //joined = link.HistoricalOffsets.Aggregate((a, b) => ("'" + a + "','" + b + "'")).ToString();
@@ -2987,7 +3004,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                 if (slice != null)
                     break;
             }
-            if (slice == null)
+            if (slice == null && !string.IsNullOrWhiteSpace(joined))
             {
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {

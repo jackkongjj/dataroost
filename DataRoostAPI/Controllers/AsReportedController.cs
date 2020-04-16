@@ -745,13 +745,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         [HttpPost]
         public TimeSlice GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
         {
+
+            // Post body: ["o7857981|l2|r0", "o7858643|l3|r0", "o133308|l9|r0"]
             try
             {
+                if (offsets == null || offsets.Count == 0)
+                    throw new ArgumentNullException();
                 int iconum = PermId.PermId2Iconum(CompanyId);
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId);
+                return helper.PostAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId, offsets);
             }
             catch (Exception ex)
             {
