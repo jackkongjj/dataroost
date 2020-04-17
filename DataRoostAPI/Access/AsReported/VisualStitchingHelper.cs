@@ -197,9 +197,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public List<Tuple<string, string, string, Guid, string>> DocumentTuples { get; set; }
 			[JsonProperty("documents")]
 			public List<string> Documents { get; set; }
-            [JsonProperty("comment")]
-            public string Comment { get; set; }
-            [JsonIgnore]
+			[JsonProperty("comment")]
+			public string Comment { get; set; }
+			[JsonIgnore]
 			public string Childrentitle { get; set; }
 
 		}
@@ -263,15 +263,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public int? NormTableId { get; set; }
 			[JsonProperty("norm_table_description")]
 			public string NormTableDescription { get; set; }
-            [JsonProperty("raw_row_id")]
-            public int? RawRowId { get; set; }
-            [JsonProperty("adjusted_row_id")]
-            public int? AdjustedRowId { get; set; }
-            [JsonProperty("raw_col_id")]
-            public int? RawColId { get; set; }
-            [JsonProperty("raw_table_id")]
-            public int? RawTableId { get; set; }
-        }
+			[JsonProperty("raw_row_id")]
+			public int? RawRowId { get; set; }
+			[JsonProperty("adjusted_row_id")]
+			public int? AdjustedRowId { get; set; }
+			[JsonProperty("raw_col_id")]
+			public int? RawColId { get; set; }
+			[JsonProperty("raw_table_id")]
+			public int? RawTableId { get; set; }
+		}
 
 		public class ReactNode {
 			[JsonProperty("id")]
@@ -767,8 +767,8 @@ SELECT  Id,Label, iconum_count, comment
 							n.Id = (int)sdr.GetInt64(0);
 							n.Title = sdr.GetString(1);
 							n.ParentId = sdr.GetInt32(2); // count, NOT parentid
-                            n.Comment = sdr.GetStringSafe(3);
-                            n.Nodes = new List<Node>();
+							n.Comment = sdr.GetStringSafe(3);
+							n.Nodes = new List<Node>();
 							allNodes.Add(n);
 						}
 					}
@@ -828,8 +828,8 @@ SELECT  Id,Label, iconum_count, comment
 								r.Id = -1;
 								r.Title = labelAtlevel;
 								r.ParentId = row.ParentId;
-                                r.Comment = row.Comment;
-                                r.Nodes = new List<Node>();
+								r.Comment = row.Comment;
+								r.Nodes = new List<Node>();
 								lastRoot.Nodes.Add(r);
 								lastRoot = r;
 								stack.Push(r);
@@ -839,7 +839,7 @@ SELECT  Id,Label, iconum_count, comment
 							r.Id = row.Id;
 							r.Title = endLabel;
 							r.ParentId = row.ParentId;
-                            r.Comment = row.Comment;
+							r.Comment = row.Comment;
 							r.Nodes = new List<Node>();
 							lastRoot.Nodes.Add(r);
 							lastRoot = r;
@@ -954,11 +954,11 @@ where coalesce(TRIM(tc.item_offset), '') <> ''
 							n.NormTableId = sdr.GetNullable<int>(21);
 							n.NormTableDescription = sdr.GetStringSafe(22);
 							n.FinalLabel = sdr.GetStringSafe(23);
-                            n.RawRowId = sdr.GetNullable<int>(24);
-                            n.AdjustedRowId = sdr.GetNullable<int>(25);
-                            n.RawColId = sdr.GetNullable<int>(26);
-                            n.RawTableId = sdr.GetNullable<int>(27);
-                            n.Nodes = new List<NameTreeNode>();
+							n.RawRowId = sdr.GetNullable<int>(24);
+							n.AdjustedRowId = sdr.GetNullable<int>(25);
+							n.RawColId = sdr.GetNullable<int>(26);
+							n.RawTableId = sdr.GetNullable<int>(27);
+							n.Nodes = new List<NameTreeNode>();
 							allNodes.Add(n);
 						}
 					}
