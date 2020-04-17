@@ -2843,7 +2843,6 @@ END CATCH
 
         public TimeSlice PostAutostitchedTimeSlice(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
         {
-            string starttime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string query = @"
 select distinct top 1 dts.*
 FROM TableCell tc 
@@ -2869,10 +2868,108 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
             string autostitchingurl = string.Format(url_pattern, iconum, currDocId, currFileId, hisDocId, hisFileId);
             var outputresult = GetWebRequest(autostitchingurl);
-            if (string.IsNullOrWhiteSpace(outputresult))
+            if (!string.IsNullOrWhiteSpace(outputresult))
             {
-                return null;
+                return GetHistoricalAutoStitched(currDocId, currFileId, hisDocId, hisFileId, offsets, outputresult);
             }
+            TimeSlice slice = null;
+            string joined = "";
+            var formatted = offsets.Select(x => string.Format("'{0}'", x));
+            joined = String.Join(",", formatted);
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(string.Format(query, joined), conn))
+                {
+                    conn.Open();
+                    //cmd.Parameters.AddWithValue("@offsets", joined);
+                    cmd.Parameters.AddWithValue("@docId", currDocId);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+
+                            slice = new TimeSlice
+                            {
+                                Id = reader.GetInt32(0),
+                                DamDocumentId = hisDocId,
+                                DocumentId = reader.GetGuid(1),
+                                DocumentSeriesId = reader.GetInt32(2),
+                                TimeSlicePeriodEndDate = reader.GetDateTime(3),
+                                ReportingPeriodEndDate = reader.GetDateTime(4),
+                                FiscalDistance = reader.GetInt32(5),
+                                Duration = reader.GetInt32(6),
+                                PeriodType = reader.GetStringSafe(7),
+                                AcquisitionFlag = reader.GetStringSafe(8),
+                                AccountingStandard = reader.GetStringSafe(9),
+                                ConsolidatedFlag = reader.GetStringSafe(10),
+                                IsProForma = reader.GetBoolean(11),
+                                IsRecap = reader.GetBoolean(12),
+                                CompanyFiscalYear = reader.GetDecimal(13),
+                                ReportType = reader.GetStringSafe(14),
+                                IsAmended = reader.GetBoolean(15),
+                                IsRestated = reader.GetBoolean(16),
+                                IsAutoCalc = reader.GetBoolean(17),
+                                ManualOrgSet = reader.GetBoolean(18),
+                                TableTypeID = reader.GetInt32(19)
+                            };
+                            break;
+                        }
+
+                    }
+                }
+            }
+            if (slice == null && !string.IsNullOrWhiteSpace(joined))
+            {
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Format(queryByCell, joined), conn))
+                    {
+                        conn.Open();
+                        cmd.Parameters.AddWithValue("@docId", currDocId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                slice = new TimeSlice
+                                {
+                                    Id = reader.GetInt32(0),
+                                    ReportingPeriodEndDate = reader.GetDateTime(1),
+                                    Currency = "TABLECELL",
+                                    TableTypeID = -1
+                                };
+                            }
+                            // if need more detail, call http://localhost:61581/api/v1/companies/28054/efforts/asreported/cells/1055408969
+                            //break;
+                        }
+                    }
+                }
+            }
+            return slice;
+        }
+
+        private TimeSlice GetHistoricalAutoStitched(Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets, string outputresult)
+        {
+            string query = @"
+select distinct top 1 dts.*
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+WHERE 
+  tc.Offset in ({0})
+and d.DAMDocumentId = @docId
+and ltrim(isnull(tc.Offset, '')) <> ''
+";
+
+            string queryByCell = @"
+select top 1 tc.id, tc.CellDate
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+WHERE 
+  tc.Offset in ({0})
+and d.DAMDocumentId = @docId
+and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
+";
             var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
             var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);
             if (autostitchInfo == null)
@@ -2898,7 +2995,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                     if (link.CurrentOffsets.Contains(o))
                     {
                         isfound = true;
-                        break; 
+                        break;
                     }
                 }
                 if (!isfound)
