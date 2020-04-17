@@ -1025,7 +1025,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     p.item_code, t.item_offset 
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
-     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND  f.item_offset::text = p.item_offset::text    AND f.iconum = p.iconum
+     LEFT JOIN prod_data p ON f.document_id = p.document_id AND  f.item_offset::text = p.item_offset::text    AND f.iconum = p.iconum
   WHERE t.cluster_id_new IS NOT NULL
   union
    SELECT DISTINCT t.cluster_id_new,
@@ -1035,13 +1035,14 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     p.item_code, t.item_offset 
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
-     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id    AND f.iconum = p.iconum
+     LEFT JOIN prod_data p ON f.document_id = p.document_id    AND f.iconum = p.iconum
   WHERE t.cluster_id_new IS NOT NULL and p.item_offset = '';
 			";
 				//select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
 				// order by cluster_id
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
 					using (var cmd = new NpgsqlCommand(query, conn)) {
+						cmd.CommandTimeout = 600;
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
@@ -1076,6 +1077,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
 
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
 					using (var cmd = new NpgsqlCommand(query, conn)) {
+						cmd.CommandTimeout = 600;
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
@@ -1114,6 +1116,7 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
 
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(query, conn)) {
+						cmd.CommandTimeout = 600;
 						conn.Open();
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
