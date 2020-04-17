@@ -2871,58 +2871,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
             var outputresult = GetWebRequest(autostitchingurl);
             if (string.IsNullOrWhiteSpace(outputresult))
             {
-                outputresult = @"
-{
-  ""currentDocumentId"": ""00033237-499b-e811-80f9-8cdcd4af21e4"",
-  ""historicalDocumentId"": ""61212c7d-7453-e811-80f1-8cdcd4af21e4"",
-  ""links"": [
-    {
-      ""historicalOffsets"": [
-
-        ""o10497|l1|r6"",
-        ""o1007379|l7|r0"",
-        ""o3506746|l5|r0""
-      ],
-      ""confidenceScore"": 1.0,
-      ""currentOffsets"": [
-        ""o133308|l9|r0"",
-        ""o135043|l9|r0"",
-        ""o136778|l9|r0"",
-        ""o138447|l9|r0""
-      ]
-    },
-    {
-      ""historicalOffsets"": [
-        
-      ],
-      ""confidenceScore"": 0.0,
-      ""currentOffsets"": [
-        ""o152738|l7|r0"",
-        ""o154383|l1|r0"",
-        ""o156027|l7|r0"",
-        ""o157672|l1|r0""
-      ]
-    },
-    {
-      ""historicalOffsets"": [
-        
-      ],
-      ""confidenceScore"": 1.0,
-      ""currentOffsets"": [
-        ""o3503290|l7|r0"",
-        ""o3505017|l9|r0"",
-        ""o3506746|l5|r0"",
-        ""o3508400|l4|r0"",
-        ""o3510124|l9|r0"",
-        ""o3511848|l6|r0"",
-        ""o3513569|l7|r0"",
-        ""o3515200|l0|r0"",
-        ""o3516830|l0|r0""
-      ]
-    }
-  ]
-}
-";
+                return null;
             }
             var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
             var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);
