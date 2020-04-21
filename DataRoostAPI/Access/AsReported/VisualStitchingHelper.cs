@@ -201,8 +201,23 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public string Comment { get; set; }
 			[JsonIgnore]
 			public string Childrentitle { get; set; }
+		}
+
+		public class TableOffSetNode {
+			[JsonProperty("document_id")]
+			public Guid DocumentID { get; set; }
+			[JsonProperty("title")]
+			public string Title { get; set; }
+			[JsonProperty("table_id")]
+			public int TableID { get; set; }
+			[JsonProperty("file_id")]
+			public int FileID { get; set; }
+			[JsonProperty("offset")]
+			public string offset { get; set; }
 
 		}
+
+
 
 		public class Profile {
 			[JsonProperty("name")]
@@ -428,6 +443,28 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return JsonConvert.SerializeObject(nodes);
 		}
 
+
+		public string GetDocumentOffsets(String damid) {
+			int tries = 1;
+			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+
+			while (tries > 0) {
+				try {
+					nodes = GetPostGresDocumentOffsets(damid);
+					tries = 0;
+				} catch (Exception ex) {
+					if (--tries > 0) {
+						System.Threading.Thread.Sleep(1000);
+					} else {
+						return JsonConvert.SerializeObject(new List<TableOffSetNode>());
+					}
+
+				}
+			}
+			return JsonConvert.SerializeObject(nodes);
+		}
+
+
 		public string SetPostGresDataTreeProfile(String name, String jsonstr) {
 			String query = @"UPDATE cluster_name_tree_profile SET json='{1}' WHERE name='{0}';
 		INSERT INTO cluster_name_tree_profile (name, json)
@@ -632,6 +669,55 @@ SELECT  [Id]
 				}
 			}
 			return allProfiles;
+		}
+
+		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid) {
+			const string query = @"
+				select table_id, file_id, title from html_table_identification where document_id = '{0}' order by table_id
+			";
+			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid), conn)) {
+					conn.Open();
+
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							int tableid = sdr.GetInt32(0);
+							int fileid = sdr.GetInt32(1);
+							string title = sdr.GetString(2);
+							string offset = GetPostGresDocumentOffsetByTableID(tableid, fileid, damid);
+							TableOffSetNode node = new TableOffSetNode();
+							node.TableID = tableid;
+							node.Title = title;
+							node.FileID = fileid;
+							node.offset = offset;
+							nodes.Add(node);
+						}
+					}
+				}
+			}
+			return nodes;
+		}
+
+		private String GetPostGresDocumentOffsetByTableID(int tableid, int fileid, String damid) {
+			const string query = @"
+				select item_offset from norm_name_tree_flat where document_id = '{0}' 
+and  table_id = {1} and item_offset ilike 'o%|%' order by 
+substring(item_offset,2, Position('|' in item_offset)-2)::integer limit 1
+			";
+			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid.ToString(), tableid), conn)) {
+					conn.Open();
+
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							return sdr.GetString(0);
+						}
+					}
+				}
+			}
+			return "";
 		}
 
 		private List<Node> GetAngularTreePostGres() {
