@@ -680,44 +680,51 @@ SELECT  [Id]
 				using (var cmd = new NpgsqlCommand(string.Format(query, damid), conn)) {
 					conn.Open();
 
+					List<int> tableIDList = new List<int>();
 					using (var sdr = cmd.ExecuteReader()) {
 						while (sdr.Read()) {
 							int tableid = sdr.GetInt32(0);
+							tableIDList.Add(tableid);
 							int fileid = sdr.GetInt32(1);
 							string title = sdr.GetString(2);
-							string offset = GetPostGresDocumentOffsetByTableID(tableid, fileid, damid);
-							TableOffSetNode node = new TableOffSetNode();
-							node.TableID = tableid;
-							node.Title = title;
-							node.FileID = fileid;
-							node.offset = offset;
+							TableOffSetNode node = new TableOffSetNode {
+								TableID = tableid,
+								Title = title,
+								FileID = fileid
+							};
 							nodes.Add(node);
 						}
 					}
+
+					GetPostGresDocumentOffsetByTableIDList(nodes, tableIDList, damid);
 				}
 			}
 			return nodes;
 		}
 
-		private String GetPostGresDocumentOffsetByTableID(int tableid, int fileid, String damid) {
+		private void GetPostGresDocumentOffsetByTableIDList(List<TableOffSetNode> nodes, List<int> tableIDList, String damid) {
 			const string query = @"
-				select item_offset from norm_name_tree_flat where document_id = '{0}' 
-and  table_id = {1} and item_offset ilike 'o%|%' order by 
-substring(item_offset,2, Position('|' in item_offset)-2)::integer limit 1
-			";
-			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+				select item_offset, table_id from
+				(select item_offset, table_id,
+				rank() over (partition by table_id order by substring(item_offset,2, Position('|' in item_offset)-2)::integer)
+				from norm_name_tree_flat where document_id = '{0}'
+				and  table_id = any(array[{1}]) and item_offset ilike 'o%|%' order by table_id) ranked_offsets
+				where rank = 1";
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
-				using (var cmd = new NpgsqlCommand(string.Format(query, damid.ToString(), tableid), conn)) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid.ToString(), string.Join(",", tableIDList.ToArray())), conn)) {
 					conn.Open();
 
 					using (var sdr = cmd.ExecuteReader()) {
 						while (sdr.Read()) {
-							return sdr.GetString(0);
+							string offset = sdr.GetString(0);
+							int tableid = sdr.GetInt32(1);
+
+							int index = nodes.FindIndex(c => c.TableID == tableid);
+							nodes[index].offset = offset;
 						}
 					}
 				}
 			}
-			return "";
 		}
 
 		private List<Node> GetAngularTreePostGres() {
