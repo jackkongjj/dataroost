@@ -197,12 +197,27 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public List<Tuple<string, string, string, Guid, string>> DocumentTuples { get; set; }
 			[JsonProperty("documents")]
 			public List<string> Documents { get; set; }
-            [JsonProperty("comment")]
-            public string Comment { get; set; }
-            [JsonIgnore]
+			[JsonProperty("comment")]
+			public string Comment { get; set; }
+			[JsonIgnore]
 			public string Childrentitle { get; set; }
+		}
+
+		public class TableOffSetNode {
+			[JsonProperty("document_id")]
+			public Guid DocumentID { get; set; }
+			[JsonProperty("title")]
+			public string Title { get; set; }
+			[JsonProperty("table_id")]
+			public int TableID { get; set; }
+			[JsonProperty("file_id")]
+			public int FileID { get; set; }
+			[JsonProperty("offset")]
+			public string offset { get; set; }
 
 		}
+
+
 
 		public class Profile {
 			[JsonProperty("name")]
@@ -263,15 +278,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public int? NormTableId { get; set; }
 			[JsonProperty("norm_table_description")]
 			public string NormTableDescription { get; set; }
-            [JsonProperty("raw_row_id")]
-            public int? RawRowId { get; set; }
-            [JsonProperty("adjusted_row_id")]
-            public int? AdjustedRowId { get; set; }
-            [JsonProperty("raw_col_id")]
-            public int? RawColId { get; set; }
-            [JsonProperty("raw_table_id")]
-            public int? RawTableId { get; set; }
-        }
+			[JsonProperty("raw_row_id")]
+			public int? RawRowId { get; set; }
+			[JsonProperty("adjusted_row_id")]
+			public int? AdjustedRowId { get; set; }
+			[JsonProperty("raw_col_id")]
+			public int? RawColId { get; set; }
+			[JsonProperty("raw_table_id")]
+			public int? RawTableId { get; set; }
+		}
 
 		public class ReactNode {
 			[JsonProperty("id")]
@@ -427,6 +442,28 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			}
 			return JsonConvert.SerializeObject(nodes);
 		}
+
+
+		public string GetDocumentOffsets(String damid) {
+			int tries = 1;
+			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+
+			while (tries > 0) {
+				try {
+					nodes = GetPostGresDocumentOffsets(damid);
+					tries = 0;
+				} catch (Exception ex) {
+					if (--tries > 0) {
+						System.Threading.Thread.Sleep(1000);
+					} else {
+						return JsonConvert.SerializeObject(new List<TableOffSetNode>());
+					}
+
+				}
+			}
+			return JsonConvert.SerializeObject(nodes);
+		}
+
 
 		public string SetPostGresDataTreeProfile(String name, String jsonstr) {
 			String query = @"UPDATE cluster_name_tree_profile SET json='{1}' WHERE name='{0}';
@@ -634,6 +671,55 @@ SELECT  [Id]
 			return allProfiles;
 		}
 
+		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid) {
+			const string query = @"
+				select table_id, file_id, title from html_table_identification where document_id = '{0}' order by table_id
+			";
+			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid), conn)) {
+					conn.Open();
+
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							int tableid = sdr.GetInt32(0);
+							int fileid = sdr.GetInt32(1);
+							string title = sdr.GetString(2);
+							string offset = GetPostGresDocumentOffsetByTableID(tableid, fileid, damid);
+							TableOffSetNode node = new TableOffSetNode();
+							node.TableID = tableid;
+							node.Title = title;
+							node.FileID = fileid;
+							node.offset = offset;
+							nodes.Add(node);
+						}
+					}
+				}
+			}
+			return nodes;
+		}
+
+		private String GetPostGresDocumentOffsetByTableID(int tableid, int fileid, String damid) {
+			const string query = @"
+				select item_offset from norm_name_tree_flat where document_id = '{0}' 
+and  table_id = {1} and item_offset ilike 'o%|%' order by 
+substring(item_offset,2, Position('|' in item_offset)-2)::integer limit 1
+			";
+			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid.ToString(), tableid), conn)) {
+					conn.Open();
+
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							return sdr.GetString(0);
+						}
+					}
+				}
+			}
+			return "";
+		}
+
 		private List<Node> GetAngularTreePostGres() {
 			const string query = @"
 SELECT  Id,Label, 0
@@ -767,8 +853,8 @@ SELECT  Id,Label, iconum_count, comment
 							n.Id = (int)sdr.GetInt64(0);
 							n.Title = sdr.GetString(1);
 							n.ParentId = sdr.GetInt32(2); // count, NOT parentid
-                            n.Comment = sdr.GetStringSafe(3);
-                            n.Nodes = new List<Node>();
+							n.Comment = sdr.GetStringSafe(3);
+							n.Nodes = new List<Node>();
 							allNodes.Add(n);
 						}
 					}
@@ -828,8 +914,8 @@ SELECT  Id,Label, iconum_count, comment
 								r.Id = -1;
 								r.Title = labelAtlevel;
 								r.ParentId = row.ParentId;
-                                r.Comment = row.Comment;
-                                r.Nodes = new List<Node>();
+								r.Comment = row.Comment;
+								r.Nodes = new List<Node>();
 								lastRoot.Nodes.Add(r);
 								lastRoot = r;
 								stack.Push(r);
@@ -839,7 +925,7 @@ SELECT  Id,Label, iconum_count, comment
 							r.Id = row.Id;
 							r.Title = endLabel;
 							r.ParentId = row.ParentId;
-                            r.Comment = row.Comment;
+							r.Comment = row.Comment;
 							r.Nodes = new List<Node>();
 							lastRoot.Nodes.Add(r);
 							lastRoot = r;
@@ -954,11 +1040,11 @@ where coalesce(TRIM(tc.item_offset), '') <> ''
 							n.NormTableId = sdr.GetNullable<int>(21);
 							n.NormTableDescription = sdr.GetStringSafe(22);
 							n.FinalLabel = sdr.GetStringSafe(23);
-                            n.RawRowId = sdr.GetNullable<int>(24);
-                            n.AdjustedRowId = sdr.GetNullable<int>(25);
-                            n.RawColId = sdr.GetNullable<int>(26);
-                            n.RawTableId = sdr.GetNullable<int>(27);
-                            n.Nodes = new List<NameTreeNode>();
+							n.RawRowId = sdr.GetNullable<int>(24);
+							n.AdjustedRowId = sdr.GetNullable<int>(25);
+							n.RawColId = sdr.GetNullable<int>(26);
+							n.RawTableId = sdr.GetNullable<int>(27);
+							n.Nodes = new List<NameTreeNode>();
 							allNodes.Add(n);
 						}
 					}
@@ -1025,7 +1111,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     p.item_code, t.item_offset 
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
-     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id AND  f.item_offset::text = p.item_offset::text    AND f.iconum = p.iconum
+     LEFT JOIN prod_data p ON f.document_id = p.document_id AND  f.item_offset::text = p.item_offset::text    AND f.iconum = p.iconum
   WHERE t.cluster_id_new IS NOT NULL
   union
    SELECT DISTINCT t.cluster_id_new,
@@ -1035,13 +1121,14 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
     p.item_code, t.item_offset 
    FROM norm_name_tree t
      JOIN norm_name_tree_flat f ON t.id = f.id
-     LEFT JOIN prod_bank_data p ON f.document_id = p.document_id    AND f.iconum = p.iconum
+     LEFT JOIN prod_data p ON f.document_id = p.document_id    AND f.iconum = p.iconum
   WHERE t.cluster_id_new IS NOT NULL and p.item_offset = '';
 			";
 				//select cluster_id, document_id, raw_row_label, value, item_code from vw_clusters_documents_sdb
 				// order by cluster_id
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
 					using (var cmd = new NpgsqlCommand(query, conn)) {
+						cmd.CommandTimeout = 600;
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
@@ -1076,6 +1163,7 @@ SELECT distinct code.GDBClusterID , item.DocumentId, item.label, item.value
 
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
 					using (var cmd = new NpgsqlCommand(query, conn)) {
+						cmd.CommandTimeout = 600;
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
@@ -1114,6 +1202,7 @@ SELECT distinct   item.DocumentId, min(f.Firm_Name), min(f.BestTicker)
 
 				using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 					using (SqlCommand cmd = new SqlCommand(query, conn)) {
+						cmd.CommandTimeout = 600;
 						conn.Open();
 						using (SqlDataReader sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
