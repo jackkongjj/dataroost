@@ -2825,7 +2825,7 @@ END CATCH
         {
             string test_url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";
             string url_pattern = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/{1}/Iconum/{0}/FileId/{2}/file";
-            var url = string.Format(url_pattern, iconum, currDocId, currFileId);
+            var url = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId);
             var outputresult = GetWebRequest(url);
             if (string.IsNullOrWhiteSpace(outputresult))
             {
@@ -2842,6 +2842,21 @@ END CATCH
         }
 
         public TimeSlice PostAutostitchedTimeSlice(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
+        {
+            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
+            string autostitchingurl = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId, hisDocId.ToString().ToLower(), hisFileId);
+            var outputresult = GetWebRequest(autostitchingurl);
+            if (!string.IsNullOrWhiteSpace(outputresult))
+            {
+                return GetHistoricalAutoStitched(currDocId, currFileId, hisDocId, hisFileId, offsets, outputresult);
+            }
+            else
+            {
+                return GetCurrentAutoStitched(currDocId, currFileId, hisDocId, hisFileId, offsets);
+            }
+        }
+        private TimeSlice GetCurrentAutoStitched(Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
         {
             string query = @"
 select distinct top 1 dts.*
@@ -2864,14 +2879,6 @@ WHERE
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
 ";
-            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
-            string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
-            string autostitchingurl = string.Format(url_pattern, iconum, currDocId, currFileId, hisDocId, hisFileId);
-            var outputresult = GetWebRequest(autostitchingurl);
-            if (!string.IsNullOrWhiteSpace(outputresult))
-            {
-                return GetHistoricalAutoStitched(currDocId, currFileId, hisDocId, hisFileId, offsets, outputresult);
-            }
             TimeSlice slice = null;
             string joined = "";
             var formatted = offsets.Select(x => string.Format("'{0}'", x));
@@ -2918,7 +2925,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                     }
                 }
             }
-            if (slice == null && !string.IsNullOrWhiteSpace(joined))
+            if (false && slice == null && !string.IsNullOrWhiteSpace(joined))
             {
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
@@ -3050,7 +3057,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                 if (slice != null)
                     break;
             }
-            if (slice == null && !string.IsNullOrWhiteSpace(joined))
+            if (false && slice == null && !string.IsNullOrWhiteSpace(joined))
             {
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
