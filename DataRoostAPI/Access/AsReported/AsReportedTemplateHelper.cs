@@ -2848,7 +2848,7 @@ END CATCH
             string autostitchingurl = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId, hisDocId.ToString().ToLower(), hisFileId);
             var outputresult = GetWebRequest(autostitchingurl);
             if (!string.IsNullOrWhiteSpace(outputresult))
-            {
+            {   // if there is result. Just return the DocumentTimeSlice historical offset maps to. 
                 return GetHistoricalAutoStitched(currDocId, currFileId, hisDocId, hisFileId, offsets, outputresult);
             }
             else
@@ -2871,13 +2871,25 @@ and ltrim(isnull(tc.Offset, '')) <> ''
 ";
 
             string queryByCell = @"
-select top 1 tc.id, tc.CellDate
+-- there is no documentTimeslice mapped. Need to get all the data from Cells
+select top 1 tc.id 
+	,tc.CellDate -- TimeSlicePeriodEndDate
+	, d.DocumentDate -- ReportPeriodEndDate
+	, tc.PeriodTypeID -- Cell PeriodType
+	, tc.PeriodLength -- Cell PeriodLength
+	, tc.PeriodLength * pt.PeriodLength -- Duration
+	, dts.PeriodType -- TimeSlice PeriodType
+	,d.ReportTypeID -- ReportType
 FROM TableCell tc 
 	join Document d on tc.DocumentId = d.ID
+	join PeriodType pt on tc.PeriodTypeID = pt.ID
+	left join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	left join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
 WHERE 
-  tc.Offset in ({0})
+tc.Offset in ({0})
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
+
 ";
             TimeSlice slice = null;
             string joined = "";
@@ -2925,7 +2937,8 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                     }
                 }
             }
-            if (false && slice == null && !string.IsNullOrWhiteSpace(joined))
+            //joined = ""; // force skip 
+            if (slice == null && !string.IsNullOrWhiteSpace(joined))
             {
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
                 {
@@ -2940,8 +2953,14 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                                 slice = new TimeSlice
                                 {
                                     Id = reader.GetInt32(0),
-                                    ReportingPeriodEndDate = reader.GetDateTime(1),
-                                    Currency = "TABLECELL",
+                                    TimeSlicePeriodEndDate = reader.GetDateTime(1), 
+                                    ReportingPeriodEndDate = reader.GetDateTime(2),
+                                    PeriodType = reader.GetStringSafe(3),
+                                    PeriodLength = reader.GetInt32(4),
+                                    Duration = reader.GetInt32(5), 
+                                    InterimType = reader.GetStringSafe(6),
+                                    ReportType = reader.GetStringSafe(7),
+                                    Currency = "TABLECELL", // "CURRENT"
                                     TableTypeID = -1
                                 };
                             }
@@ -2969,11 +2988,22 @@ and ltrim(isnull(tc.Offset, '')) <> ''
 ";
 
             string queryByCell = @"
-select top 1 tc.id, tc.CellDate
+-- got the historical offsets, but there is no documentTimeslice mapped. Need to get all the data from Cells
+select top 1 tc.id 
+	,tc.CellDate -- TimeSlicePeriodEndDate
+	, d.DocumentDate -- ReportPeriodEndDate
+	, tc.PeriodTypeID -- Cell PeriodType
+	, tc.PeriodLength -- Cell PeriodLength
+	, tc.PeriodLength * pt.PeriodLength -- Duration
+	, dts.PeriodType -- TimeSlice PeriodType
+	,d.ReportTypeID -- ReportType
 FROM TableCell tc 
 	join Document d on tc.DocumentId = d.ID
+	join PeriodType pt on tc.PeriodTypeID = pt.ID
+	left join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	left join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
 WHERE 
-  tc.Offset in ({0})
+tc.Offset in ({0})
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
 ";
@@ -3057,6 +3087,7 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                 if (slice != null)
                     break;
             }
+            joined = ""; // force skip 
             if (false && slice == null && !string.IsNullOrWhiteSpace(joined))
             {
                 using (SqlConnection conn = new SqlConnection(_sfConnectionString))
@@ -3072,9 +3103,16 @@ and ltrim(isnull(tc.Offset, '')) <> '' and tc.CellDate is not null
                                 slice = new TimeSlice
                                 {
                                     Id = reader.GetInt32(0),
-                                    ReportingPeriodEndDate = reader.GetDateTime(1),
-                                    Currency = "TABLECELL",
+                                    TimeSlicePeriodEndDate = reader.GetDateTime(1), 
+                                    ReportingPeriodEndDate = reader.GetDateTime(2),
+                                    PeriodType = reader.GetStringSafe(3),
+                                    PeriodLength = reader.GetInt32(4),
+                                    Duration = reader.GetInt32(5), 
+                                    InterimType = reader.GetStringSafe(6),
+                                    ReportType = reader.GetStringSafe(7),
+                                    Currency = "TABLECELL", // "HISTORICAL"
                                     TableTypeID = -1
+                                    // CompanyFiscalYear need to be calculated against CurrentDoc's Date
                                 };
                             }
                             // if need more detail, call http://localhost:61581/api/v1/companies/28054/efforts/asreported/cells/1055408969
