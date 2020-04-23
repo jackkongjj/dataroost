@@ -205,7 +205,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
 		public class TableOffSetNode {
 			[JsonProperty("document_id")]
-			public Guid DocumentID { get; set; }
+			public string DocumentID { get; set; }
 			[JsonProperty("title")]
 			public string Title { get; set; }
 			[JsonProperty("table_id")]
@@ -686,11 +686,13 @@ SELECT  [Id]
 							int tableid = sdr.GetInt32(0);
 							tableIDList.Add(tableid);
 							int fileid = sdr.GetInt32(1);
-							string title = sdr.GetString(2);
-							TableOffSetNode node = new TableOffSetNode {
+							string title = sdr.GetStringSafe(2);
+							TableOffSetNode node = new TableOffSetNode
+							{
 								TableID = tableid,
 								Title = title,
-								FileID = fileid
+								FileID = fileid,
+								DocumentID = damid
 							};
 							nodes.Add(node);
 						}
