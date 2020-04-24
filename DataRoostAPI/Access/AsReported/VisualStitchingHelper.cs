@@ -204,20 +204,18 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 		}
 
 		public class TableOffSetNode {
-			[JsonProperty("document_id")]
+			[JsonProperty("documentid")]
 			public string DocumentID { get; set; }
 			[JsonProperty("title")]
 			public string Title { get; set; }
-			[JsonProperty("table_id")]
+			[JsonProperty("tableid")]
 			public int TableID { get; set; }
-			[JsonProperty("file_id")]
+			[JsonProperty("fileid")]
 			public int FileID { get; set; }
 			[JsonProperty("offset")]
 			public string offset { get; set; }
 
 		}
-
-
 
 		public class Profile {
 			[JsonProperty("name")]
@@ -464,6 +462,22 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return JsonConvert.SerializeObject(nodes);
 		}
 
+		public string UpdateTableTitle(String damid, int iconum, int tableid, int fileid, String newtitle) {
+			String query = @"UPDATE html_table_identification SET title='{4}' WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, newtitle), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+						}
+					}
+				}
+			} catch (Exception ex) {
+				return "Fail";
+			}
+
+			return "Success";
+		}
 
 		public string SetPostGresDataTreeProfile(String name, String jsonstr) {
 			String query = @"UPDATE cluster_name_tree_profile SET json='{1}' WHERE name='{0}';
