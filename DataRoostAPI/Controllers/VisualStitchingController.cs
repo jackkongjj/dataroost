@@ -245,7 +245,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
 
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				return vsHelper.UpdateTableTitle(DamDocumentId.ToString(), iconum, tableid, fileid, input.StringData);
+				if (input.StringData.ToLower().StartsWith("true") || input.StringData.ToLower().StartsWith("false")) {
+					bool value = Boolean.Parse(input.StringData.ToLower());
+					return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, value);
+				} else {
+					return vsHelper.UpdateTableTitleComments(DamDocumentId.ToString(), iconum, tableid, fileid, input.StringData);
+				}
 			} catch (Exception ex) {
 				LogError(ex);
 				return null;

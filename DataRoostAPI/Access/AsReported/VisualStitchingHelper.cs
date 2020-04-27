@@ -214,7 +214,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public int FileID { get; set; }
 			[JsonProperty("offset")]
 			public string offset { get; set; }
-
+			[JsonProperty("comments")]
+			public string comments { get; set; }
+			[JsonProperty("iscorrect")]
+			public bool iscorrect { get; set; }
 		}
 
 		public class Profile {
@@ -462,8 +465,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return JsonConvert.SerializeObject(nodes);
 		}
 
-		public string UpdateTableTitle(String damid, int iconum, int tableid, int fileid, String newtitle) {
-			String query = @"UPDATE html_table_identification SET title='{4}' WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
+		public string UpdateTableTitleComments(String damid, int iconum, int tableid, int fileid, String newtitle) {
+			String query = @"UPDATE html_table_identification SET comments='{4}' WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
 			try {
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
 					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, newtitle), conn)) {
@@ -478,6 +481,24 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
 			return "Success";
 		}
+
+		public string UpdateTableTitleCorrect(String damid, int iconum, int tableid, int fileid, bool value) {
+			String query = @"UPDATE html_table_identification SET is_correct={4} WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, value), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+						}
+					}
+				}
+			} catch (Exception ex) {
+				return "Fail";
+			}
+
+			return "Success";
+		}
+
 
 		public string SetPostGresDataTreeProfile(String name, String jsonstr) {
 			String query = @"UPDATE cluster_name_tree_profile SET json='{1}' WHERE name='{0}';
@@ -687,7 +708,7 @@ SELECT  [Id]
 
 		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid) {
 			const string query = @"
-				select table_id, file_id, title from html_table_identification where document_id = '{0}' order by table_id
+				select table_id, file_id, title, comments, is_correct from html_table_identification where document_id = '{0}' order by table_id
 			";
 			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
@@ -701,12 +722,19 @@ SELECT  [Id]
 							tableIDList.Add(tableid);
 							int fileid = sdr.GetInt32(1);
 							string title = sdr.GetStringSafe(2);
+							string comment = sdr.GetStringSafe(3);
+							bool iscorrect = false;
+							if (!sdr.IsDBNull(4)) {
+								iscorrect = sdr.GetBoolean(4);
+							}
 							TableOffSetNode node = new TableOffSetNode
 							{
 								TableID = tableid,
 								Title = title,
 								FileID = fileid,
-								DocumentID = damid
+								DocumentID = damid,
+								comments = comment,
+								iscorrect = iscorrect
 							};
 							nodes.Add(node);
 						}
