@@ -236,6 +236,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("name-tree-api/trees/{DamDocumentId}/{fileid}")]
+		[HttpGet]
+		public HttpResponseMessage GetDocumentTrees(Guid DamDocumentId, int fileid) {
+			try {
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+				var vsHelper = new VisualStitchingHelper(sfConnectionString);
+				var json = vsHelper.GetNameTreesTableByDamid(DamDocumentId.ToString(), fileid);
+				return new HttpResponseMessage()
+				{
+					Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+				};
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("name-tree-api/{DamDocumentId}/{iconum}/{tableid}/{fileid}")]
 		[HttpPost]
 		public String UpdateTableName(Guid DamDocumentId, int iconum, int tableid, int fileid, StringInput input) {

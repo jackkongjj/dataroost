@@ -220,6 +220,35 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public bool iscorrect { get; set; }
 		}
 
+		public class NameTreeTableNode {
+			[JsonProperty("id")]
+			public int id { get; set; }
+			[JsonProperty("documentid")]
+			public string DocumentID { get; set; }
+			[JsonProperty("title")]
+			public string Title { get; set; }
+			[JsonProperty("tableid")]
+			public int TableID { get; set; }
+			[JsonProperty("fileid")]
+			public int FileID { get; set; }
+			[JsonProperty("indent")]
+			public int indent { get; set; }
+			[JsonProperty("iconum")]
+			public int iconum { get; set; }
+			[JsonProperty("isheader")]
+			public Boolean isheader { get; set; }
+			[JsonProperty("normtitle")]
+			public string NormTitle { get; set; }
+			[JsonProperty("cleanedrowlabel")]
+			public string CleanedRowLabel { get; set; }
+			[JsonProperty("offset")]
+			public string offset { get; set; }
+			[JsonProperty("adjustedrowid")]
+			public int adjustedrowid { get; set; }
+			[JsonProperty("nodes")]
+			public List<NameTreeTableNode> Nodes { get; set; }
+		}
+
 		public class Profile {
 			[JsonProperty("name")]
 			public string Name { get; set; }
@@ -444,6 +473,25 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return JsonConvert.SerializeObject(nodes);
 		}
 
+		public string GetNameTreesTableByDamid(String damid, int fileid) {
+			int tries = 1;
+			List<NameTreeTableNode> nodes = new List<NameTreeTableNode>();
+
+			while (tries > 0) {
+				try {
+					nodes = GetPostGresNameTreeTableNode(damid, fileid);
+					tries = 0;
+				} catch (Exception ex) {
+					if (--tries > 0) {
+						System.Threading.Thread.Sleep(1000);
+					} else {
+						return JsonConvert.SerializeObject(new List<TableOffSetNode>());
+					}
+
+				}
+			}
+			return JsonConvert.SerializeObject(nodes);
+		}
 
 		public string GetDocumentOffsets(String damid) {
 			int tries = 1;
@@ -705,6 +753,188 @@ SELECT  [Id]
 			}
 			return allProfiles;
 		}
+
+		private NameTreeTableNode genNameTreeTableNode(NpgsqlDataReader sdr) {
+			string norm_title = "N/A";
+			if (sdr.GetStringSafe(6).Length > 1) {
+				norm_title = sdr.GetStringSafe(6);
+			}
+
+			int nodeindent = 0;
+			int rowid = 0;
+			if (!sdr.IsDBNull(4)) {
+				nodeindent = sdr.GetInt32(4);
+			}
+			if (!sdr.IsDBNull(10)) {
+				rowid = sdr.GetInt32(10);
+			}
+			NameTreeTableNode node = new NameTreeTableNode
+			{
+				DocumentID = sdr.GetGuid(0).ToString(),
+				iconum = sdr.GetInt32(1),
+				Title = sdr.GetStringSafe(2),
+				FileID = sdr.GetInt32(3),
+				indent = nodeindent,
+				TableID = sdr.GetInt32(5),
+				NormTitle = norm_title,
+				isheader = sdr.GetBoolean(7),
+				CleanedRowLabel = sdr.GetStringSafe(8),// use this to find parent
+				offset = sdr.GetStringSafe(9),
+				adjustedrowid = rowid,
+				Nodes = new List<NameTreeTableNode>(),
+				id = sdr.GetInt32(5) * 1000 + rowid
+			};
+			return node;
+		}
+		public NameTreeTableNode genRootNameTreeTableNode(NameTreeTableNode node) {
+			return new NameTreeTableNode()
+			{
+				DocumentID = node.DocumentID,
+				iconum = node.iconum,
+				Title = "" + node.TableID,
+				FileID = node.FileID,
+				indent = -1,
+				NormTitle = node.NormTitle,
+				isheader = true,
+				CleanedRowLabel = node.NormTitle,
+				Nodes = new List<NameTreeTableNode>(),
+				TableID = node.TableID,
+				adjustedrowid = node.adjustedrowid,
+				id = node.TableID * 1000 + node.adjustedrowid
+			};
+		}
+
+		private List<NameTreeTableNode> GetPostGresNameTreeTableNode(String damid, int fileid) {
+			const string query = @"
+				select document_id,iconum, final_label, file_id,indent,table_id, norm_table_title,is_total,cleaned_row_label,item_offset,adjusted_row_id 
+         from norm_name_tree_flat where document_id = '{0}' 
+              and col_id = 1 and file_id={1}
+order by norm_table_title, table_id, indent,adjusted_row_id
+			";
+			List<NameTreeTableNode> treenodes = new List<NameTreeTableNode>();
+			//HashSet<string> tableset = new HashSet<string>();
+			//Dictionary<int, List<NameTreeTableNode>> indentmap = new Dictionary<int, List<NameTreeTableNode>>();
+			Dictionary<int, NameTreeTableNode> tableidmap = new Dictionary<int, NameTreeTableNode>();
+			int rowcount = 0;
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid, fileid), conn)) {
+					conn.Open();
+					try {
+						List<int> tableIDList = new List<int>();
+						NameTreeTableNode rootnode = null;// same table_id's root
+						using (var sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								rowcount++;
+								NameTreeTableNode node = genNameTreeTableNode(sdr);
+								if (!tableidmap.ContainsKey(node.TableID)) {
+									rootnode = genRootNameTreeTableNode(node);
+									tableidmap[node.TableID] = rootnode;
+									treenodes.Add(rootnode);
+								} else {
+									rootnode = tableidmap[node.TableID];
+								}
+
+								if (node.indent == 0) {
+									rootnode.Nodes.Add(node);
+								} else {
+									NameTreeTableNode pnode = findParentByRowID(rootnode, node);
+									pnode.Nodes.Add(node);
+								}
+							}
+						}
+					} catch (Exception ex) {
+						Console.WriteLine(ex.StackTrace);
+					}
+
+				}
+			}
+			return populateNameTree(treenodes);
+		}
+
+		public List<NameTreeTableNode> populateNameTree(List<NameTreeTableNode> treenodes) {
+			Dictionary<string, NameTreeTableNode> map = new Dictionary<string, NameTreeTableNode>();
+			List<NameTreeTableNode> list = new List<NameTreeTableNode>();
+			NameTreeTableNode root = null;
+			foreach (NameTreeTableNode node in treenodes) {
+				String norm_title = node.NormTitle;
+				if (!map.ContainsKey(norm_title)) {
+					root = new NameTreeTableNode()
+					{
+						DocumentID = node.DocumentID,
+						iconum = node.iconum,
+						Title = node.NormTitle,
+						FileID = node.FileID,
+						indent = -1,
+						NormTitle = node.NormTitle,
+						isheader = true,
+						CleanedRowLabel = node.NormTitle,
+						Nodes = new List<NameTreeTableNode>(),
+						TableID = node.TableID,
+						id = node.TableID * 1000 + node.adjustedrowid
+					};
+					map[norm_title] = root;
+					list.Add(root);
+				}
+				root = map[norm_title];
+				root.Nodes.Add(node);
+			}
+			return list;
+		}
+
+		public NameTreeTableNode findParentByRowID(NameTreeTableNode root, NameTreeTableNode node) {
+			int rowid = node.adjustedrowid;
+			int indent = node.indent;
+			List<NameTreeTableNode> list = getSameIndentNode(root, indent - 1);
+			for (int i = 0; i < list.Count; i++) {
+				NameTreeTableNode rnode = list.ElementAt(i);
+				if (rnode.adjustedrowid > rowid)
+					return rnode;
+			}
+			return list.ElementAt(0);
+		}
+
+		public List<NameTreeTableNode> getSameIndentNode(NameTreeTableNode root, int indent) {
+			List<NameTreeTableNode> list = new List<NameTreeTableNode>();
+			if (root.indent == indent) {
+				list.Add(root);
+			} else {
+				for (int i = 0; i < root.Nodes.Count; i++) {
+					list.AddRange(getSameIndentNode(root.Nodes.ElementAt(i), indent));
+				}
+			}
+			return list;
+		}
+		public static int getDistance(String str1, String str2, int m, int n) {
+			int[,] dp = new int[m + 1, n + 1];
+			for (int i = 0; i <= m; i++) {
+				for (int j = 0; j <= n; j++) {
+					if (i == 0)
+						dp[i, j] = j;
+					else if (j == 0)
+						dp[i, j] = i;
+					else if (str1.ElementAt(i - 1) == str2.ElementAt(j - 1))
+						dp[i, j] = dp[i - 1, j - 1];
+					else
+						dp[i, j] = 1 + Math.Min(dp[i, j - 1], Math.Min(dp[i - 1, j], dp[i - 1, j - 1]));
+				}
+			}
+			return dp[m, n];
+		}
+		//by diatance
+		public NameTreeTableNode findParent(Dictionary<int, List<NameTreeTableNode>> indentmap, NameTreeTableNode node) {
+			List<NameTreeTableNode> list = indentmap[node.indent - 1];
+			NameTreeTableNode ret = null;
+			int min = Int32.MaxValue;
+			for (int i = 0; i < list.Count; i++) {
+				int cmin = getDistance(node.CleanedRowLabel, list.ElementAt(i).CleanedRowLabel, node.CleanedRowLabel.Length, list.ElementAt(i).CleanedRowLabel.Length);
+				if (cmin < min) {
+					min = cmin;
+					ret = list.ElementAt(i);
+				}
+			}
+			return ret;
+		}
+
 
 		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid) {
 			const string query = @"
