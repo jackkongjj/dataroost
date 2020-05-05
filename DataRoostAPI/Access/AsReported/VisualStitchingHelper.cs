@@ -874,7 +874,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 						iconum = node.iconum,
 						Title = node.NormTitle,
 						FileID = node.FileID,
-						indent = -1,
+						indent = -2,
 						NormTitle = node.NormTitle,
 						isheader = true,
 						CleanedRowLabel = node.NormTitle,
