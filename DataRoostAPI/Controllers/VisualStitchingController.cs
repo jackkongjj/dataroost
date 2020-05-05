@@ -258,18 +258,19 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 		[Route("name-tree-api/{DamDocumentId}/{iconum}/{tableid}/{fileid}")]
 		[HttpPost]
-		public String UpdateTableName(Guid DamDocumentId, int iconum, int tableid, int fileid, StringInput input) {
+		public String UpdateTableName(Guid DamDocumentId, int iconum, int tableid, int fileid, StringDictionary input) {
 			try {
 
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
 
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				if (input.StringData.ToLower().StartsWith("true") || input.StringData.ToLower().StartsWith("false")) {
-					bool value = Boolean.Parse(input.StringData.ToLower());
-					return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, value);
+				if (input.StringData.ContainsKey("iscorrect")) {
+					bool iscorrect = Boolean.Parse(input.StringData["iscorrect"]);
+					bool iscarboncorrect = Boolean.Parse(input.StringData["iscarboncorrect"]);
+					return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, iscorrect, iscarboncorrect);
 				} else {
-					return vsHelper.UpdateTableTitleComments(DamDocumentId.ToString(), iconum, tableid, fileid, input.StringData);
+					return vsHelper.UpdateTableTitleComments(DamDocumentId.ToString(), iconum, tableid, fileid, input.StringData["comments"]);
 				}
 			} catch (Exception ex) {
 				LogError(ex);

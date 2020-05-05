@@ -218,6 +218,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public string comments { get; set; }
 			[JsonProperty("iscorrect")]
 			public bool iscorrect { get; set; }
+			[JsonProperty("iscarboncorrect")]
+			public bool iscarboncorrect { get; set; }
 		}
 
 		public class NameTreeTableNode {
@@ -247,6 +249,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public int adjustedrowid { get; set; }
 			[JsonProperty("nodes")]
 			public List<NameTreeTableNode> Nodes { get; set; }
+			[JsonProperty("info")]
+			public TableOffSetNode info { get; set; }
+
 		}
 
 		public class Profile {
@@ -530,11 +535,11 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return "Success";
 		}
 
-		public string UpdateTableTitleCorrect(String damid, int iconum, int tableid, int fileid, bool value) {
-			String query = @"UPDATE html_table_identification SET is_correct={4} WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
+		public string UpdateTableTitleCorrect(String damid, int iconum, int tableid, int fileid, bool iscorrect, bool iscarboncorrect) {
+			String query = @"UPDATE html_table_identification SET is_correct={4},is_carbon_hier_correct={5} WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
 			try {
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
-					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, value), conn)) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, iscorrect, iscarboncorrect), conn)) {
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 						}
@@ -852,6 +857,11 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 		}
 
 		public List<NameTreeTableNode> populateNameTree(List<NameTreeTableNode> treenodes) {
+			List<TableOffSetNode> infolist = new List<TableOffSetNode>();
+			if (treenodes.Count > 0) {
+				infolist = GetPostGresDocumentOffsets(treenodes.ElementAt(0).DocumentID);
+			}
+
 			Dictionary<string, NameTreeTableNode> map = new Dictionary<string, NameTreeTableNode>();
 			List<NameTreeTableNode> list = new List<NameTreeTableNode>();
 			NameTreeTableNode root = null;
@@ -876,6 +886,11 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 					list.Add(root);
 				}
 				root = map[norm_title];
+				if (infolist.Any(t => t.TableID == node.TableID)) {
+					node.info = infolist.First(t => t.TableID == node.TableID);
+					node.Title = node.info.Title + "(" + node.TableID + ")";
+					node.offset = node.info.offset;
+				}
 				root.Nodes.Add(node);
 			}
 			return list;
@@ -938,7 +953,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 
 		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid) {
 			const string query = @"
-				select table_id, file_id, title, comments, is_correct from html_table_identification where document_id = '{0}' order by table_id
+				select table_id, file_id, title, comments, is_correct,is_carbon_hier_correct from html_table_identification where document_id = '{0}' order by table_id
 			";
 			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
@@ -954,8 +969,12 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 							string title = sdr.GetStringSafe(2);
 							string comment = sdr.GetStringSafe(3);
 							bool iscorrect = false;
+							bool iscarboncorrect = false;
 							if (!sdr.IsDBNull(4)) {
 								iscorrect = sdr.GetBoolean(4);
+							}
+							if (!sdr.IsDBNull(5)) {
+								iscarboncorrect = sdr.GetBoolean(5);
 							}
 							TableOffSetNode node = new TableOffSetNode
 							{
@@ -964,7 +983,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 								FileID = fileid,
 								DocumentID = damid,
 								comments = comment,
-								iscorrect = iscorrect
+								iscorrect = iscorrect,
+								iscarboncorrect = iscarboncorrect
 							};
 							nodes.Add(node);
 						}
@@ -2774,8 +2794,6 @@ exec GDBGetCodesForIconum @sdbcode, @iconum, @documentId
 			List<SDBValueNode> valuenodes = new List<SDBValueNode>();
 			DataTable table = new DataTable();
 			DataRow countRow = null;
-
-
 
 			using (SqlConnection conn = new SqlConnection(_sfConnectionString)) {
 				conn.Open();
