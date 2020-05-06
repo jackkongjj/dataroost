@@ -220,6 +220,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public bool iscorrect { get; set; }
 			[JsonProperty("iscarboncorrect")]
 			public bool iscarboncorrect { get; set; }
+			[JsonProperty("normtitle")]
+			public string normtitle { get; set; }
 		}
 
 		public class NameTreeTableNode {
@@ -252,6 +254,9 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			[JsonProperty("info")]
 			public TableOffSetNode info { get; set; }
 
+			public String toString() {
+				return "id:" + this.id + " title:" + this.Title + " tableid:" + this.TableID + " fileid:" + this.FileID + " indent:" + this.indent + " NormTitle:" + this.NormTitle + " offset:" + this.offset;
+			}
 		}
 
 		public class Profile {
@@ -498,13 +503,13 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return JsonConvert.SerializeObject(nodes);
 		}
 
-		public string GetDocumentOffsets(String damid) {
+		public string GetDocumentOffsets(String damid, int fileid) {
 			int tries = 1;
 			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
 
 			while (tries > 0) {
 				try {
-					nodes = GetPostGresDocumentOffsets(damid);
+					nodes = GetPostGresDocumentOffsets(damid, fileid);
 					tries = 0;
 				} catch (Exception ex) {
 					if (--tries > 0) {
@@ -816,11 +821,9 @@ SELECT  [Id]
               and col_id = 1 and file_id={1}
 order by norm_table_title, table_id, indent,adjusted_row_id
 			";
+
 			List<NameTreeTableNode> treenodes = new List<NameTreeTableNode>();
-			//HashSet<string> tableset = new HashSet<string>();
-			//Dictionary<int, List<NameTreeTableNode>> indentmap = new Dictionary<int, List<NameTreeTableNode>>();
 			Dictionary<int, NameTreeTableNode> tableidmap = new Dictionary<int, NameTreeTableNode>();
-			int rowcount = 0;
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
 				using (var cmd = new NpgsqlCommand(string.Format(query, damid, fileid), conn)) {
 					conn.Open();
@@ -829,7 +832,6 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 						NameTreeTableNode rootnode = null;// same table_id's root
 						using (var sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
-								rowcount++;
 								NameTreeTableNode node = genNameTreeTableNode(sdr);
 								if (!tableidmap.ContainsKey(node.TableID)) {
 									rootnode = genRootNameTreeTableNode(node);
@@ -850,23 +852,29 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 					} catch (Exception ex) {
 						Console.WriteLine(ex.StackTrace);
 					}
-
 				}
 			}
+
 			return populateNameTree(treenodes);
 		}
 
 		public List<NameTreeTableNode> populateNameTree(List<NameTreeTableNode> treenodes) {
 			List<TableOffSetNode> infolist = new List<TableOffSetNode>();
 			if (treenodes.Count > 0) {
-				infolist = GetPostGresDocumentOffsets(treenodes.ElementAt(0).DocumentID);
+				infolist = GetPostGresDocumentOffsets(treenodes.ElementAt(0).DocumentID, treenodes.ElementAt(0).FileID);
 			}
 
 			Dictionary<string, NameTreeTableNode> map = new Dictionary<string, NameTreeTableNode>();
 			List<NameTreeTableNode> list = new List<NameTreeTableNode>();
 			NameTreeTableNode root = null;
 			foreach (NameTreeTableNode node in treenodes) {
+
+				if (infolist.First(t => t.TableID == node.TableID).normtitle != null) {
+					node.NormTitle = infolist.First(t => t.TableID == node.TableID).normtitle;
+					//node.NormTitle = norm_title;
+				}
 				String norm_title = node.NormTitle;
+
 				if (!map.ContainsKey(norm_title)) {
 					root = new NameTreeTableNode()
 					{
@@ -951,13 +959,16 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 		}
 
 
-		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid) {
+		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid, int fileid) {
 			const string query = @"
-				select table_id, file_id, title, comments, is_correct,is_carbon_hier_correct from html_table_identification where document_id = '{0}' order by table_id
+				select ht.table_id, ht.file_id, ht.title, ht.comments, ht.is_correct,ht.is_carbon_hier_correct, nt.label 
+            from html_table_identification ht 
+       left join norm_table nt on ht.norm_table_id = nt.id    
+        where document_id = '{0}' and file_id = {1} order by table_id
 			";
 			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
-				using (var cmd = new NpgsqlCommand(string.Format(query, damid), conn)) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid, fileid), conn)) {
 					conn.Open();
 
 					List<int> tableIDList = new List<int>();
@@ -965,9 +976,9 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 						while (sdr.Read()) {
 							int tableid = sdr.GetInt32(0);
 							tableIDList.Add(tableid);
-							int fileid = sdr.GetInt32(1);
 							string title = sdr.GetStringSafe(2);
 							string comment = sdr.GetStringSafe(3);
+							string normtitle = null;
 							bool iscorrect = false;
 							bool iscarboncorrect = false;
 							if (!sdr.IsDBNull(4)) {
@@ -975,6 +986,9 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 							}
 							if (!sdr.IsDBNull(5)) {
 								iscarboncorrect = sdr.GetBoolean(5);
+							}
+							if (!sdr.IsDBNull(6)) {
+								normtitle = sdr.GetStringSafe(6);
 							}
 							TableOffSetNode node = new TableOffSetNode
 							{
@@ -984,7 +998,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 								DocumentID = damid,
 								comments = comment,
 								iscorrect = iscorrect,
-								iscarboncorrect = iscarboncorrect
+								iscarboncorrect = iscarboncorrect,
+								normtitle = normtitle
 							};
 							nodes.Add(node);
 						}

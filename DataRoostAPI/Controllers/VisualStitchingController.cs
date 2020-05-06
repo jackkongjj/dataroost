@@ -216,16 +216,16 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-		[Route("name-tree-api/offsets/{DamDocumentId}")]
+		[Route("name-tree-api/offsets/{DamDocumentId}/{fileid}")]
 		[HttpGet]
-		public HttpResponseMessage GetDocumentOffsets(Guid DamDocumentId) {
+		public HttpResponseMessage GetDocumentOffsets(Guid DamDocumentId, int fileid) {
 			try {
 
 				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
 				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
 
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
-				var json = vsHelper.GetDocumentOffsets(DamDocumentId.ToString());
+				var json = vsHelper.GetDocumentOffsets(DamDocumentId.ToString(), fileid);
 				return new HttpResponseMessage()
 				{
 					Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
