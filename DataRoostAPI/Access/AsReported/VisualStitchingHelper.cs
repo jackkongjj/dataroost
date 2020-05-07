@@ -222,6 +222,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public bool iscarboncorrect { get; set; }
 			[JsonProperty("normtitle")]
 			public string normtitle { get; set; }
+			[JsonProperty("normtitleid")]
+			public int? normtitleid { get; set; }
 		}
 
 		public class NameTreeTableNode {
@@ -257,6 +259,14 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public String toString() {
 				return "id:" + this.id + " title:" + this.Title + " tableid:" + this.TableID + " fileid:" + this.FileID + " indent:" + this.indent + " NormTitle:" + this.NormTitle + " offset:" + this.offset;
 			}
+		}
+
+
+		public class NormTable {
+			[JsonProperty("normtitleid")]
+			public int normtitleid { get; set; }
+			[JsonProperty("normtitle")]
+			public string normtitle { get; set; }
 		}
 
 		public class Profile {
@@ -503,6 +513,25 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return JsonConvert.SerializeObject(nodes);
 		}
 
+		public string GetNameTreesNormTable() {
+			int tries = 1;
+			List<NormTable> nodes = new List<NormTable>();
+			while (tries > 0) {
+				try {
+					nodes = GetPostGresNormTable();
+					tries = 0;
+				} catch (Exception ex) {
+					if (--tries > 0) {
+						System.Threading.Thread.Sleep(1000);
+					} else {
+						return JsonConvert.SerializeObject(new List<NormTable>());
+					}
+
+				}
+			}
+			return JsonConvert.SerializeObject(nodes);
+		}
+
 		public string GetDocumentOffsets(String damid, int fileid) {
 			int tries = 1;
 			List<TableOffSetNode> nodes = new List<TableOffSetNode>();
@@ -521,6 +550,27 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 				}
 			}
 			return JsonConvert.SerializeObject(nodes);
+		}
+
+		public string UpdateTableNormTableId(String damid, int iconum, int tableid, int fileid, int? newid) {
+			String idvalue = "null";
+			if (newid.HasValue)
+				idvalue = "" + newid.Value;
+
+			String query = @"UPDATE html_table_identification SET norm_table_id={4} WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, idvalue), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+						}
+					}
+				}
+			} catch (Exception ex) {
+				return "Fail";
+			}
+
+			return "Success";
 		}
 
 		public string UpdateTableTitleComments(String damid, int iconum, int tableid, int fileid, String newtitle) {
@@ -827,30 +877,37 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
 				using (var cmd = new NpgsqlCommand(string.Format(query, damid, fileid), conn)) {
 					conn.Open();
-					try {
-						List<int> tableIDList = new List<int>();
-						NameTreeTableNode rootnode = null;// same table_id's root
-						using (var sdr = cmd.ExecuteReader()) {
-							while (sdr.Read()) {
-								NameTreeTableNode node = genNameTreeTableNode(sdr);
-								if (!tableidmap.ContainsKey(node.TableID)) {
-									rootnode = genRootNameTreeTableNode(node);
-									tableidmap[node.TableID] = rootnode;
-									treenodes.Add(rootnode);
-								} else {
-									rootnode = tableidmap[node.TableID];
-								}
 
-								if (node.indent == 0) {
-									rootnode.Nodes.Add(node);
-								} else {
-									NameTreeTableNode pnode = findParentByRowID(rootnode, node);
-									pnode.Nodes.Add(node);
+					int tries = 1;
+					while (tries > 0) {
+						try {
+							List<int> tableIDList = new List<int>();
+							NameTreeTableNode rootnode = null;// same table_id's root
+							using (var sdr = cmd.ExecuteReader()) {
+								while (sdr.Read()) {
+									NameTreeTableNode node = genNameTreeTableNode(sdr);
+									if (!tableidmap.ContainsKey(node.TableID)) {
+										rootnode = genRootNameTreeTableNode(node);
+										tableidmap[node.TableID] = rootnode;
+										treenodes.Add(rootnode);
+									} else {
+										rootnode = tableidmap[node.TableID];
+									}
+
+									if (node.indent == 0) {
+										rootnode.Nodes.Add(node);
+									} else {
+										NameTreeTableNode pnode = findParentByRowID(rootnode, node);
+										pnode.Nodes.Add(node);
+									}
 								}
 							}
+							tries = 0;
+						} catch (Exception ex) {
+							if (--tries > 0) {
+								System.Threading.Thread.Sleep(1000);
+							}
 						}
-					} catch (Exception ex) {
-						Console.WriteLine(ex.StackTrace);
 					}
 				}
 			}
@@ -959,9 +1016,32 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 		}
 
 
+		private List<NormTable> GetPostGresNormTable() {
+			const string query = @"select id, label from norm_table";
+			List<NormTable> nodes = new List<NormTable>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(query, conn)) {
+					conn.Open();
+
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+
+							nodes.Add(new NormTable()
+							{
+								normtitleid = sdr.GetInt32(0),
+								normtitle = sdr.GetStringSafe(1)
+							});
+						}
+					}
+				}
+			}
+			return nodes;
+		}
+
+
 		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid, int fileid) {
 			const string query = @"
-				select ht.table_id, ht.file_id, ht.title, ht.comments, ht.is_correct,ht.is_carbon_hier_correct, nt.label 
+				select ht.table_id, ht.file_id, ht.title, ht.comments, ht.is_correct,ht.is_carbon_hier_correct, nt.label , nt.id
             from html_table_identification ht 
        left join norm_table nt on ht.norm_table_id = nt.id    
         where document_id = '{0}' and file_id = {1} order by table_id
@@ -981,6 +1061,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 							string normtitle = null;
 							bool iscorrect = false;
 							bool iscarboncorrect = false;
+							int? normtitleid = null;
 							if (!sdr.IsDBNull(4)) {
 								iscorrect = sdr.GetBoolean(4);
 							}
@@ -989,6 +1070,9 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 							}
 							if (!sdr.IsDBNull(6)) {
 								normtitle = sdr.GetStringSafe(6);
+							}
+							if (!sdr.IsDBNull(7)) {
+								normtitleid = sdr.GetInt32(7);
 							}
 							TableOffSetNode node = new TableOffSetNode
 							{
@@ -999,7 +1083,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 								comments = comment,
 								iscorrect = iscorrect,
 								iscarboncorrect = iscarboncorrect,
-								normtitle = normtitle
+								normtitle = normtitle,
+								normtitleid = normtitleid
 							};
 							nodes.Add(node);
 						}

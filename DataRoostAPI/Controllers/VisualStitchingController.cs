@@ -236,6 +236,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("name-tree-api/normtables/")]
+		[HttpGet]
+		public HttpResponseMessage GetDocumentTrees() {
+			try {
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+				var vsHelper = new VisualStitchingHelper(sfConnectionString);
+				var json = vsHelper.GetNameTreesNormTable();
+				return new HttpResponseMessage()
+				{
+					Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+				};
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("name-tree-api/trees/{DamDocumentId}/{fileid}")]
 		[HttpGet]
 		public HttpResponseMessage GetDocumentTrees(Guid DamDocumentId, int fileid) {
@@ -269,6 +289,14 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					bool iscorrect = Boolean.Parse(input.StringData["iscorrect"]);
 					bool iscarboncorrect = Boolean.Parse(input.StringData["iscarboncorrect"]);
 					return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, iscorrect, iscarboncorrect);
+				} 
+				else if (input.StringData.ContainsKey("normtitleid")) {
+					try {
+						int newid = Int32.Parse(input.StringData["normtitleid"]);
+						return vsHelper.UpdateTableNormTableId(DamDocumentId.ToString(), iconum, tableid, fileid, newid);
+					} catch (Exception ex) {
+						return vsHelper.UpdateTableNormTableId(DamDocumentId.ToString(), iconum, tableid, fileid, null);
+					}
 				} else {
 					return vsHelper.UpdateTableTitleComments(DamDocumentId.ToString(), iconum, tableid, fileid, input.StringData["comments"]);
 				}
