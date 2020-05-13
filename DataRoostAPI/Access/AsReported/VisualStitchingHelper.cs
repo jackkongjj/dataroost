@@ -866,7 +866,7 @@ SELECT  [Id]
 
 		private List<NameTreeTableNode> GetPostGresNameTreeTableNode(String damid, int fileid) {
 			const string query = @"
-				select document_id,iconum, final_label, file_id,indent,table_id, norm_table_title,is_total,cleaned_row_label,item_offset,adjusted_row_id 
+				select document_id,iconum, final_label, file_id,indent,table_id, '',is_total,cleaned_row_label,item_offset,adjusted_row_id 
          from norm_name_tree_flat where document_id = '{0}' 
               and col_id = 1 and file_id={1}
 order by norm_table_title, table_id, indent,adjusted_row_id
@@ -879,7 +879,9 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 					conn.Open();
 
 					int tries = 1;
+					int num = 0;
 					while (tries > 0) {
+						num++;
 						try {
 							List<int> tableIDList = new List<int>();
 							NameTreeTableNode rootnode = null;// same table_id's root
@@ -897,8 +899,14 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 									if (node.indent == 0) {
 										rootnode.Nodes.Add(node);
 									} else {
-										NameTreeTableNode pnode = findParentByRowID(rootnode, node);
-										pnode.Nodes.Add(node);
+										try {
+											NameTreeTableNode pnode = findParentByRowID(rootnode, node);
+											pnode.Nodes.Add(node);
+										} catch (Exception ex) {
+											Console.WriteLine(num);
+										}
+
+
 									}
 								}
 							}
@@ -964,13 +972,20 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 		public NameTreeTableNode findParentByRowID(NameTreeTableNode root, NameTreeTableNode node) {
 			int rowid = node.adjustedrowid;
 			int indent = node.indent;
-			List<NameTreeTableNode> list = getSameIndentNode(root, indent - 1);
-			for (int i = 0; i < list.Count; i++) {
-				NameTreeTableNode rnode = list.ElementAt(i);
-				if (rnode.adjustedrowid > rowid)
-					return rnode;
+			int preindent = indent - 1;
+
+			while (preindent >= 0) {
+				List<NameTreeTableNode> list = getSameIndentNode(root, preindent);
+				for (int i = 0; i < list.Count; i++) {
+					NameTreeTableNode rnode = list.ElementAt(i);
+					if (rnode.adjustedrowid > rowid)
+						return rnode;
+				}
+				if (list.Count > 0)
+					return list.ElementAt(0);
+				preindent--;
 			}
-			return list.ElementAt(0);
+			return null;
 		}
 
 		public List<NameTreeTableNode> getSameIndentNode(NameTreeTableNode root, int indent) {
