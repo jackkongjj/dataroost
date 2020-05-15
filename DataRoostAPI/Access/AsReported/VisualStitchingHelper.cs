@@ -228,7 +228,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
 		public class NameTreeTableNode {
 			[JsonProperty("id")]
-			public int id { get; set; }
+			public long id { get; set; }
 			[JsonProperty("documentid")]
 			public string DocumentID { get; set; }
 			[JsonProperty("title")]
@@ -842,7 +842,7 @@ SELECT  [Id]
 				offset = sdr.GetStringSafe(9),
 				adjustedrowid = rowid,
 				Nodes = new List<NameTreeTableNode>(),
-				id = sdr.GetInt32(5) * 1000 + rowid
+				id = sdr.GetInt64(11)
 			};
 			return node;
 		}
@@ -860,13 +860,13 @@ SELECT  [Id]
 				Nodes = new List<NameTreeTableNode>(),
 				TableID = node.TableID,
 				adjustedrowid = node.adjustedrowid,
-				id = node.TableID * 1000 + node.adjustedrowid
+				id = node.id * -1
 			};
 		}
 
 		private List<NameTreeTableNode> GetPostGresNameTreeTableNode(String damid, int fileid) {
 			const string query = @"
-				select document_id,iconum, final_label, file_id,indent,table_id, '',is_total,cleaned_row_label,item_offset,adjusted_row_id 
+				select document_id,iconum, final_label, file_id,indent,table_id, '',is_total,cleaned_row_label,item_offset,adjusted_row_id,id 
          from norm_name_tree_flat where document_id = '{0}' 
               and col_id = 1 and file_id={1}
 order by norm_table_title, table_id, indent,adjusted_row_id
@@ -1372,7 +1372,6 @@ SELECT  Id,Label, iconum_count, comment
 			return newTree;
 		}
 
-
 		public string GetNameTree(Guid DamDocumentId) {
 
 			int tries = 1;
@@ -1675,114 +1674,119 @@ select * from vw_documents_iconums
 			return n;
 		}
 		private Node PGnodeDocuments2(Node n, string hiearchy = "") {
-			if (n.Documents == null) {
-				n.Documents = new List<string>();
-			}
-			if (n.DocumentTuples == null) {
-				n.DocumentTuples = new List<Tuple<string, string, string, Guid, string>>();
-			}
-			if (pgdocumentCluster == null) {
-				initPgDocumentCluster();
-			}
-			if (pgdocumentCluster2 == null) {
-				initPgDocumentCluster2();
-			}
-			if (pgtickerCluster == null) {
-				initPgTickerCluster();
+			try {
+				if (n.Documents == null) {
+					n.Documents = new List<string>();
+				}
+				if (n.DocumentTuples == null) {
+					n.DocumentTuples = new List<Tuple<string, string, string, Guid, string>>();
+				}
+				if (pgdocumentCluster == null) {
+					initPgDocumentCluster();
+				}
+				if (pgdocumentCluster2 == null) {
+					initPgDocumentCluster2();
+				}
+				if (pgtickerCluster == null) {
+					initPgTickerCluster();
 
-			}
-			var nTitle = n.Title;
-			if (string.IsNullOrWhiteSpace(n.Childrentitle)) {
-				n.Childrentitle = "";
-			}
-			n.Childrentitle += nTitle;
-			if (pgdocumentCluster.ContainsKey(n.Id)) { // n.id is ClusterID
+				}
+				var nTitle = n.Title;
+				if (string.IsNullOrWhiteSpace(n.Childrentitle)) {
+					n.Childrentitle = "";
+				}
+				n.Childrentitle += nTitle;
+				if (pgdocumentCluster.ContainsKey(n.Id)) { // n.id is ClusterID
 
-				foreach (var d in pgdocumentCluster[n.Id]) {
-					var doc = new List<string>();
+					foreach (var d in pgdocumentCluster[n.Id]) {
+						var doc = new List<string>();
 
-					string z = "";
-					string y = "";
-					//doc.Add(d.ToString());
-					if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+						string z = "";
+						string y = "";
+						//doc.Add(d.ToString());
+						if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
                     {
-						//foreach(var t in tickerCluster[d.Item1])
-						//{
-						//    doc.Add(t);
+							//foreach(var t in tickerCluster[d.Item1])
+							//{
+							//    doc.Add(t);
 
-						//}
-						z = pgtickerCluster[d.Item1][0]; // iconum
-						//y = pgtickerCluster[d.Item1][1]; // was ticker
+							//}
+							z = pgtickerCluster[d.Item1][0]; // iconum
+							//y = pgtickerCluster[d.Item1][1]; // was ticker
 
+
+						}
+						//doc.Add(d.Item2);
+						//n.Documents.Add(doc);
+						// Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
+						var sdb = "x";
+						if (!string.IsNullOrWhiteSpace(d.Item4)) {
+							sdb = "SDB: " + d.Item4;
+						}
+						Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(sdb, d.Item2, d.Item3 ?? "NA", d.Item1, "Iconum: " + z);
+						n.DocumentTuples.Add(tuple);
 
 					}
-					//doc.Add(d.Item2);
-					//n.Documents.Add(doc);
-					// Item4 - SDB, Item2 = raw label, Item3 = value, Item1 = DocID
-					var sdb = "x";
-					if (!string.IsNullOrWhiteSpace(d.Item4)) {
-						sdb = "SDB: " + d.Item4;
+					foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1)) {
+						n.Documents.Add(dt.ToString());
 					}
-					Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>(sdb, d.Item2, d.Item3 ?? "NA", d.Item1, "Iconum: " + z);
-					n.DocumentTuples.Add(tuple);
+					n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
+					if (pgdocumentCluster.ContainsKey(n.Id)) {
+						var set = new HashSet<Guid>();
+						foreach (var g in pgdocumentCluster2[n.Id]) {
+							set.Add(g.Item1);
+						}
+						n.Title += string.Format(" ({0})", set.Count);
+					}
+				} else if (pgdocumentCluster2.ContainsKey(n.Id)) {
+					foreach (var d in pgdocumentCluster2[n.Id]) {
+						var doc = new List<string>();
 
-				}
-				foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1)) {
-					n.Documents.Add(dt.ToString());
-				}
-				n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
-				if (pgdocumentCluster.ContainsKey(n.Id)) {
+						string z = "";
+						string y = "";
+						//doc.Add(d.ToString());
+						if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
+                    {
+							//foreach(var t in tickerCluster[d.Item1])
+							//{
+							//    doc.Add(t);
+
+							//}
+							z = pgtickerCluster[d.Item1][0]; // iconum
+							//y = pgtickerCluster[d.Item1][1]; // was ticker
+
+
+						}
+						//doc.Add(d.Item2);
+						//n.Documents.Add(doc);
+						Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("y ", d.Item2, "Missing", d.Item1, "Iconum: " + z);
+						n.DocumentTuples.Add(tuple);
+
+					}
+					foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1)) {
+						n.Documents.Add(dt.ToString());
+					}
+					n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
 					var set = new HashSet<Guid>();
 					foreach (var g in pgdocumentCluster2[n.Id]) {
 						set.Add(g.Item1);
 					}
 					n.Title += string.Format(" ({0})", set.Count);
+				} else {
+					//n.Title += string.Format(" (Cid: {0})", n.Id);
 				}
-			} else if (pgdocumentCluster2.ContainsKey(n.Id)) {
-				foreach (var d in pgdocumentCluster2[n.Id]) {
-					var doc = new List<string>();
-
-					string z = "";
-					string y = "";
-					//doc.Add(d.ToString());
-					if (pgtickerCluster.ContainsKey(d.Item1)) // d.Item1 is DocID
-                    {
-						//foreach(var t in tickerCluster[d.Item1])
-						//{
-						//    doc.Add(t);
-
-						//}
-						z = pgtickerCluster[d.Item1][0]; // iconum
-						//y = pgtickerCluster[d.Item1][1]; // was ticker
-
-
-					}
-					//doc.Add(d.Item2);
-					//n.Documents.Add(doc);
-					Tuple<string, string, string, Guid, string> tuple = new Tuple<string, string, string, Guid, string>("y ", d.Item2, "Missing", d.Item1, "Iconum: " + z);
-					n.DocumentTuples.Add(tuple);
-
+				foreach (var child in n.Nodes) {
+					PGnodeDocuments2(child, string.Format("{0}[{1}]", hiearchy, nTitle));
 				}
-				foreach (var dt in n.DocumentTuples.OrderBy(x => x.Item1)) {
-					n.Documents.Add(dt.ToString());
-				}
-				n.Documents.Add(string.Format("{0}[{1}]", "", n.Title));
-				var set = new HashSet<Guid>();
-				foreach (var g in pgdocumentCluster2[n.Id]) {
-					set.Add(g.Item1);
-				}
-				n.Title += string.Format(" ({0})", set.Count);
-			} else {
-				//n.Title += string.Format(" (Cid: {0})", n.Id);
+				//foreach (var child in n.Nodes)
+				//{
+				//    n.Childrentitle += childrenTitle(child);
+				//}
+				return n;
+			} catch (Exception ex) {
+				Console.WriteLine("");
 			}
-			foreach (var child in n.Nodes) {
-				PGnodeDocuments2(child, string.Format("{0}[{1}]", hiearchy, nTitle));
-			}
-			//foreach (var child in n.Nodes)
-			//{
-			//    n.Childrentitle += childrenTitle(child);
-			//}
-			return n;
+			return null;
 		}
 		private Node nodeDocuments(Node n, string hiearchy = "") {
 			if (n.Documents == null) {
