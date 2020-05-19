@@ -568,79 +568,10 @@ ORDER BY ChangeDate DESC";
 
 		public Dictionary<int, EffortDTO> GetCompaniesEfforts(List<int> companies) {
 
-			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();
-			DataTable table = new DataTable();
-			table.Columns.Add("iconum", typeof(int));
-			foreach (int iconum in companies) {
-				table.Rows.Add(iconum);
-				effortDictionary.Add(iconum, EffortDTO.Voyager());
+			Dictionary<int, EffortDTO> effortDictionary = new Dictionary<int, EffortDTO>();			
+			foreach (int iconum in companies) {				
+				effortDictionary.Add(iconum, EffortDTO.SuperCore());
 			}
-
-			const string createTableQuery = @"CREATE TABLE #iconums ( iconum INT NOT NULL )";
-			const string query = @"
-with ico as
-(
-       select c.iconum, IsoCountry 
-       from #iconums c
-       join PPIIconumMap fds WITH (NOLOCK) on fds.iconum = c.iconum
-       where IsAdr = 0 and IsActive=1 --order by ClientAddDate, [Priority]
-)      
-select  fds.iconum
-from fce.rules r WITH (NOLOCK)
-join ico fds WITH (NOLOCK) on r.country = fds.IsoCountry
-join fce.RulesToPath rtp WITH (NOLOCK) on r.id = rtp.RuleId
-join fce.Paths p WITH (NOLOCK) on p.Id = rtp.PathId
-join fce.PathTransitions pt WITH (NOLOCK) on p.Id = pt.PathId
-join WorkQueueTasks wqt WITH (NOLOCK) on wqt.id = pt.taskid
-left join fce.CompanyListRulesToPath clr WITH (NOLOCK) on clr.RulesToPathId = rtp.Id
-where wqt.name = 'Finantula' and clr.RulesToPathId is null
-union
-select matchList.iconum from
-(
-       select fds.iconum, rulestopathid, matchcount = count(distinct 1)
-       from fce.rules r WITH (NOLOCK)
-       join ico fds WITH (NOLOCK) on r.country = fds.IsoCountry
-       join fce.RulesToPath rtp WITH (NOLOCK) on r.id = rtp.RuleId
-       join fce.Paths p WITH (NOLOCK) on p.Id = rtp.PathId
-       join fce.PathTransitions pt WITH (NOLOCK) on p.Id = pt.PathId
-       join WorkQueueTasks wqt WITH (NOLOCK) on wqt.id = pt.taskid
-       join fce.CompanyListRulesToPath clr WITH (NOLOCK) on clr.RulesToPathId = rtp.Id
-       join companylistcompanies clc WITH (NOLOCK) on clc.companylistid = clr.companylistid and clc.iconum = fds.iconum
-       where wqt.name = 'Finantula'
-       group by clr.RulesToPathId, fds.iconum
-) as matchList
-join (
-       select rulestopathid, matchcount = count(1)
-       from fce.CompanyListRulesToPath WITH (NOLOCK)
-       group by rulestopathid
-) as reqList on matchList.RulesToPathId = reqList.RulesToPathId and matchList.matchcount = reqList.matchcount";
-
-			// Create Global Temp Table
-			using (SqlConnection connection = new SqlConnection(_damConnectionString)) {
-				connection.Open();
-				using (SqlCommand cmd = new SqlCommand(createTableQuery, connection)) {
-					cmd.ExecuteNonQuery();
-				}
-
-				// Upload all iconums to Temp table
-				using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, null)) {
-					bulkCopy.BatchSize = table.Rows.Count;
-					bulkCopy.DestinationTableName = "#iconums";
-					bulkCopy.WriteToServer(table);
-				}
-
-				using (SqlCommand cmd = new SqlCommand(query, connection)) {
-					cmd.CommandTimeout = 500;
-					using (SqlDataReader reader = cmd.ExecuteReader()) {
-						while (reader.Read()) {
-							int iconum = reader.GetInt32(0);
-							EffortDTO superfastEffort = EffortDTO.SuperCore();
-							effortDictionary[iconum] = superfastEffort;
-						}
-					}
-				}
-			}
-
 			return effortDictionary;
 		}
 
