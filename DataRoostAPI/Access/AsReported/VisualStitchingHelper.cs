@@ -934,10 +934,15 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			NameTreeTableNode root = null;
 			foreach (NameTreeTableNode node in treenodes) {
 
-				if (infolist.First(t => t.TableID == node.TableID).normtitle != null) {
-					node.NormTitle = infolist.First(t => t.TableID == node.TableID).normtitle;
-					//node.NormTitle = norm_title;
+				try {
+					if (infolist.First(t => t.TableID == node.TableID).normtitle != null) {
+						node.NormTitle = infolist.First(t => t.TableID == node.TableID).normtitle;
+						//node.NormTitle = norm_title;
+					}
+				} catch (Exception ex) {
+					Console.WriteLine("");
 				}
+			
 				String norm_title = node.NormTitle;
 
 				if (!map.ContainsKey(norm_title)) {
