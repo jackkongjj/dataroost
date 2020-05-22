@@ -756,7 +756,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 sfConnectionString = "Application Name=DataRoost;Data Source=FFDochistsql-prod.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=SCAR_Collection;Password=nIaAIVnBr2;MultipleActiveResultSets=True;";
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.PostAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId, offsets);
+                //return helper.PostAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId, offsets);
+                return helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId).First();
             }
             catch (Exception ex)
             {

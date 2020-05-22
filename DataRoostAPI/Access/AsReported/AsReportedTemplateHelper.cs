@@ -2808,7 +2808,46 @@ END CATCH
 			public int RootId { get; set; }
 		}
 
-		public TimeSlice PostAutostitchedTimeSliceCurrent(int iconum, Guid currDocId, int currFileId, List<string> offsets) {
+        public List<TimeSlice> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId)
+        {
+            string sql_lastyeardocument = @"
+select top 1 d.DAMDocumentId
+FROM  Document d_curr
+JOIN DocumentSeries ds_curr on d_curr.DocumentSeriesID = ds_curr.ID
+JOIN Document d on d_curr.DocumentSeriesID = d.DocumentSeriesID and d_curr.ReportTypeID = d.ReportTypeID and d_curr.FormTypeID = d.FormTypeID
+WHERE 
+d_curr.DAMDocumentId = @docId
+and ds_curr.CompanyID = @companyId
+and d.ArdExportFlag = 1
+and d.DocumentDate <= DATEADD(d, -364, d_curr.DocumentDate) 
+and d.DocumentDate >= DATEADD(d, -367, d_curr.DocumentDate)
+order by  d.PublicationDateTime desc
+
+";
+            Guid bestHistory = default(Guid);
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(sql_lastyeardocument, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@docId", currDocId);
+                    cmd.Parameters.AddWithValue("@companyId", iconum);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            bestHistory = reader.GetGuid(0);
+                            break;
+                        }
+
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        public TimeSlice PostAutostitchedTimeSliceCurrent(int iconum, Guid currDocId, int currFileId, List<string> offsets) {
 			string test_url = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/b75fb8da-2a34-e711-80ea-8cdcd4af21e4/Iconum/20763/FileId/20/file";
 			string url_pattern = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/{1}/Iconum/{0}/FileId/{2}/file";
 			var url = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId);
