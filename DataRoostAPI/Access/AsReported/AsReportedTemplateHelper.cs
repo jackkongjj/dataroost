@@ -2808,9 +2808,9 @@ END CATCH
 			public int RootId { get; set; }
 		}
 
-        public List<TimeSlice> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId)
+        private Guid SmartTimeSliceGetHistoricalDocument(int iconum, Guid currDocId)
         {
-            string sql_lastyeardocument = @"
+         string sql_lastyeardocument = @"
 select top 1 d.DAMDocumentId
 FROM  Document d_curr
 JOIN DocumentSeries ds_curr on d_curr.DocumentSeriesID = ds_curr.ID
@@ -2843,7 +2843,124 @@ order by  d.PublicationDateTime desc
                     }
                 }
             }
+            return bestHistory;
+        }
+        public List<TimeSlice> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId)
+        {
+            var hisDocId = SmartTimeSliceGetHistoricalDocument(iconum, currDocId);
+            var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, 0, null);
+
             return null;
+        }
+
+        public List<TimeSlice> SmartTimeSliceAutostitching(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
+        {
+            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
+            string autostitchingurl = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId, hisDocId.ToString().ToLower(), hisFileId);
+            var outputresult = GetWebRequest(autostitchingurl);
+            if (!string.IsNullOrWhiteSpace(outputresult))
+            {   // if there is result. Just return the DocumentTimeSlice historical offset maps to. 
+                return GetSmartTimeHistoricalAutoStitched(currDocId, currFileId, hisDocId, hisFileId, offsets, outputresult);
+            }
+            else
+            {
+                throw new Exception("No stitching service");
+            }
+        }
+
+        private List<TimeSlice> GetSmartTimeHistoricalAutoStitched(Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets, string outputresult)
+        {
+            string query = @"
+select distinct top 100 dts.*
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
+WHERE 
+  tc.Offset in ({0})
+and d.DAMDocumentId = @docId
+and ltrim(isnull(tc.Offset, '')) <> ''
+";
+            var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
+            var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);
+            if (autostitchInfo == null)
+            {
+                throw new Exception("failed to get auto stitch result");
+            }
+            List<TimeSlice> slices = new List<TimeSlice>();
+            string joined = "";
+            var test_hisDocId = new Guid("61212c7d-7453-e811-80f1-8cdcd4af21e4");
+            foreach (var link in autostitchInfo.Links)
+            {
+                if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
+                {
+                    continue;
+                }
+                if (link.CurrentOffsets == null || link.CurrentOffsets.Count == 0)
+                {
+                    continue;
+                }
+                bool isfound = false;
+                foreach (var o in offsets)
+                {
+                    if (link.CurrentOffsets.Contains(o))
+                    {
+                        isfound = true;
+                        break;
+                    }
+                }
+                if (!isfound)
+                {
+                    continue;
+                }
+                var formatted = link.HistoricalOffsets.Select(x => string.Format("'{0}'", x));
+                joined = String.Join(",", formatted);
+                //joined = link.HistoricalOffsets.Aggregate((a, b) => ("'" + a + "','" + b + "'")).ToString();
+                using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(string.Format(query, joined), conn))
+                    {
+                        conn.Open();
+                        //cmd.Parameters.AddWithValue("@offsets", joined);
+                        cmd.Parameters.AddWithValue("@docId", hisDocId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+
+                                var slice = new TimeSlice
+                                {
+                                    Id = reader.GetInt32(0),
+                                    DamDocumentId = hisDocId,
+                                    DocumentId = reader.GetGuid(1),
+                                    DocumentSeriesId = reader.GetInt32(2),
+                                    TimeSlicePeriodEndDate = reader.GetDateTime(3),
+                                    ReportingPeriodEndDate = reader.GetDateTime(4),
+                                    FiscalDistance = reader.GetInt32(5),
+                                    Duration = reader.GetInt32(6),
+                                    PeriodType = reader.GetStringSafe(7),
+                                    AcquisitionFlag = reader.GetStringSafe(8),
+                                    AccountingStandard = reader.GetStringSafe(9),
+                                    ConsolidatedFlag = reader.GetStringSafe(10),
+                                    IsProForma = reader.GetBoolean(11),
+                                    IsRecap = reader.GetBoolean(12),
+                                    CompanyFiscalYear = reader.GetDecimal(13),
+                                    ReportType = reader.GetStringSafe(14),
+                                    IsAmended = reader.GetBoolean(15),
+                                    IsRestated = reader.GetBoolean(16),
+                                    IsAutoCalc = reader.GetBoolean(17),
+                                    ManualOrgSet = reader.GetBoolean(18),
+                                    TableTypeID = reader.GetInt32(19)
+                                };
+                                slices.Add(slice);
+                            }
+
+                        }
+                    }
+                }
+            }
+            return slices;
         }
 
         public List<TimeSlice> SmartTimeSlicesPostBak1(int iconum, Guid currDocId, int currFileId)

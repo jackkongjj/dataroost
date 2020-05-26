@@ -743,7 +743,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}")]
         [HttpPost]
-        public TimeSlice GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
+        public List<TimeSlice> GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
         {
 
             // Post body: ["o7857981|l2|r0", "o7858643|l3|r0", "o133308|l9|r0"]
@@ -757,7 +757,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 sfConnectionString = "Application Name=DataRoost;Data Source=FFDochistsql-prod.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=SCAR_Collection;Password=nIaAIVnBr2;MultipleActiveResultSets=True;";
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
                 //return helper.PostAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId, offsets);
-                return helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId).First();
+                var slices =  helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId);
+                return slices;
             }
             catch (Exception ex)
             {
