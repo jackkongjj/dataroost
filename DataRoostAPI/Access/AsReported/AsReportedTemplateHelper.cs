@@ -2845,12 +2845,33 @@ order by  d.PublicationDateTime desc
             }
             return bestHistory;
         }
-        public List<TimeSlice> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId)
+
+        public List<JsonCol> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId, List<string> currOffsets)
         {
             var hisDocId = SmartTimeSliceGetHistoricalDocument(iconum, currDocId);
-            var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, 0, null);
-
-            return null;
+            var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, 23, currOffsets);
+            List<JsonCol> jsonCols = new List<JsonCol>();
+            if (result != null)
+            {
+                int count = 0;
+                foreach (var r in result)
+                {
+                    JsonCol jsonCol = new JsonCol();
+                    jsonCol.columnId = count;
+                    jsonCol.columnDay = r.TimeSlicePeriodEndDate.Day;
+                    jsonCol.columnMonth = r.TimeSlicePeriodEndDate.Month;
+                    jsonCol.columnYear = r.TimeSlicePeriodEndDate.Year;
+                    jsonCol.columnPeriodCount = r.Duration;
+                    jsonCol.columnPeriodType = r.PeriodType;
+                    jsonCol.columnHeader = r.TimeSlicePeriodEndDate.ToShortDateString();
+                    jsonCol.columnType = r.PeriodType;
+                    jsonCol.location = 0;
+                    jsonCol.endLocation = 0;
+                    jsonCols.Add(jsonCol);
+                    count++;
+                }
+            }
+            return jsonCols;
         }
 
         public List<TimeSlice> SmartTimeSliceAutostitching(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
@@ -2881,6 +2902,7 @@ WHERE
   tc.Offset in ({0})
 and d.DAMDocumentId = @docId
 and ltrim(isnull(tc.Offset, '')) <> ''
+ORDER BY dts.id
 ";
             var settings = new JsonSerializerSettings { Error = (se, ev) => { ev.ErrorContext.Handled = true; } };
             var autostitchInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<AutoStitch>(outputresult, settings);

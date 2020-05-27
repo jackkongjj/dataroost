@@ -95,5 +95,39 @@ namespace DataRoostAPI.Common.Models.AsReported {
 		public List<SCARAPITableCell> Cells { get; set; }
 	}
 
+
+    public class JsonCol
+    {
+        [JsonProperty("columnId")]
+        public int columnId { get; set; }
+
+        [JsonProperty("columnDay")]
+        public int columnDay { get; set; }
+
+        [JsonProperty("columnMonth")]
+        public int columnMonth { get; set; }
+
+        [JsonProperty("columnYear")]
+        public int columnYear { get; set; }
+
+        [JsonProperty("columnPeriodCount")]
+        public int columnPeriodCount { get; set; }
+
+        [JsonProperty("columnPeriodType")]
+        public string columnPeriodType { get; set; }
+
+        [JsonProperty("columnHeader")]
+        public string columnHeader { get; set; }
+
+        [JsonProperty("columnType")]
+        public string columnType { get; set; }
+
+        [JsonProperty("location")]
+        public int location { get; set; }
+
+        [JsonProperty("endLocation")]
+        public int endLocation { get; set; }
+
+    }
 }
 
