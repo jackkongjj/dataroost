@@ -2850,28 +2850,61 @@ order by  d.PublicationDateTime desc
         {
             var hisDocId = SmartTimeSliceGetHistoricalDocument(iconum, currDocId);
             var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, 23, currOffsets);
-            List<JsonCol> jsonCols = new List<JsonCol>();
+            List<JsonCol> jsonColsFromTint = new List<JsonCol>();
             if (result != null)
             {
-                int count = 0;
+                int count = 1;
                 foreach (var r in result)
                 {
                     JsonCol jsonCol = new JsonCol();
                     jsonCol.columnId = count;
-                    jsonCol.columnDay = r.TimeSlicePeriodEndDate.Day;
-                    jsonCol.columnMonth = r.TimeSlicePeriodEndDate.Month;
-                    jsonCol.columnYear = r.TimeSlicePeriodEndDate.Year;
-                    jsonCol.columnPeriodCount = r.Duration;
-                    jsonCol.columnPeriodType = r.PeriodType;
-                    jsonCol.columnHeader = r.TimeSlicePeriodEndDate.ToShortDateString();
-                    jsonCol.columnType = r.PeriodType;
+                    var predictedEndDate = r.TimeSlicePeriodEndDate;
+                    bool isFeb29 = false;
+                    if (predictedEndDate.Month == 2)
+                    {
+                        if (predictedEndDate.Day == 28 || predictedEndDate.Day == 29)
+                        {
+                            predictedEndDate.AddDays(1).AddYears(1).AddDays(-1);
+                            isFeb29 = true;
+                        }
+                    }
+                    if (!isFeb29)
+                    {
+                        predictedEndDate.AddYears(1);
+                    }
+                    jsonCol.columnDay = predictedEndDate.Day;
+                    jsonCol.columnMonth = predictedEndDate.Month;
+                    jsonCol.columnYear = predictedEndDate.Year;
+                    //jsonCol.columnPeriodCount = r.Duration;
+                    //jsonCol.columnPeriodType = "Q1";//r.PeriodType;
+                    var tint = TranslateToTint(r.PeriodType);
+                    jsonCol.columnPeriodType = tint.Item1;
+                    jsonCol.columnPeriodCount = tint.Item2;
+                   
+                    jsonCol.columnHeader = predictedEndDate.ToString("MMM dd yyyy");
+                    jsonCol.columnType = "Value";
                     jsonCol.location = 0;
                     jsonCol.endLocation = 0;
-                    jsonCols.Add(jsonCol);
+                    jsonColsFromTint.Add(jsonCol);
                     count++;
                 }
             }
-            return jsonCols;
+            return jsonColsFromTint;
+        }
+
+        private Tuple<string, int> TranslateToTint(string interimtype)
+        {
+            switch (interimtype)
+            {
+                case "Q1":
+                    return new Tuple<string, int>("Month", 3);
+                case "Q6":
+                    return new Tuple<string, int>("Month", 6);
+                case "P":
+                    return new Tuple<string, int>("PIT", 0);
+                    
+            }
+            return new Tuple<string, int>("Month", 12);
         }
 
         public List<TimeSlice> SmartTimeSliceAutostitching(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
@@ -2915,6 +2948,8 @@ ORDER BY dts.id
             var test_hisDocId = new Guid("61212c7d-7453-e811-80f1-8cdcd4af21e4");
             foreach (var link in autostitchInfo.Links)
             {
+                if (slices != null && slices.Count > 0)
+                    return slices;
                 if (link.HistoricalOffsets == null || link.HistoricalOffsets.Count == 0)
                 {
                     continue;

@@ -757,8 +757,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 sfConnectionString = "Application Name=DataRoost;Data Source=FFDochistsql-prod.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=SCAR_Collection;Password=nIaAIVnBr2;MultipleActiveResultSets=True;";
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
                 //return helper.PostAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId, offsets);
-                var slices =  helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId, offsets);
-                return slices;
+                var jsonColsTint =  helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId, offsets);
+                return jsonColsTint;
             }
             catch (Exception ex)
             {
