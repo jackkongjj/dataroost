@@ -2846,10 +2846,51 @@ order by  d.PublicationDateTime desc
             return bestHistory;
         }
 
+
+        public int GetLatestFlyt(Guid bestMatchDocId, Guid currDocId, int? currFileId = null)
+        {
+            string GetFlytSql = "dbo.prcGet_BestMatchFileId";
+            string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+            damConnectionString = "Application Name=DataRoost;Data Source=ffdamsql-prod.prod.factset.com;Initial Catalog=ffdam;User ID=ffdam_services;Password=6HQwAN9Zobxvn97s";
+            int resultFileID = 0;
+            try
+            {
+                using (SqlConnection sqlConn = new SqlConnection(damConnectionString))
+                using (SqlCommand cmd = new SqlCommand(GetFlytSql, sqlConn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@bestMatchDocId", bestMatchDocId);
+                    cmd.Parameters.AddWithValue("@currDocId", currDocId);
+                    if (currFileId.HasValue)
+                        cmd.Parameters.AddWithValue("@currFileId", currFileId.Value);
+                    else
+                        cmd.Parameters.AddWithValue("@currFileId", DBNull.Value);
+                    sqlConn.Open();
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+
+                            resultFileID = sdr.GetInt16(1);
+                            return resultFileID;
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+            }
+            return resultFileID;
+
+        }
+
+
         public List<JsonCol> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId, List<string> currOffsets)
         {
             var hisDocId = SmartTimeSliceGetHistoricalDocument(iconum, currDocId);
-            var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, 23, currOffsets);
+            var hisFileId = GetLatestFlyt(hisDocId, currDocId, currFileId);
+            var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, hisFileId, currOffsets);
             List<JsonCol> jsonColsFromTint = new List<JsonCol>();
             if (result != null)
             {
