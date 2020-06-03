@@ -2979,11 +2979,9 @@ where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
                         jsonCol.columnYear = predictedEndDate.Year;
                         //jsonCol.columnPeriodCount = r.Duration;
                         //jsonCol.columnPeriodType = "Q1";//r.PeriodType;
-                        //var tint = TranslateToTint(r.PeriodType);
-                        //jsonCol.columnPeriodType = tint.Item1;
-                        //jsonCol.columnPeriodCount = tint.Item2;
-                        jsonCol.columnPeriodType = r.PeriodType;
-                        jsonCol.columnPeriodCount = r.Duration;
+                        var tint = TranslateToTint(r.PeriodType);
+                        jsonCol.columnPeriodType = tint.Item1;
+                        jsonCol.columnPeriodCount = tint.Item2;
 
                         jsonCol.columnHeader = predictedEndDate.ToString("MMM dd yyyy");
                         jsonCol.columnType = "Value";
@@ -3045,6 +3043,8 @@ where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
 
         private List<TimeSlice> GetSmartTimeHistoricalAutoStitched(Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets, string outputresult)
         {
+            // this balance sheet has tablecell saying "P", but user tagged it as Q2/Q6. 
+            // will go with users, even if they may be incorrect 
             string sql_findPeriodTypeByCell = @"
 select tc.* from DocumentTimeSlice dts
 join DocumentTimeSliceTableCell dtstc on dts.Id = dtstc.DocumentTimeSliceId
@@ -3053,13 +3053,27 @@ where dts.id in
 (990164)
 ";
 
-            string query = @"
+            // Timeslice Table sometimes missing Timeslice
+            string sql_lookupTimeslice = @"
 select distinct top 100 dts.*, ts.PeriodTypeId, ts.PeriodLength
 FROM TableCell tc 
 	join Document d on tc.DocumentId = d.ID
 	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
 	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
     join TimeSlice ts on  dts.DocumentId = ts.DocumentID and dts.TimeSlicePeriodEndDate = ts.TimeSliceDate and dts.PeriodType = ts.InterimTypeID
+WHERE 
+  tc.Offset in ({0})
+and d.DAMDocumentId = @docId
+and ltrim(isnull(tc.Offset, '')) <> ''
+ORDER BY dts.id
+";
+
+            string query = @"
+select distinct top 100 dts.*
+FROM TableCell tc 
+	join Document d on tc.DocumentId = d.ID
+	join DocumentTimeSliceTableCell dtstc on dtstc.TableCellId = tc.id
+	join DocumentTimeSlice dts on dtstc.DocumentTimeSliceId = dts.Id
 WHERE 
   tc.Offset in ({0})
 and d.DAMDocumentId = @docId
@@ -3124,8 +3138,8 @@ ORDER BY dts.id
                                     TimeSlicePeriodEndDate = reader.GetDateTime(3),
                                     ReportingPeriodEndDate = reader.GetDateTime(4),
                                     FiscalDistance = reader.GetInt32(5),
-                                    Duration = reader.GetInt32(21),
-                                    PeriodType = reader.GetStringSafe(20),
+                                    Duration = reader.GetInt32(6),
+                                    PeriodType = reader.GetStringSafe(7),
                                     AcquisitionFlag = reader.GetStringSafe(8),
                                     AccountingStandard = reader.GetStringSafe(9),
                                     ConsolidatedFlag = reader.GetStringSafe(10),
