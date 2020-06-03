@@ -2873,7 +2873,6 @@ where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
 ) a where a.root_rank = 1 order by a.RootId desc
 ";
             string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
-            damConnectionString = "Application Name=DataRoost;Data Source=ffdamsql-prod.prod.factset.com;Initial Catalog=ffdam;User ID=ffdam_services;Password=6HQwAN9Zobxvn97s";
             var list = new List<int>();
             try
             {
@@ -3028,7 +3027,8 @@ where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
         public List<TimeSlice> SmartTimeSliceAutostitching(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
         {
             string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
-            string url_pattern = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
+            string autostitchingbasepath = @"https://auto-stitching-prod.factset.io/";
+            string url_pattern = autostitchingbasepath + @"api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
             string autostitchingurl = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId, hisDocId.ToString().ToLower(), hisFileId);
             var outputresult = GetWebRequest(autostitchingurl);
             if (!string.IsNullOrWhiteSpace(outputresult))

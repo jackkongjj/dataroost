@@ -752,7 +752,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 int iconum = PermId.PermId2Iconum(CompanyId);
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                sfConnectionString = "Application Name=DataRoost;Data Source=FFDochistsql-prod.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=SCAR_Collection;Password=nIaAIVnBr2;MultipleActiveResultSets=True;";
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
                 var jsonColsTint =  helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId, offsets);
                 return jsonColsTint;
