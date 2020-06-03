@@ -101,6 +101,9 @@ namespace DataRoostAPI.Common.Models.AsReported {
         [JsonProperty("columnId")]
         public int columnId { get; set; }
 
+        [JsonProperty("dbColumnId")]
+        public int dbcolumnId { get; set; }
+
         [JsonProperty("columnDay")]
         public int columnDay { get; set; }
 

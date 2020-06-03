@@ -2847,6 +2847,59 @@ order by  d.PublicationDateTime desc
         }
 
 
+
+        public List<int> GetAllPossibleFlyt(Guid currDocId)
+        {
+            string sql_getallpossibleflyt = @"
+declare @validRoots table(
+RootId tinyint
+)
+declare @feedName varchar(20) = null
+select @feedName = f.DisplayName from Documents d with (nolock)
+join Feeds f with (nolock) on f.id = d.FeedId
+ where d.id = @DamDocumentID
+if @feedName = 'EDG' begin 
+	 insert into @validRoots values (0)
+	 insert into @validRoots
+	 select distinct RootId from DocumentFiles with (nolock) where DocumentId = @DamDocumentID and FileType = 'xbra'
+end else begin
+     insert into @validRoots
+	 select distinct RootId from DocumentFiles with (nolock) where DocumentId = @DamDocumentID and FileType = 'flyt'
+end
+select a.DocumentId, a.FileId, a.RootId from (
+select df.DocumentId ,df.rootid , df.FileId , RANK () OVER (partition by df.rootid ORDER BY fileid DESC) root_rank from Documentfiles df with (nolock)
+join @validRoots vr on vr.RootId = df.RootId
+where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
+) a where a.root_rank = 1 order by a.RootId desc
+";
+            string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ToString();
+            damConnectionString = "Application Name=DataRoost;Data Source=ffdamsql-prod.prod.factset.com;Initial Catalog=ffdam;User ID=ffdam_services;Password=6HQwAN9Zobxvn97s";
+            var list = new List<int>();
+            try
+            {
+                using (SqlConnection sqlConn = new SqlConnection(damConnectionString))
+                using (SqlCommand cmd = new SqlCommand(sql_getallpossibleflyt, sqlConn))
+                {
+                    cmd.Parameters.AddWithValue("@DamDocumentID", currDocId);
+                    sqlConn.Open();
+                    using (SqlDataReader sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+
+                            list.Add(sdr.GetInt16(1));
+                            //return resultFileID;
+                        }
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+            }
+            return list;
+
+        }
         public int GetLatestFlyt(Guid bestMatchDocId, Guid currDocId, int? currFileId = null)
         {
             string GetFlytSql = "dbo.prcGet_BestMatchFileId";
@@ -2872,7 +2925,7 @@ order by  d.PublicationDateTime desc
                         {
 
                             resultFileID = sdr.GetInt16(1);
-                            return resultFileID;
+                            //return resultFileID;
                         }
                     }
                 }
@@ -2889,48 +2942,58 @@ order by  d.PublicationDateTime desc
         public List<JsonCol> SmartTimeSlicesPost(int iconum, Guid currDocId, int currFileId, List<string> currOffsets)
         {
             var hisDocId = SmartTimeSliceGetHistoricalDocument(iconum, currDocId);
-            var hisFileId = GetLatestFlyt(hisDocId, currDocId, currFileId);
-            var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, hisFileId, currOffsets);
+            var hisFileids = GetAllPossibleFlyt(hisDocId);
+            //var hisFileId = GetLatestFlyt(hisDocId, currDocId, currFileId);
             List<JsonCol> jsonColsFromTint = new List<JsonCol>();
-            if (result != null)
+
+            foreach (var hisFileId in hisFileids)
             {
-                int count = 1;
-                foreach (var r in result)
+                if (jsonColsFromTint.Count > 0)
+                    break;
+
+                var result = SmartTimeSliceAutostitching(iconum, currDocId, currFileId, hisDocId, hisFileId, currOffsets);
+                if (result != null)
                 {
-                    JsonCol jsonCol = new JsonCol();
-                    jsonCol.columnId = count;
-                    var predictedEndDate = r.TimeSlicePeriodEndDate;
-                    bool isFeb29 = false;
-                    if (predictedEndDate.Month == 2)
+                    int count = 1;
+                    foreach (var r in result)
                     {
-                        if (predictedEndDate.Day == 28 || predictedEndDate.Day == 29)
+                        JsonCol jsonCol = new JsonCol();
+                        jsonCol.columnId = count;
+                        jsonCol.dbcolumnId = r.Id;
+                        var predictedEndDate = r.TimeSlicePeriodEndDate;
+                        bool isFeb29 = false;
+                        if (predictedEndDate.Month == 2)
                         {
-                            predictedEndDate.AddDays(1).AddYears(1).AddDays(-1);
-                            isFeb29 = true;
+                            if (predictedEndDate.Day == 28 || predictedEndDate.Day == 29)
+                            {
+                                predictedEndDate = predictedEndDate.AddDays(1).AddYears(1).AddDays(-1);
+                                isFeb29 = true;
+                            }
                         }
+                        if (!isFeb29)
+                        {
+                            predictedEndDate = predictedEndDate.AddYears(1);
+                        }
+                        jsonCol.columnDay = predictedEndDate.Day;
+                        jsonCol.columnMonth = predictedEndDate.Month;
+                        jsonCol.columnYear = predictedEndDate.Year;
+                        //jsonCol.columnPeriodCount = r.Duration;
+                        //jsonCol.columnPeriodType = "Q1";//r.PeriodType;
+                        var tint = TranslateToTint(r.PeriodType);
+                        jsonCol.columnPeriodType = tint.Item1;
+                        jsonCol.columnPeriodCount = tint.Item2;
+
+                        jsonCol.columnHeader = predictedEndDate.ToString("MMM dd yyyy");
+                        jsonCol.columnType = "Value";
+                        jsonCol.location = 0;
+                        jsonCol.endLocation = 0;
+                        jsonColsFromTint.Add(jsonCol);
+                        count++;
                     }
-                    if (!isFeb29)
-                    {
-                        predictedEndDate.AddYears(1);
-                    }
-                    jsonCol.columnDay = predictedEndDate.Day;
-                    jsonCol.columnMonth = predictedEndDate.Month;
-                    jsonCol.columnYear = predictedEndDate.Year;
-                    //jsonCol.columnPeriodCount = r.Duration;
-                    //jsonCol.columnPeriodType = "Q1";//r.PeriodType;
-                    var tint = TranslateToTint(r.PeriodType);
-                    jsonCol.columnPeriodType = tint.Item1;
-                    jsonCol.columnPeriodCount = tint.Item2;
-                   
-                    jsonCol.columnHeader = predictedEndDate.ToString("MMM dd yyyy");
-                    jsonCol.columnType = "Value";
-                    jsonCol.location = 0;
-                    jsonCol.endLocation = 0;
-                    jsonColsFromTint.Add(jsonCol);
-                    count++;
                 }
             }
             return jsonColsFromTint;
+
         }
 
         private Tuple<string, int> TranslateToTint(string interimtype)
@@ -2938,11 +3001,25 @@ order by  d.PublicationDateTime desc
             switch (interimtype)
             {
                 case "Q1":
+                case "Q2":
+                case "Q3":
+                case "Q4":
                     return new Tuple<string, int>("Month", 3);
-                case "Q6":
-                    return new Tuple<string, int>("Month", 6);
                 case "P":
                     return new Tuple<string, int>("PIT", 0);
+                case "Q6":
+                case "I1":
+                case "I2":
+                case "IF":
+                    return new Tuple<string, int>("Month", 6);
+                case "Q8":
+                    return new Tuple<string, int>("Day", 240);
+                case "Q9":
+                    return new Tuple<string, int>("Day", 270);
+                case "T1":
+                case "T2":
+                case "T3":
+                    return new Tuple<string, int>("Day", 120);
                     
             }
             return new Tuple<string, int>("Month", 12);
