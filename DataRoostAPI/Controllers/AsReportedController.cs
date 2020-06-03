@@ -741,12 +741,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
-        [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}")]
+        [Route("timeSlice/smart/{currDocumentId}/{currFileId}")]
         [HttpPost]
-        public List<JsonCol> GetAutoStitchedTimeSliceCurrent(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
+        public List<JsonCol> PostSmartTimeSlice(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
         {
-
-            // Post body: ["o7857981|l2|r0", "o7858643|l3|r0", "o133308|l9|r0"]
             try
             {
                 if (offsets == null || offsets.Count == 0)
@@ -756,7 +754,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 sfConnectionString = "Application Name=DataRoost;Data Source=FFDochistsql-prod.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=SCAR_Collection;Password=nIaAIVnBr2;MultipleActiveResultSets=True;";
                 AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                //return helper.PostAutostitchedTimeSliceCurrent(iconum, currDocumentId, currFileId, offsets);
                 var jsonColsTint =  helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId, offsets);
                 return jsonColsTint;
             }
@@ -767,24 +764,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
-        [Route("timeSlice/autostitch/{currDocumentId}/{currFileId}/{histDocumentId}/{histFileId}")]
-        [HttpGet]
-        public TimeSlice GetAutoStitchedTimeSlice(string CompanyId, Guid currDocumentId, int currFileId, Guid histDocumentId, int histFileId)
-        {
-            try
-            {
-                int iconum = PermId.PermId2Iconum(CompanyId);
-
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
-                return helper.GetAutostitchedTimeSlice(iconum, currDocumentId, currFileId, histDocumentId, histFileId);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex);
-                return null;
-            }
-        }
 
         //TODO: Add IsSummary
         [Route("timeSlice/{id}")]
