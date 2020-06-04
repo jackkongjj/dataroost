@@ -1250,10 +1250,12 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				iconum = sdr.GetInt32(4),
 				id = sdr.GetInt64(2)
 			};
+			/*
 			foreach (ClusterNameTreeNode n in pnode.Nodes) {
 				if (n.Role == "item")
 					return;
 			}
+			*/
 			pnode.Nodes.Add(node);
 		}
 
