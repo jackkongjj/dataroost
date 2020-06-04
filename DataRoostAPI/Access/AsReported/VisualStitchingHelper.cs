@@ -203,6 +203,31 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public string Childrentitle { get; set; }
 		}
 
+		public class ClusterNameTreeNode {
+			[JsonProperty("normtableid")]
+			public int Normtableid { get; set; }
+			[JsonProperty("normtitle")]
+			public string NormtableTitle { get; set; }
+			[JsonProperty("industry")]
+			public string Industry { get; set; }
+			[JsonProperty("hiearachyid")]
+			public int Hiearachyid { get; set; }
+			[JsonProperty("presentationid")]
+			public int Presentationid { get; set; }
+			[JsonProperty("title")]
+			public string Title { get; set; }
+			[JsonProperty("nodes")]
+			public List<ClusterNameTreeNode> Nodes { get; set; }
+			[JsonProperty("parentid")]
+			public int? ParentID { get; set; }
+			[JsonProperty("role")]
+			public string Role { get; set; }
+			[JsonProperty("documentid")]
+			public string documentid { get; set; }
+			[JsonProperty("iconum")]
+			public int iconum { get; set; }
+		}
+
 		public class TableOffSetNode {
 			[JsonProperty("documentid")]
 			public string DocumentID { get; set; }
@@ -905,8 +930,6 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 										} catch (Exception ex) {
 											Console.WriteLine(num);
 										}
-
-
 									}
 								}
 							}
@@ -942,7 +965,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				} catch (Exception ex) {
 					Console.WriteLine("");
 				}
-			
+
 				String norm_title = node.NormTitle;
 
 				if (!map.ContainsKey(norm_title)) {
@@ -1058,6 +1081,176 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			return nodes;
 		}
 
+		public String getIndustryByDamid(String damid) {
+			return "Bank";
+		}
+
+		private ClusterNameTreeNode genClusterNameTreeNode(NpgsqlDataReader sdr) {
+			int norm_table_id = sdr.GetInt32(0);
+			string norm_table = sdr.GetStringSafe(1);
+			String industry = sdr.GetStringSafe(2); ;
+			int cluster_hierarchy_id = sdr.GetInt32(3);
+			int cluster_presentation_id = sdr.GetInt32(4);
+			string title = sdr.GetStringSafe(5);
+			int displayorder = sdr.GetInt32(6);
+
+			int? parent_id = null;
+			if (!sdr.IsDBNull(7)) {
+				parent_id = sdr.GetInt32(7);
+			}
+
+			ClusterNameTreeNode node = new ClusterNameTreeNode
+			{
+				Normtableid = norm_table_id,
+				NormtableTitle = norm_table,
+				Industry = industry,
+				Hiearachyid = cluster_hierarchy_id,
+				Presentationid = cluster_presentation_id,
+				Title = title,
+				ParentID = parent_id,
+				Role = "node",
+				Nodes = new List<ClusterNameTreeNode>()
+			};
+			return node;
+		}
+
+		public ClusterNameTreeNode genRootClusterNameTreeNode(ClusterNameTreeNode node) {
+			return new ClusterNameTreeNode()
+			{
+				Normtableid = node.Normtableid,
+				NormtableTitle = node.NormtableTitle,
+				Industry = node.Industry,
+				Hiearachyid = 0,
+				Presentationid = node.Presentationid,
+				Title = node.NormtableTitle,
+				Role = "header",
+				Nodes = new List<ClusterNameTreeNode>()
+			};
+		}
+
+		public string GetPostGresClusterNameTreeTableNode(String damid) {
+			String damindustry = getIndustryByDamid(damid);
+			const string query = @"
+				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
+				join cluster_presentation as cp on cluster_presentation_id = cp.id
+				join norm_table as nt on cp.norm_table_id = nt.id
+					where cp.Industry='{0}'
+				order by norm_table_id, display_order
+			";
+
+			List<ClusterNameTreeNode> treenodes = new List<ClusterNameTreeNode>();
+			Dictionary<int, ClusterNameTreeNode> normtableidmap = new Dictionary<int, ClusterNameTreeNode>();
+			Dictionary<int, ClusterNameTreeNode> clusteridmap = new Dictionary<int, ClusterNameTreeNode>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damindustry), conn)) {
+					conn.Open();
+
+					int tries = 1;
+					int num = 0;
+					while (tries > 0) {
+						num++;
+						try {
+							List<int> tableIDList = new List<int>();
+							ClusterNameTreeNode rootnode = null;// same table_id's root
+							using (var sdr = cmd.ExecuteReader()) {
+								while (sdr.Read()) {
+									ClusterNameTreeNode node = genClusterNameTreeNode(sdr);
+									if (!normtableidmap.ContainsKey(node.Normtableid)) {
+										rootnode = genRootClusterNameTreeNode(node);
+										normtableidmap[node.Normtableid] = rootnode;
+										treenodes.Add(rootnode);
+									} else {
+										rootnode = normtableidmap[node.Normtableid];
+									}
+
+									clusteridmap[node.Hiearachyid] = node;
+									if (!node.ParentID.HasValue) {
+										rootnode.Nodes.Add(node);
+									} else {
+										if (clusteridmap.ContainsKey(node.ParentID.Value)) {
+											ClusterNameTreeNode pnode = clusteridmap[node.ParentID.Value];
+											pnode.Nodes.Add(node);
+										} else {
+											Console.WriteLine("");
+										}
+
+									}
+								}
+							}
+							tries = 0;
+						} catch (Exception ex) {
+							if (--tries > 0) {
+								System.Threading.Thread.Sleep(1000);
+							}
+						}
+					}
+				}
+			}
+			populateClusterNameTree(damid, clusteridmap);
+			return JsonConvert.SerializeObject(treenodes);
+		}
+
+		/*
+		public void populateClusterNameTree(List<ClusterNameTreeNode> treenodes,Dictionary<int, ClusterNameTreeNode> clusteridmap,string damid) {
+			Dictionary<int, ClusterNameTreeNode> mappedNodes = GetPostGresClusterMappingByDamID(damid, clusteridmap);
+			foreach (KeyValuePair<int, ClusterNameTreeNode> entry in mappedNodes) {
+				ClusterNameTreeNode pnode = clusteridmap[entry.Key];
+				pnode.Nodes.Add(entry.Value);
+			}
+		}
+		*/
+
+		private void populateClusterNameTree(string damid, Dictionary<int, ClusterNameTreeNode> clusteridmap) {
+			const string query = @"
+				select * from cluster_mapping as cm
+				join norm_name_tree_flat as f 
+					on cm.norm_name_tree_flat_id = f.id	
+				and f.col_id = 1
+			and f.document_id = '{0}' order by cluster_hierarchy_id, table_id";
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damid.ToString()), conn)) {
+					conn.Open();
+
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							genClusterMappedNameTreeNode(sdr, clusteridmap);
+						}
+					}
+				}
+			}
+		}
+
+		private void genClusterMappedNameTreeNode(NpgsqlDataReader sdr, Dictionary<int, ClusterNameTreeNode> clusteridmap) {
+			int cluster_hierarchy_id = sdr.GetInt32(0);
+			ClusterNameTreeNode pnode = clusteridmap[cluster_hierarchy_id];
+			int norm_table_id = pnode.Normtableid;
+			string norm_table = pnode.NormtableTitle;
+			String industry = pnode.Industry;
+			int cluster_presentation_id = pnode.Presentationid;
+
+			string title = sdr.GetStringSafe(7);
+			int? parent_id = null;
+
+			ClusterNameTreeNode node = new ClusterNameTreeNode
+			{
+				Normtableid = norm_table_id,
+				NormtableTitle = norm_table,
+				Industry = industry,
+				Hiearachyid = cluster_hierarchy_id,
+				Presentationid = cluster_presentation_id,
+				Title = title,
+				ParentID = parent_id,
+				Role = "item",
+				Nodes = new List<ClusterNameTreeNode>(),
+				documentid = sdr.GetGuid(3).ToString(),
+				iconum = sdr.GetInt32(4)
+			};
+			foreach (ClusterNameTreeNode n in pnode.Nodes) {
+				if (n.Role == "item")
+					return;
+			}
+			pnode.Nodes.Add(node);
+		}
 
 		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid, int fileid) {
 			const string query = @"

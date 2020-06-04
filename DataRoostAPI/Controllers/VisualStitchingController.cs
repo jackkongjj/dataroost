@@ -276,6 +276,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("name-tree-api/clustertrees/{DamDocumentId}")]
+		[HttpGet]
+		public HttpResponseMessage GetClusterTrees(Guid DamDocumentId) {
+			try {
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+				var vsHelper = new VisualStitchingHelper(sfConnectionString);
+				var json = vsHelper.GetPostGresClusterNameTreeTableNode(DamDocumentId.ToString());
+				return new HttpResponseMessage()
+				{
+					Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+				};
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("name-tree-api/{DamDocumentId}/{iconum}/{tableid}/{fileid}")]
 		[HttpPost]
 		public String UpdateTableName(Guid DamDocumentId, int iconum, int tableid, int fileid, StringDictionary input) {
@@ -289,8 +309,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 					bool iscorrect = Boolean.Parse(input.StringData["iscorrect"]);
 					bool iscarboncorrect = Boolean.Parse(input.StringData["iscarboncorrect"]);
 					return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, iscorrect, iscarboncorrect);
-				} 
-				else if (input.StringData.ContainsKey("normtitleid")) {
+				} else if (input.StringData.ContainsKey("normtitleid")) {
 					try {
 						int newid = Int32.Parse(input.StringData["normtitleid"]);
 						return vsHelper.UpdateTableNormTableId(DamDocumentId.ToString(), iconum, tableid, fileid, newid);
