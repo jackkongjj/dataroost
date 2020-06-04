@@ -204,6 +204,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 		}
 
 		public class ClusterNameTreeNode {
+			[JsonProperty("id")]
+			public long id { get; set; }
 			[JsonProperty("normtableid")]
 			public int Normtableid { get; set; }
 			[JsonProperty("normtitle")]
@@ -1109,7 +1111,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				Title = title,
 				ParentID = parent_id,
 				Role = "node",
-				Nodes = new List<ClusterNameTreeNode>()
+				Nodes = new List<ClusterNameTreeNode>(),
+				id = -1
 			};
 			return node;
 		}
@@ -1124,7 +1127,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				Presentationid = node.Presentationid,
 				Title = node.NormtableTitle,
 				Role = "header",
-				Nodes = new List<ClusterNameTreeNode>()
+				Nodes = new List<ClusterNameTreeNode>(),
+				id = -2
 			};
 		}
 
@@ -1243,7 +1247,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				Role = "item",
 				Nodes = new List<ClusterNameTreeNode>(),
 				documentid = sdr.GetGuid(3).ToString(),
-				iconum = sdr.GetInt32(4)
+				iconum = sdr.GetInt32(4),
+				id = sdr.GetInt64(2)
 			};
 			foreach (ClusterNameTreeNode n in pnode.Nodes) {
 				if (n.Role == "item")
