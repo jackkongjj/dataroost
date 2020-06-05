@@ -1256,7 +1256,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 					return;
 			}
 			*/
-			pnode.Nodes.Add(node);
+			pnode.Nodes.Insert(0, node);
 		}
 
 		private List<TableOffSetNode> GetPostGresDocumentOffsets(String damid, int fileid) {
