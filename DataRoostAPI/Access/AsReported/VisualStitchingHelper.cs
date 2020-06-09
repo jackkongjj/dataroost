@@ -228,6 +228,8 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public string documentid { get; set; }
 			[JsonProperty("iconum")]
 			public int iconum { get; set; }
+			[JsonProperty("offset")]
+			public string offset { get; set; }
 		}
 
 		public class TableOffSetNode {
@@ -1248,7 +1250,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				Nodes = new List<ClusterNameTreeNode>(),
 				documentid = sdr.GetGuid(3).ToString(),
 				iconum = sdr.GetInt32(4),
-				id = sdr.GetInt64(2)
+				id = sdr.GetInt64(2),
+				offset = sdr.GetStringSafe(12)
 			};
 			/*
 			foreach (ClusterNameTreeNode n in pnode.Nodes) {
