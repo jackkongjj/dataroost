@@ -276,6 +276,71 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+		[Route("name-tree-api/clustertrees/")]
+		[HttpPost]
+		public HttpResponseMessage SaveClusterTree(StringInput input) {
+			try {
+
+				if (input == null)
+					return null;
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+				String jsonstr = input.StringData;
+				var vsHelper = new VisualStitchingHelper(sfConnectionString);
+				var json = vsHelper.SaveClusterTree(jsonstr);
+				var ret = new Dictionary<string, string>();
+				ret["data"] = json;
+				return new HttpResponseMessage()
+				{
+					Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(ret), System.Text.Encoding.UTF8, "application/json")
+				};
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
+		[Route("name-tree-api/clustertrees/{DamDocumentId}/{iconum}")]
+		[HttpGet]
+		public HttpResponseMessage GetClusterTreesWithIconum(Guid DamDocumentId, int iconum) {
+			try {
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+				var vsHelper = new VisualStitchingHelper(sfConnectionString);
+				var json = vsHelper.GetPostGresClusterNameTreeTableNodeWithIconum(DamDocumentId.ToString(), iconum);
+				return new HttpResponseMessage()
+				{
+					Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+				};
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
+		[Route("name-tree-api/clustertreestest/{DamDocumentId}/{iconum}")]
+		[HttpGet]
+		public HttpResponseMessage GetClusterTreesWithIconumTest(Guid DamDocumentId, int iconum) {
+			try {
+
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+				sfConnectionString = @"Application Name=DataRoost;Data Source=ffdocumenthistory-prestage-rds-sqlserver-se-standalone.prod.factset.com;Initial Catalog=FFDocumentHistory;User ID=ffdocumenthistory_admin_dev;Password=1tpIDJLT;MultipleActiveResultSets=True;";
+
+				var vsHelper = new VisualStitchingHelper(sfConnectionString);
+				var json = vsHelper.GetPostGresClusterNameTreeTableNodeWithIconum(DamDocumentId.ToString(), iconum, true);
+				return new HttpResponseMessage()
+				{
+					Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+				};
+			} catch (Exception ex) {
+				LogError(ex);
+				return null;
+			}
+		}
+
 		[Route("name-tree-api/clustertrees/{DamDocumentId}")]
 		[HttpGet]
 		public HttpResponseMessage GetClusterTrees(Guid DamDocumentId) {

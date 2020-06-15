@@ -657,6 +657,13 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
 			return "Success";
 		}
+
+		public string SaveClusterTree(String jsonstr) {
+			ClusterNameTreeNode node = JsonConvert.DeserializeObject<ClusterNameTreeNode>(jsonstr);
+			return "Success";
+		}
+
+
 		public string GetPostGresDataTreeProfile() {
 
 			int tries = 1;
@@ -1085,8 +1092,19 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			return nodes;
 		}
 
-		public String getIndustryByDamid(String damid) {
-			return "Bank";
+		public String getIndustryByDamid(String damid, int iconum = 0) {
+			if (iconum == 0)
+				return "bank";
+			else {
+				string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ConnectionString;
+				string voyConnectionString = ConfigurationManager.ConnectionStrings["Voyager"].ConnectionString;
+				string lionConnectionString = ConfigurationManager.ConnectionStrings["Lion"].ConnectionString;
+				string damConnectionString = ConfigurationManager.ConnectionStrings["FFDAM"].ConnectionString;
+				CCS.Fundamentals.DataRoostAPI.Access.Company.CompanyHelper helper = new CCS.Fundamentals.DataRoostAPI.Access.Company.CompanyHelper(sfConnectionString, voyConnectionString, lionConnectionString, damConnectionString);
+				dynamic obj = helper.GetCompanyByDamID(damid, "" + iconum);
+				String ret = obj.Profile;
+				return ret.ToLower();
+			}
 		}
 
 		private ClusterNameTreeNode genClusterNameTreeNode(NpgsqlDataReader sdr) {
@@ -1134,13 +1152,90 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			};
 		}
 
+
+		public string GetPostGresClusterNameTreeTableNodeWithIconum(String damid,int iconum, Boolean istest = false) {
+			String damindustry = getIndustryByDamid(damid, iconum);
+			 string query = @"
+				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
+				join cluster_presentation as cp on cluster_presentation_id = cp.id
+				join norm_table as nt on cp.norm_table_id = nt.id
+					where lower(cp.Industry)='{0}'
+				order by norm_table_id, display_order
+			";
+			if (istest) {
+				query = @"
+				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy_test as ch
+				join cluster_presentation_test as cp on cluster_presentation_id = cp.id
+				join norm_table as nt on cp.norm_table_id = nt.id
+					where lower(cp.Industry)='{0}'
+				order by norm_table_id, display_order
+				";
+			}
+
+			List<ClusterNameTreeNode> treenodes = new List<ClusterNameTreeNode>();
+			Dictionary<int, ClusterNameTreeNode> normtableidmap = new Dictionary<int, ClusterNameTreeNode>();
+			Dictionary<int, ClusterNameTreeNode> clusteridmap = new Dictionary<int, ClusterNameTreeNode>();
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, damindustry), conn)) {
+					conn.Open();
+
+					int tries = 1;
+					int num = 0;
+					while (tries > 0) {
+						num++;
+						try {
+							List<int> tableIDList = new List<int>();
+							ClusterNameTreeNode rootnode = null;// same table_id's root
+							using (var sdr = cmd.ExecuteReader()) {
+								while (sdr.Read()) {
+									ClusterNameTreeNode node = genClusterNameTreeNode(sdr);
+									if (!normtableidmap.ContainsKey(node.Normtableid)) {
+										rootnode = genRootClusterNameTreeNode(node);
+										normtableidmap[node.Normtableid] = rootnode;
+										treenodes.Add(rootnode);
+									} else {
+										rootnode = normtableidmap[node.Normtableid];
+									}
+
+									clusteridmap[node.Hiearachyid] = node;
+									if (!node.ParentID.HasValue) {
+										rootnode.Nodes.Add(node);
+									} else {
+										if (clusteridmap.ContainsKey(node.ParentID.Value)) {
+											ClusterNameTreeNode pnode = clusteridmap[node.ParentID.Value];
+											pnode.Nodes.Add(node);
+										} else {
+											Console.WriteLine("");
+										}
+
+									}
+								}
+							}
+							tries = 0;
+						} catch (Exception ex) {
+							if (--tries > 0) {
+								System.Threading.Thread.Sleep(1000);
+							}
+						}
+					}
+				}
+			}
+			try {
+				populateClusterNameTree(damid, clusteridmap);
+			} catch (Exception ex) {
+				Console.WriteLine(ex.Message);
+			}
+			
+			return JsonConvert.SerializeObject(treenodes);
+		}
+
 		public string GetPostGresClusterNameTreeTableNode(String damid) {
 			String damindustry = getIndustryByDamid(damid);
 			const string query = @"
 				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
 				join cluster_presentation as cp on cluster_presentation_id = cp.id
 				join norm_table as nt on cp.norm_table_id = nt.id
-					where cp.Industry='{0}'
+					where lower(cp.Industry)='{0}'
 				order by norm_table_id, display_order
 			";
 
