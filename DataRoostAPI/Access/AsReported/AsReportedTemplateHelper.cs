@@ -5443,10 +5443,10 @@ exec prcUpd_FFDocHist_UpdateAdjustRedStar '{0}';
 								elem["obj"]["UnitTypeId"].AsValue(),
 								elem["obj"]["IsIncomePositive"].AsBoolean(),
 								elem["obj"]["ChildrenExpandDown"].AsBoolean(),
-								"NULL",
-																"0", //elem["obj"]["IsDanglingHeader"].AsBoolean(),
-																documentSeriesId //elem["obj"]["DocumentSeriesID"].AsValue()
-																));
+                                elem["obj"]["ParentID"].Equals(JValue.CreateNull()) ? "null" : elem["obj"]["ParentID"].AsValue(),
+                                "0", //elem["obj"]["IsDanglingHeader"].AsBoolean(),
+								documentSeriesId //elem["obj"]["DocumentSeriesID"].AsValue()
+								));
 							if (string.IsNullOrEmpty(tableTypeId)) {
 								tableTypeId = elem["obj"]["TableType"]["ID"].AsValue();
 							}
