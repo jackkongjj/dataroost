@@ -658,9 +658,413 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return "Success";
 		}
 
-		public string SaveClusterTree(String jsonstr) {
+		public void getDamlist(ClusterNameTreeNode node, HashSet<string> set) {
+			if (node.documentid != null) {
+				set.Add(node.documentid);
+			}
+			foreach (ClusterNameTreeNode snode in node.Nodes) {
+				getDamlist(snode, set);
+			}
+		}
+
+		public void removeMapping(List<long> flatids, Boolean istest) {
+			String query = @"
+			delete from cluster_mapping where norm_name_tree_flat_id in ({0});
+			";
+			if (istest)
+				query = @"
+				delete from cluster_mapping_test where norm_name_tree_flat_id in ({0});
+			";
+
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, string.Join(",", flatids)), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+						}
+					}
+				}
+			} catch (Exception ex) {
+			}
+
+		}
+
+		public Dictionary<long, int> getOldMapping(List<String> docids, Boolean istest, int presenetationid) {
+			String query = @"
+			select cm.* from cluster_mapping as cm
+				join norm_name_tree_flat as f 
+					on cm.norm_name_tree_flat_id = f.id	 and f.col_id = 1
+			        and f.document_id  in ({0}) 
+			    join cluster_hierarchy as ch on cm.cluster_hierarchy_id = ch.id
+				and ch.cluster_presentation_id = {1}
+			order by document_id,cluster_hierarchy_id, table_id
+		";
+			if (istest) {
+				query = @"
+			select cm.* from cluster_mapping_test as cm
+				join norm_name_tree_flat as f 
+					on cm.norm_name_tree_flat_id = f.id	 and f.col_id = 1
+			        and f.document_id  in ({0}) 
+			    join cluster_hierarchy_test as ch on cm.cluster_hierarchy_id = ch.id
+				and ch.cluster_presentation_id = {1}
+			order by document_id,cluster_hierarchy_id, table_id
+		";
+			}
+			String allids = string.Join(",", docids.Select(x => string.Format("'{0}'", x)).ToList());
+			Dictionary<long, int> dic = new Dictionary<long, int>();
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, allids, presenetationid), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								dic[(long)sdr.GetInt32(1)] = sdr.GetInt32(0);
+							}
+
+						}
+					}
+				}
+			} catch (Exception ex) {
+			}
+			return dic;
+		}
+
+		public void getNodeMapping(ClusterNameTreeNode pnode, ClusterNameTreeNode node, Dictionary<long, ClusterNameTreeNode> dic, Dictionary<int, ClusterNameTreeNode> map) {
+			if (node.Role == "item") {
+				dic[node.id] = node;
+				if (pnode != null) {
+					node.Hiearachyid = pnode.Hiearachyid;
+				}
+			} else {
+				if (node.Hiearachyid != 0)
+					map[node.Hiearachyid] = node;
+				foreach (ClusterNameTreeNode snode in node.Nodes) {
+					getNodeMapping(node, snode, dic, map);
+				}
+			}
+		}
+
+		public void createnewnode(Dictionary<long, ClusterNameTreeNode> newmap, Boolean istest) {
+			for (var i = 0; i < newmap.Keys.Count; i++) {
+				ClusterNameTreeNode node = newmap[newmap.Keys.ElementAt(i)];
+				if (node.Hiearachyid == 0 && node.Role != "item") {
+					node.Hiearachyid = create_cluster_hierarchy(node, istest);
+				}
+			}
+		}
+
+		public void checkwholetreenode(ClusterNameTreeNode rootnode, ClusterNameTreeNode pnode, List<ClusterNameTreeNode> Nodes, Boolean istest) {
+			for (int i = 0; i < Nodes.Count; i++) {
+				ClusterNameTreeNode node = Nodes.ElementAt(i);
+				node.Presentationid = rootnode.Presentationid;
+				node.Industry = rootnode.Industry;
+				node.Normtableid = rootnode.Normtableid;
+
+				if (node.Role != "item") {
+					if (node.Hiearachyid == 0) {
+						if (pnode == null)
+							node.ParentID = null;
+						else
+							node.ParentID = pnode.Hiearachyid;
+
+						node.Hiearachyid = create_cluster_hierarchy(node, istest);
+					}
+					checkwholetreenode(rootnode, node, node.Nodes, istest);
+				} else {
+					if (node.Hiearachyid == 0) {
+						node.Hiearachyid = pnode.Hiearachyid;
+					}
+				}
+			}
+		}
+
+		private int create_cluster_hierarchy(ClusterNameTreeNode node, Boolean istest) {
+			string query = @"insert into cluster_hierarchy (cluster_presentation_id, description, display_order, parent_id, isheader) VALUES ({0},'{1}',{2},{3},{4});
+				SELECT currval(pg_get_serial_sequence('cluster_hierarchy','id'));
+			";
+			if (istest)
+				query = @"insert into cluster_hierarchy_test (cluster_presentation_id, description, display_order, parent_id, isheader) VALUES ({0},'{1}',{2},{3},{4});
+				SELECT currval(pg_get_serial_sequence('cluster_hierarchy_test','id'));
+			";
+			try {
+				string pid = "null";
+				if (node.ParentID.HasValue)
+					pid = "" + node.ParentID.Value;
+
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, node.Presentationid, node.Title, -1, pid, node.Role == "header"), conn)) {
+						conn.Open();
+						//cmd.ExecuteNonQuery();
+						using (var sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								int newid = sdr.GetInt32(0);
+								return newid;
+							}
+						}
+						//return (int)cmd.ExecuteScalar();
+					}
+				}
+			} catch (Exception ex) {
+			}
+			return -1;
+		}
+
+		public void createnewmapping(Dictionary<long, ClusterNameTreeNode> newmap, Dictionary<long, int> oldmap, Boolean istest) {
+			for (var i = 0; i < newmap.Keys.Count; i++) {
+				ClusterNameTreeNode node = newmap[newmap.Keys.ElementAt(i)];
+				if (!oldmap.ContainsKey(node.id) || node.Hiearachyid != oldmap[node.id]) {
+					String sql = @"UPDATE {2} SET cluster_hierarchy_id={0} WHERE norm_name_tree_flat_id={1};
+					INSERT INTO {2} (cluster_hierarchy_id, norm_name_tree_flat_id)
+					SELECT {0}, {1}
+						WHERE NOT EXISTS (SELECT 1 FROM cluster_mapping WHERE norm_name_tree_flat_id={1});";
+					String mappingtable = "cluster_mapping";
+					if (istest)
+						mappingtable = "cluster_mapping_test";
+
+					try {
+						using (var conn = new NpgsqlConnection(PGConnectionString())) {
+							using (var cmd = new NpgsqlCommand(string.Format(sql, node.Hiearachyid, node.id, mappingtable), conn)) {
+								conn.Open();
+								var sdr = cmd.ExecuteReader();
+							}
+						}
+					} catch (Exception ex) {
+
+					}
+				}
+			}
+		}
+
+		public List<int> getOldhierarchyids(int Presentationid, Boolean istest) {
+			string query = "select id from cluster_hierarchy where cluster_presentation_id = {0}";
+			if (istest)
+				query = "select id from cluster_hierarchy_test where cluster_presentation_id = {0}";
+			List<int> list = new List<int>();
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, Presentationid), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								list.Add(sdr.GetInt32(0));
+							}
+						}
+					}
+				}
+			} catch (Exception ex) {
+
+			}
+			return list;
+
+		}
+
+		public void removehierarchy(List<int> oldhierarchyids, Dictionary<int, ClusterNameTreeNode> newhierarchymap, Boolean istest) {
+			List<int> list = new List<int>();
+			foreach (int hierarchyid in oldhierarchyids) {
+				if (!newhierarchymap.ContainsKey(hierarchyid)) // need to remove
+					list.Add(hierarchyid);
+			}
+			if (list.Count == 0)
+				return;
+
+			String query = "delete from cluster_hiearachy where id in ({0})";
+
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, string.Join(",", list)), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+						}
+					}
+				}
+			} catch (Exception ex) {
+			}
+		}
+
+		public int getNormtableID(String title) {
+			String query = "select id from norm_table where label='{0}'";
+
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, title), conn)) {
+					conn.Open();
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							return sdr.GetInt32(0);
+						}
+					}
+				}
+			}
+			return 9999;
+		}
+
+		public int genPresentation(String ind, int normtableid, Boolean istest) {
+
+			string qry1 = @"
+				select id from cluster_presentation where norm_table_id={0} and industry = '{1}'";
+			if (istest)
+				qry1 = @"select id from cluster_presentation_test where norm_table_id={0} and industry = '{1}'";
+
+
+			String query = @"insert into cluster_presentation (norm_table_id, industry) values({0},'{1}'); 
+                       SELECT currval(pg_get_serial_sequence('cluster_presentation', 'id'));";
+			if (istest)
+				query = @"insert into cluster_presentation_test (norm_table_id, industry) values({0},'{1}'); 
+                       SELECT currval(pg_get_serial_sequence('cluster_presentation_test', 'id'));";
+			int id = 9999;
+			//Boolean needcreate = true;
+			string industry = char.ToUpper(ind[0]) + ind.Substring(1);
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				try {
+					using (var cmd = new NpgsqlCommand(string.Format(qry1, normtableid, industry), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								id = sdr.GetInt32(0);
+								//needcreate = false;
+								break;
+							}
+						}
+					}
+				} catch (Exception ex) {
+					using (var cmd1 = new NpgsqlCommand(string.Format(query, normtableid, industry), conn)) {
+						//conn.Open();
+						using (var sdr = cmd1.ExecuteReader()) {
+							while (sdr.Read()) {
+								id = sdr.GetInt32(0);
+								break;
+							}
+						}
+					}
+				}
+				/*
+				String query2 = @"insert into cluster_presentation_test (norm_table_id, industry) values({0},'{1}')";
+				if (istest)
+					query2 = @"insert into cluster_presentation_test (norm_table_id, industry) values({0},'{1}')";
+
+				if (needcreate) {
+					using (var cmd2 = new NpgsqlCommand(string.Format(query2, normtableid, industry), conn)) {
+						//conn.Open();
+						using (var sdr = cmd2.ExecuteReader()) {
+						}
+					}
+				}
+				*/
+
+			}
+			return id;
+
+		}
+		//
+
+
+		public int createPresentation(ClusterNameTreeNode node, Boolean istest) {
+			string industry = getIndustryByDamid(node.documentid, node.iconum);
+			string normtitle = node.NormtableTitle;
+			int normtableid = getNormtableID(normtitle);
+			int newid = genPresentation(industry, normtableid, istest);
+			node.Industry = industry;
+			node.Normtableid = normtableid;
+			return newid;
+		}
+
+
+		public void updatehierarchy(int Presentationid, int Hiearachyid, string title, int order, int? pid, Boolean isheader, Boolean istest) {
+			String query = "update cluster_hierarchy set description='{0}', display_order={1}, parent_id={2}, isheader={3} where id={4}";
+			if (istest)
+				query = "update cluster_hierarchy_test set description='{0}', display_order={1}, parent_id={2}, isheader={3} where id={4}";
+
+			string parentid = "null";
+			if (pid.HasValue)
+				parentid = "" + pid;
+
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, title, order, parentid, isheader, Hiearachyid), conn)) {
+					conn.Open();
+					using (var sdr = cmd.ExecuteReader()) {
+					}
+				}
+			}
+		}
+
+		public void updatewholehierarchy(ClusterNameTreeNode root, Boolean istest) {
+			Dictionary<int, int> map = new Dictionary<int, int>();
+			Queue<ClusterNameTreeNode> q = new Queue<ClusterNameTreeNode>();
+			q.Enqueue(root);
+			int order = 0;
+			while (q.Count > 0) {
+				ClusterNameTreeNode n = q.Dequeue();
+				if (n.id != -2) {
+					// update n
+					if (n.Role != "item") {
+						if (map.ContainsKey(n.Hiearachyid)) {
+							updatehierarchy(root.Presentationid, n.Hiearachyid, n.Title, order, map[n.Hiearachyid], n.Role == "header", istest);
+						} else {
+							updatehierarchy(root.Presentationid, n.Hiearachyid, n.Title, order, null, n.Role == "header", istest);
+						}
+						order++;
+					}
+
+				}
+				for (int i = 0; i < n.Nodes.Count; i++) {
+					ClusterNameTreeNode snode = n.Nodes.ElementAt(i);
+					q.Enqueue(snode);
+					if (n != root)
+						map[snode.Hiearachyid] = n.Hiearachyid;
+				}
+			}
+
+		}
+
+		public string SaveClusterTree(String jsonstr, Boolean istest) {
 			ClusterNameTreeNode node = JsonConvert.DeserializeObject<ClusterNameTreeNode>(jsonstr);
-			return "Success";
+			Boolean isNew = false;
+			if (node.Presentationid == 0) {
+				node.Presentationid = createPresentation(node, istest); // need to test
+				isNew = true;
+			}
+
+			checkwholetreenode(node, null, node.Nodes, istest);
+
+			HashSet<string> set = new HashSet<string>();
+			getDamlist(node, set);
+			List<String> docids = set.ToList();
+			List<long> removeflatids = new List<long>();
+			Dictionary<long, int> oldmap = getOldMapping(docids, istest, node.Presentationid).OrderBy(t => t.Key).ToDictionary(p => p.Key, q => q.Value);
+			Dictionary<long, ClusterNameTreeNode> newmap = new Dictionary<long, ClusterNameTreeNode>();
+			Dictionary<int, ClusterNameTreeNode> newhierarchymap = new Dictionary<int, ClusterNameTreeNode>();
+			getNodeMapping(null, node, newmap, newhierarchymap);
+			newmap = newmap.OrderBy(t => t.Key).ToDictionary(p => p.Key, q => q.Value);
+			List<int> oldhierarchyids = getOldhierarchyids(node.Presentationid, istest);
+			for (int i = 0; i < oldmap.Keys.Count; i++) {
+				long key = oldmap.Keys.ElementAt(i);
+				if (!newmap.ContainsKey(key)) {
+					removeflatids.Add(key);
+				}
+			}
+
+			if (removeflatids.Count > 0) {
+				removeMapping(removeflatids, istest);
+			}
+
+			if (!isNew)
+				createnewnode(newmap, istest);
+			createnewmapping(newmap, oldmap, istest);
+			removehierarchy(oldhierarchyids, newhierarchymap, istest);
+			updatewholehierarchy(node, istest);
+
+			// 0 check if need to create new presentation
+			// 1 loop through Node to see if need to create new hierarchy
+			// 2 get damids from node
+			// 3 get old mappings from the damids
+			// 4 get new mapping from node
+			// 5 remove mapping in old but not in new
+			// 6 loop new mapping and see if need to create new hierarchy
+			// 7 insert or update the mapping based on new mappinge
+			// 8 compare new and old hierarchy to see if need to delete some in DB
+			///==========================
+			// 9 base on the tree to update cluster_hierarchy
+
+			return JsonConvert.SerializeObject(node);
 		}
 
 
@@ -1121,6 +1525,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				parent_id = sdr.GetInt32(7);
 			}
 
+			String role = sdr.GetBoolean(8) ? "header" : "node";
 			ClusterNameTreeNode node = new ClusterNameTreeNode
 			{
 				Normtableid = norm_table_id,
@@ -1130,7 +1535,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				Presentationid = cluster_presentation_id,
 				Title = title,
 				ParentID = parent_id,
-				Role = "node",
+				Role = role,
 				Nodes = new List<ClusterNameTreeNode>(),
 				id = -1
 			};
@@ -1152,10 +1557,50 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			};
 		}
 
+		public string rebuildtest() {
+			String query = @"
+			drop table IF EXISTS cluster_mapping_test;
+			drop table IF EXISTS cluster_hierarchy_test;
+			drop table IF EXISTS cluster_presentation_test;
 
-		public string GetPostGresClusterNameTreeTableNodeWithIconum(String damid,int iconum, Boolean istest = false) {
+			CREATE TABLE cluster_presentation_test AS SELECT * FROM cluster_presentation;
+			ALTER TABLE cluster_presentation_test ADD CONSTRAINT cluster_presentation_test_pkey PRIMARY KEY(id);
+			ALTER TABLE cluster_presentation_test ADD CONSTRAINT cluster_presentation_norm_table_id_fkey FOREIGN KEY (norm_table_id) REFERENCES norm_table(id);
+			ALTER TABLE cluster_presentation_test ALTER COLUMN id Add GENERATED ALWAYS AS IDENTITY;
+			select setval('cluster_presentation_test_id_seq', (select max(id) from cluster_presentation_test), true);
+									 
+			CREATE TABLE cluster_hierarchy_test AS SELECT * FROM cluster_hierarchy;
+			ALTER TABLE cluster_hierarchy_test ADD CONSTRAINT cluster_hierarchy_test_pkey PRIMARY KEY(id);
+			ALTER TABLE cluster_hierarchy_test ADD CONSTRAINT cluster_hierarchy_test_cluster_presentation_test_id_fkey FOREIGN KEY (cluster_presentation_id) REFERENCES cluster_presentation_test(id);
+			ALTER TABLE cluster_hierarchy_test ADD CONSTRAINT cluster_hierarchy_test_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES cluster_hierarchy_test(id);
+			ALTER TABLE cluster_hierarchy_test ALTER COLUMN id Add GENERATED ALWAYS AS IDENTITY;
+
+			select setval('cluster_hierarchy_test_id_seq', (select max(id) from cluster_hierarchy_test), true);
+			CREATE TABLE cluster_mapping_test AS SELECT * FROM cluster_mapping;
+			ALTER TABLE cluster_mapping_test ADD CONSTRAINT cluster_mapping_cluster_hierarchy_test_id_fkey FOREIGN KEY (cluster_hierarchy_id) REFERENCES cluster_hierarchy_test(id);
+			ALTER TABLE cluster_mapping_test ADD CONSTRAINT cluster_mapping_norm_name_tree_flat_id_fkey_fkey FOREIGN KEY (norm_name_tree_flat_id) REFERENCES norm_name_tree_flat(id);
+			";
+
+
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(query, conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+
+						}
+					}
+				}
+			} catch (Exception ex) {
+				return "Fail:"+ex.Message;
+			}
+			return "Success";
+		}
+
+
+		public string GetPostGresClusterNameTreeTableNodeWithIconum(String damid, int iconum, Boolean istest = false) {
 			String damindustry = getIndustryByDamid(damid, iconum);
-			 string query = @"
+			string query = @"
 				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
 				join cluster_presentation as cp on cluster_presentation_id = cp.id
 				join norm_table as nt on cp.norm_table_id = nt.id
@@ -1221,11 +1666,11 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				}
 			}
 			try {
-				populateClusterNameTree(damid, clusteridmap);
+				populateClusterNameTree(damid, clusteridmap, istest);
 			} catch (Exception ex) {
 				Console.WriteLine(ex.Message);
 			}
-			
+
 			return JsonConvert.SerializeObject(treenodes);
 		}
 
@@ -1301,13 +1746,23 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 		}
 		*/
 
-		private void populateClusterNameTree(string damid, Dictionary<int, ClusterNameTreeNode> clusteridmap) {
-			const string query = @"
+		private void populateClusterNameTree(string damid, Dictionary<int, ClusterNameTreeNode> clusteridmap, bool isTest = false) {
+			string query = @"
 				select * from cluster_mapping as cm
 				join norm_name_tree_flat as f 
 					on cm.norm_name_tree_flat_id = f.id	
 				and f.col_id = 1
 			and f.document_id = '{0}' order by cluster_hierarchy_id, table_id";
+
+			if (isTest) {
+				query = @"
+				select * from cluster_mapping_test as cm
+				join norm_name_tree_flat as f 
+					on cm.norm_name_tree_flat_id = f.id	
+				and f.col_id = 1
+			and f.document_id = '{0}' order by cluster_hierarchy_id, table_id";
+			}
+
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
 				using (var cmd = new NpgsqlCommand(string.Format(query, damid.ToString()), conn)) {
 					conn.Open();
@@ -1323,6 +1778,9 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 
 		private void genClusterMappedNameTreeNode(NpgsqlDataReader sdr, Dictionary<int, ClusterNameTreeNode> clusteridmap) {
 			int cluster_hierarchy_id = sdr.GetInt32(0);
+			if (!clusteridmap.ContainsKey(cluster_hierarchy_id)) {
+				Console.WriteLine(cluster_hierarchy_id);
+			}
 			ClusterNameTreeNode pnode = clusteridmap[cluster_hierarchy_id];
 			int norm_table_id = pnode.Normtableid;
 			string norm_table = pnode.NormtableTitle;
