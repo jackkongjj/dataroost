@@ -753,6 +753,28 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			}
 		}
 
+		public Boolean isNodeExist(ClusterNameTreeNode node, Boolean istest) {
+			String query = "select id from cluster_hierarchy where id={0}";
+			if (istest)
+				query = "select id from cluster_hierarchy_test where id={0}";
+			try {
+				using (var conn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, node.Hiearachyid), conn)) {
+						conn.Open();
+						using (var sdr = cmd.ExecuteReader()) {
+							while (sdr.Read()) {
+								int id = sdr.GetInt32(0);
+								return true;
+							}
+						}
+					}
+				}
+			} catch (Exception ex) {
+
+			}
+			return false;
+		}
+
 		public void checkwholetreenode(ClusterNameTreeNode rootnode, ClusterNameTreeNode pnode, List<ClusterNameTreeNode> Nodes, Boolean istest) {
 			for (int i = 0; i < Nodes.Count; i++) {
 				ClusterNameTreeNode node = Nodes.ElementAt(i);
@@ -761,7 +783,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 				node.Normtableid = rootnode.Normtableid;
 
 				if (node.Role != "item") {
-					if (node.Hiearachyid == 0) {
+					if (node.Hiearachyid == 0 || !isNodeExist(node, istest)) {
 						if (pnode == null)
 							node.ParentID = null;
 						else
@@ -976,7 +998,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			string parentid = "null";
 			if (pid.HasValue)
 				parentid = "" + pid;
-
+			//try {
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
 				using (var cmd = new NpgsqlCommand(string.Format(query, title, order, parentid, isheader, Hiearachyid), conn)) {
 					conn.Open();
@@ -984,6 +1006,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 					}
 				}
 			}
+			//} catch (Exception ex) {
+			//		Console.WriteLine("XX");
+			//}
+
 		}
 
 		public void updatewholehierarchy(ClusterNameTreeNode root, Boolean istest) {
@@ -1592,7 +1618,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 					}
 				}
 			} catch (Exception ex) {
-				return "Fail:"+ex.Message;
+				return "Fail:" + ex.Message;
 			}
 			return "Success";
 		}
