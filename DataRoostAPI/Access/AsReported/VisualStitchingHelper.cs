@@ -1776,17 +1776,15 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			string query = @"
 				select * from cluster_mapping as cm
 				join norm_name_tree_flat as f 
-					on cm.norm_name_tree_flat_id = f.id	
-				and f.col_id = 1
-			and f.document_id = '{0}' order by cluster_hierarchy_id, table_id";
+					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' and item_offset like '%|r0'
+			  order by cluster_hierarchy_id, f.table_id";
 
 			if (isTest) {
 				query = @"
 				select * from cluster_mapping_test as cm
 				join norm_name_tree_flat as f 
-					on cm.norm_name_tree_flat_id = f.id	
-				and f.col_id = 1
-			and f.document_id = '{0}' order by cluster_hierarchy_id, table_id";
+					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' 
+        order by cluster_hierarchy_id, f.table_id";
 			}
 
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
