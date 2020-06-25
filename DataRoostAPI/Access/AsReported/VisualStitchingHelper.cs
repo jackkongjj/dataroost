@@ -889,26 +889,22 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			if (list.Count == 0)
 				return;
 
-			String query = @"
-					delete from cluster_mapping where cluster_hierarchy_id in({0}); 
-					delete from cluster_hierarchy where id in ({1});";
+			String query = @"update cluster_hierarchy set display_order = -2 where id in ({0});";
 
 			if (istest)
-				query = @"
-          delete from cluster_mapping_test where cluster_hierarchy_id in({0}); 
-					delete from cluster_hierarchy_test where id in ({1});";
+				query = @"update cluster_hierarchy_test set display_order = -2 where id in ({0});";
 
-			try {
-				using (var conn = new NpgsqlConnection(PGConnectionString())) {
-					using (var cmd = new NpgsqlCommand(string.Format(query, string.Join(",", list), string.Join(",", list)), conn)) {
-						conn.Open();
-						using (var sdr = cmd.ExecuteReader()) {
-						}
+			//try {
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, string.Join(",", list), string.Join(",", list)), conn)) {
+					conn.Open();
+					using (var sdr = cmd.ExecuteReader()) {
 					}
 				}
-			} catch (Exception ex) {
-				Console.WriteLine("Ex");
 			}
+			//} catch (Exception ex) {
+			//	Console.WriteLine("Ex");
+			//}
 		}
 
 		public int getNormtableID(String title) {
@@ -1638,7 +1634,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
 				join cluster_presentation as cp on cluster_presentation_id = cp.id
 				join norm_table as nt on cp.norm_table_id = nt.id
-					where lower(cp.Industry)='{0}'
+					where lower(cp.Industry)='{0}' and display_order >= 0
 				order by norm_table_id, display_order
 			";
 			if (istest) {
@@ -1646,7 +1642,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy_test as ch
 				join cluster_presentation_test as cp on cluster_presentation_id = cp.id
 				join norm_table as nt on cp.norm_table_id = nt.id
-					where lower(cp.Industry)='{0}'
+					where lower(cp.Industry)='{0}' and display_order >= 0
 				order by norm_table_id, display_order
 				";
 			}
