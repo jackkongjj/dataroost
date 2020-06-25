@@ -889,17 +889,25 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			if (list.Count == 0)
 				return;
 
-			String query = "delete from cluster_hiearachy where id in ({0})";
+			String query = @"
+					delete from cluster_mapping where cluster_hierarchy_id in({0}); 
+					delete from cluster_hierarchy where id in ({1});";
+
+			if (istest)
+				query = @"
+          delete from cluster_mapping_test where cluster_hierarchy_id in({0}); 
+					delete from cluster_hierarchy_test where id in ({1});";
 
 			try {
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
-					using (var cmd = new NpgsqlCommand(string.Format(query, string.Join(",", list)), conn)) {
+					using (var cmd = new NpgsqlCommand(string.Format(query, string.Join(",", list), string.Join(",", list)), conn)) {
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 						}
 					}
 				}
 			} catch (Exception ex) {
+				Console.WriteLine("Ex");
 			}
 		}
 
@@ -1000,7 +1008,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 				parentid = "" + pid;
 			//try {
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
-				using (var cmd = new NpgsqlCommand(string.Format(query, title, order, parentid, isheader, Hiearachyid), conn)) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, title.Replace("'", "''"), order, parentid, isheader, Hiearachyid), conn)) {
 					conn.Open();
 					using (var sdr = cmd.ExecuteReader()) {
 					}
