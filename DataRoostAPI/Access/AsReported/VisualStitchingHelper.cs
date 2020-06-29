@@ -1079,7 +1079,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			if (!isNew)
 				createnewnode(newmap, istest);
 			createnewmapping(newmap, oldmap, istest);
-			removehierarchy(oldhierarchyids, newhierarchymap, istest);
+			//removehierarchy(oldhierarchyids, newhierarchymap, istest);
 			updatewholehierarchy(node, istest);
 
 			// 0 check if need to create new presentation
@@ -1093,8 +1093,32 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			// 8 compare new and old hierarchy to see if need to delete some in DB
 			///==========================
 			// 9 base on the tree to update cluster_hierarchy
+			List<ClusterNameTreeNode> rootnodes = GetPostGresClusterNameTreeNodeWithIconum(node.documentid, node.iconum, node.Industry, istest);
+			foreach (ClusterNameTreeNode n in rootnodes) {
+				if (n.Presentationid == node.Presentationid) {
+					appendItemNodes(n, newhierarchymap);
+					return JsonConvert.SerializeObject(n);
+				}
+			}
+			return "[]";
+		}
 
-			return JsonConvert.SerializeObject(node);
+		public void appendItemNodes(ClusterNameTreeNode node, Dictionary<int, ClusterNameTreeNode> map) {
+			if (node.Role != "item") {
+				if (node.Hiearachyid != 0) {
+					ClusterNameTreeNode n = map[node.Hiearachyid];
+					for (int i = n.Nodes.Count - 1; i >= 0; i--) {
+						ClusterNameTreeNode subnode = n.Nodes.ElementAt(i);
+						if (subnode.Role == "item" && !node.Nodes.Any(t => t.Role == "item" && t.id == node.id)) {
+							node.Nodes.Insert(0, subnode);
+						}
+					}
+				}
+
+				for (int i = 0; i < node.Nodes.Count; i++) {
+					appendItemNodes(node.Nodes.ElementAt(i), map);
+				}
+			}
 		}
 
 
@@ -1628,8 +1652,13 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 		}
 
 
-		public string GetPostGresClusterNameTreeTableNodeWithIconum(String damid, int iconum, Boolean istest = false) {
-			String damindustry = getIndustryByDamid(damid, iconum);
+		public List<ClusterNameTreeNode> GetPostGresClusterNameTreeNodeWithIconum(String damid, int iconum, String industry, Boolean istest = false) {
+			String damindustry = industry;
+			if (industry == null)
+				damindustry = getIndustryByDamid(damid, iconum);
+			else
+				damindustry = damindustry.ToLower();
+
 			string query = @"
 				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
 				join cluster_presentation as cp on cluster_presentation_id = cp.id
@@ -1696,12 +1725,17 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				}
 			}
 			try {
-				populateClusterNameTree(damid, clusteridmap, istest);
+				if (damid != null)
+					populateClusterNameTree(damid, clusteridmap, istest);
 			} catch (Exception ex) {
 				Console.WriteLine(ex.Message);
 			}
+			return treenodes;
+		}
 
-			return JsonConvert.SerializeObject(treenodes);
+
+		public string GetPostGresClusterNameTreeTableNodeWithIconum(String damid, int iconum, Boolean istest = false) {
+			return JsonConvert.SerializeObject(GetPostGresClusterNameTreeNodeWithIconum(damid, iconum, null, istest));
 		}
 
 		public string GetPostGresClusterNameTreeTableNode(String damid) {
