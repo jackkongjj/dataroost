@@ -1660,10 +1660,11 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				damindustry = damindustry.ToLower();
 
 			string query = @"
-				select cp.norm_table_id, nt.label, cp.Industry, ch.* from cluster_hierarchy as ch
+				select cp.norm_table_id, nt.label, i.label, ch.* from cluster_hierarchy as ch
 				join cluster_presentation as cp on cluster_presentation_id = cp.id
 				join norm_table as nt on cp.norm_table_id = nt.id
-					where lower(cp.Industry)='{0}' and display_order >= 0
+				join industry as i on cp.industry_id = i.id
+					where lower(i.label)='{0}' and display_order >= 0
 				order by norm_table_id, display_order
 			";
 			if (istest) {
