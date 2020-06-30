@@ -1106,12 +1106,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 		public void appendItemNodes(ClusterNameTreeNode node, Dictionary<int, ClusterNameTreeNode> map) {
 			if (node.Role != "item") {
 				if (node.Hiearachyid != 0) {
-					ClusterNameTreeNode n = map[node.Hiearachyid];
-					for (int i = n.Nodes.Count - 1; i >= 0; i--) {
-						ClusterNameTreeNode subnode = n.Nodes.ElementAt(i);
-						if (subnode.Role == "item" && !node.Nodes.Any(t => t.Role == "item" && t.id == node.id)) {
-							node.Nodes.Insert(0, subnode);
+					if (map.ContainsKey(node.Hiearachyid)) {
+						ClusterNameTreeNode n = map[node.Hiearachyid];
+						for (int i = n.Nodes.Count - 1; i >= 0; i--) {
+							ClusterNameTreeNode subnode = n.Nodes.ElementAt(i);
+							if (subnode.Role == "item" && !node.Nodes.Any(t => t.Role == "item" && t.id == node.id)) {
+								node.Nodes.Insert(0, subnode);
+							}
 						}
+
 					}
 				}
 
