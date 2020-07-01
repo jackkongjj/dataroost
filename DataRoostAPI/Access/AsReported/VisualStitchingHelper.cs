@@ -923,15 +923,15 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return 9999;
 		}
 
-		public int genPresentation(String ind, int normtableid, Boolean istest) {
+		public int genPresentation(String ind, int industry_id, int normtableid, Boolean istest) {
 
 			string qry1 = @"
-				select id from cluster_presentation where norm_table_id={0} and industry = '{1}'";
+				select id from cluster_presentation where norm_table_id={0} and industry_id = {2}";
 			if (istest)
 				qry1 = @"select id from cluster_presentation_test where norm_table_id={0} and industry = '{1}'";
 
 
-			String query = @"insert into cluster_presentation (norm_table_id, industry) values({0},'{1}'); 
+			String query = @"insert into cluster_presentation (norm_table_id, industry_id) values({0},{2}); 
                        SELECT currval(pg_get_serial_sequence('cluster_presentation', 'id'));";
 			if (istest)
 				query = @"insert into cluster_presentation_test (norm_table_id, industry) values({0},'{1}'); 
@@ -941,7 +941,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			string industry = char.ToUpper(ind[0]) + ind.Substring(1);
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
 				try {
-					using (var cmd = new NpgsqlCommand(string.Format(qry1, normtableid, industry), conn)) {
+					using (var cmd = new NpgsqlCommand(string.Format(qry1, normtableid, industry, industry_id), conn)) {
 						conn.Open();
 						using (var sdr = cmd.ExecuteReader()) {
 							while (sdr.Read()) {
@@ -985,12 +985,28 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 
 		public int createPresentation(ClusterNameTreeNode node, Boolean istest) {
 			string industry = getIndustryByDamid(node.documentid, node.iconum);
+			int industry_id = getIndustryID(industry);
 			string normtitle = node.NormtableTitle;
 			int normtableid = getNormtableID(normtitle);
-			int newid = genPresentation(industry, normtableid, istest);
+			int newid = genPresentation(industry, industry_id, normtableid, istest);
 			node.Industry = industry;
 			node.Normtableid = normtableid;
 			return newid;
+		}
+
+		public int getIndustryID(String label) {
+			String query = "select id from industry where lower(label) = '{0}'";
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, label.ToLower()), conn)) {
+					conn.Open();
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							return sdr.GetInt32(0);
+						}
+					}
+				}
+			}
+			return -1;
 		}
 
 
