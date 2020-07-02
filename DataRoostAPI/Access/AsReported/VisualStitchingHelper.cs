@@ -1112,7 +1112,13 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			List<ClusterNameTreeNode> rootnodes = GetPostGresClusterNameTreeNodeWithIconum(node.documentid, node.iconum, node.Industry, istest);
 			foreach (ClusterNameTreeNode n in rootnodes) {
 				if (n.Presentationid == node.Presentationid) {
-					appendItemNodes(n, newhierarchymap);
+					Dictionary<int, ClusterNameTreeNode> hiermap = new Dictionary<int, ClusterNameTreeNode>();
+					Dictionary<long, ClusterNameTreeNode> flatidmap = new Dictionary<long, ClusterNameTreeNode>();
+					getNodeMapping(null, n, flatidmap, hiermap);
+					foreach (String damid in docids) {
+						populateClusterNameTree(damid, hiermap, istest);
+					}
+					//appendItemNodes(n, newhierarchymap);
 					return JsonConvert.SerializeObject(n);
 				}
 			}
@@ -1862,6 +1868,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			int cluster_hierarchy_id = sdr.GetInt32(0);
 			if (!clusteridmap.ContainsKey(cluster_hierarchy_id)) {
 				Console.WriteLine(cluster_hierarchy_id);
+				return;
 			}
 			ClusterNameTreeNode pnode = clusteridmap[cluster_hierarchy_id];
 			int norm_table_id = pnode.Normtableid;
