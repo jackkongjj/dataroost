@@ -3923,5 +3923,312 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			}
 			return table;
 		}
-	}
+
+        static Guid NullGuid = new Guid();
+        public bool ExtendClusterByIconum(int iconum)
+        {
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _Extend(iconums, NullGuid);
+            return true;
+        }
+        public bool ExtendClusterByDocument(int iconum, Guid docid)
+        {
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _Extend(iconums, docid);
+            return true;
+        }
+        private bool _Extend(List<int> iconums, Guid guid)
+        {
+            //var tableIDs = TableIDs();
+            List<int> tableIDs = new List<int>() { 1 };
+            foreach (var t in tableIDs)
+            {
+                var existing = _GetExistingClusterTree(t);
+                foreach (var i in iconums)
+                {
+                    _unslotted = new Dictionary<string, int>();
+                    SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
+                    if (guid != NullGuid)
+                    {
+                        unmapped = _GetIconumRawLabels(i, guid, t);
+                    }
+                    else
+                    {
+
+                        unmapped = _GetIconumRawLabels(i, t);
+                    }
+                    var changeList = _getChangeList(existing, unmapped);
+                    Console.WriteLine("Slotted:");
+                    int countSlotted = 0;
+                    foreach (var c in changeList)
+                    {
+                        Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
+                        countSlotted++;
+                    }
+                    Console.WriteLine("End Slotted");
+                    //Console.ReadLine();
+                    Console.WriteLine("Unslotted");
+                    int countUnslotted = 0;
+                    foreach (var u in _unslotted)
+                    {
+
+                        Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
+                        countUnslotted += u.Value;
+                    }
+                    Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
+                    //_WriteChangeListToFile(i, t, changeList, _unslotted);
+                    //_WriteChangeListToDB(i, changeList, _unslotted);
+                }
+            }
+            return true;
+        }
+        private Dictionary<string, int> _unslotted = new Dictionary<string, int>();
+
+        private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped)
+        {
+            // existing[raw label, clusterid]
+            // unmapped[itemid, rawlabel]
+            // changelist[itemid, clusterid]
+            Dictionary<long, long> changelist = new Dictionary<long, long>();
+            Dictionary<long, string> unslotted = new Dictionary<long, string>();
+            foreach (var u in unmapped)
+            {
+                if (existing.ContainsKey(u.Value))
+                {
+                    // u.key is the itemID, existing is the cluster_id
+                    changelist[u.Key] = existing[u.Value];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (unslotted.Count == 0) return changelist;
+            /// ------ second try
+            SortedDictionary<string, string> cleanedExisting = new SortedDictionary<string, string>();
+            SortedDictionary<long, string> cleanedUnmapped = new SortedDictionary<long, string>();
+
+            foreach (var u in unslotted)
+            {
+                var sCleaned = CleanStringForStep2(u.Value);
+                cleanedUnmapped[u.Key] = sCleaned;
+            }
+            foreach (var e in existing)
+            {
+                var sCleaned = CleanStringForStep2(e.Key);
+                if (!cleanedExisting.ContainsKey(sCleaned))
+                {
+                    //cleaned version is the key
+                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+                }
+            }
+            _unslotted = new Dictionary<string, int>();
+            unslotted = new Dictionary<long, string>();
+            foreach (var u in cleanedUnmapped)
+            {
+                // cleanedunmap[itemid, cleaned]
+                // cleanedExisting[cleaned, uncleaned]
+                if (cleanedExisting.ContainsKey(u.Value))
+                {
+                    // if cleanedversion = cleanversion
+                    // find the 
+
+                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (_unslotted.Count == 0) return changelist;
+            /// ------ third try use end label only
+            cleanedExisting = new SortedDictionary<string, string>();
+            cleanedUnmapped = new SortedDictionary<long, string>();
+
+            foreach (var u in unslotted)
+            {
+                var sCleaned = CleanStringForStep2(fn.RevCar(u.Value));
+                cleanedUnmapped[u.Key] = sCleaned;
+            }
+            foreach (var e in existing)
+            {
+                var sCleaned = CleanStringForStep2(fn.RevCar(e.Key));
+                if (!cleanedExisting.ContainsKey(sCleaned))
+                {
+                    //cleaned version is the key
+                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+                }
+            }
+            _unslotted = new Dictionary<string, int>();
+            unslotted = new Dictionary<long, string>();
+            foreach (var u in cleanedUnmapped)
+            {
+                // cleanedunmap[itemid, cleaned]
+                // cleanedExisting[cleaned, uncleaned]
+                if (cleanedExisting.ContainsKey(u.Value))
+                {
+                    // if cleanedversion = cleanversion
+                    // find the 
+
+                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (_unslotted.Count == 0) return changelist;
+            return changelist;
+        }
+
+        private string CleanStringForStep2(string str)
+        {
+            //remove non alphanumeric and space
+            // make singular
+            // replace phrase
+            // remove stem words, and replace individual words 
+            var s = str;
+            s = fn.AlphaNumericSpaceAndSquareBrackets(s);
+            s = fn.SingularForm(s);
+            s = fn.ReplacePhraseAllLevel(s);
+            //s = fn.RemoveNondictionaryWordAllLevel(s);
+            s = fn.NoStemWordAllLevel(s);
+            s = fn.ReplacePhraseAllLevel(s);
+            return s;
+
+        }
+        private SortedDictionary<string, long> _GetExistingClusterTree(int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            string sqltxt_old = string.Format(@"
+select id, label, iconum_count
+	from cluster_name_tree_new c
+	where c.norm_table_id = {0}", tableId);
+
+            string sqltxt = string.Format(@"
+select distinct c.id, c.iconum_count, tf.raw_row_label
+	from cluster_name_tree_new c
+	join norm_name_tree t on c.id = t.cluster_id_new 
+	join norm_name_tree_flat tf on t.id = tf.id
+where c.norm_table_id = {0}
+	and t.norm_table_id = {0}
+order by c.iconum_count
+", tableId);
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(2);
+                            if (!string.IsNullOrWhiteSpace(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+
+                            }
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
+        }
+
+        private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+select t.id, tf.raw_row_label
+	from norm_name_tree t 
+	join norm_name_tree_flat tf on t.id = tf.id
+where t.norm_table_id = {0}
+	and t.iconum = {1} and tf.iconum = {1}
+	and t.cluster_id_new is null
+	and (tf.raw_row_label = '') is not true
+
+", tableId, iconum);
+            return _GetIconumRawLabelsHelper(sqltxt);
+        }
+        private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, Guid docid, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+select t.id, tf.raw_row_label
+	from norm_name_tree t 
+	join norm_name_tree_flat tf on t.id = tf.id
+where t.norm_table_id = {0}
+	and t.iconum = {1} and t.document_id = '{2}'
+	and t.cluster_id_new is null
+	and (tf.raw_row_label = '') is not true
+
+", tableId, iconum, docid.ToString());
+            return _GetIconumRawLabelsHelper(sqltxt);
+        }
+        private SortedDictionary<long, string> _GetIconumRawLabelsHelper(string sqltxt)
+        {
+            SortedDictionary<long, string> entries = new SortedDictionary<long, string>();
+
+
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!string.IsNullOrWhiteSpace(rawlabel))
+                            {
+                                entries[id] = rawlabel;
+
+                            }
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
+        }
+
+    }
 }
