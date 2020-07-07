@@ -1826,15 +1826,6 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 			return JsonConvert.SerializeObject(treenodes);
 		}
 
-		/*
-		public void populateClusterNameTree(List<ClusterNameTreeNode> treenodes,Dictionary<int, ClusterNameTreeNode> clusteridmap,string damid) {
-			Dictionary<int, ClusterNameTreeNode> mappedNodes = GetPostGresClusterMappingByDamID(damid, clusteridmap);
-			foreach (KeyValuePair<int, ClusterNameTreeNode> entry in mappedNodes) {
-				ClusterNameTreeNode pnode = clusteridmap[entry.Key];
-				pnode.Nodes.Add(entry.Value);
-			}
-		}
-		*/
 
 		private void populateClusterNameTree(string damid, Dictionary<int, ClusterNameTreeNode> clusteridmap, bool isTest = false) {
 			string query = @"
@@ -1847,7 +1838,7 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				query = @"
 				select * from cluster_mapping_test as cm
 				join norm_name_tree_flat as f 
-					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' 
+					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' and item_offset like '%|r0'
         order by cluster_hierarchy_id, f.table_id";
 			}
 
