@@ -12,6 +12,56 @@ using System.IO;
 namespace CCS.Fundamentals.DataRoostAPI.Helpers {
     public class fn
     {
+        static Dictionary<string, string> StemDictionary = new Dictionary<string, string>()
+        {
+            {"afs", "" },
+            //{"and", "" },
+            {"the", "" },
+            {"by", "" },
+            {"of", "" },
+            {"to", "" },
+            {"from", "" },
+            {"for", "" },
+            {"under", "" },
+            {"all", "" },
+            {"in", "" },
+            {"with", "" },
+            {"at", "" },
+            {"on", "" },
+            {"or", "" },
+            {"over", "" },
+            {"stackholder", "shareholder" },
+            {"stockholder", "shareholder" },
+            {"net", "" },
+            {"guaranteed", "" },
+            {"office", "" },
+            {"total", "" }
+        };
+
+        static Dictionary<string, string> ReplacePhraseDict = new Dictionary<string, string>()
+        {
+            {"afs", "" }, //available for sale
+            {"available for sale", "" },
+            {"fte", "" }, //full time equivalent
+            {"full time equivalent", "" },
+            {"provided by", "" },
+            {"cash equivalent", "cash" },
+            {"cash due bank", "cash" },
+            {"increase", "change" },
+            {"decrease", "change" },
+            {"frb", "federal reserve" },
+            {"fhlb", "federal home loan bank" },
+            {"lhfs", "loan held for sale" },
+            {"lhfi", "loan held for investment" },
+            {"pci", "purchased credit impaired" },
+            {"cd", "certificate deposit" },
+            {"cds", "certificate deposit" },
+            {"cre", "commercial real estate" },
+            {"domestic", "us" },
+            {"international", "non us" },
+            {"foreign", "non us" },
+            {"stockholder", "shareholder" }
+        };
 
         public static string Car(string s)
         {
@@ -269,7 +319,250 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers {
             return rgx.Replace(input, newStr);
         }
 
-  
+        public static string SingularForm(string str)
+        {
+            if (str.Contains("]"))
+            {
+                var result = str.Replace("[", "");
+                string[] remlabelWords = result.Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                result = "";
+                foreach (var r in remlabelWords)
+                {
+                    if (string.IsNullOrWhiteSpace(r))
+                    {
+                        continue;
+                    }
+                    var s = SingularFormSingleLevel(r.TrimStart().TrimEnd()).TrimStart().TrimEnd();
+                    if (!string.IsNullOrWhiteSpace(s))
+                    {
+                        result += string.Format("[{0}]", s);
+                    }
+
+                }
+                return result;
+            }
+            else
+            {
+                return SingularFormSingleLevel(str);
+            }
+
+        }
+        public static string SingularFormSingleLevel(string str)
+        {
+            var result = str;
+            string[] remlabelWords = result.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < remlabelWords.Count(); i++)
+            {
+                var r = new Regex(@"[A-Za-z]\d+$");
+                if (r.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"\d+$", "");
+                }
+                //if (!EnglishDict.Contains(remlabelWords[i]))
+                //{
+                //    remlabelWords[i] = "";
+                //}
+                var ii = new Regex(@"ii$");
+                var ies = new Regex(@"ies$");
+                var excess = new Regex(@"excess$");
+                var ses = new Regex(@"(a|e|i|o|u)ses$");
+                var es = new Regex(@"(s|x|ch|sh)es$");
+                var s = new Regex(@"([a-z]){3,}s$");
+                var leases = new Regex(@"(lease|expense)s$");
+                var less = new Regex(@"(l|n)(e|o)ss$");
+                var sis = new Regex(@"sis$");
+                var unitedstates = new Regex(@"(non|\b)us$");
+                if (remlabelWords[i] == "radii")
+                {
+                    remlabelWords[i] = "radius";
+                }
+                else if (ii.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"ii$", "us");
+                }
+                else if (leases.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"es$", "e");
+                }
+                else if (ses.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"es$", "e");
+                }
+                else if (less.IsMatch(remlabelWords[i]) || unitedstates.IsMatch(remlabelWords[i]))
+                {
+                }
+                else if (sis.IsMatch(remlabelWords[i]) || excess.IsMatch(remlabelWords[i]))
+                {
+                }
+                else if (ies.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"ies$", "y");
+                }
+                else if (es.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"es$", "");
+                }
+                else if (s.IsMatch(remlabelWords[i]))
+                {
+                    remlabelWords[i] = Regex.Replace(remlabelWords[i], @"s$", "");
+                }
+                //spelling.Text = remlabelWords[i];
+                //spelling.SpellCheck();
+                //if (!oSpell.TestWord(remlabelWords[i]))
+                //{
+                //    remlabelWords[i] = "";
+                //}
+            }
+            result = string.Join<string>(" ", remlabelWords.Where(x => x.Length > 1 && !string.IsNullOrWhiteSpace(x)));// && !_stops.ContainsKey(c.ToLower())));
+            //result = NoStemWordSingleLevel(result);
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                return str;
+            }
+            return result;
+        }
+        public static string ReplacePhraseAllLevel(string str)
+        {
+            if (str.Contains("]"))
+            {
+                var result = str.Replace("[", "");
+                string[] remlabelWords = result.Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                result = "";
+                foreach (var r in remlabelWords)
+                {
+                    if (string.IsNullOrWhiteSpace(r))
+                    {
+                        continue;
+                    }
+                    var s = ReplacePhraseSingleLevel(r.TrimStart().TrimEnd()).TrimStart().TrimEnd();
+                    if (!string.IsNullOrWhiteSpace(s))
+                    {
+                        result += string.Format("[{0}]", s);
+                    }
+
+                }
+                return result;
+            }
+            else
+            {
+                return ReplacePhraseSingleLevel(str);
+            }
+
+        }
+        public static string ReplacePhraseSingleLevel(string str)
+        {
+            var replaced = str;
+            foreach (var d in ReplacePhraseDict)
+            {
+                string pattern = @"\b" + d.Key + @"\b";
+                var phrase = new Regex(pattern);
+                if (phrase.IsMatch(replaced))
+                {
+                    replaced = Regex.Replace(replaced, pattern, d.Value, RegexOptions.IgnoreCase);
+                }
+            }
+            return replaced;
+            //var result = str;
+            //string[] remlabelWords = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            //for (int i = 0; i < remlabelWords.Count(); i++)
+            //{
+            //    if (!EnglishDict.Contains(remlabelWords[i]))
+            //    {
+            //        Console.WriteLine("non english: " + remlabelWords[i]);
+            //        remlabelWords[i] = "";
+            //    }
+            //}
+            //result = string.Join(' ', remlabelWords.Where(x => x.Length > 1 && !string.IsNullOrWhiteSpace(x)));// && !_stops.ContainsKey(c.ToLower())));
+            //if (string.IsNullOrWhiteSpace(result))
+            //{
+            //    return str;
+            //}
+            //return result;
+        }
+        public static string NoStemWordAllLevel(string str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                return str;
+            }
+            if (str.Contains("]"))
+            {
+                var result = str.Replace("[", "");
+                string[] remlabelWords = result.Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                result = "";
+                foreach (var r in remlabelWords)
+                {
+                    if (string.IsNullOrWhiteSpace(r))
+                    {
+                        continue;
+                    }
+                    var s = NoStemWordSingleLevel(r.TrimStart().TrimEnd()).TrimStart().TrimEnd();
+                    if (!string.IsNullOrWhiteSpace(s))
+                    {
+                        result += string.Format("[{0}]", s);
+                    }
+
+                }
+                return result;
+            }
+            else
+            {
+                return NoStemWordSingleLevel(str);
+            }
+        }
+        public static string NoStemWordSingleLevel(string str, string wordToRemove = "")
+        {
+            var result = str;
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                return result;
+            }
+            if (string.IsNullOrWhiteSpace(wordToRemove))
+            {
+                string[] remlabelWords = result.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < remlabelWords.Count(); i++)
+                {
+                    if (StemDictionary.ContainsKey(remlabelWords[i]))
+                    {
+                        remlabelWords[i] = StemDictionary[remlabelWords[i]];
+                    }
+                }
+
+                result = string.Join<string>(" ", remlabelWords.Where(x => x.Length > 1 && !string.IsNullOrWhiteSpace(x)).Distinct());// && !_stops.ContainsKey(c.ToLower())));
+                if (!result.Contains("liability and "))
+                {
+                    result = NoStemWordSingleLevel(result, "and");
+                }
+                if (string.IsNullOrWhiteSpace(result))
+                {
+                    return str;
+                }
+            }
+            else
+            {
+                string[] remlabelWords = result.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < remlabelWords.Count(); i++)
+                {
+                    if (string.IsNullOrWhiteSpace(remlabelWords[i]))
+                    {
+                        continue;
+                    }
+                    if (remlabelWords[i] == wordToRemove)
+                    {
+                        remlabelWords[i] = "";
+                    }
+                }
+
+                result = string.Join<string>(" ", remlabelWords.Where(x => x.Length > 1 && !string.IsNullOrWhiteSpace(x)).Distinct());// && !_stops.ContainsKey(c.ToLower())));
+                if (string.IsNullOrWhiteSpace(result))
+                {
+                    return str;
+                }
+            }
+
+            return result;
+        }
+
         public static string ReplaceFirst(string text, string search, string replace)
         {
             int pos = text.IndexOf(search);
