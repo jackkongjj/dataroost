@@ -808,27 +808,27 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 				query = @"insert into cluster_hierarchy_test (cluster_presentation_id, description, display_order, parent_id, isheader) VALUES ({0},'{1}',{2},{3},{4});
 				SELECT currval(pg_get_serial_sequence('cluster_hierarchy_test','id'));
 			";
-			try {
-				string pid = "null";
-				if (node.ParentID.HasValue)
-					pid = "" + node.ParentID.Value;
+			//try {
+			string pid = "null";
+			if (node.ParentID.HasValue)
+				pid = "" + node.ParentID.Value;
 
-				using (var conn = new NpgsqlConnection(PGConnectionString())) {
-					using (var cmd = new NpgsqlCommand(string.Format(query, node.Presentationid, node.Title, -1, pid, node.Role == "header"), conn)) {
-						conn.Open();
-						//cmd.ExecuteNonQuery();
-						using (var sdr = cmd.ExecuteReader()) {
-							while (sdr.Read()) {
-								int newid = sdr.GetInt32(0);
-								return newid;
-							}
+			using (var conn = new NpgsqlConnection(PGConnectionString())) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, node.Presentationid, node.Title, -1, pid, node.Role == "header"), conn)) {
+					conn.Open();
+					//cmd.ExecuteNonQuery();
+					using (var sdr = cmd.ExecuteReader()) {
+						while (sdr.Read()) {
+							int newid = sdr.GetInt32(0);
+							return newid;
 						}
-						//return (int)cmd.ExecuteScalar();
 					}
+					//return (int)cmd.ExecuteScalar();
 				}
-			} catch (Exception ex) {
 			}
-			return -1;
+			//} catch (Exception ex) {
+			//	}
+			return -1; // shouldn't happen
 		}
 
 		public void createnewmapping(Dictionary<long, ClusterNameTreeNode> newmap, Dictionary<long, int> oldmap, Boolean istest) {
@@ -838,14 +838,14 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 					String sql = @"UPDATE {2} SET cluster_hierarchy_id={0} WHERE norm_name_tree_flat_id={1};
 					INSERT INTO {2} (cluster_hierarchy_id, norm_name_tree_flat_id)
 					SELECT {0}, {1}
-						WHERE NOT EXISTS (SELECT 1 FROM cluster_mapping WHERE norm_name_tree_flat_id={1});";
+						WHERE NOT EXISTS (SELECT 1 FROM {2} WHERE norm_name_tree_flat_id={1});";
 					String mappingtable = "cluster_mapping";
 					if (istest)
 						mappingtable = "cluster_mapping_test";
 
 					try {
 						using (var conn = new NpgsqlConnection(PGConnectionString())) {
-							using (var cmd = new NpgsqlCommand(string.Format(sql, node.Hiearachyid, node.id, mappingtable), conn)) {
+							using (var cmd = new NpgsqlCommand(string.Format(sql, node.Hiearachyid, node.id, mappingtable, mappingtable), conn)) {
 								conn.Open();
 								var sdr = cmd.ExecuteReader();
 							}
@@ -3915,207 +3915,173 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			return table;
 		}
 
-        static Guid NullGuid = new Guid();
-        public bool ExtendClusterByIconum(int iconum)
-        {
-            List<int> iconums = new List<int>();
-            iconums.Add(iconum);
-            //List<int> iconums = new List<int>() { 18119 };
-            _Extend(iconums, NullGuid);
-            return true;
-        }
-        public bool ExtendClusterByDocument(int iconum, Guid docid)
-        {
-            List<int> iconums = new List<int>();
-            iconums.Add(iconum);
-            //List<int> iconums = new List<int>() { 18119 };
-            _Extend(iconums, docid);
-            return true;
-        }
-        private bool _Extend(List<int> iconums, Guid guid)
-        {
-            //var tableIDs = TableIDs();
-            List<int> tableIDs = new List<int>() { 1 };
-            foreach (var t in tableIDs)
-            {
-                var existing = _GetExistingClusterTree(t);
-                foreach (var i in iconums)
-                {
-                    _unslotted = new Dictionary<string, int>();
-                    SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
-                    if (guid != NullGuid)
-                    {
-                        unmapped = _GetIconumRawLabels(i, guid, t);
-                    }
-                    else
-                    {
+		static Guid NullGuid = new Guid();
+		public bool ExtendClusterByIconum(int iconum) {
+			List<int> iconums = new List<int>();
+			iconums.Add(iconum);
+			//List<int> iconums = new List<int>() { 18119 };
+			_Extend(iconums, NullGuid);
+			return true;
+		}
+		public bool ExtendClusterByDocument(int iconum, Guid docid) {
+			List<int> iconums = new List<int>();
+			iconums.Add(iconum);
+			//List<int> iconums = new List<int>() { 18119 };
+			_Extend(iconums, docid);
+			return true;
+		}
+		private bool _Extend(List<int> iconums, Guid guid) {
+			//var tableIDs = TableIDs();
+			List<int> tableIDs = new List<int>() { 1 };
+			foreach (var t in tableIDs) {
+				var existing = _GetExistingClusterTree(t);
+				foreach (var i in iconums) {
+					_unslotted = new Dictionary<string, int>();
+					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
+					if (guid != NullGuid) {
+						unmapped = _GetIconumRawLabels(i, guid, t);
+					} else {
 
-                        unmapped = _GetIconumRawLabels(i, t);
-                    }
-                    var changeList = _getChangeList(existing, unmapped);
-                    Console.WriteLine("Slotted:");
-                    int countSlotted = 0;
-                    foreach (var c in changeList)
-                    {
-                        Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
-                        countSlotted++;
-                    }
-                    Console.WriteLine("End Slotted");
-                    //Console.ReadLine();
-                    Console.WriteLine("Unslotted");
-                    int countUnslotted = 0;
-                    foreach (var u in _unslotted)
-                    {
+						unmapped = _GetIconumRawLabels(i, t);
+					}
+					var changeList = _getChangeList(existing, unmapped);
+					Console.WriteLine("Slotted:");
+					int countSlotted = 0;
+					foreach (var c in changeList) {
+						Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
+						countSlotted++;
+					}
+					Console.WriteLine("End Slotted");
+					//Console.ReadLine();
+					Console.WriteLine("Unslotted");
+					int countUnslotted = 0;
+					foreach (var u in _unslotted) {
 
-                        Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
-                        countUnslotted += u.Value;
-                    }
-                    Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
-                    //_WriteChangeListToFile(i, t, changeList, _unslotted);
-                    //_WriteChangeListToDB(i, changeList, _unslotted);
-                }
-            }
-            return true;
-        }
-        private Dictionary<string, int> _unslotted = new Dictionary<string, int>();
+						Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
+						countUnslotted += u.Value;
+					}
+					Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
+					//_WriteChangeListToFile(i, t, changeList, _unslotted);
+					//_WriteChangeListToDB(i, changeList, _unslotted);
+				}
+			}
+			return true;
+		}
+		private Dictionary<string, int> _unslotted = new Dictionary<string, int>();
 
-        private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped)
-        {
-            // existing[raw label, clusterid]
-            // unmapped[itemid, rawlabel]
-            // changelist[itemid, clusterid]
-            Dictionary<long, long> changelist = new Dictionary<long, long>();
-            Dictionary<long, string> unslotted = new Dictionary<long, string>();
-            foreach (var u in unmapped)
-            {
-                if (existing.ContainsKey(u.Value))
-                {
-                    // u.key is the itemID, existing is the cluster_id
-                    changelist[u.Key] = existing[u.Value];
-                }
-                else
-                {
-                    unslotted[u.Key] = u.Value;
-                    if (!_unslotted.ContainsKey(u.Value))
-                    {
-                        _unslotted[u.Value] = 0;
-                    }
-                    _unslotted[u.Value]++;
-                }
-            }
-            if (unslotted.Count == 0) return changelist;
-            /// ------ second try
-            SortedDictionary<string, string> cleanedExisting = new SortedDictionary<string, string>();
-            SortedDictionary<long, string> cleanedUnmapped = new SortedDictionary<long, string>();
+		private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
+			// existing[raw label, clusterid]
+			// unmapped[itemid, rawlabel]
+			// changelist[itemid, clusterid]
+			Dictionary<long, long> changelist = new Dictionary<long, long>();
+			Dictionary<long, string> unslotted = new Dictionary<long, string>();
+			foreach (var u in unmapped) {
+				if (existing.ContainsKey(u.Value)) {
+					// u.key is the itemID, existing is the cluster_id
+					changelist[u.Key] = existing[u.Value];
+				} else {
+					unslotted[u.Key] = u.Value;
+					if (!_unslotted.ContainsKey(u.Value)) {
+						_unslotted[u.Value] = 0;
+					}
+					_unslotted[u.Value]++;
+				}
+			}
+			if (unslotted.Count == 0) return changelist;
+			/// ------ second try
+			SortedDictionary<string, string> cleanedExisting = new SortedDictionary<string, string>();
+			SortedDictionary<long, string> cleanedUnmapped = new SortedDictionary<long, string>();
 
-            foreach (var u in unslotted)
-            {
-                var sCleaned = CleanStringForStep2(u.Value);
-                cleanedUnmapped[u.Key] = sCleaned;
-            }
-            foreach (var e in existing)
-            {
-                var sCleaned = CleanStringForStep2(e.Key);
-                if (!cleanedExisting.ContainsKey(sCleaned))
-                {
-                    //cleaned version is the key
-                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
-                }
-            }
-            _unslotted = new Dictionary<string, int>();
-            unslotted = new Dictionary<long, string>();
-            foreach (var u in cleanedUnmapped)
-            {
-                // cleanedunmap[itemid, cleaned]
-                // cleanedExisting[cleaned, uncleaned]
-                if (cleanedExisting.ContainsKey(u.Value))
-                {
-                    // if cleanedversion = cleanversion
-                    // find the 
+			foreach (var u in unslotted) {
+				var sCleaned = CleanStringForStep2(u.Value);
+				cleanedUnmapped[u.Key] = sCleaned;
+			}
+			foreach (var e in existing) {
+				var sCleaned = CleanStringForStep2(e.Key);
+				if (!cleanedExisting.ContainsKey(sCleaned)) {
+					//cleaned version is the key
+					cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+				}
+			}
+			_unslotted = new Dictionary<string, int>();
+			unslotted = new Dictionary<long, string>();
+			foreach (var u in cleanedUnmapped) {
+				// cleanedunmap[itemid, cleaned]
+				// cleanedExisting[cleaned, uncleaned]
+				if (cleanedExisting.ContainsKey(u.Value)) {
+					// if cleanedversion = cleanversion
+					// find the 
 
-                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
-                }
-                else
-                {
-                    unslotted[u.Key] = u.Value;
-                    if (!_unslotted.ContainsKey(u.Value))
-                    {
-                        _unslotted[u.Value] = 0;
-                    }
-                    _unslotted[u.Value]++;
-                }
-            }
-            if (_unslotted.Count == 0) return changelist;
-            /// ------ third try use end label only
-            cleanedExisting = new SortedDictionary<string, string>();
-            cleanedUnmapped = new SortedDictionary<long, string>();
+					changelist[u.Key] = existing[cleanedExisting[u.Value]];
+				} else {
+					unslotted[u.Key] = u.Value;
+					if (!_unslotted.ContainsKey(u.Value)) {
+						_unslotted[u.Value] = 0;
+					}
+					_unslotted[u.Value]++;
+				}
+			}
+			if (_unslotted.Count == 0) return changelist;
+			/// ------ third try use end label only
+			cleanedExisting = new SortedDictionary<string, string>();
+			cleanedUnmapped = new SortedDictionary<long, string>();
 
-            foreach (var u in unslotted)
-            {
-                var sCleaned = CleanStringForStep2(fn.RevCar(u.Value));
-                cleanedUnmapped[u.Key] = sCleaned;
-            }
-            foreach (var e in existing)
-            {
-                var sCleaned = CleanStringForStep2(fn.RevCar(e.Key));
-                if (!cleanedExisting.ContainsKey(sCleaned))
-                {
-                    //cleaned version is the key
-                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
-                }
-            }
-            _unslotted = new Dictionary<string, int>();
-            unslotted = new Dictionary<long, string>();
-            foreach (var u in cleanedUnmapped)
-            {
-                // cleanedunmap[itemid, cleaned]
-                // cleanedExisting[cleaned, uncleaned]
-                if (cleanedExisting.ContainsKey(u.Value))
-                {
-                    // if cleanedversion = cleanversion
-                    // find the 
+			foreach (var u in unslotted) {
+				var sCleaned = CleanStringForStep2(fn.RevCar(u.Value));
+				cleanedUnmapped[u.Key] = sCleaned;
+			}
+			foreach (var e in existing) {
+				var sCleaned = CleanStringForStep2(fn.RevCar(e.Key));
+				if (!cleanedExisting.ContainsKey(sCleaned)) {
+					//cleaned version is the key
+					cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+				}
+			}
+			_unslotted = new Dictionary<string, int>();
+			unslotted = new Dictionary<long, string>();
+			foreach (var u in cleanedUnmapped) {
+				// cleanedunmap[itemid, cleaned]
+				// cleanedExisting[cleaned, uncleaned]
+				if (cleanedExisting.ContainsKey(u.Value)) {
+					// if cleanedversion = cleanversion
+					// find the 
 
-                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
-                }
-                else
-                {
-                    unslotted[u.Key] = u.Value;
-                    if (!_unslotted.ContainsKey(u.Value))
-                    {
-                        _unslotted[u.Value] = 0;
-                    }
-                    _unslotted[u.Value]++;
-                }
-            }
-            if (_unslotted.Count == 0) return changelist;
-            return changelist;
-        }
+					changelist[u.Key] = existing[cleanedExisting[u.Value]];
+				} else {
+					unslotted[u.Key] = u.Value;
+					if (!_unslotted.ContainsKey(u.Value)) {
+						_unslotted[u.Value] = 0;
+					}
+					_unslotted[u.Value]++;
+				}
+			}
+			if (_unslotted.Count == 0) return changelist;
+			return changelist;
+		}
 
-        private string CleanStringForStep2(string str)
-        {
-            //remove non alphanumeric and space
-            // make singular
-            // replace phrase
-            // remove stem words, and replace individual words 
-            var s = str;
-            s = fn.AlphaNumericSpaceAndSquareBrackets(s);
-            s = fn.SingularForm(s);
-            s = fn.ReplacePhraseAllLevel(s);
-            //s = fn.RemoveNondictionaryWordAllLevel(s);
-            s = fn.NoStemWordAllLevel(s);
-            s = fn.ReplacePhraseAllLevel(s);
-            return s;
+		private string CleanStringForStep2(string str) {
+			//remove non alphanumeric and space
+			// make singular
+			// replace phrase
+			// remove stem words, and replace individual words 
+			var s = str;
+			s = fn.AlphaNumericSpaceAndSquareBrackets(s);
+			s = fn.SingularForm(s);
+			s = fn.ReplacePhraseAllLevel(s);
+			//s = fn.RemoveNondictionaryWordAllLevel(s);
+			s = fn.NoStemWordAllLevel(s);
+			s = fn.ReplacePhraseAllLevel(s);
+			return s;
 
-        }
-        private SortedDictionary<string, long> _GetExistingClusterTree(int tableId)
-        {
-            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
-            string sqltxt_old = string.Format(@"
+		}
+		private SortedDictionary<string, long> _GetExistingClusterTree(int tableId) {
+			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+			string sqltxt_old = string.Format(@"
 select id, label, iconum_count
 	from cluster_name_tree_new c
 	where c.norm_table_id = {0}", tableId);
 
-            string sqltxt = string.Format(@"
+			string sqltxt = string.Format(@"
 select distinct c.id, c.iconum_count, tf.raw_row_label
 	from cluster_name_tree_new c
 	join norm_name_tree t on c.id = t.cluster_id_new 
@@ -4124,40 +4090,32 @@ where c.norm_table_id = {0}
 	and t.norm_table_id = {0}
 order by c.iconum_count
 ", tableId);
-            int idx = 0;
-            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
-            {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
-                {
-                    while (sdr.Read())
-                    {
-                        try
-                        {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(2);
-                            if (!string.IsNullOrWhiteSpace(rawlabel))
-                            {
-                                entries[rawlabel] = id;
+			int idx = 0;
+			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
+				//cmd.Parameters.AddWithValue("@iconum", iconum);
+				sqlConn.Open();
+				using (var sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						try {
+							var id = sdr.GetInt64(0);
+							var rawlabel = sdr.GetStringSafe(2);
+							if (!string.IsNullOrWhiteSpace(rawlabel)) {
+								entries[rawlabel] = id;
 
-                            }
-                        }
-                        catch
-                        {
+							}
+						} catch {
 
-                        }
-                    }
+						}
+					}
 
-                }
-            }
-            return entries;
-        }
+				}
+			}
+			return entries;
+		}
 
-        private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId)
-        {
-            string sqltxt = string.Format(@"
+		private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId) {
+			string sqltxt = string.Format(@"
 
 select t.id, tf.raw_row_label
 	from norm_name_tree t 
@@ -4168,11 +4126,10 @@ where t.norm_table_id = {0}
 	and (tf.raw_row_label = '') is not true
 
 ", tableId, iconum);
-            return _GetIconumRawLabelsHelper(sqltxt);
-        }
-        private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, Guid docid, int tableId)
-        {
-            string sqltxt = string.Format(@"
+			return _GetIconumRawLabelsHelper(sqltxt);
+		}
+		private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, Guid docid, int tableId) {
+			string sqltxt = string.Format(@"
 
 select t.id, tf.raw_row_label
 	from norm_name_tree t 
@@ -4183,43 +4140,35 @@ where t.norm_table_id = {0}
 	and (tf.raw_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
-            return _GetIconumRawLabelsHelper(sqltxt);
-        }
-        private SortedDictionary<long, string> _GetIconumRawLabelsHelper(string sqltxt)
-        {
-            SortedDictionary<long, string> entries = new SortedDictionary<long, string>();
+			return _GetIconumRawLabelsHelper(sqltxt);
+		}
+		private SortedDictionary<long, string> _GetIconumRawLabelsHelper(string sqltxt) {
+			SortedDictionary<long, string> entries = new SortedDictionary<long, string>();
 
 
-            int idx = 0;
-            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
-            {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
-                {
-                    while (sdr.Read())
-                    {
-                        try
-                        {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
-                            if (!string.IsNullOrWhiteSpace(rawlabel))
-                            {
-                                entries[id] = rawlabel;
+			int idx = 0;
+			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
+				//cmd.Parameters.AddWithValue("@iconum", iconum);
+				sqlConn.Open();
+				using (var sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						try {
+							var id = sdr.GetInt64(0);
+							var rawlabel = sdr.GetStringSafe(1);
+							if (!string.IsNullOrWhiteSpace(rawlabel)) {
+								entries[id] = rawlabel;
 
-                            }
-                        }
-                        catch
-                        {
+							}
+						} catch {
 
-                        }
-                    }
+						}
+					}
 
-                }
-            }
-            return entries;
-        }
+				}
+			}
+			return entries;
+		}
 
-    }
+	}
 }
