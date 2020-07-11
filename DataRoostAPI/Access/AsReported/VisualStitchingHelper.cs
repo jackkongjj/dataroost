@@ -4371,9 +4371,8 @@ select distinct ch.id, nntf.raw_row_label
                         {
                             var id = sdr.GetInt64(0);
                             var rawlabel = sdr.GetStringSafe(1);
-								entries[rawlabel] = id;
+							entries[rawlabel] = id;
 
-							}
 						} catch {
 
 						}
