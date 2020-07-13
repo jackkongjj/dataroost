@@ -814,7 +814,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 				pid = "" + node.ParentID.Value;
 
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
-				using (var cmd = new NpgsqlCommand(string.Format(query, node.Presentationid, node.Title, -1, pid, node.Role == "header"), conn)) {
+				using (var cmd = new NpgsqlCommand(string.Format(query, node.Presentationid, node.Title.Replace("'", "''"), -1, pid, node.Role == "header"), conn)) {
 					conn.Open();
 					//cmd.ExecuteNonQuery();
 					using (var sdr = cmd.ExecuteReader()) {
