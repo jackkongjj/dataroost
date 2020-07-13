@@ -3920,66 +3920,56 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(iconums, NullGuid);
+			_ExtendHierarchy(iconums, NullGuid);
 			return true;
 		}
 		public bool ExtendClusterByDocument(int iconum, Guid docid) {
 			List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(iconums, docid);
-            return true;
-        }
-        private bool _ExtendHierarchy(List<int> iconums, Guid guid)
-        {
-            var iconum = iconums.First();
-            var tableIDs = TableIDs();
-            if (guid == NullGuid)
-            {
-                foreach (var t in tableIDs)
-                {
-                    _CleanupHierarchy(iconum, t);
-                }
-            }
-            foreach (var t in tableIDs)
-            {
-                var existing = _GetExistingClusterHierarchy(iconum, t);
-                foreach (var i in iconums)
-                {
-                    _unslotted = new Dictionary<string, int>();
-                    SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
-                    if (guid != NullGuid)
-                    {
-                        unmapped = _GetIconumRawLabels(i, guid, t);
-                    }
-                    else
-                    {
+			_ExtendHierarchy(iconums, docid);
+			return true;
+		}
+		private bool _ExtendHierarchy(List<int> iconums, Guid guid) {
+			var iconum = iconums.First();
+			var tableIDs = TableIDs();
+			if (guid == NullGuid) {
+				foreach (var t in tableIDs) {
+					_CleanupHierarchy(iconum, t);
+				}
+			}
+			foreach (var t in tableIDs) {
+				var existing = _GetExistingClusterHierarchy(iconum, t);
+				foreach (var i in iconums) {
+					_unslotted = new Dictionary<string, int>();
+					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
+					if (guid != NullGuid) {
+						unmapped = _GetIconumRawLabels(i, guid, t);
+					} else {
 
-                        unmapped = _GetIconumRawLabels(i, t);
-                    }
-                    var changeList = _getChangeList(existing, unmapped);
-                    Console.WriteLine("Slotted:");
-                    int countSlotted = 0;
-                    foreach (var c in changeList)
-                    {
-                        Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
-                        countSlotted++;
-                    }
-                    Console.WriteLine("End Slotted");
-                    //Console.ReadLine();
-                    Console.WriteLine("Unslotted");
-                    int countUnslotted = 0;
-                    foreach (var u in _unslotted)
-                    {
+						unmapped = _GetIconumRawLabels(i, t);
+					}
+					var changeList = _getChangeList(existing, unmapped);
+					Console.WriteLine("Slotted:");
+					int countSlotted = 0;
+					foreach (var c in changeList) {
+						Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
+						countSlotted++;
+					}
+					Console.WriteLine("End Slotted");
+					//Console.ReadLine();
+					Console.WriteLine("Unslotted");
+					int countUnslotted = 0;
+					foreach (var u in _unslotted) {
 
-                        Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
-                        countUnslotted += u.Value;
-                    }
-                    Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
-                    //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
-                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
-                }
-            }
+						Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
+						countUnslotted += u.Value;
+					}
+					Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
+					//_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
+					_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+				}
+			}
 			return true;
 		}
 		private bool _Extend(List<int> iconums, Guid guid) {
@@ -4019,44 +4009,38 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			}
 			return true;
 		}
-        private List<int> TableIDs()
-        {
-            List<int> dataNodes = new List<int>();
-            dataNodes = new List<int>() { 1, 2, 4, 5 };
-            return dataNodes;
-            string sqltxt = string.Format(@"
+		private List<int> TableIDs() {
+			List<int> dataNodes = new List<int>();
+			dataNodes = new List<int>() { 1, 2, 4, 5 };
+			return dataNodes;
+			string sqltxt = string.Format(@"
   select nt.id 
   from norm_table nt
 --  where nt.label = 'Average Balance Sheet'
   order by id ");
-            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
-            {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
-                {
-                    while (sdr.Read())
-                    {
-                        int value = sdr.GetInt32(0);
-                        dataNodes.Add(value);
-                    }
+			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
+				//cmd.Parameters.AddWithValue("@iconum", iconum);
+				sqlConn.Open();
+				using (var sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						int value = sdr.GetInt32(0);
+						dataNodes.Add(value);
+					}
 
-                }
-            }
-            return dataNodes;
-        }
-        private bool _CleanupHierarchy(int iconum, int tableId)
-        {
-            var dict = _CleanupGetMissingHierarchy(iconum, tableId);
-            _CleanUpdateClusterIdForHierarchy(iconum, tableId, dict);
-            return true;
-        }
-        private SortedDictionary<string, long> _CleanupGetMissingHierarchy(int iconum, int tableId)
-        {
-            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+				}
+			}
+			return dataNodes;
+		}
+		private bool _CleanupHierarchy(int iconum, int tableId) {
+			var dict = _CleanupGetMissingHierarchy(iconum, tableId);
+			_CleanUpdateClusterIdForHierarchy(iconum, tableId, dict);
+			return true;
+		}
+		private SortedDictionary<string, long> _CleanupGetMissingHierarchy(int iconum, int tableId) {
+			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
-            string sqltxt = string.Format(@"
+			string sqltxt = string.Format(@"
 
 select p.item_code, max(cm.cluster_hierarchy_id)
 	from prod_data p
@@ -4070,36 +4054,29 @@ select p.item_code, max(cm.cluster_hierarchy_id)
 	group by p.item_code
 	having count (distinct cm.cluster_hierarchy_id) = 1  and  count(*) > count(cm.cluster_hierarchy_id);
 ", iconum, tableId);
-            int idx = 0;
-            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
-            {
-                cmd.CommandTimeout = 600;
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
-                {
-                    while (sdr.Read())
-                    {
-                        try
-                        {
-                            var itemCode = sdr.GetStringSafe(0);
-                            var id = sdr.GetInt64(1);
-                            entries[itemCode] = id;
-                        }
-                        catch
-                        {
+			int idx = 0;
+			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
+				cmd.CommandTimeout = 600;
+				//cmd.Parameters.AddWithValue("@iconum", iconum);
+				sqlConn.Open();
+				using (var sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						try {
+							var itemCode = sdr.GetStringSafe(0);
+							var id = sdr.GetInt64(1);
+							entries[itemCode] = id;
+						} catch {
 
-                        }
-                    }
+						}
+					}
 
-                }
-            }
-            return entries;
-        }
-        private bool _CleanUpdateClusterIdForHierarchy(int iconum, int tableId, SortedDictionary<string, long> entries)
-        {
-            string sql_update_format = @"
+				}
+			}
+			return entries;
+		}
+		private bool _CleanUpdateClusterIdForHierarchy(int iconum, int tableId, SortedDictionary<string, long> entries) {
+			string sql_update_format = @"
 
 insert into cluster_mapping (cluster_hierarchy_id, norm_name_tree_flat_id)
 select {1}, ntf.id
@@ -4114,83 +4091,69 @@ select {1}, ntf.id
 		and p.item_code = '{0}'
  		and cm.norm_name_tree_flat_id is null;
 ";
-            foreach (var e in entries)
-            {
-                // e.Value is the cluster_hieararchy_id, e.key is the itemcode. 
-                string sql_update = string.Format(sql_update_format, e.Key, e.Value, iconum, tableId);
-                //Console.WriteLine(sql_update);
-                using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-                {
-                    using (var cmd = new NpgsqlCommand(sql_update, sqlConn))
-                    {
-                        cmd.CommandTimeout = 600;
-                        sqlConn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
-            return true;
-        }
-        private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted)
-        {
-            string slottedpath = string.Format("{0}_table{1}_slotted_h.csv", iconum, tableid);
-            string unslottedpath = string.Format("{0}_table{1}_unslotted_h.csv", iconum, tableid);
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(slottedpath))
-            {
-                foreach (var c in changeList)
-                {
-                    sw.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
-                }
-            }
-            using (System.IO.StreamWriter sw = System.IO.File.AppendText(unslottedpath))
-            {
-                foreach (var u in unslotted)
-                {
-                    sw.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
-                }
-            }
+			foreach (var e in entries) {
+				// e.Value is the cluster_hieararchy_id, e.key is the itemcode. 
+				string sql_update = string.Format(sql_update_format, e.Key, e.Value, iconum, tableId);
+				//Console.WriteLine(sql_update);
+				using (var sqlConn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(sql_update, sqlConn)) {
+						cmd.CommandTimeout = 600;
+						sqlConn.Open();
+						cmd.ExecuteNonQuery();
+					}
+				}
+			}
+			return true;
+		}
+		private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
+			string slottedpath = string.Format("{0}_table{1}_slotted_h.csv", iconum, tableid);
+			string unslottedpath = string.Format("{0}_table{1}_unslotted_h.csv", iconum, tableid);
+			using (System.IO.StreamWriter sw = System.IO.File.AppendText(slottedpath)) {
+				foreach (var c in changeList) {
+					sw.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
+				}
+			}
+			using (System.IO.StreamWriter sw = System.IO.File.AppendText(unslottedpath)) {
+				foreach (var u in unslotted) {
+					sw.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
+				}
+			}
 
-            return true;
-        }
-        private bool _WriteChangeListToDBForHierarchy(long iconum, Dictionary<long, long> changeList, Dictionary<string, int> unslotted)
-        {
-            foreach (var newclusterid in changeList.GroupBy(x => x.Value).Select(x => x.First().Value))
-            {
-                var changeIds = changeList.Where(x => x.Value == newclusterid).Select(x => x.Key);
-                _UpdateClusterHierarchyId(changeIds, newclusterid);
-            }
-            //foreach (var c in changeList)
-            //{
-            //    sw.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
-            //}
+			return true;
+		}
+		private bool _WriteChangeListToDBForHierarchy(long iconum, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
+			foreach (var newclusterid in changeList.GroupBy(x => x.Value).Select(x => x.First().Value)) {
+				var changeIds = changeList.Where(x => x.Value == newclusterid).Select(x => x.Key);
+				_UpdateClusterHierarchyId(changeIds, newclusterid);
+			}
+			//foreach (var c in changeList)
+			//{
+			//    sw.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
+			//}
 
-            return true;
-        }
+			return true;
+		}
 
-        private bool _UpdateClusterHierarchyId(IEnumerable<long> ids, long clusterId)
-        {
-            string sql_update_format = @"
+		private bool _UpdateClusterHierarchyId(IEnumerable<long> ids, long clusterId) {
+			string sql_update_format = @"
             insert into cluster_mapping (cluster_hierarchy_id, norm_name_tree_flat_id)
             select {0} id, x
             FROM  	unnest(ARRAY[{1}]) x
 ";
-            if (ids != null && ids.Count() > 0 && clusterId > 0)
-            {
-                string sql_update = string.Format(sql_update_format, clusterId, string.Join(",", ids));
-                Console.WriteLine(sql_update);
-                using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-                {
-                    using (var cmd = new NpgsqlCommand(sql_update, sqlConn))
-                    {
-                        cmd.CommandTimeout = 600;
-                        sqlConn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
+			if (ids != null && ids.Count() > 0 && clusterId > 0) {
+				string sql_update = string.Format(sql_update_format, clusterId, string.Join(",", ids));
+				Console.WriteLine(sql_update);
+				using (var sqlConn = new NpgsqlConnection(PGConnectionString())) {
+					using (var cmd = new NpgsqlCommand(sql_update, sqlConn)) {
+						cmd.CommandTimeout = 600;
+						sqlConn.Open();
+						cmd.ExecuteNonQuery();
+					}
+				}
+			}
 
-            return true;
-        }
+			return true;
+		}
 
 		private Dictionary<string, int> _unslotted = new Dictionary<string, int>();
 
@@ -4325,27 +4288,23 @@ order by c.iconum_count
 						try {
 							var id = sdr.GetInt64(0);
 							var rawlabel = sdr.GetStringSafe(2);
-                            if (!string.IsNullOrWhiteSpace(rawlabel))
-                            {
-                                entries[rawlabel] = id;
+							if (!string.IsNullOrWhiteSpace(rawlabel)) {
+								entries[rawlabel] = id;
 
-                            }
-                        }
-                        catch
-                        {
+							}
+						} catch {
 
-                        }
-                    }
+						}
+					}
 
-                }
-            }
-            return entries;
-        }
-        private SortedDictionary<string, long> _GetExistingClusterHierarchy(int iconum, int tableId)
-        {
-            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+				}
+			}
+			return entries;
+		}
+		private SortedDictionary<string, long> _GetExistingClusterHierarchy(int iconum, int tableId) {
+			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
-            string sqltxt = string.Format(@"
+			string sqltxt = string.Format(@"
 select distinct ch.id, nntf.raw_row_label
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
@@ -4357,20 +4316,16 @@ select distinct ch.id, nntf.raw_row_label
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
-            int idx = 0;
-            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
-            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
-            {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
-                {
-                    while (sdr.Read())
-                    {
-                        try
-                        {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
+			int idx = 0;
+			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
+				//cmd.Parameters.AddWithValue("@iconum", iconum);
+				sqlConn.Open();
+				using (var sdr = cmd.ExecuteReader()) {
+					while (sdr.Read()) {
+						try {
+							var id = sdr.GetInt64(0);
+							var rawlabel = sdr.GetStringSafe(1);
 							entries[rawlabel] = id;
 
 						} catch {
