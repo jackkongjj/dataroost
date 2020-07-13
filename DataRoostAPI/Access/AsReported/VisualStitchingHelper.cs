@@ -230,6 +230,10 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			public int iconum { get; set; }
 			[JsonProperty("offset")]
 			public string offset { get; set; }
+			[JsonProperty("value")]
+			public string value { get; set; }
+			[JsonProperty("numeric_value")]
+			public Decimal numeric_value { get; set; }
 		}
 
 		public class TableOffSetNode {
@@ -1829,17 +1833,21 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 
 		private void populateClusterNameTree(string damid, Dictionary<int, ClusterNameTreeNode> clusteridmap, bool isTest = false) {
 			string query = @"
-				select * from cluster_mapping as cm
+				select cluster_hierarchy_id, norm_name_tree_flat_id, id, document_id, iconum, raw_row_label, raw_column_label, 
+       cleaned_row_label,cleaned_column_label,raw_table_title, norm_table_title, xbrl_tag, item_offset, value, numeric_value
+from cluster_mapping as cm
 				join norm_name_tree_flat as f 
 					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' and item_offset like '%|r0'
 			  order by cluster_hierarchy_id, f.table_id";
 
 			if (isTest) {
 				query = @"
-				select * from cluster_mapping_test as cm
+				select cluster_hierarchy_id, norm_name_tree_flat_id, id, document_id, iconum, raw_row_label, raw_column_label, 
+       cleaned_row_label,cleaned_column_label,raw_table_title, norm_table_title, xbrl_tag, item_offset, value, numeric_value
+from cluster_mapping_test as cm
 				join norm_name_tree_flat as f 
 					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' and item_offset like '%|r0'
-        order by cluster_hierarchy_id, f.table_id";
+			  order by cluster_hierarchy_id, f.table_id";
 			}
 
 			using (var conn = new NpgsqlConnection(PGConnectionString())) {
@@ -1884,7 +1892,9 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 				documentid = sdr.GetGuid(3).ToString(),
 				iconum = sdr.GetInt32(4),
 				id = sdr.GetInt64(2),
-				offset = sdr.GetStringSafe(12)
+				offset = sdr.GetStringSafe(12),
+				value = sdr.GetStringSafe(13),
+				numeric_value = sdr.GetDecimal(14)
 			};
 			/*
 			foreach (ClusterNameTreeNode n in pnode.Nodes) {
