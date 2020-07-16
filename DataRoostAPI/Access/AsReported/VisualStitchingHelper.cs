@@ -204,36 +204,36 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 		}
 
 		public class ClusterNameTreeNode {
+			[JsonProperty("documentid")]
+			public string documentid { get; set; }
+			[JsonProperty("hiearachyid")]
+			public int Hiearachyid { get; set; }
+			[JsonProperty("iconum")]
+			public int iconum { get; set; }
 			[JsonProperty("id")]
 			public long id { get; set; }
+			[JsonProperty("industry")]
+			public string Industry { get; set; }
+			[JsonProperty("nodes")]
+			public List<ClusterNameTreeNode> Nodes { get; set; }
 			[JsonProperty("normtableid")]
 			public int Normtableid { get; set; }
 			[JsonProperty("normtitle")]
 			public string NormtableTitle { get; set; }
-			[JsonProperty("industry")]
-			public string Industry { get; set; }
-			[JsonProperty("hiearachyid")]
-			public int Hiearachyid { get; set; }
-			[JsonProperty("presentationid")]
-			public int Presentationid { get; set; }
-			[JsonProperty("title")]
-			public string Title { get; set; }
-			[JsonProperty("nodes")]
-			public List<ClusterNameTreeNode> Nodes { get; set; }
-			[JsonProperty("parentid")]
-			public int? ParentID { get; set; }
-			[JsonProperty("role")]
-			public string Role { get; set; }
-			[JsonProperty("documentid")]
-			public string documentid { get; set; }
-			[JsonProperty("iconum")]
-			public int iconum { get; set; }
+			[JsonProperty("numericvalue")]
+			public string numericvalue { get; set; }
 			[JsonProperty("offset")]
 			public string offset { get; set; }
+			[JsonProperty("parentid")]
+			public int? ParentID { get; set; }
+			[JsonProperty("presentationid")]
+			public int Presentationid { get; set; }
+			[JsonProperty("role")]
+			public string Role { get; set; }
+			[JsonProperty("title")]
+			public string Title { get; set; }
 			[JsonProperty("value")]
 			public string value { get; set; }
-			[JsonProperty("numeric_value")]
-			public Decimal numeric_value { get; set; }
 		}
 
 		public class TableOffSetNode {
@@ -1894,7 +1894,7 @@ from cluster_mapping_test as cm
 				id = sdr.GetInt64(2),
 				offset = sdr.GetStringSafe(12),
 				value = sdr.GetStringSafe(13),
-				numeric_value = sdr.GetDecimal(14)
+				numericvalue = sdr.GetDecimal(14).ToString()
 			};
 			/*
 			foreach (ClusterNameTreeNode n in pnode.Nodes) {
