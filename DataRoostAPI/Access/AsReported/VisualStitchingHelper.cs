@@ -1833,8 +1833,8 @@ order by norm_table_title, table_id, indent,adjusted_row_id
 
 		private void populateClusterNameTree(string damid, Dictionary<int, ClusterNameTreeNode> clusteridmap, bool isTest = false) {
 			string query = @"
-				select cluster_hierarchy_id, norm_name_tree_flat_id, id, document_id, iconum, raw_row_label, raw_column_label, 
-       cleaned_row_label,cleaned_column_label,raw_table_title, norm_table_title, xbrl_tag, item_offset, value, numeric_value
+				select distinct cluster_hierarchy_id, norm_name_tree_flat_id, id, document_id, iconum, raw_row_label, raw_column_label, 
+       cleaned_row_label,cleaned_column_label,raw_table_title, norm_table_title, xbrl_tag, item_offset, value, numeric_value, f.table_id
 from cluster_mapping as cm
 				join norm_name_tree_flat as f 
 					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' and item_offset like '%|r0'
@@ -1842,8 +1842,8 @@ from cluster_mapping as cm
 
 			if (isTest) {
 				query = @"
-				select cluster_hierarchy_id, norm_name_tree_flat_id, id, document_id, iconum, raw_row_label, raw_column_label, 
-       cleaned_row_label,cleaned_column_label,raw_table_title, norm_table_title, xbrl_tag, item_offset, value, numeric_value
+				select distinct cluster_hierarchy_id, norm_name_tree_flat_id, id, document_id, iconum, raw_row_label, raw_column_label, 
+       cleaned_row_label,cleaned_column_label,raw_table_title, norm_table_title, xbrl_tag, item_offset, value, numeric_value , f.table_id
 from cluster_mapping_test as cm
 				join norm_name_tree_flat as f 
 					on cm.norm_name_tree_flat_id = f.id	and f.col_id = 1 and f.document_id = '{0}' and item_offset like '%|r0'
