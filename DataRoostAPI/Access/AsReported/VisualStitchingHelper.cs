@@ -1877,6 +1877,10 @@ from cluster_mapping_test as cm
 
 			string title = sdr.GetStringSafe(7);
 			int? parent_id = null;
+			String numericvalue = "";
+			if (!sdr.IsDBNull(14)) {
+				numericvalue = sdr.GetDecimal(14).ToString();
+			}
 
 			ClusterNameTreeNode node = new ClusterNameTreeNode
 			{
@@ -1894,7 +1898,7 @@ from cluster_mapping_test as cm
 				id = sdr.GetInt64(2),
 				offset = sdr.GetStringSafe(12),
 				value = sdr.GetStringSafe(13),
-				numericvalue = sdr.GetDecimal(14).ToString()
+				numericvalue = numericvalue
 			};
 			/*
 			foreach (ClusterNameTreeNode n in pnode.Nodes) {
