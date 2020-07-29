@@ -623,7 +623,7 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 			return "Success";
 		}
 
-		public string UpdateTableTitleCorrect(String damid, int iconum, int tableid, int fileid, bool iscorrect, bool iscarboncorrect) {
+		public string UpdateTableTitleCorrect(String damid, int iconum, int tableid, int fileid, string iscorrect, string iscarboncorrect) {
 			String query = @"UPDATE html_table_identification SET is_correct={4},is_carbon_hier_correct={5} WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
 			try {
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
