@@ -607,7 +607,17 @@ SELECT coalesce(id, -1) FROM json where hashkey = @hashkey LIMIT 1;
 		}
 
 		public string UpdateTableTitleComments(String damid, int iconum, int tableid, int fileid, String newtitle) {
-			String query = @"UPDATE html_table_identification SET comments='{4}' WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ";
+			String query = @"
+                                do $$
+                                begin
+                                    IF exists (select  from html_table_identification  WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3} ) then 
+	                                    UPDATE html_table_identification SET comments='{4}' WHERE document_id='{0}' and iconum={1} and table_id={2} and file_id={3};
+	                                else 
+	                                    insert into html_table_identification (document_id, iconum, table_id, file_id, comments) values ('{0}', {1}, {2}, {3}, '{4}'); 
+		                            end if;
+		                        end
+		                        $$
+                            ";
 			try {
 				using (var conn = new NpgsqlConnection(PGConnectionString())) {
 					using (var cmd = new NpgsqlCommand(string.Format(query, damid, iconum, tableid, fileid, newtitle), conn)) {
