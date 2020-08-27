@@ -3026,9 +3026,9 @@ where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
 
         public List<TimeSlice> SmartTimeSliceAutostitching(int iconum, Guid currDocId, int currFileId, Guid hisDocId, int hisFileId, List<string> offsets)
         {
-            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
+            string test_autostitchingurl = @"https://auto-stitching-prod.factset.io/api/v1/stitch1?historicalDocumentId=61212c7d-7453-e811-80f1-8cdcd4af21e4&historicalFileId=15&currentDocumentId=00033237-499b-e811-80f9-8cdcd4af21e4&currentFileId=11&companyId=28054";
             string autostitchingbasepath = @"https://auto-stitching-prod.factset.io/";
-            string url_pattern = autostitchingbasepath + @"api/v1/stitch?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
+            string url_pattern = autostitchingbasepath + @"api/v1/stitch1?historicalDocumentId={3}&historicalFileId={4}&currentDocumentId={1}&currentFileId={2}&companyId={0}";
             string autostitchingurl = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), currFileId, hisDocId.ToString().ToLower(), hisFileId);
             var outputresult = GetWebRequest(autostitchingurl);
             if (!string.IsNullOrWhiteSpace(outputresult))
