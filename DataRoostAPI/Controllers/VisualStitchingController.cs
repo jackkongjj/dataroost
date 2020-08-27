@@ -366,9 +366,17 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
 				var vsHelper = new VisualStitchingHelper(sfConnectionString);
 				if (input.StringData.ContainsKey("iscorrect")) {
-					bool iscorrect = Boolean.Parse(input.StringData["iscorrect"]);
-					bool iscarboncorrect = Boolean.Parse(input.StringData["iscarboncorrect"]);
-					return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, iscorrect, iscarboncorrect);
+					//bool iscorrect = Boolean.Parse(input.StringData["iscorrect"]);
+					//bool iscarboncorrect = Boolean.Parse(input.StringData["iscarboncorrect"]);
+                    if (input.StringData["iscorrect"] == null)
+                    {
+                        input.StringData["iscorrect"] = "null";
+                    }
+                    if (input.StringData["iscarboncorrect"] == null)
+                    {
+                        input.StringData["iscarboncorrect"] = "null";
+                    }
+                    return vsHelper.UpdateTableTitleCorrect(DamDocumentId.ToString(), iconum, tableid, fileid, input.StringData["iscorrect"], input.StringData["iscarboncorrect"]);
 				} else if (input.StringData.ContainsKey("normtitleid")) {
 					try {
 						int newid = Int32.Parse(input.StringData["normtitleid"]);
