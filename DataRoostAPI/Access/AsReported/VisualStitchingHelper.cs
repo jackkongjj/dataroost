@@ -1308,7 +1308,9 @@ SELECT  [Id]
 
 
 		public static string PGConnectionString() {
-			return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+            return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+
+            return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
 		}
 
 		private List<Profile> GetProfilePostGres() {
@@ -4157,7 +4159,12 @@ select {1}, ntf.id
             foreach (var newclusterid in changeList.GroupBy(x => x.Value).Select(x => x.First().Value))
             {
                 var changeIds = changeList.Where(x => x.Value == newclusterid).Select(x => x.Key);
-                _UpdateClusterHierarchyId(changeIds, newclusterid);
+                try
+                {
+                    _UpdateClusterHierarchyId(changeIds, newclusterid);
+
+                }
+                catch { }
             }
             //foreach (var c in changeList)
             //{
@@ -4357,6 +4364,19 @@ select distinct ch.id, nntf.raw_row_label
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
+
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, nntf.raw_row_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation cp 
+		on cp.id = ch.cluster_presentation_id
+	where cp.norm_table_id = {1} and cp.industry_id = 1
+		and coalesce( trim(nntf.raw_row_label),'')<>''
+", iconum, tableId);
             int idx = 0;
             using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -4371,29 +4391,63 @@ select distinct ch.id, nntf.raw_row_label
                         {
                             var id = sdr.GetInt64(0);
                             var rawlabel = sdr.GetStringSafe(1);
-								entries[rawlabel] = id;
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
 
-							}
-						} catch {
+
+                        } catch {
 
 						}
 					}
 
 				}
 			}
-			return entries;
+
+            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
 		}
 
 		private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId) {
 			string sqltxt = string.Format(@"
 
-select t.id, tf.raw_row_label
+  select distinct tf.id, tf.raw_row_label
 	from norm_name_tree t 
-	join norm_name_tree_flat tf on t.id = tf.id
-where t.norm_table_id = {0}
-	and t.iconum = {1} and tf.iconum = {1}
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
+where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+	and tf.iconum = {1} 
 	and t.cluster_id_new is null
 	and (tf.raw_row_label = '') is not true
+
 
 ", tableId, iconum);
 			return _GetIconumRawLabelsHelper(sqltxt);
@@ -4401,11 +4455,12 @@ where t.norm_table_id = {0}
 		private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, Guid docid, int tableId) {
 			string sqltxt = string.Format(@"
 
-select t.id, tf.raw_row_label
+  select distinct tf.id, tf.raw_row_label
 	from norm_name_tree t 
-	join norm_name_tree_flat tf on t.id = tf.id
-where t.norm_table_id = {0}
-	and t.iconum = {1} and t.document_id = '{2}'
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
+where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+	and tf.iconum = {1} and tf.document_id = '{2}'
 	and t.cluster_id_new is null
 	and (tf.raw_row_label = '') is not true
 
