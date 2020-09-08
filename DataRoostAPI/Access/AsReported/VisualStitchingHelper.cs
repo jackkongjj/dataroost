@@ -29,7 +29,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 		}
 
 		private string factsetIOconnString = "Host=ip-172-31-81-210.manager.factset.io;Port=32791;Username=uyQKYrcTSrnnqB;Password=NoCLf_xBeXiB0UXZjhZUNg7Zx8;Database=di8UFb70sJdA5e;sslmode=Require;Trust Server Certificate=true;";
-		private string connString = "Host=ffnametree.cluster-ccr4dwxpskgi.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedb_admin_user;Password=5Ls75tj6;Database=nametreedb;sslmode=Require;Trust Server Certificate=true;";
+		private string connString = "Host=nametreedata.cluster-ccr4dwxpskgi.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=hAJXbQGS;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
 
 		public string GetJson(int id) {
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
