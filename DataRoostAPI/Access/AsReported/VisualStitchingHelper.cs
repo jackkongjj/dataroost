@@ -1322,8 +1322,7 @@ SELECT  [Id]
 
 
 		public static string PGConnectionString() {
-            return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
-
+            //return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
             return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
 		}
 
