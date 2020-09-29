@@ -3037,7 +3037,8 @@ where df.DocumentId = @DamDocumentID and df.FileType= 'flyt'
             }
             else
             {
-                throw new Exception("No stitching service");
+                //throw new Exception("No stitching service");
+                return null;
             }
         }
 
