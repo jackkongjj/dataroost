@@ -3948,14 +3948,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			_ExtendHierarchy(iconums, NullGuid);
 			return true;
 		}
-		public bool ExtendClusterByDocument(int iconum, Guid docid) {
+		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
 			List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
-			_ExtendHierarchy(iconums, docid);
+			_ExtendHierarchy(iconums, docid, tableid);
 			return true;
 		}
-		private bool _ExtendHierarchy(List<int> iconums, Guid guid) {
+		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
 			var iconum = iconums.First();
 			var tableIDs = TableIDs();
 			if (guid == NullGuid) {
@@ -3964,6 +3964,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 				}
 			}
 			foreach (var t in tableIDs) {
+                if (tableid > 0 && t != tableid)
+                {
+                    continue;
+                }
 				var existing = _GetExistingClusterHierarchy(iconum, t);
 				foreach (var i in iconums) {
 					_unslotted = new Dictionary<string, int>();

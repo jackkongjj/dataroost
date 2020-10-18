@@ -784,7 +784,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 };
             }
         }
+        [Route("cluster/extend/{iconum}/{docId}/{tableid}")]
+        [HttpGet]
+        public HttpResponseMessage ClusterTreeExtendPut3(int iconum, Guid docId, int tableid)
+        {
+            try
+            {
+                if (iconum <= 0)
+                    throw new NotImplementedException();
 
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.ExtendClusterByDocument(iconum, docId, tableid);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
 
         public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
