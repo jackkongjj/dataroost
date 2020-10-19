@@ -4345,8 +4345,10 @@ select distinct ch.id, nntf.raw_row_label
 		on cm.norm_name_tree_flat_id = nntf.id
 	join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
 	join cluster_presentation cp 
-		on cp.id = ch.cluster_presentation_id
+		on cp.id = cpct.cluster_presentation_id
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
@@ -4358,8 +4360,10 @@ select distinct ch.id, nntf.raw_row_label
 		on cm.norm_name_tree_flat_id = nntf.id
 	join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
 	join cluster_presentation cp 
-		on cp.id = ch.cluster_presentation_id
+		on cp.id = cpct.cluster_presentation_id
 	where cp.norm_table_id = {1} and cp.industry_id = 1
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
