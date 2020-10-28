@@ -19,13 +19,21 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class VisualStitchingHelper {
 
 		private readonly string _sfConnectionString;
+        private readonly string _pgConnectionString;
 
 		static VisualStitchingHelper() {
 
 		}
 
-		public VisualStitchingHelper(string sfConnectionString) {
+        public VisualStitchingHelper(string sfConnectionString)
+        {
+            this._sfConnectionString = sfConnectionString;
+            this._pgConnectionString = PGConnectionString();
+        }
+
+        public VisualStitchingHelper(string sfConnectionString, string pgConnectionString) {
 			this._sfConnectionString = sfConnectionString;
+            this._pgConnectionString = pgConnectionString;
 		}
 
 		private string factsetIOconnString = "Host=ip-172-31-81-210.manager.factset.io;Port=32791;Username=uyQKYrcTSrnnqB;Password=NoCLf_xBeXiB0UXZjhZUNg7Zx8;Database=di8UFb70sJdA5e;sslmode=Require;Trust Server Certificate=true;";
@@ -1321,12 +1329,18 @@ SELECT  [Id]
 		}
 
 
-		public static string PGConnectionString() {
+		public static string PGConnectionString() { 
             //return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
             return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
 		}
 
-		private List<Profile> GetProfilePostGres() {
+        public static string PGDevConnectionString()
+        {
+            return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
+            //return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+        }
+
+        private List<Profile> GetProfilePostGres() {
 			const string query = @"
 				SELECT name,json FROM cluster_name_tree_profile
 			";
@@ -4047,7 +4061,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
   from norm_table nt
 --  where nt.label = 'Average Balance Sheet'
   order by id ");
-			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
 				//cmd.Parameters.AddWithValue("@iconum", iconum);
 				sqlConn.Open();
@@ -4084,7 +4098,7 @@ select p.item_code, max(cm.cluster_hierarchy_id)
 	having count (distinct cm.cluster_hierarchy_id) = 1  and  count(*) > count(cm.cluster_hierarchy_id);
 ", iconum, tableId);
 			int idx = 0;
-			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
 				cmd.CommandTimeout = 600;
 				//cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -4124,7 +4138,7 @@ select {1}, ntf.id
 				// e.Value is the cluster_hieararchy_id, e.key is the itemcode. 
 				string sql_update = string.Format(sql_update_format, e.Key, e.Value, iconum, tableId);
 				//Console.WriteLine(sql_update);
-				using (var sqlConn = new NpgsqlConnection(PGConnectionString())) {
+				using (var sqlConn = new NpgsqlConnection(this._pgConnectionString)) {
 					using (var cmd = new NpgsqlCommand(sql_update, sqlConn)) {
 						cmd.CommandTimeout = 600;
 						sqlConn.Open();
@@ -4177,7 +4191,7 @@ select {1}, ntf.id
 			if (ids != null && ids.Count() > 0 && clusterId > 0) {
 				string sql_update = string.Format(sql_update_format, clusterId, string.Join(",", ids));
 				Console.WriteLine(sql_update);
-				using (var sqlConn = new NpgsqlConnection(PGConnectionString())) {
+				using (var sqlConn = new NpgsqlConnection(this._pgConnectionString)) {
 					using (var cmd = new NpgsqlCommand(sql_update, sqlConn)) {
 						cmd.CommandTimeout = 600;
 						sqlConn.Open();
@@ -4313,7 +4327,7 @@ where c.norm_table_id = {0}
 order by c.iconum_count
 ", tableId);
 			int idx = 0;
-			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
 				//cmd.Parameters.AddWithValue("@iconum", iconum);
 				sqlConn.Open();
@@ -4368,7 +4382,7 @@ select distinct ch.id, nntf.raw_row_label
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
 			int idx = 0;
-			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
 				//cmd.Parameters.AddWithValue("@iconum", iconum);
 				sqlConn.Open();
@@ -4391,7 +4405,7 @@ select distinct ch.id, nntf.raw_row_label
 				}
 			}
 
-            using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
             {
                 //cmd.Parameters.AddWithValue("@iconum", iconum);
@@ -4458,7 +4472,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 
 
 			int idx = 0;
-			using (var sqlConn = new NpgsqlConnection(PGConnectionString()))
+			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
 				//cmd.Parameters.AddWithValue("@iconum", iconum);
 				sqlConn.Open();

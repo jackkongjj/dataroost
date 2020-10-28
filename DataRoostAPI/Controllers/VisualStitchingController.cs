@@ -768,6 +768,32 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                     throw new NotImplementedException();
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
+                var json = vsHelper.ExtendClusterByDocument(iconum, docId);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
+        [Route("cluster/extend/{iconum}/{docId}/staging")]
+        [HttpGet]
+        public HttpResponseMessage ClusterTreeExtendPut2Staging(int iconum, Guid docId)
+        {
+            try
+            {
+                if (iconum <= 0)
+                    throw new NotImplementedException();
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.ExtendClusterByDocument(iconum, docId);
                 return new HttpResponseMessage()
