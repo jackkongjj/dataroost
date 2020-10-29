@@ -4187,6 +4187,8 @@ select {1}, ntf.id
             insert into cluster_mapping (cluster_hierarchy_id, norm_name_tree_flat_id)
             select {0} id, x
             FROM  	unnest(ARRAY[{1}]) x
+			ON CONFLICT ON CONSTRAINT cluster_mapping_groupmapping 
+			DO NOTHING;
 ";
 			if (ids != null && ids.Count() > 0 && clusterId > 0) {
 				string sql_update = string.Format(sql_update_format, clusterId, string.Join(",", ids));
@@ -4195,8 +4197,12 @@ select {1}, ntf.id
 					using (var cmd = new NpgsqlCommand(sql_update, sqlConn)) {
 						cmd.CommandTimeout = 600;
 						sqlConn.Open();
-						cmd.ExecuteNonQuery();
-					}
+						int result = cmd.ExecuteNonQuery();
+                        if (result > 0)
+                        {
+                            result++;
+                        }
+                    }
 				}
 			}
 
