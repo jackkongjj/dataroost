@@ -820,7 +820,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                     throw new NotImplementedException();
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
                 var json = vsHelper.ExtendClusterByDocument(iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
@@ -836,7 +836,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 };
             }
         }
-        [Route("cluster/extend/{iconum}/{docId}/{tableid}/staging")]
+        [Route("cluster/extend/{iconum}/{docId}/{tableid}/dev")]
         [HttpGet]
         public HttpResponseMessage ClusterTreeExtendPut3Staging(int iconum, Guid docId, int tableid)
         {
@@ -846,7 +846,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                     throw new NotImplementedException();
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
                 var json = vsHelper.ExtendClusterByDocument(iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
