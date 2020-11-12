@@ -3993,61 +3993,17 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 						unmapped = _GetIconumRawLabels(i, t);
 					}
 					var changeList = _getChangeList(existing, unmapped);
-					Console.WriteLine("Slotted:");
-					int countSlotted = 0;
-					foreach (var c in changeList) {
-						Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
-						countSlotted++;
-					}
-					Console.WriteLine("End Slotted");
-					//Console.ReadLine();
-					Console.WriteLine("Unslotted");
-					int countUnslotted = 0;
-					foreach (var u in _unslotted) {
-
-						Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
-						countUnslotted += u.Value;
-					}
-					Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
+					//int countSlotted = 0;
+					//foreach (var c in changeList) {
+					//	countSlotted++;
+					//}
+					//int countUnslotted = 0;
+					//foreach (var u in _unslotted) {
+					//	countUnslotted += u.Value;
+					//}
+					//Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
 					//_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
 					_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
-				}
-			}
-			return true;
-		}
-		private bool _Extend(List<int> iconums, Guid guid) {
-			//var tableIDs = TableIDs();
-			List<int> tableIDs = new List<int>() { 1 };
-			foreach (var t in tableIDs) {
-				var existing = _GetExistingClusterTree(t);
-				foreach (var i in iconums) {
-					_unslotted = new Dictionary<string, int>();
-					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
-					if (guid != NullGuid) {
-						unmapped = _GetIconumRawLabels(i, guid, t);
-					} else {
-
-						unmapped = _GetIconumRawLabels(i, t);
-					}
-					var changeList = _getChangeList(existing, unmapped);
-					Console.WriteLine("Slotted:");
-					int countSlotted = 0;
-					foreach (var c in changeList) {
-						Console.WriteLine(string.Format("{0},{1}", c.Key, c.Value));
-						countSlotted++;
-					}
-					Console.WriteLine("End Slotted");
-					//Console.ReadLine();
-					Console.WriteLine("Unslotted");
-					int countUnslotted = 0;
-					foreach (var u in _unslotted) {
-
-						Console.WriteLine(string.Format("{0},{1}", u.Key, u.Value));
-						countUnslotted += u.Value;
-					}
-					Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
-					//_WriteChangeListToFile(i, t, changeList, _unslotted);
-					//_WriteChangeListToDB(i, changeList, _unslotted);
 				}
 			}
 			return true;
