@@ -3971,7 +3971,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 		}
 		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
 			var iconum = iconums.First();
-			var tableIDs = TableIDs();
+            iconum = 12380;
+            guid = new Guid("75CF5A86-014F-E811-80F1-8CDCD4AF21E4");
+
+            var tableIDs = TableIDs();
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
 					_CleanupHierarchy(iconum, t);
@@ -3992,18 +3995,35 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
 						unmapped = _GetIconumRawLabels(i, t);
 					}
-					var changeList = _getChangeList(existing, unmapped);
-					//int countSlotted = 0;
-					//foreach (var c in changeList) {
-					//	countSlotted++;
-					//}
-					//int countUnslotted = 0;
-					//foreach (var u in _unslotted) {
-					//	countUnslotted += u.Value;
-					//}
-					//Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
-					//_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
-					_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+					var changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
+                    // the problem is: which document do we use? which document's raw tables? 
+                    // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
+					int countSlotted = 0;
+					foreach (var c in changeList) {
+						countSlotted++;
+					}
+					int countUnslotted = 0;
+					foreach (var u in _unslotted) {
+						countUnslotted += u.Value;
+					}
+                    // limit it to /guid/tableid/
+                    // most have a docId
+                    if (guid != NullGuid && _unslotted.Count > 0)
+                    {
+                        var moreChanges = _getChangeListByTableAlignment(guid, existing, unmapped);
+                        foreach (var mc in moreChanges)
+                        {
+                            if (!changeList.ContainsKey(mc.Key))
+                            {
+                                changeList.Add(mc.Key, mc.Value);
+                            }
+                        }
+                    }
+                    //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
+                    //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
+                    //_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    var debugchangelist = changeList;
+                    var debugunslot = _unslotted;
 				}
 			}
 			return true;
@@ -4166,12 +4186,50 @@ select {1}, ntf.id
 		}
 
 		private Dictionary<string, int> _unslotted = new Dictionary<string, int>();
+        private Guid _getBestMatchingDocument(Guid currDoc)
+        {
+            return new Guid("5B56EC82-0731-E711-80EA-8CDCD4AF21E4");
+        }
 
-		private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
-			// existing[raw label, clusterid]
-			// unmapped[itemid, rawlabel]
-			// changelist[itemid, clusterid]
-			Dictionary<long, long> changelist = new Dictionary<long, long>();
+        private Dictionary<long, long> _matchIdenticalTable(Guid curr_doc, int curr_raw_table_id, Guid hist_doc, int hist_raw_table_id)
+        {
+            SortedDictionary<int, long> curr_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
+            SortedDictionary<int, long> hist_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
+            Dictionary<long, long> changelist = new Dictionary<long, long>();
+            
+            if (curr_table.Count > 0 && curr_table.Count == hist_table.Count)
+            {
+                for (int i = 0; i < curr_table.Count; i++)
+                {
+                    changelist[hist_table.ElementAt(i).Value] = curr_table.ElementAt(i).Value; // (curr_table.norm_name_tree_id, hist_table.norm_name_tree_id)
+                }
+            }
+
+            return new Dictionary<long, long>();
+        }
+        private Dictionary<long, long> _getChangeListByTableAlignment(Guid currDoc, SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
+            var histDoc = _getBestMatchingDocument(currDoc);
+
+            return new Dictionary<long, long>();
+        }
+
+        private bool _isIdenticalTable(Guid curr_doc, int curr_raw_table_id, Guid hist_doc, int hist_raw_table_id)
+        {
+            SortedDictionary<int, long> curr_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
+            SortedDictionary<int, long> hist_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
+            Dictionary<long, long> changelist = new Dictionary<long, long>();
+
+            // if Name is identical according to HTML identfication or and number of row is same. 
+            // if all row's label matches. 
+
+            return false;
+        }
+        private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
+            return new Dictionary<long, long>();// let's assume no label matching.
+            // existing[raw label, clusterid]
+            // unmapped[itemid, rawlabel]
+            // changelist[itemid, clusterid]
+            Dictionary<long, long> changelist = new Dictionary<long, long>();
 			Dictionary<long, string> unslotted = new Dictionary<long, string>();
 			foreach (var u in unmapped) {
 				if (existing.ContainsKey(u.Value)) {
