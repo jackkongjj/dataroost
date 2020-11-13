@@ -306,6 +306,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers {
             return "";
         }
 
+        public static string AlphabetOnly(string input, string newStr = " ")
+        {
+            input = input.Replace("[", newStr).Replace("]", newStr).Replace("-", newStr);
+            var rgx = new System.Text.RegularExpressions.Regex("[^a-zA-Z]");
+            return rgx.Replace(input, newStr);
+        }
         public static string AlphaNumericOnly(string input, string newStr = " ")
         {
             input = input.Replace("[", " ").Replace("]", " ").Replace("-", " ");

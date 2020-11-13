@@ -3971,8 +3971,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 		}
 		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
 			var iconum = iconums.First();
+#if DEV
             iconum = 12380;
             guid = new Guid("75CF5A86-014F-E811-80F1-8CDCD4AF21E4");
+#endif
 
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
@@ -3987,6 +3989,15 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 }
 				var existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
                 var existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
+                SortedDictionary<string, long> existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                foreach (var cl in existingCleanLabel)
+                {
+                    var lower = RemoveHierarchyNumberSpace(cl.Key);
+                    if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                    {
+                        existingCleanLabelNoHierarchy[lower] = cl.Value;
+                    }
+                }
                 // need to do it for Clean label too. 
 				foreach (var i in iconums) {
 					_unslotted = new Dictionary<string, int>();
@@ -4001,6 +4012,9 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 					}
 					var changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                     //changelist[flat_id, clusterid]
+                    var changeCount = changeList.Count;
+
+                    /* SECOND ATTEMPT */
                     var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
                     foreach (var unmap in unmappedCleanLabel)
                     {
@@ -4008,9 +4022,38 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         {
                             continue;
                         }
-                        unmappedCleanLabelNotMatched[unmap.Key] = unmap.Value; // (flat_id, clean_row_label)
+                        unmappedCleanLabelNotMatched[unmap.Key] = unmap.Value; // (flat_id, cleaned_row_label)
                     }
                     var changeList2 = _getChangeList(existingCleanLabel, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                    foreach (var change in changeList2)
+                    {
+                        if (!changeList.ContainsKey(change.Key))
+                        {
+                            changeList[change.Key] = change.Value;
+                        }
+                    }
+                    var changeCount2 = changeList.Count;
+
+                    /* THIRD ATTEMPT */
+                    unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                    foreach (var unmap in unmappedCleanLabel)
+                    {
+                        if (changeList.ContainsKey(unmap.Key))
+                        {
+                            continue;
+                        }
+                        unmappedCleanLabelNotMatched[unmap.Key] = RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
+                    }
+                    changeList2 = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                    foreach (var change in changeList2)
+                    {
+                        if (!changeList.ContainsKey(change.Key))
+                        {
+                            changeList[change.Key] = change.Value;
+                        }
+                    }
+                    var changeCount3 = changeList.Count;
+
                     // the problem is: which document do we use? which document's raw tables? 
                     // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
                     int countSlotted = 0;
@@ -4037,6 +4080,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
                     //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
                     //_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
 				}
@@ -4243,8 +4287,17 @@ select {1}, ntf.id
 
             return false;
         }
+        private string RemoveHierarchyNumberSpace(string s)
+        {
+            var nohierarchy = fn.EndLabel(s);
+            var noNumberandSpace = fn.AlphabetOnly(nohierarchy, "");
+            var lower = noNumberandSpace.ToLower();
+            return lower;
+        }
         private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
-            // return new Dictionary<long, long>();// let's assume no label matching.
+#if DEV
+            return new Dictionary<long, long>();// let's assume no label matching.
+#endif
             // existing[raw label, clusterid]
             // unmapped[flat_id, rawlabel]
             // changelist[flat_id, clusterid]
@@ -4573,14 +4626,14 @@ select distinct ch.id, nntf.cleaned_row_label
         {
             string sqltxt = string.Format(@"
 
-  select distinct tf.id, tf.clean_row_label
+  select distinct tf.id, tf.cleaned_row_label
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} 
 	and t.cluster_id_new is null
-	and (tf.clean_row_label = '') is not true
+	and (tf.cleaned_row_label = '') is not true
 
 
 ", tableId, iconum);
@@ -4590,14 +4643,14 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
         {
             string sqltxt = string.Format(@"
 
-  select distinct tf.id, tf.clean_row_label
+  select distinct tf.id, tf.cleaned_row_label
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and t.cluster_id_new is null
-	and (tf.clean_row_label = '') is not true
+	and (tf.cleaned_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
             return _GetIconumLabelsHelper(sqltxt);
