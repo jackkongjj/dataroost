@@ -3985,20 +3985,35 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 {
                     continue;
                 }
-				var existing = _GetExistingClusterHierarchy(iconum, t);
+				var existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
+                var existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
+                // need to do it for Clean label too. 
 				foreach (var i in iconums) {
 					_unslotted = new Dictionary<string, int>();
 					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
-					if (guid != NullGuid) {
-						unmapped = _GetIconumRawLabels(i, guid, t);
+                    SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
+                    if (guid != NullGuid) {
+						unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
+                        unmappedCleanLabel = _GetIconumCleanLabels(i, guid, t);
 					} else {
 
 						unmapped = _GetIconumRawLabels(i, t);
 					}
 					var changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
+                    //changelist[flat_id, clusterid]
+                    var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                    foreach (var unmap in unmappedCleanLabel)
+                    {
+                        if (changeList.ContainsKey(unmap.Key))
+                        {
+                            continue;
+                        }
+                        unmappedCleanLabelNotMatched[unmap.Key] = unmap.Value; // (flat_id, clean_row_label)
+                    }
+                    var changeList2 = _getChangeList(existingCleanLabel, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
                     // the problem is: which document do we use? which document's raw tables? 
                     // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
-					int countSlotted = 0;
+                    int countSlotted = 0;
 					foreach (var c in changeList) {
 						countSlotted++;
 					}
@@ -4191,6 +4206,10 @@ select {1}, ntf.id
             return new Guid("5B56EC82-0731-E711-80EA-8CDCD4AF21E4");
         }
 
+        private SortedDictionary<int, long> _getTable()
+        {
+            return new SortedDictionary<int, long>();
+        }
         private Dictionary<long, long> _matchIdenticalTable(Guid curr_doc, int curr_raw_table_id, Guid hist_doc, int hist_raw_table_id)
         {
             SortedDictionary<int, long> curr_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
@@ -4225,16 +4244,16 @@ select {1}, ntf.id
             return false;
         }
         private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
-            return new Dictionary<long, long>();// let's assume no label matching.
+            // return new Dictionary<long, long>();// let's assume no label matching.
             // existing[raw label, clusterid]
-            // unmapped[itemid, rawlabel]
-            // changelist[itemid, clusterid]
+            // unmapped[flat_id, rawlabel]
+            // changelist[flat_id, clusterid]
             Dictionary<long, long> changelist = new Dictionary<long, long>();
 			Dictionary<long, string> unslotted = new Dictionary<long, string>();
 			foreach (var u in unmapped) {
 				if (existing.ContainsKey(u.Value)) {
 					// u.key is the itemID, existing is the cluster_id
-					changelist[u.Key] = existing[u.Value];
+					changelist[u.Key] = existing[u.Value]; // changelist[flat_id] = cluster_id
 				} else {
 					unslotted[u.Key] = u.Value;
 					if (!_unslotted.ContainsKey(u.Value)) {
@@ -4456,7 +4475,135 @@ select distinct ch.id, nntf.raw_row_label
             return entries;
 		}
 
-		private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId) {
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabel(int iconum, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+
+            string sqltxt = string.Format(@"
+select distinct ch.id, nntf.cleaned_row_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	where cp.norm_table_id = {1} and nntf.iconum = {0}
+		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+", iconum, tableId);
+
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, nntf.cleaned_row_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	where cp.norm_table_id = {1} and cp.industry_id = 1
+		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+", iconum, tableId);
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
+        }
+
+        private SortedDictionary<long, string> _GetIconumCleanLabels(int iconum, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+  select distinct tf.id, tf.clean_row_label
+	from norm_name_tree t 
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
+where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+	and tf.iconum = {1} 
+	and t.cluster_id_new is null
+	and (tf.clean_row_label = '') is not true
+
+
+", tableId, iconum);
+            return _GetIconumLabelsHelper(sqltxt);
+        }
+        private SortedDictionary<long, string> _GetIconumCleanLabels(int iconum, Guid docid, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+  select distinct tf.id, tf.clean_row_label
+	from norm_name_tree t 
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
+where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+	and tf.iconum = {1} and tf.document_id = '{2}'
+	and t.cluster_id_new is null
+	and (tf.clean_row_label = '') is not true
+
+", tableId, iconum, docid.ToString());
+            return _GetIconumLabelsHelper(sqltxt);
+        }
+
+        private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId) {
 			string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.raw_row_label
@@ -4470,7 +4617,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 
 
 ", tableId, iconum);
-			return _GetIconumRawLabelsHelper(sqltxt);
+			return _GetIconumLabelsHelper(sqltxt);
 		}
 		private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, Guid docid, int tableId) {
 			string sqltxt = string.Format(@"
@@ -4485,9 +4632,9 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and (tf.raw_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
-			return _GetIconumRawLabelsHelper(sqltxt);
+			return _GetIconumLabelsHelper(sqltxt);
 		}
-		private SortedDictionary<long, string> _GetIconumRawLabelsHelper(string sqltxt) {
+		private SortedDictionary<long, string> _GetIconumLabelsHelper(string sqltxt) {
 			SortedDictionary<long, string> entries = new SortedDictionary<long, string>();
 
 
