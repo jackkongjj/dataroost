@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define DEV
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Configuration;
@@ -3970,12 +3971,12 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			return true;
 		}
 		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
-			var iconum = iconums.First();
 #if DEV
-            iconum = 12380;
+            iconums = new List<int>();
+            iconums.Add(12380);
             guid = new Guid("75CF5A86-014F-E811-80F1-8CDCD4AF21E4");
 #endif
-
+            var iconum = iconums.First();
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
@@ -4066,7 +4067,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 					}
                     // limit it to /guid/tableid/
                     // most have a docId
-                    if (guid != NullGuid && _unslotted.Count > 0)
+                    if (guid != NullGuid)// && _unslotted.Count > 0)
                     {
                         var moreChanges = _getChangeListByTableAlignment(guid, existing, unmapped);
                         foreach (var mc in moreChanges)
@@ -4259,7 +4260,25 @@ select {1}, ntf.id
             SortedDictionary<int, long> curr_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
             SortedDictionary<int, long> hist_table = new SortedDictionary<int, long>(); // (col_id, norm_name_tree_id)
             Dictionary<long, long> changelist = new Dictionary<long, long>();
-            
+            // like sorting? 
+            // go both way down. 
+            // if there is no match, then, find the target, and swap. 
+            // find number of no match? 
+
+            // if the rows match,
+            //      1. if no out ot order, and 0 mismatch.... taht's easy
+            //      2. if no out of order, and 1 mismatch.... assume that 
+            //      3. if no out of order, and 2 mismatch.... are they in place? yes, assume that. 
+            //      3. if no out of order, and 3 mismatch ... 
+            //  => if same row count, if a row is found not expected, then it's a messed up table
+            //              if it's a messed up table, see if all the messed up are within themselves?
+            //              no, just match by label and leave it to other algorithm. 
+            //  => if same row count, no row out of order, if less than 5 mismatch line, then just match everything. 
+            //  => 123388 
+            // row doesn't match
+            //      1. if less than 3 mismatch, match by labels in the table, then leave it to other algorithm. 
+            //      2. if more than 3 mismatch, match by labels in the table, then leave it to other algorithm
+
             if (curr_table.Count > 0 && curr_table.Count == hist_table.Count)
             {
                 for (int i = 0; i < curr_table.Count; i++)
@@ -4271,9 +4290,14 @@ select {1}, ntf.id
             return new Dictionary<long, long>();
         }
         private Dictionary<long, long> _getChangeListByTableAlignment(Guid currDoc, SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
+            var result = new Dictionary<long, long>(); 
             var histDoc = _getBestMatchingDocument(currDoc);
-
-            return new Dictionary<long, long>();
+            NormNameTreeTable curr = new NormNameTreeTable();
+            curr.Load(this._pgConnectionString, 12380, currDoc, 50);
+            NormNameTreeTable hist = new NormNameTreeTable();
+            hist.Load(this._pgConnectionString, 12380, histDoc, 45);
+            result = curr.MergeWithHistoricalTable(hist);
+            return result;
         }
 
         private bool _isIdenticalTable(Guid curr_doc, int curr_raw_table_id, Guid hist_doc, int hist_raw_table_id)
@@ -4443,7 +4467,9 @@ order by c.iconum_count
 		}
 		private SortedDictionary<string, long> _GetExistingClusterHierarchy(int iconum, int tableId) {
 			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            // TODO: think there is a bug here. not joining HTML table identification
 
+            // TODO: need to increase timeout
 			string sqltxt = string.Format(@"
 select distinct ch.id, nntf.raw_row_label
 	from cluster_mapping cm
@@ -4716,4 +4742,197 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 		}
 
 	}
+    public class NormNameTreeRow
+    {
+        public HashSet<long> FlatIds = new HashSet<long>();
+        public string RawRowLabel;
+        public string CleanedRowLabel;
+        public string FinalLabel;
+        public long ClusterId;
+        public int DatabaseRowId;
+        public int NormalizedRowId;
+    }
+    public class NormNameTreeTable
+    {
+        public SortedList<int, NormNameTreeRow> Rows = new SortedList<int, NormNameTreeRow>();
+        public NormNameTreeTable()
+        {
+
+        }
+        public NormNameTreeTable Load(string connectionString, int iconum, Guid guid, int table_id)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+
+            string sqltxt = string.Format(@"
+select f.id, f.raw_row_label, f.cleaned_row_label, f.final_label,
+	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id
+from norm_name_tree_flat f 
+left join cluster_mapping cm on f.id = cm.norm_name_tree_flat_id
+where f.document_id = '{1}' and f.iconum = {0}
+and f.table_id = {2}
+order by f.row_id, f.col_id
+
+", iconum, guid, table_id);
+            int idx = 0;
+            int curr_row_index = 0;
+            var curr_row = new NormNameTreeRow();
+            string last_raw_label = "";
+            int last_database_row_id = -1;
+            using (var sqlConn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                cmd.CommandTimeout = 600;
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var flat_id = sdr.GetInt64(0);
+                            var curr_raw_label = sdr.GetStringSafe(1);
+                            var cluster_id = sdr.GetInt64(4);
+                            int curr_database_row_id = sdr.GetInt32(5);
+                            bool isNewRow = false;
+                            if (last_database_row_id < 0)
+                            {
+                                isNewRow = true;
+                            }
+                            else
+                            {
+                                if (last_database_row_id == curr_database_row_id)
+                                {
+                                    if (last_raw_label != curr_raw_label)
+                                    {
+                                        throw new DataException("Row label doesn't match");
+                                    }
+                                }
+                                else
+                                {
+                                    isNewRow = true;
+                                }
+                            }
+                            if (isNewRow)
+                            {
+                                var newRow = new NormNameTreeRow();
+                                curr_row = newRow;
+                                curr_row.RawRowLabel = curr_raw_label;
+                                curr_row.CleanedRowLabel = sdr.GetStringSafe(2);
+                                curr_row.FinalLabel = sdr.GetStringSafe(3);
+                                curr_row.ClusterId = cluster_id;
+                                curr_row.DatabaseRowId = curr_database_row_id;
+                                curr_row.NormalizedRowId = curr_row_index;
+                                curr_row.FlatIds.Add(flat_id);
+                                this.Rows.Add(curr_row_index, newRow);
+                                curr_row_index++;
+                                last_database_row_id = curr_database_row_id;
+                                last_raw_label = curr_raw_label;
+                            }
+                            else
+                            {
+                                curr_row.FlatIds.Add(flat_id);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            throw ex;
+                        }
+                    }
+
+                }
+            }
+            return this;
+        }
+
+        public Dictionary<long, long> MergeWithHistoricalTable(NormNameTreeTable hist)
+        {
+            Dictionary<long, long> result = new Dictionary<long, long>();
+            if (this.Rows.Count == 0 || hist.Rows.Count == 0)
+            {
+                return result;
+            }
+            if (this.Rows.Count == hist.Rows.Count)
+            {
+                if (_isInOrder(this, hist))
+                {
+                    result = _straightlineMerge(this, hist);
+                }
+            }
+            else if (this.Rows.Count > hist.Rows.Count)
+            {
+
+            }
+            else if (this.Rows.Count < hist.Rows.Count)
+            {
+
+            }
+
+
+            return result;
+        }
+
+        private Dictionary<long, long> _straightlineMerge(NormNameTreeTable curr, NormNameTreeTable hist)
+        {
+            Dictionary<long, long> result = new Dictionary<long, long>();
+            for (int i = 0; i < hist.Rows.Count; i++)
+            {
+                for (int j = 0; j < hist.Rows.Count; j++)
+                {
+                    if (j < i) continue;
+                    else if (j > i) break;
+
+                    var hist_cluster_id = hist.Rows[j].ClusterId;
+                    if (hist_cluster_id <= 0) break;
+                    foreach (var flat_id in curr.Rows[i].FlatIds)
+                    {
+                        result.Add(flat_id, hist_cluster_id);
+                    }
+                }
+            }
+            return result;
+        }
+
+        private bool _isMatch(NormNameTreeRow curr, NormNameTreeRow hist)
+        {
+            bool result = false;
+            result = true;
+            return result;
+        }
+        private bool _isInOrder(NormNameTreeTable curr, NormNameTreeTable hist)
+        {
+            bool result = false;
+            int lastHistoryRow = 0;
+            HashSet<int> alreadyMatchedHistoryRow = new HashSet<int>();
+            foreach (var c in curr.Rows)
+            {
+                bool isMatched = false;
+                int currMatched = -1;
+                for (int j = 0; j < hist.Rows.Count; j++)
+                {
+                    if (alreadyMatchedHistoryRow.Contains(j))
+                    {   // for cases with duplicated labels
+                        continue;
+                    }
+                    if (_isMatch(c.Value, hist.Rows[j]))
+                    {
+                        currMatched = j;
+                        alreadyMatchedHistoryRow.Add(currMatched);
+                        isMatched = true;
+                        break;
+                    }
+                }
+                if (isMatched)
+                {
+                    if (currMatched < lastHistoryRow)
+                    {
+                        return false;
+                    }
+                    lastHistoryRow = currMatched;
+                }
+            }
+            result = true;
+            return result;
+        }
+    }
 }
