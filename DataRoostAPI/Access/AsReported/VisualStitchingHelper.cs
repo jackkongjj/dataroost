@@ -4298,6 +4298,72 @@ order by  d.PublicationDateTime desc
             }
             return bestHistory;
         }
+        private Dictionary<long, long> FindMaxChangeList(List<NormNameTreeTable> currTables, List<NormNameTreeTable> histTables)
+        {
+            Dictionary<long, long> result = new Dictionary<long, long>();
+            if (currTables.Count == 0 || histTables.Count == 0)
+                return result;
+
+            foreach(var c in currTables)
+            {
+                foreach(var h in histTables)
+                {
+                    var r = c.MergeWithHistoricalTable(h);
+                    if (r.Count > 0)
+                    {
+                        var newCurrTables = currTables.Clone();
+                        newCurrTables.Remove(c);
+                        var newHistTables = histTables.Clone();
+                        newHistTables.Remove(h);
+                        var future = FindMaxChangeList(newCurrTables, newHistTables);
+                        if (r.Count + future.Count > result.Count)
+                        {
+                            result = new Dictionary<long, long>(); // keep longest list
+                            result.Eat(r);
+                            result.Eat(future);
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+        private List<int> _getTableIdsForDocument(int iconum, Guid doc, int normTableId)
+        {
+            List<int> vs = new List<int>();
+            string sqltxt = string.Format(@"
+
+ select tf.document_id, tf.table_id
+  from norm_name_tree_flat tf 
+  join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id and hti.iconum = tf.iconum
+  where tf.iconum = {0}  and hti.norm_table_id = {1} and tf.document_id ='{2}'
+  group by tf.document_id, tf.table_id
+", iconum, normTableId, doc);
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                cmd.CommandTimeout = 600;
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var table = sdr.GetInt32(1);
+                            vs.Add(table);
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return vs;
+        }
         private Guid _getBestMatchingDocument(int iconum, Guid currDoc, int tableId)
         {
             List<Tuple<Guid, int, int>> histDocList = new List<Tuple<Guid, int, int>>();
@@ -4323,9 +4389,9 @@ order by  d.PublicationDateTime desc
                         try
                         {
                             var guid = sdr.GetGuid(0);
-                            var fileId = sdr.GetInt32(1);
+                            var table = sdr.GetInt32(1);
                             var rowCount = sdr.GetInt32(2);
-                            var tuple = new Tuple<Guid, int, int>(guid, fileId, rowCount);
+                            var tuple = new Tuple<Guid, int, int>(guid, table, rowCount);
                             histDocList.Add(tuple);
                         }
                         catch
@@ -4430,18 +4496,34 @@ order by  d.PublicationDateTime desc
 
             return new Dictionary<long, long>();
         }
-        private Dictionary<long, long> _getChangeListByTableAlignment(int iconum, Guid currDoc, int tableId) {
+        private Dictionary<long, long> _getChangeListByTableAlignment(int iconum, Guid currDoc, int normTableId) {
             var result = new Dictionary<long, long>(); 
-            var histDoc = _getBestMatchingDocument(iconum, currDoc, tableId);
+            var histDoc = _getBestMatchingDocument(iconum, currDoc, normTableId);
             if (histDoc == NullGuid)
                 return result;
+            var currTableIds = _getTableIdsForDocument(iconum, currDoc, normTableId);
+            var histTableIds = _getTableIdsForDocument(iconum, histDoc, normTableId);
 
-
-            NormNameTreeTable curr = new NormNameTreeTable();
-            curr.Load(this._pgConnectionString, iconum, currDoc, 50);
-            NormNameTreeTable hist = new NormNameTreeTable();
-            hist.Load(this._pgConnectionString, iconum, histDoc, 45);
-            result = curr.MergeWithHistoricalTable(hist);
+            List<NormNameTreeTable> currDocTables = new List<NormNameTreeTable>();
+            foreach (var c in currTableIds)
+            {
+                NormNameTreeTable t = new NormNameTreeTable();
+                t.Load(this._pgConnectionString, iconum, currDoc, c);
+                currDocTables.Add(t);
+            }
+            List<NormNameTreeTable> histDocTables = new List<NormNameTreeTable>();
+            foreach (var c in histTableIds)
+            {
+                NormNameTreeTable t = new NormNameTreeTable();
+                t.Load(this._pgConnectionString, iconum, histDoc, c);
+                histDocTables.Add(t);
+            }
+            //NormNameTreeTable curr = new NormNameTreeTable();
+            //curr.Load(this._pgConnectionString, iconum, currDoc, 50);
+            //NormNameTreeTable hist = new NormNameTreeTable();
+            //hist.Load(this._pgConnectionString, iconum, histDoc, 45);
+            //result = curr.MergeWithHistoricalTable(hist);
+            result = FindMaxChangeList(currDocTables, histDocTables);
             return result;
         }
 
@@ -4883,7 +4965,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 		}
 
 	}
-    public static class DictionaryExtension
+    public static class Extensions
     {
         public static Dictionary<long, long> Eat(this Dictionary<long, long> survive, Dictionary<long, long> eaten)
         {
@@ -4895,6 +4977,12 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
                 }
             }
             return survive;
+        }
+        public static List<NormNameTreeTable> Clone(this List<NormNameTreeTable> listToClone)
+        {
+            List<NormNameTreeTable> newList = new List<NormNameTreeTable>();
+            newList.AddRange(listToClone.Select(item => item));
+            return newList;
         }
     }
     public class NormNameTreeRow
