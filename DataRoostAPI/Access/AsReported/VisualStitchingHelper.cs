@@ -3994,11 +3994,6 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
                 foreach (var i in iconums) {
                     Dictionary<long, long> changeList = new Dictionary<long, long>();
-                    if (guid != NullGuid)// && _unslotted.Count > 0)
-                    {
-
-                    }
-
                     _unslotted = new Dictionary<string, int>();
 					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
                     SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
@@ -4006,7 +4001,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     if (guid != NullGuid) {
 						unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
                         datapointToMatch = unmapped.Count;
-                        var tableAlignmentChanges = _getChangeListByTableAlignment(guid);
+                        var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
                         changeList.Eat(tableAlignmentChanges);
                     } else {
 						unmapped = _GetIconumRawLabels(i, t);
@@ -4253,14 +4248,153 @@ select {1}, ntf.id
 		}
 
 		private Dictionary<string, int> _unslotted = new Dictionary<string, int>();
-        private Guid _getBestMatchingDocument(Guid currDoc)
+        private Guid _getHistoricalDocumentFromDB(int iconum, Guid currDocId)
         {
-            return new Guid("5B56EC82-0731-E711-80EA-8CDCD4AF21E4");
+            string sql_lastyeardocument = @"
+select top 1 d.DAMDocumentId
+FROM  Document d_curr
+JOIN DocumentSeries ds_curr on d_curr.DocumentSeriesID = ds_curr.ID
+JOIN Document d on d_curr.DocumentSeriesID = d.DocumentSeriesID and d_curr.ReportTypeID = d.ReportTypeID and d_curr.FormTypeID = d.FormTypeID
+WHERE 
+d_curr.DAMDocumentId = @docId
+and ds_curr.CompanyID = @companyId
+and d.ArdExportFlag = 1
+and d.DocumentDate <= DATEADD(d, -364, d_curr.DocumentDate) 
+and d.DocumentDate >= DATEADD(d, -367, d_curr.DocumentDate)
+order by  d.PublicationDateTime desc
+
+";
+            Guid bestHistory = default(Guid);
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(sql_lastyeardocument, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@docId", currDocId);
+                    cmd.Parameters.AddWithValue("@companyId", iconum);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            bestHistory = reader.GetGuid(0);
+                            break;
+                        }
+
+                    }
+                }
+            }
+            return bestHistory;
+        }
+
+        private Guid _getHistoricalDocumentFromService(int iconum, Guid currDocId)
+        {
+            Guid bestHistory = default(Guid);
+            string url_pattern = @"https://automate-equation.factset.io/api/Automate/BestMatchHistoricalDocument/DocumentId/{1}/Iconum/{0}/FileId/{2}/file";
+            var url = string.Format(url_pattern, iconum, currDocId.ToString().ToLower(), 0);
+            var outputresult = GetWebRequest(url);
+            if (string.IsNullOrWhiteSpace(outputresult))
+            {
+                return NullGuid;
+            }
+            return bestHistory;
+        }
+        private Guid _getBestMatchingDocument(int iconum, Guid currDoc, int tableId)
+        {
+            List<Tuple<Guid, int, int>> histDocList = new List<Tuple<Guid, int, int>>();
+            string sqltxt = string.Format(@"
+  select tf.document_id, tf.file_id, count(distinct tf.row_id)
+  from norm_name_tree_flat tf 
+  join cluster_mapping cm on tf.id = cm.norm_name_tree_flat_id
+  join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id and hti.iconum = tf.iconum
+  where tf.iconum = {0}  and hti.norm_table_id = {1}
+  group by tf.document_id, tf.file_id
+", iconum, tableId);
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                cmd.CommandTimeout = 600;
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var guid = sdr.GetGuid(0);
+                            var fileId = sdr.GetInt32(1);
+                            var rowCount = sdr.GetInt32(2);
+                            var tuple = new Tuple<Guid, int, int>(guid, fileId, rowCount);
+                            histDocList.Add(tuple);
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            var dbguid = _getHistoricalDocumentFromDB(iconum, currDoc);
+            foreach (var t in histDocList)
+            {
+                if (t.Item1 == dbguid)
+                {
+                    return dbguid;
+                }
+            }
+            var webguid = _getHistoricalDocumentFromService(iconum, currDoc);
+            foreach (var t in histDocList)
+            {
+                if (t.Item1 == webguid)
+                {
+                    return webguid;
+                }
+            }
+            return NullGuid;
+            //return new Guid("5B56EC82-0731-E711-80EA-8CDCD4AF21E4");
         }
 
         private SortedDictionary<int, long> _getTable()
         {
             return new SortedDictionary<int, long>();
+        }
+        private string GetWebRequest(string url)
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.ContentType = "application/json";
+            request.Timeout = 120000;
+            request.Method = "GET";
+            HttpWebResponse response = null;
+            try
+            {
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            catch
+            {
+                return "";
+                //throw new FileNotFoundException("call failed");
+            }
+            string outputresult = null;
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                using (var streamReader = new StreamReader(response.GetResponseStream()))
+                {
+                    outputresult = streamReader.ReadToEnd();
+                }
+            }
+            else if (response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.ServiceUnavailable)
+            {
+                throw new Exception("call failed");
+            }
+            else
+            {
+                return "";
+                //throw new FileNotFoundException("call failed");
+            }
+            return outputresult;
+
         }
         private Dictionary<long, long> _matchIdenticalTable(Guid curr_doc, int curr_raw_table_id, Guid hist_doc, int hist_raw_table_id)
         {
@@ -4296,13 +4430,17 @@ select {1}, ntf.id
 
             return new Dictionary<long, long>();
         }
-        private Dictionary<long, long> _getChangeListByTableAlignment(Guid currDoc) {
+        private Dictionary<long, long> _getChangeListByTableAlignment(int iconum, Guid currDoc, int tableId) {
             var result = new Dictionary<long, long>(); 
-            var histDoc = _getBestMatchingDocument(currDoc);
+            var histDoc = _getBestMatchingDocument(iconum, currDoc, tableId);
+            if (histDoc == NullGuid)
+                return result;
+
+
             NormNameTreeTable curr = new NormNameTreeTable();
-            curr.Load(this._pgConnectionString, 12380, currDoc, 50);
+            curr.Load(this._pgConnectionString, iconum, currDoc, 50);
             NormNameTreeTable hist = new NormNameTreeTable();
-            hist.Load(this._pgConnectionString, 12380, histDoc, 45);
+            hist.Load(this._pgConnectionString, iconum, histDoc, 45);
             result = curr.MergeWithHistoricalTable(hist);
             return result;
         }
@@ -4665,7 +4803,6 @@ select distinct ch.id, nntf.cleaned_row_label
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} 
-	and t.cluster_id_new is null
 	and (tf.cleaned_row_label = '') is not true
 
 
@@ -4682,7 +4819,6 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} and tf.document_id = '{2}'
-	and t.cluster_id_new is null
 	and (tf.cleaned_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
@@ -4698,7 +4834,6 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} 
-	and t.cluster_id_new is null
 	and (tf.raw_row_label = '') is not true
 
 
@@ -4714,7 +4849,6 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} and tf.document_id = '{2}'
-	and t.cluster_id_new is null
 	and (tf.raw_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
