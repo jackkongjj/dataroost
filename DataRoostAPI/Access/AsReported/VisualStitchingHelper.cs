@@ -3993,7 +3993,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 SortedDictionary<string, long> existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
                 foreach (var cl in existingCleanLabel)
                 {
-                    var lower = RemoveHierarchyNumberSpace(cl.Key);
+                    var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
                     if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
                     {
                         existingCleanLabelNoHierarchy[lower] = cl.Value;
@@ -4043,7 +4043,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         {
                             continue;
                         }
-                        unmappedCleanLabelNotMatched[unmap.Key] = RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
+                        unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
                     }
                     changeList2 = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
                     foreach (var change in changeList2)
@@ -4311,13 +4311,13 @@ select {1}, ntf.id
 
             return false;
         }
-        private string RemoveHierarchyNumberSpace(string s)
-        {
-            var nohierarchy = fn.EndLabel(s);
-            var noNumberandSpace = fn.AlphabetOnly(nohierarchy, "");
-            var lower = noNumberandSpace.ToLower();
-            return lower;
-        }
+        //private string RemoveHierarchyNumberSpace(string s)
+        //{
+        //    var nohierarchy = fn.EndLabel(s);
+        //    var noNumberandSpace = fn.AlphabetOnly(nohierarchy, "");
+        //    var lower = noNumberandSpace.ToLower();
+        //    return lower;
+        //}
         private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
 #if DEV
             return new Dictionary<long, long>();// let's assume no label matching.
@@ -4751,6 +4751,10 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
         public long ClusterId;
         public int DatabaseRowId;
         public int NormalizedRowId;
+
+        public string CleanedRawRowLabel;
+        public string CleanedCleanedRowLabel;
+        public string CleanedFinalLabel;
     }
     public class NormNameTreeTable
     {
@@ -4818,8 +4822,11 @@ order by f.row_id, f.col_id
                                 var newRow = new NormNameTreeRow();
                                 curr_row = newRow;
                                 curr_row.RawRowLabel = curr_raw_label;
+                                curr_row.CleanedRawRowLabel = fn.RemoveHierarchyNumberSpace(curr_row.RawRowLabel);
                                 curr_row.CleanedRowLabel = sdr.GetStringSafe(2);
+                                curr_row.CleanedCleanedRowLabel = fn.RemoveHierarchyNumberSpace(curr_row.CleanedRowLabel);
                                 curr_row.FinalLabel = sdr.GetStringSafe(3);
+                                curr_row.CleanedFinalLabel = fn.RemoveHierarchyNumberSpace(curr_row.FinalLabel);
                                 curr_row.ClusterId = cluster_id;
                                 curr_row.DatabaseRowId = curr_database_row_id;
                                 curr_row.NormalizedRowId = curr_row_index;
@@ -4845,6 +4852,38 @@ order by f.row_id, f.col_id
             return this;
         }
 
+        private bool _satisfiesWholeTableMerge(TableComparison comp)
+        {
+            bool result = false;
+            if (comp.IsInOrder)// && comp.TotalMatchCount == comp.StraightLineMatchCount)
+            {
+                if (comp.FirstStraightLineMatch == 0 && comp.LastStraightLineMatch > (comp.Table1Size - 2))
+                {
+                    // top and bottm matches
+                    if ((double)comp.StraightLineMatchCount / (double)comp.Table1Size > 0.5)
+                    {
+                        result = true;
+                    }
+                }
+            }
+            return result;
+        }
+        private bool _satisfiesPartialTableMerge(TableComparison comp)
+        {
+            bool result = false;
+            if (comp.IsInOrder)// && comp.TotalMatchCount == comp.StraightLineMatchCount)
+            {
+                if (comp.FirstStraightLineMatch == 0 && comp.LastStraightLineMatch > (comp.Table1Size - 2))
+                {
+                    // top and bottm matches
+                    if ((double)comp.StraightLineMatchCount / (double)comp.Table1Size > 0.5)
+                    {
+                        result = true;
+                    }
+                }
+            }
+            return result;
+        }
         public Dictionary<long, long> MergeWithHistoricalTable(NormNameTreeTable hist)
         {
             Dictionary<long, long> result = new Dictionary<long, long>();
@@ -4854,28 +4893,42 @@ order by f.row_id, f.col_id
             }
             if (this.Rows.Count == hist.Rows.Count)
             {
-                if (_isInOrder(this, hist))
+                var analysisObj = _analyze(this, hist);
+                if (_satisfiesWholeTableMerge(analysisObj))
                 {
-                    result = _straightlineMerge(this, hist);
+                    // if first line and last line matches, and match percentage is > 0.5 then straightline merge
+                    // if fistline merge didn't work, and match percentage > 0.5 then merge within limited
+                    result = _straightlineMergeWholeTable(this, hist);
+                }
+                else if (_satisfiesPartialTableMerge(analysisObj))
+                {
+                    result = _straightlineMergePartialTable(this, hist, analysisObj.FirstStraightLineMatch, analysisObj.LastStraightLineMatch);
                 }
             }
             else if (this.Rows.Count > hist.Rows.Count)
             {
+                if (this.Rows.Count - hist.Rows.Count == 1)
+                {
+                    // remove one row from unmatched, and treat it as same count
+                }
 
             }
             else if (this.Rows.Count < hist.Rows.Count)
             {
-
+                if (hist.Rows.Count - this.Rows.Count == 1)
+                {
+                    // remove one row from unmatched, and see treat it as same count
+                }
             }
 
 
             return result;
         }
 
-        private Dictionary<long, long> _straightlineMerge(NormNameTreeTable curr, NormNameTreeTable hist)
+        private Dictionary<long, long> _straightlineMergeWholeTable(NormNameTreeTable curr, NormNameTreeTable hist)
         {
             Dictionary<long, long> result = new Dictionary<long, long>();
-            for (int i = 0; i < hist.Rows.Count; i++)
+            for (int i = 0; i < curr.Rows.Count; i++)
             {
                 for (int j = 0; j < hist.Rows.Count; j++)
                 {
@@ -4893,13 +4946,105 @@ order by f.row_id, f.col_id
             return result;
         }
 
+        private Dictionary<long, long> _straightlineMergePartialTable(NormNameTreeTable curr, NormNameTreeTable hist, int first, int last)
+        {
+            Dictionary<long, long> result = new Dictionary<long, long>();
+            for (int i = first; i < last; i++)
+            {
+                for (int j = first; j < last; j++)
+                {
+                    if (j < i) continue;
+                    else if (j > i) break;
+
+                    var hist_cluster_id = hist.Rows[j].ClusterId;
+                    if (hist_cluster_id <= 0) break;
+                    foreach (var flat_id in curr.Rows[i].FlatIds)
+                    {
+                        result.Add(flat_id, hist_cluster_id);
+                    }
+                }
+            }
+            return result;
+        }
         private bool _isMatch(NormNameTreeRow curr, NormNameTreeRow hist)
         {
             bool result = false;
-            result = true;
+            if ((curr.RawRowLabel == hist.RawRowLabel) ||
+                (curr.CleanedRawRowLabel == hist.CleanedRawRowLabel) ||
+                (curr.CleanedRowLabel == hist.CleanedRowLabel) ||
+                (curr.CleanedCleanedRowLabel == hist.CleanedCleanedRowLabel) ||
+                (curr.FinalLabel == hist.FinalLabel) ||
+                (curr.CleanedFinalLabel == hist.CleanedFinalLabel))
+            {
+                result = true;
+            }
             return result;
         }
-        private bool _isInOrder(NormNameTreeTable curr, NormNameTreeTable hist)
+        public class TableComparison
+        {
+            public int Table1Size = -1;
+            public int Table2Size = -1;
+            public bool IsInOrder = false;
+            public int StraightLineMatchCount = -1;
+            public int TotalMatchCount = -1;
+            public int FirstStraightLineMatch = -1;
+            public int LastStraightLineMatch = -1;
+        }
+        private TableComparison _analyze(NormNameTreeTable curr, NormNameTreeTable hist)
+        {
+            TableComparison result = new TableComparison();
+            result.Table1Size = curr.Rows.Count;
+            result.Table2Size = hist.Rows.Count;
+            int lastHistoryRow = 0;
+            int straightLineMatchCount = 0;
+            bool isInOrder = true;
+            int firstStraightLineMatch = -1;
+            int lastStraightLineMatch = -1;
+            HashSet<int> alreadyMatchedHistoryRow = new HashSet<int>();
+            for (int i = 0; i < curr.Rows.Count; i++)
+            {
+                bool isMatched = false;
+                int currMatched = -1;
+                for (int j = 0; j < hist.Rows.Count; j++)
+                {
+                    if (alreadyMatchedHistoryRow.Contains(j))
+                    {   // for cases with duplicated labels
+                        continue;
+                    }
+                    if (_isMatch(curr.Rows[i], hist.Rows[j]))
+                    {
+                        currMatched = j;
+                        alreadyMatchedHistoryRow.Add(currMatched);
+                        isMatched = true;
+                        break;
+                    }
+                }
+                if (isMatched)
+                {
+                    if (currMatched < lastHistoryRow)
+                    {
+                        isInOrder = false;
+                    }
+                    lastHistoryRow = currMatched;
+                    if (i == currMatched)
+                    {
+                        if (straightLineMatchCount == 0)
+                        {
+                            firstStraightLineMatch = currMatched;
+                        }
+                        straightLineMatchCount++;
+                        lastStraightLineMatch = currMatched;
+                    }
+                }
+            }
+            result.StraightLineMatchCount = straightLineMatchCount;
+            result.TotalMatchCount = alreadyMatchedHistoryRow.Count;
+            result.IsInOrder = isInOrder;
+            result.FirstStraightLineMatch = firstStraightLineMatch;
+            result.LastStraightLineMatch = lastStraightLineMatch;
+            return result;
+        }
+        private bool _isInOrderObselete(NormNameTreeTable curr, NormNameTreeTable hist)
         {
             bool result = false;
             int lastHistoryRow = 0;
@@ -4934,5 +5079,42 @@ order by f.row_id, f.col_id
             result = true;
             return result;
         }
+        private bool _matchCount(NormNameTreeTable curr, NormNameTreeTable hist)
+        {
+            bool result = false;
+            int lastHistoryRow = 0;
+            HashSet<int> alreadyMatchedHistoryRow = new HashSet<int>();
+            foreach (var c in curr.Rows)
+            {
+                bool isMatched = false;
+                int currMatched = -1;
+                for (int j = 0; j < hist.Rows.Count; j++)
+                {
+                    if (alreadyMatchedHistoryRow.Contains(j))
+                    {   // for cases with duplicated labels
+                        continue;
+                    }
+                    if (_isMatch(c.Value, hist.Rows[j]))
+                    {
+                        currMatched = j;
+                        alreadyMatchedHistoryRow.Add(currMatched);
+                        isMatched = true;
+                        break;
+                    }
+                }
+                if (isMatched)
+                {
+                    if (currMatched < lastHistoryRow)
+                    {
+                        return false;
+                    }
+                    lastHistoryRow = currMatched;
+                }
+            }
+            result = true;
+            return result;
+        }
+
+
     }
 }

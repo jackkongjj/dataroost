@@ -648,6 +648,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers {
             }
             return resultStr;
         }
- 
+
+        public static string RemoveHierarchyNumberSpace(string s)
+        {
+            var nohierarchy = fn.EndLabel(s);
+            var noNumberandSpace = fn.AlphabetOnly(nohierarchy, "");
+            var lower = noNumberandSpace.ToLower();
+            return lower;
+        }
     }
 }
