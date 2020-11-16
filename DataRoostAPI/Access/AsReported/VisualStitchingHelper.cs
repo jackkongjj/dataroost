@@ -3988,73 +3988,90 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 {
                     continue;
                 }
-				var existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
-                var existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
-                SortedDictionary<string, long> existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
-                foreach (var cl in existingCleanLabel)
-                {
-                    var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
-                    if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                SortedDictionary<string, long> existing = null;
+                SortedDictionary<string, long> existingCleanLabel = null;
+                SortedDictionary<string, long> existingCleanLabelNoHierarchy = null;
+
+                foreach (var i in iconums) {
+                    Dictionary<long, long> changeList = new Dictionary<long, long>();
+                    if (guid != NullGuid)// && _unslotted.Count > 0)
                     {
-                        existingCleanLabelNoHierarchy[lower] = cl.Value;
+
                     }
-                }
-                // need to do it for Clean label too. 
-				foreach (var i in iconums) {
-					_unslotted = new Dictionary<string, int>();
+
+                    _unslotted = new Dictionary<string, int>();
 					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
                     SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
+                    int datapointToMatch = -1;
                     if (guid != NullGuid) {
 						unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
-                        unmappedCleanLabel = _GetIconumCleanLabels(i, guid, t);
-					} else {
-
+                        datapointToMatch = unmapped.Count;
+                        var tableAlignmentChanges = _getChangeListByTableAlignment(guid);
+                        changeList.Eat(tableAlignmentChanges);
+                    } else {
 						unmapped = _GetIconumRawLabels(i, t);
-					}
-					var changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
-                    //changelist[flat_id, clusterid]
-                    var changeCount = changeList.Count;
-
-                    /* SECOND ATTEMPT */
-                    var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
-                    foreach (var unmap in unmappedCleanLabel)
-                    {
-                        if (changeList.ContainsKey(unmap.Key))
-                        {
-                            continue;
-                        }
-                        unmappedCleanLabelNotMatched[unmap.Key] = unmap.Value; // (flat_id, cleaned_row_label)
+                        datapointToMatch = unmapped.Count;
                     }
-                    var changeList2 = _getChangeList(existingCleanLabel, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
-                    foreach (var change in changeList2)
+                    bool isDone = changeList.Count == datapointToMatch;
+                    if (!isDone) // FIRST ATTEMPT: match raw_row_label
                     {
-                        if (!changeList.ContainsKey(change.Key))
+                        if (existing == null)
                         {
-                            changeList[change.Key] = change.Value;
+                            existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
                         }
+                        var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }                                                         //changelist[flat_id, clusterid]
+                    var changeCount = changeList.Count;
+                    isDone = changeList.Count == datapointToMatch;
+                    if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
+                    { 
+                        if (existingCleanLabel == null)
+                        {
+                            existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
+                        }
+                        var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
+                        foreach (var um in unmappedCleanLabel1)
+                        {
+                            if (!changeList.ContainsKey(um.Key))
+                            {
+                                unmappedCleanLabel[um.Key] = um.Value;
+                            }
+                        }
+                        
+                        var temp_changeList = _getChangeList(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
                     }
                     var changeCount2 = changeList.Count;
-
-                    /* THIRD ATTEMPT */
-                    unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
-                    foreach (var unmap in unmappedCleanLabel)
+                    isDone = changeList.Count == datapointToMatch;
+                    if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
                     {
-                        if (changeList.ContainsKey(unmap.Key))
+                        if (existingCleanLabelNoHierarchy == null)
                         {
-                            continue;
+                            existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                            foreach (var cl in existingCleanLabel)
+                            {
+                                var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
+                                if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                                {
+                                    existingCleanLabelNoHierarchy[lower] = cl.Value;
+                                }
+                            }
                         }
-                        unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
-                    }
-                    changeList2 = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
-                    foreach (var change in changeList2)
-                    {
-                        if (!changeList.ContainsKey(change.Key))
+                        var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                        foreach (var unmap in unmappedCleanLabel)
                         {
-                            changeList[change.Key] = change.Value;
+                            if (changeList.ContainsKey(unmap.Key))
+                            {
+                                continue;
+                            }
+                            unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
                         }
+                        var temp_changeList = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
                     }
                     var changeCount3 = changeList.Count;
-
+                    isDone = changeList.Count == datapointToMatch;
                     // the problem is: which document do we use? which document's raw tables? 
                     // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
                     int countSlotted = 0;
@@ -4067,17 +4084,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 					}
                     // limit it to /guid/tableid/
                     // most have a docId
-                    if (guid != NullGuid)// && _unslotted.Count > 0)
-                    {
-                        var moreChanges = _getChangeListByTableAlignment(guid, existing, unmapped);
-                        foreach (var mc in moreChanges)
-                        {
-                            if (!changeList.ContainsKey(mc.Key))
-                            {
-                                changeList.Add(mc.Key, mc.Value);
-                            }
-                        }
-                    }
+
                     //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
                     //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
                     //_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
@@ -4289,7 +4296,7 @@ select {1}, ntf.id
 
             return new Dictionary<long, long>();
         }
-        private Dictionary<long, long> _getChangeListByTableAlignment(Guid currDoc, SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
+        private Dictionary<long, long> _getChangeListByTableAlignment(Guid currDoc) {
             var result = new Dictionary<long, long>(); 
             var histDoc = _getBestMatchingDocument(currDoc);
             NormNameTreeTable curr = new NormNameTreeTable();
@@ -4320,7 +4327,7 @@ select {1}, ntf.id
         //}
         private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
 #if DEV
-            return new Dictionary<long, long>();// let's assume no label matching.
+            //return new Dictionary<long, long>();// let's assume no label matching.
 #endif
             // existing[raw label, clusterid]
             // unmapped[flat_id, rawlabel]
@@ -4508,7 +4515,7 @@ select distinct ch.id, nntf.raw_row_label
 					while (sdr.Read()) {
 						try {
 							var id = sdr.GetInt64(0);
-							var rawlabel = sdr.GetStringSafe(1);
+							var rawlabel = sdr.GetStringSafe(1).ToLower();
                             if (!entries.ContainsKey(rawlabel))
                             {
                                 entries[rawlabel] = id;
@@ -4535,7 +4542,7 @@ select distinct ch.id, nntf.raw_row_label
                         try
                         {
                             var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
+                            var rawlabel = sdr.GetStringSafe(1).ToLower();
                             if (!entries.ContainsKey(rawlabel))
                             {
                                 entries[rawlabel] = id;
@@ -4726,7 +4733,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 					while (sdr.Read()) {
 						try {
 							var id = sdr.GetInt64(0);
-							var rawlabel = sdr.GetStringSafe(1);
+							var rawlabel = sdr.GetStringSafe(1).ToLower();
 							if (!string.IsNullOrWhiteSpace(rawlabel)) {
 								entries[id] = rawlabel;
 
@@ -4742,6 +4749,20 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 		}
 
 	}
+    public static class DictionaryExtension
+    {
+        public static Dictionary<long, long> Eat(this Dictionary<long, long> survive, Dictionary<long, long> eaten)
+        {
+            foreach (var change in eaten)
+            {
+                if (!survive.ContainsKey(change.Key))
+                {
+                    survive[change.Key] = change.Value;
+                }
+            }
+            return survive;
+        }
+    }
     public class NormNameTreeRow
     {
         public HashSet<long> FlatIds = new HashSet<long>();
