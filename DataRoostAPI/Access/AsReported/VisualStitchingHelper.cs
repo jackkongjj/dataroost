@@ -5257,7 +5257,7 @@ select distinct ch.id, nntf.raw_row_label
                         try
                         {
                             var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
+                            var rawlabel = sdr.GetStringSafe(1).ToLower();
                             if (!entries.ContainsKey(rawlabel))
                             {
                                 entries[rawlabel] = id;
@@ -5286,7 +5286,7 @@ select distinct ch.id, nntf.raw_row_label
                         try
                         {
                             var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
+                            var rawlabel = sdr.GetStringSafe(1).ToLower();
                             if (!entries.ContainsKey(rawlabel))
                             {
                                 entries[rawlabel] = id;
@@ -5315,7 +5315,6 @@ select distinct ch.id, nntf.raw_row_label
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} 
-	and t.cluster_id_new is null
 	and (tf.raw_row_label = '') is not true
 
 
@@ -5332,7 +5331,6 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	and tf.iconum = {1} and tf.document_id = '{2}'
-	and t.cluster_id_new is null
 	and (tf.raw_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
@@ -5356,7 +5354,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
                         try
                         {
                             var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
+                            var rawlabel = sdr.GetStringSafe(1).ToLower();
                             if (!string.IsNullOrWhiteSpace(rawlabel))
                             {
                                 entries[id] = rawlabel;
