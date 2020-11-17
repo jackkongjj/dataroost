@@ -1,5 +1,4 @@
-﻿#define DEV
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Configuration;
@@ -3971,11 +3970,6 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			return true;
 		}
 		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
-#if DEV
-            iconums = new List<int>();
-            iconums.Add(12380);
-            guid = new Guid("75CF5A86-014F-E811-80F1-8CDCD4AF21E4");
-#endif
             var iconum = iconums.First();
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
@@ -4082,7 +4076,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
                     //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
                     //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
-                    //_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
 
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
@@ -4286,6 +4280,43 @@ order by  d.PublicationDateTime desc
             return bestHistory;
         }
 
+        private Guid _getNextYearDocumentFromDB(int iconum, Guid currDocId)
+        {
+            string sql_lastyeardocument = @"
+select top 1 d.DAMDocumentId
+FROM  Document d_curr
+JOIN DocumentSeries ds_curr on d_curr.DocumentSeriesID = ds_curr.ID
+JOIN Document d on d_curr.DocumentSeriesID = d.DocumentSeriesID and d_curr.ReportTypeID = d.ReportTypeID and d_curr.FormTypeID = d.FormTypeID
+WHERE 
+d_curr.DAMDocumentId = @docId
+and ds_curr.CompanyID = @companyId
+and d.ArdExportFlag = 1
+and d.DocumentDate >= DATEADD(d, 364, d_curr.DocumentDate) 
+and d.DocumentDate <= DATEADD(d, 367, d_curr.DocumentDate)
+order by  d.PublicationDateTime desc
+
+";
+            Guid bestHistory = default(Guid);
+            using (SqlConnection conn = new SqlConnection(_sfConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(sql_lastyeardocument, conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@docId", currDocId);
+                    cmd.Parameters.AddWithValue("@companyId", iconum);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            bestHistory = reader.GetGuid(0);
+                            break;
+                        }
+
+                    }
+                }
+            }
+            return bestHistory;
+        }
         private Guid _getHistoricalDocumentFromService(int iconum, Guid currDocId)
         {
             Guid bestHistory = default(Guid);
@@ -4400,6 +4431,14 @@ order by  d.PublicationDateTime desc
                         }
                     }
 
+                }
+            }
+            var next_year_guid = _getNextYearDocumentFromDB(iconum, currDoc);
+            foreach (var t in histDocList)
+            {
+                if (t.Item1 == next_year_guid)
+                {
+                    return next_year_guid;
                 }
             }
             var dbguid = _getHistoricalDocumentFromDB(iconum, currDoc);
@@ -4546,9 +4585,6 @@ order by  d.PublicationDateTime desc
         //    return lower;
         //}
         private Dictionary<long, long> _getChangeList(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped) {
-#if DEV
-            //return new Dictionary<long, long>();// let's assume no label matching.
-#endif
             // existing[raw label, clusterid]
             // unmapped[flat_id, rawlabel]
             // changelist[flat_id, clusterid]
