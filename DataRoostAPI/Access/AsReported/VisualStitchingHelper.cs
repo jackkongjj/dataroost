@@ -4116,7 +4116,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
                     //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
                     //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
-                    //_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
 
                     _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
