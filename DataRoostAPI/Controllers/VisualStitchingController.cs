@@ -731,6 +731,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				};
 			}
 		}
+        [Route("cluster/debug/{level}")]
+        [HttpGet]
+        public int ClusterDebugLevel(int level)
+        {
+            try
+            {
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var result = vsHelper.DebugLevel(level);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return -1;
+            }
+        }
         [Route("cluster/extend/{iconum}")]
         [HttpGet]
         public HttpResponseMessage ClusterTreeExtendPut(int iconum)

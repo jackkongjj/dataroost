@@ -14,15 +14,35 @@ using System.Threading.Tasks;
 using FactSet.Data.SqlClient;
 using System.Text.RegularExpressions;
 using CCS.Fundamentals.DataRoostAPI.Helpers;
+using System.Net.Mail;
 
 namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 	public class VisualStitchingHelper {
-
-		private readonly string _sfConnectionString;
+        public static void SendEmail(string subject, string emailBody)
+        {
+            try
+            {
+                SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+                MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost VisualStitching");
+                MailMessage message = new MailMessage();
+                message.From = mailFrom;
+                var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
+                message.To.Add(ljiang);
+                message.Subject = subject + " from " + Environment.MachineName;
+                message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+                message.Body = emailBody;
+                message.IsBodyHtml = true;
+                mySMTP.Send(message);
+            }
+            catch { }
+        }
+        private StringBuilder _levelOneLogger = new StringBuilder();
+        private StringBuilder _levelTwoLogger = new StringBuilder();
+        private readonly string _sfConnectionString;
         private readonly string _pgConnectionString;
-
+        static int DebugLogLevel = 5;
 		static VisualStitchingHelper() {
-
+            DebugLogLevel = 5;
 		}
 
         public VisualStitchingHelper(string sfConnectionString)
@@ -35,6 +55,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
 			this._sfConnectionString = sfConnectionString;
             this._pgConnectionString = pgConnectionString;
 		}
+
+        public int DebugLevel(int newLevel)
+        {
+            DebugLogLevel = newLevel;
+            return DebugLogLevel;
+        }
 
 		private string factsetIOconnString = "Host=ip-172-31-81-210.manager.factset.io;Port=32791;Username=uyQKYrcTSrnnqB;Password=NoCLf_xBeXiB0UXZjhZUNg7Zx8;Database=di8UFb70sJdA5e;sslmode=Require;Trust Server Certificate=true;";
 		private string connString = "Host=ffautomation-dev-postgres.c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=ffautomation_writer_user;Password=qyp0nMeA;Database=postgres;"; // sslmode=Require;Trust Server Certificate=true;
@@ -3971,23 +3997,30 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 		}
 		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
             var iconum = iconums.First();
+            _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
+            _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
 					_CleanupHierarchy(iconum, t);
-				}
+                    _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
+                }
 			}
 			foreach (var t in tableIDs) {
                 if (tableid > 0 && t != tableid)
                 {
                     continue;
                 }
+                _levelOneLogger.AppendLineBreak("foreach (var t in tableIDs): " + t);
                 SortedDictionary<string, long> existing = null;
                 SortedDictionary<string, long> existingCleanLabel = null;
                 SortedDictionary<string, long> existingCleanLabelNoHierarchy = null;
 
                 foreach (var i in iconums) {
+                    _levelOneLogger.AppendLineBreak("iconums.First(): " + iconum);
                     Dictionary<long, long> changeList = new Dictionary<long, long>();
+                    _levelOneLogger.AppendLineBreak("changeList.Count: " + changeList.Count);
                     _unslotted = new Dictionary<string, int>();
 					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
                     SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
@@ -3995,12 +4028,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     if (guid != NullGuid) {
 						unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
                         datapointToMatch = unmapped.Count;
+
                         var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
                         changeList.Eat(tableAlignmentChanges);
+                        _levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
                     } else {
 						unmapped = _GetIconumRawLabels(i, t);
                         datapointToMatch = unmapped.Count;
                     }
+                    _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
+                    _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
                     bool isDone = changeList.Count == datapointToMatch;
                     if (!isDone) // FIRST ATTEMPT: match raw_row_label
                     {
@@ -4012,6 +4049,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
                     var changeCount = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after First attempt: " + changeList.Count);
                     isDone = changeList.Count == datapointToMatch;
                     if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
                     { 
@@ -4031,6 +4069,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         var temp_changeList = _getChangeList(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }
+                    _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
                     var changeCount2 = changeList.Count;
                     isDone = changeList.Count == datapointToMatch;
                     if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
@@ -4060,6 +4099,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         changeList.Eat(temp_changeList);
                     }
                     var changeCount3 = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 3rd Attempt: " + changeList.Count);
                     isDone = changeList.Count == datapointToMatch;
                     // the problem is: which document do we use? which document's raw tables? 
                     // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
@@ -4076,13 +4116,24 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
                     //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
                     //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
-                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    //_WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
 
+                    _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
 				}
 			}
-			return true;
+            if (DebugLogLevel > 0)
+            {
+                string emailbody = _levelOneLogger.ToString();
+                if (DebugLogLevel > 1)
+                {
+                    emailbody += "LEVEL 2+: " + _levelTwoLogger.ToString();
+                }
+                SendEmail("Visual Stitching Debug", emailbody);
+            }
+
+            return true;
 		}
 		private List<int> TableIDs() {
 			List<int> dataNodes = new List<int>();
@@ -5019,6 +5070,11 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
             List<NormNameTreeTable> newList = new List<NormNameTreeTable>();
             newList.AddRange(listToClone.Select(item => item));
             return newList;
+        }
+        public static StringBuilder AppendLineBreak(this StringBuilder sb, string line)
+        {
+            sb.AppendLine(line + "<BR>");
+            return sb;
         }
     }
     public class NormNameTreeRow
