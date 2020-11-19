@@ -5100,16 +5100,28 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
         }
         public NormNameTreeTable Load(string connectionString, int iconum, Guid guid, int table_id)
         {
+            try
+            {
+                return _Load(connectionString, iconum, guid, table_id);
+            }
+            catch
+            {
+                return new NormNameTreeTable();
+            }
+        }
+
+        private NormNameTreeTable _Load(string connectionString, int iconum, Guid guid, int table_id)
+        {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt = string.Format(@"
 select f.id, f.raw_row_label, f.cleaned_row_label, f.final_label,
-	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id
+	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id, f.file_id
 from norm_name_tree_flat f 
 left join cluster_mapping cm on f.id = cm.norm_name_tree_flat_id
 where f.document_id = '{1}' and f.iconum = {0}
-and f.table_id = {2}
-order by f.row_id, f.col_id
+and f.table_id = {2} and f.item_offset like '%|r0'
+order by f.file_id, f.row_id, f.col_id
 
 ", iconum, guid, table_id);
             int idx = 0;
@@ -5117,6 +5129,7 @@ order by f.row_id, f.col_id
             var curr_row = new NormNameTreeRow();
             string last_raw_label = "";
             int last_database_row_id = -1;
+            int last_file_id = -1;
             using (var sqlConn = new NpgsqlConnection(connectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
             {
@@ -5133,6 +5146,16 @@ order by f.row_id, f.col_id
                             var curr_raw_label = sdr.GetStringSafe(1);
                             var cluster_id = sdr.GetInt64(4);
                             int curr_database_row_id = sdr.GetInt32(5);
+                            var curr_file_id = sdr.GetInt32(7);
+                            if (last_file_id >= 0)
+                            {
+                                if (curr_file_id != last_file_id)
+                                    return this;
+                            }
+                            else
+                            {
+                                last_file_id = curr_file_id;
+                            }
                             bool isNewRow = false;
                             if (last_database_row_id < 0)
                             {
