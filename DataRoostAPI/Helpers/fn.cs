@@ -9,8 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.IO;
 
-namespace CCS.Fundamentals.DataRoostAPI.Helpers
-{
+namespace CCS.Fundamentals.DataRoostAPI.Helpers {
     public class fn
     {
         static Dictionary<string, string> StemDictionary = new Dictionary<string, string>()
@@ -307,6 +306,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers
             return "";
         }
 
+        public static string AlphabetOnly(string input, string newStr = " ")
+        {
+            input = input.Replace("[", newStr).Replace("]", newStr).Replace("-", newStr);
+            var rgx = new System.Text.RegularExpressions.Regex("[^a-zA-Z]");
+            return rgx.Replace(input, newStr);
+        }
         public static string AlphaNumericOnly(string input, string newStr = " ")
         {
             input = input.Replace("[", " ").Replace("]", " ").Replace("-", " ");
@@ -574,8 +579,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
 
-
-
         public static string LongestSubstring(String X, String Y)
         {
             var m = X.Length;
@@ -644,5 +647,12 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers
             return resultStr;
         }
 
+        public static string RemoveHierarchyNumberSpace(string s)
+        {
+            var nohierarchy = fn.EndLabel(s);
+            var noNumberandSpace = fn.AlphabetOnly(nohierarchy, "");
+            var lower = noNumberandSpace.ToLower();
+            return lower;
+        }
     }
 }

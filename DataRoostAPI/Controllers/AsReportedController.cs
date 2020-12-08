@@ -741,9 +741,31 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			}
 		}
 
+        [Route("timeSlice/smart/{currDocumentId}/{currFileId}")]
+        [HttpPost]
+        public List<JsonCol> PostSmartTimeSlice(string CompanyId, Guid currDocumentId, int currFileId, List<string> offsets)
+        {
+            try
+            {
+                if (offsets == null || offsets.Count == 0)
+                    throw new ArgumentNullException();
+                int iconum = PermId.PermId2Iconum(CompanyId);
 
-		//TODO: Add IsSummary
-		[Route("timeSlice/{id}")]
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                AsReportedTemplateHelper helper = new AsReportedTemplateHelper(sfConnectionString);
+                var jsonColsTint =  helper.SmartTimeSlicesPost(iconum, currDocumentId, currFileId, offsets);
+                return jsonColsTint;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return null;
+            }
+        }
+
+
+        //TODO: Add IsSummary
+        [Route("timeSlice/{id}")]
 		[HttpGet]
 		public TimeSlice GetTimeSlice(string CompanyId, int id) {
 			try {
