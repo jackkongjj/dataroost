@@ -4795,6 +4795,9 @@ select distinct ch.id, nntf.raw_row_label
 		on ch.concept_type_id = cpct.concept_type_id
 	join cluster_presentation cp 
 		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
@@ -4810,6 +4813,9 @@ select distinct ch.id, nntf.raw_row_label
 		on ch.concept_type_id = cpct.concept_type_id
 	join cluster_presentation cp 
 		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and cp.industry_id = 1
 		and coalesce( trim(nntf.raw_row_label),'')<>''
 ", iconum, tableId);
@@ -4883,6 +4889,9 @@ select distinct ch.id, nntf.cleaned_row_label
 		on ch.concept_type_id = cpct.concept_type_id
 	join cluster_presentation cp 
 		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
 ", iconum, tableId);
@@ -4898,6 +4907,9 @@ select distinct ch.id, nntf.cleaned_row_label
 		on ch.concept_type_id = cpct.concept_type_id
 	join cluster_presentation cp 
 		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and cp.industry_id = 1
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
 ", iconum, tableId);
