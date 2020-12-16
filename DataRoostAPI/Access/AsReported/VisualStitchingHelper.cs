@@ -5131,8 +5131,17 @@ select f.id, f.raw_row_label, f.cleaned_row_label, f.final_label,
 	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id, f.file_id
 from norm_name_tree_flat f 
 left join cluster_mapping cm on f.id = cm.norm_name_tree_flat_id
+left join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+left join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+left join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+left join concept_type ct 
+		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
 and f.table_id = {2} and f.item_offset like '%|r0'
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
 order by f.file_id, f.row_id, f.col_id
 
 ", iconum, guid, table_id);
