@@ -4800,6 +4800,7 @@ select distinct ch.id, nntf.raw_row_label
 		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>''
+        and ch.is_reviewed = true
 ", iconum, tableId);
 
             string sqltxt2 = string.Format(@"
@@ -4818,6 +4819,7 @@ select distinct ch.id, nntf.raw_row_label
 		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and cp.industry_id = 1
 		and coalesce( trim(nntf.raw_row_label),'')<>''
+    and ch.is_reviewed = true
 ", iconum, tableId);
 			int idx = 0;
 			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
@@ -4894,6 +4896,7 @@ select distinct ch.id, nntf.cleaned_row_label
 		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+        and ch.is_reviewed = true
 ", iconum, tableId);
 
             string sqltxt2 = string.Format(@"
@@ -4912,6 +4915,7 @@ select distinct ch.id, nntf.cleaned_row_label
 		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and cp.industry_id = 1
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+        and ch.is_reviewed = true
 ", iconum, tableId);
             int idx = 0;
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
