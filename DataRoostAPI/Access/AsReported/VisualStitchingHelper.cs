@@ -3986,7 +3986,6 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, NullGuid);
-            _ExtendColumns(iconums, NullGuid);
             return true;
 		}
 		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
@@ -3994,13 +3993,29 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, docid, tableid);
-            _ExtendColumns(iconums, docid, tableid);
             return true;
 		}
 
+        public bool ExtendClusterByIconumDev(int iconum)
+        {
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _ExtendHierarchy(iconums, NullGuid);
+            _ExtendColumns(iconums, NullGuid);
+            return true;
+        }
+        public bool ExtendClusterByDocumentDev(int iconum, Guid docid, int tableid = -1)
+        {
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _ExtendHierarchy(iconums, docid, tableid);
+            _ExtendColumns(iconums, docid, tableid);
+            return true;
+        }
         private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
         {
-            return false;
             if (guid == NullGuid || tableid < 0)
             {
                 return false; // only work for document-table clustering

@@ -786,7 +786,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByIconum(iconum);
+                var json = vsHelper.ExtendClusterByIconumDev(iconum);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -838,7 +838,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId);
+                var json = vsHelper.ExtendClusterByDocumentDev(iconum, docId);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -890,7 +890,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId, tableid);
+                var json = vsHelper.ExtendClusterByDocumentDev(iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
