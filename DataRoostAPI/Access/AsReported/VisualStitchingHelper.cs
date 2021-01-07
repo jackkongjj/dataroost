@@ -3986,16 +3986,172 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, NullGuid);
-			return true;
+            _ExtendColumns(iconums, NullGuid);
+            return true;
 		}
 		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
 			List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, docid, tableid);
-			return true;
+            _ExtendColumns(iconums, docid, tableid);
+            return true;
 		}
-		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
+
+        private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
+        {
+            return false;
+            _levelTwoLogger.AppendLineBreak("");
+            _levelTwoLogger.AppendLineBreak("COLUMN TYPE");
+            var iconum = iconums.First();
+            _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
+            _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+
+            var tableIDs = TableIDs();
+            if (guid == NullGuid)
+            {
+                foreach (var t in tableIDs)
+                {
+                    _CleanupHierarchy(iconum, t);
+                    _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
+                }
+            }
+            foreach (var t in tableIDs)
+            {
+                if (tableid > 0 && t != tableid)
+                {
+                    continue;
+                }
+                _levelOneLogger.AppendLineBreak("foreach (var t in tableIDs): " + t);
+                SortedDictionary<string, long> existing = null;
+                SortedDictionary<string, long> existingCleanLabel = null;
+                SortedDictionary<string, long> existingCleanLabelNoHierarchy = null;
+
+                foreach (var i in iconums)
+                {
+                    _levelOneLogger.AppendLineBreak("iconums.First(): " + iconum);
+                    Dictionary<long, long> changeList = new Dictionary<long, long>();
+                    _levelOneLogger.AppendLineBreak("changeList.Count: " + changeList.Count);
+                    _unslotted = new Dictionary<string, int>();
+                    SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
+                    SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
+                    int datapointToMatch = -1;
+                    if (guid != NullGuid)
+                    {
+                        unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
+                        datapointToMatch = unmapped.Count;
+
+                        var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
+                        changeList.Eat(tableAlignmentChanges);
+                        _levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
+                    }
+                    else
+                    {
+                        unmapped = _GetIconumRawLabels(i, t);
+                        datapointToMatch = unmapped.Count;
+                    }
+                    _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
+                    _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
+                    bool isDone = changeList.Count == datapointToMatch;
+                    if (!isDone) // FIRST ATTEMPT: match raw_row_label
+                    {
+                        if (existing == null)
+                        {
+                            existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
+                        }
+                        var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }                                                         //changelist[flat_id, clusterid]
+                    var changeCount = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after First attempt: " + changeList.Count);
+                    isDone = changeList.Count == datapointToMatch;
+                    if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
+                    {
+                        if (existingCleanLabel == null)
+                        {
+                            existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
+                        }
+                        var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
+                        foreach (var um in unmappedCleanLabel1)
+                        {
+                            if (!changeList.ContainsKey(um.Key))
+                            {
+                                unmappedCleanLabel[um.Key] = um.Value;
+                            }
+                        }
+
+                        var temp_changeList = _getChangeList(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
+                    var changeCount2 = changeList.Count;
+                    isDone = changeList.Count == datapointToMatch;
+                    if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
+                    {
+                        if (existingCleanLabelNoHierarchy == null)
+                        {
+                            existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                            foreach (var cl in existingCleanLabel)
+                            {
+                                var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
+                                if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                                {
+                                    existingCleanLabelNoHierarchy[lower] = cl.Value;
+                                }
+                            }
+                        }
+                        var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                        foreach (var unmap in unmappedCleanLabel)
+                        {
+                            if (changeList.ContainsKey(unmap.Key))
+                            {
+                                continue;
+                            }
+                            unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
+                        }
+                        var temp_changeList = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    var changeCount3 = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 3rd Attempt: " + changeList.Count);
+                    isDone = changeList.Count == datapointToMatch;
+                    // the problem is: which document do we use? which document's raw tables? 
+                    // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
+                    int countSlotted = 0;
+                    foreach (var c in changeList)
+                    {
+                        countSlotted++;
+                    }
+                    int countUnslotted = 0;
+                    foreach (var u in _unslotted)
+                    {
+                        countUnslotted += u.Value;
+                    }
+                    // limit it to /guid/tableid/
+                    // most have a docId
+
+                    //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
+                    //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
+                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+
+                    _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
+                    var debugchangelist = changeList;
+                    var debugunslot = _unslotted;
+                }
+            }
+            if (DebugLogLevel > 0)
+            {
+                string emailbody = _levelOneLogger.ToString();
+                if (DebugLogLevel > 1)
+                {
+                    emailbody += "LEVEL 2+: " + _levelTwoLogger.ToString();
+                }
+                SendEmail("Visual Stitching Debug", emailbody);
+            }
+
+            return true;
+        }
+        private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
