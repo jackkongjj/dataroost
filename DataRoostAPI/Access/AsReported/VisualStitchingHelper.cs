@@ -4001,21 +4001,17 @@ exec GDBGetCountForIconum @sdbcode, @iconum
         private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
         {
             return false;
-            _levelTwoLogger.AppendLineBreak("");
-            _levelTwoLogger.AppendLineBreak("COLUMN TYPE");
+            if (guid == NullGuid || tableid < 0)
+            {
+                return false; // only work for document-table clustering
+            }
+            _levelOneLogger.AppendLineBreak("");
+            _levelOneLogger.AppendLineBreak("COLUMN TYPE");
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
 
             var tableIDs = TableIDs();
-            if (guid == NullGuid)
-            {
-                foreach (var t in tableIDs)
-                {
-                    _CleanupHierarchy(iconum, t);
-                    _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
-                }
-            }
             foreach (var t in tableIDs)
             {
                 if (tableid > 0 && t != tableid)
@@ -4038,15 +4034,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     int datapointToMatch = -1;
                     if (guid != NullGuid)
                     {
-                        unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
+                        unmapped = _GetIconumRawColumnLabels(i, guid, t); // (flat_id, raw_row_label)
                         datapointToMatch = unmapped.Count;
 
-                        var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
-                        changeList.Eat(tableAlignmentChanges);
-                        _levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
+                        //var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
+                        //changeList.Eat(tableAlignmentChanges);
+                        //_levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
                     }
                     else
                     {
+                        throw new ArgumentException("guid is null");
                         unmapped = _GetIconumRawLabels(i, t);
                         datapointToMatch = unmapped.Count;
                     }
@@ -4057,9 +4054,9 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterColumnHierarchy(iconum, t); // (raw_row_label, cluster_id)
                         }
-                        var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
+                        var temp_changeList = _getChangeList(existing, unmapped); 
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
                     var changeCount = changeList.Count;
@@ -4069,9 +4066,9 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchy(iconum, t);
                         }
-                        var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
+                        var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
                         {
                             if (!changeList.ContainsKey(um.Key))
@@ -5032,6 +5029,208 @@ select distinct ch.id, nntf.raw_row_label
             return entries;
 		}
 
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchy(int iconum, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            // TODO: think there is a bug here. not joining HTML table identification
+
+            // TODO: need to increase timeout
+            string sqltxt = string.Format(@"
+select distinct ch.id, nntf.raw_column_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and nntf.iconum = {0}
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", iconum, tableId);
+
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, nntf.raw_column_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and cp.industry_id = 1
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", iconum, tableId);
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1).ToLower();
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1).ToLower();
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
+        }
+
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchy(int iconum, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+
+            string sqltxt = string.Format(@"
+select distinct ch.id, nntf.cleaned_column_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and nntf.iconum = {0}
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", iconum, tableId);
+
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, nntf.cleaned_column_label
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and cp.industry_id = 1
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", iconum, tableId);
+            int idx = 0;
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
+        }
+
         private SortedDictionary<string, long> _GetExistingClusterCleanLabel(int iconum, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
@@ -5166,6 +5365,22 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
             return _GetIconumLabelsHelper(sqltxt);
         }
 
+        private SortedDictionary<long, string> _GetIconumCleanColumnLabels(int iconum, Guid docid, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+  select distinct tf.id, tf.cleaned_column_label
+	from norm_name_tree t 
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
+where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+	and tf.iconum = {1} and tf.document_id = '{2}'
+	and (tf.cleaned_column_label = '') is not true
+
+", tableId, iconum, docid.ToString());
+            return _GetIconumLabelsHelper(sqltxt);
+        }
+
         private SortedDictionary<long, string> _GetIconumRawLabels(int iconum, int tableId) {
 			string sqltxt = string.Format(@"
 
@@ -5195,7 +5410,25 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 ", tableId, iconum, docid.ToString());
 			return _GetIconumLabelsHelper(sqltxt);
 		}
-		private SortedDictionary<long, string> _GetIconumLabelsHelper(string sqltxt) {
+
+        private SortedDictionary<long, string> _GetIconumRawColumnLabels(int iconum, Guid docid, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+  select distinct tf.id, tf.raw_column_label
+	from norm_name_tree t 
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id and hti.file_id = tf.file_id
+where (hti.norm_table_id = {0} )
+	and tf.iconum = {1} and tf.document_id = '{2}'
+	and (tf.raw_column_label = '') is not true
+
+", tableId, iconum, docid.ToString());
+            return _GetIconumLabelsHelper(sqltxt);
+        }
+
+
+        private SortedDictionary<long, string> _GetIconumLabelsHelper(string sqltxt) {
 			SortedDictionary<long, string> entries = new SortedDictionary<long, string>();
 
 
