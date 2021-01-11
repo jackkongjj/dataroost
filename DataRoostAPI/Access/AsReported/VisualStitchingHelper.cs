@@ -4064,7 +4064,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
-                    bool isDone = changeList.Count == datapointToMatch;
+                    bool isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // FIRST ATTEMPT: match raw_row_label
                     {
                         if (existing == null)
@@ -4076,7 +4076,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }                                                         //changelist[flat_id, clusterid]
                     var changeCount = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after First attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
                     {
                         if (existingCleanLabel == null)
@@ -4097,12 +4097,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
                     var changeCount2 = changeList.Count;
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
                     {
                         if (existingCleanLabelNoHierarchy == null)
                         {
                             existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                            if (existingCleanLabel == null)
+                            {
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchy(iconum, t);
+                            }
                             foreach (var cl in existingCleanLabel)
                             {
                                 var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
@@ -4126,7 +4130,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     var changeCount3 = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 3rd Attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     // the problem is: which document do we use? which document's raw tables? 
                     // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
                     int countSlotted = 0;
@@ -5356,7 +5360,7 @@ select distinct ch.id, nntf.cleaned_row_label
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0} 
 	and tf.iconum = {1} 
 	and (tf.cleaned_row_label = '') is not true
 
@@ -5372,7 +5376,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and (tf.cleaned_row_label = '') is not true
 
@@ -5388,7 +5392,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and (tf.cleaned_column_label = '') is not true
 
@@ -5403,7 +5407,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} 
 	and (tf.raw_row_label = '') is not true
 
@@ -5418,7 +5422,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and (tf.raw_row_label = '') is not true
 
@@ -5434,7 +5438,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id and hti.file_id = tf.file_id
-where (hti.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and (tf.raw_column_label = '') is not true
 
