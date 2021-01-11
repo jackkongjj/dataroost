@@ -5552,7 +5552,7 @@ left join cluster_presentation cp
 left join concept_type ct 
 		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
-and f.table_id = {2} and f.item_offset like '%|r0'
+and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
 and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
 order by f.file_id, f.row_id, f.col_id
 
