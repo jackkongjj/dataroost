@@ -3986,6 +3986,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, NullGuid);
+            _ExtendColumns(iconums, NullGuid);
             return true;
 		}
 		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
@@ -3993,6 +3994,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, docid, tableid);
+            _ExtendColumns(iconums, docid, tableid);
             return true;
 		}
 
