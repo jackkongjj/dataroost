@@ -40,6 +40,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
         private StringBuilder _levelTwoLogger = new StringBuilder();
         private readonly string _sfConnectionString;
         private readonly string _pgConnectionString;
+        private string _environment = "STAGING";
         static int DebugLogLevel = 5;
 		static VisualStitchingHelper() {
             DebugLogLevel = 5;
@@ -4000,6 +4001,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
         public bool ExtendClusterByIconumDev(int iconum)
         {
+            this._environment = "DEV";
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
@@ -4009,6 +4011,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
         }
         public bool ExtendClusterByDocumentDev(int iconum, Guid docid, int tableid = -1)
         {
+            this._environment = "DEV";
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
@@ -4953,6 +4956,17 @@ order by c.iconum_count
 			}
 			return entries;
 		}
+        private string GetGoldCorpusSQL()
+        {
+            string sql = "";
+
+            if (this._environment == "DEV")
+            {
+                sql = @"	join gold_corpus_document_list gc 
+                    on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum ";
+            }
+            return sql;
+        }
 		private SortedDictionary<string, long> _GetExistingClusterHierarchy(int iconum, int tableId) {
 			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             // TODO: think there is a bug here. not joining HTML table identification
@@ -4962,10 +4976,8 @@ order by c.iconum_count
 select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join gold_corpus_document_list gc 
-		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
-	join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + GetGoldCorpusSQL() +
+	@" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -4983,10 +4995,8 @@ select distinct ch.id, lower(nntf.raw_row_label)
 select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join gold_corpus_document_list gc 
-		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
-	join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + GetGoldCorpusSQL() +
+	@" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -5270,10 +5280,8 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join gold_corpus_document_list gc 
-		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
-	join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + GetGoldCorpusSQL() +
+	@" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -5291,10 +5299,8 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join gold_corpus_document_list gc 
-		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
-	join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + GetGoldCorpusSQL() +
+	@" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
