@@ -4959,10 +4959,12 @@ order by c.iconum_count
 
             // TODO: need to increase timeout
 			string sqltxt = string.Format(@"
-select distinct ch.id, nntf.raw_row_label
+select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
+	join gold_corpus_document_list gc 
+		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
 	join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -4978,10 +4980,12 @@ select distinct ch.id, nntf.raw_row_label
 ", iconum, tableId);
 
             string sqltxt2 = string.Format(@"
-select distinct ch.id, nntf.raw_row_label
+select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
+	join gold_corpus_document_list gc 
+		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
 	join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5018,33 +5022,35 @@ select distinct ch.id, nntf.raw_row_label
 
 				}
 			}
-
-            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            if (entries.Count == 0)
             {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
                 {
-                    while (sdr.Read())
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
                     {
-                        try
+                        while (sdr.Read())
                         {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1).ToLower();
-                            if (!entries.ContainsKey(rawlabel))
+                            try
                             {
-                                entries[rawlabel] = id;
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1).ToLower();
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
                             }
+                            catch
+                            {
 
-
+                            }
                         }
-                        catch
-                        {
 
-                        }
                     }
-
                 }
             }
             return entries;
@@ -5057,7 +5063,7 @@ select distinct ch.id, nntf.raw_row_label
 
             // TODO: need to increase timeout
             string sqltxt = string.Format(@"
-select distinct ch.id, nntf.raw_column_label
+select distinct ch.id, lower(nntf.raw_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
@@ -5075,7 +5081,7 @@ select distinct ch.id, nntf.raw_column_label
 ", iconum, tableId);
 
             string sqltxt2 = string.Format(@"
-select distinct ch.id, nntf.raw_column_label
+select distinct ch.id, lower(nntf.raw_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
@@ -5120,33 +5126,35 @@ select distinct ch.id, nntf.raw_column_label
 
                 }
             }
-
-            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            if (entries.Count == 0)
             {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
                 {
-                    while (sdr.Read())
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
                     {
-                        try
+                        while (sdr.Read())
                         {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1).ToLower();
-                            if (!entries.ContainsKey(rawlabel))
+                            try
                             {
-                                entries[rawlabel] = id;
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1).ToLower();
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
                             }
+                            catch
+                            {
 
-
+                            }
                         }
-                        catch
-                        {
 
-                        }
                     }
-
                 }
             }
             return entries;
@@ -5157,7 +5165,7 @@ select distinct ch.id, nntf.raw_column_label
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt = string.Format(@"
-select distinct ch.id, nntf.cleaned_column_label
+select distinct ch.id, lower(nntf.cleaned_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
@@ -5175,7 +5183,7 @@ select distinct ch.id, nntf.cleaned_column_label
 ", iconum, tableId);
 
             string sqltxt2 = string.Format(@"
-select distinct ch.id, nntf.cleaned_column_label
+select distinct ch.id, lower(nntf.cleaned_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
@@ -5220,33 +5228,35 @@ select distinct ch.id, nntf.cleaned_column_label
 
                 }
             }
-
-            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            if (entries.Count == 0)
             {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
                 {
-                    while (sdr.Read())
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
                     {
-                        try
+                        while (sdr.Read())
                         {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
-                            if (!entries.ContainsKey(rawlabel))
+                            try
                             {
-                                entries[rawlabel] = id;
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1);
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
                             }
+                            catch
+                            {
 
-
+                            }
                         }
-                        catch
-                        {
 
-                        }
                     }
-
                 }
             }
             return entries;
@@ -5257,10 +5267,12 @@ select distinct ch.id, nntf.cleaned_column_label
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt = string.Format(@"
-select distinct ch.id, nntf.cleaned_row_label
+select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
+	join gold_corpus_document_list gc 
+		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
 	join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5276,10 +5288,12 @@ select distinct ch.id, nntf.cleaned_row_label
 ", iconum, tableId);
 
             string sqltxt2 = string.Format(@"
-select distinct ch.id, nntf.cleaned_row_label
+select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id
+	join gold_corpus_document_list gc 
+		on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum
 	join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5322,33 +5336,35 @@ select distinct ch.id, nntf.cleaned_row_label
 
                 }
             }
-
-            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            if (entries.Count == 0)
             {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
                 {
-                    while (sdr.Read())
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
                     {
-                        try
+                        while (sdr.Read())
                         {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
-                            if (!entries.ContainsKey(rawlabel))
+                            try
                             {
-                                entries[rawlabel] = id;
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1);
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
                             }
+                            catch
+                            {
 
-
+                            }
                         }
-                        catch
-                        {
 
-                        }
                     }
-
                 }
             }
             return entries;
