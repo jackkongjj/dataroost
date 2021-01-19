@@ -4870,11 +4870,11 @@ order by  d.PublicationDateTime desc
 			cleanedUnmapped = new SortedDictionary<long, string>();
 
 			foreach (var u in unslotted) {
-				var sCleaned = CleanStringForStep2(fn.RevCar(u.Value));
+				var sCleaned = CleanStringForStep2(fn.EndLabel(u.Value));
 				cleanedUnmapped[u.Key] = sCleaned;
 			}
 			foreach (var e in existing) {
-				var sCleaned = CleanStringForStep2(fn.RevCar(e.Key));
+				var sCleaned = CleanStringForStep2(fn.EndLabel(e.Key));
 				if (!cleanedExisting.ContainsKey(sCleaned)) {
 					//cleaned version is the key
 					cleanedExisting[sCleaned] = e.Key; // raw label is the value.
