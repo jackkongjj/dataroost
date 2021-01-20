@@ -4782,7 +4782,7 @@ order by  d.PublicationDateTime desc
             foreach (var c in histTableIds)
             {
                 NormNameTreeTable t = new NormNameTreeTable();
-                t.Load(this._pgConnectionString, iconum, histDoc, c);
+                t.LoadHistorical(this._pgConnectionString, iconum, histDoc, c);
                 histDocTables.Add(t);
             }
             //NormNameTreeTable curr = new NormNameTreeTable();
@@ -5558,6 +5558,18 @@ where hti.norm_table_id = {0}
             }
         }
 
+        public NormNameTreeTable LoadHistorical(string connectionString, int iconum, Guid guid, int table_id)
+        {
+            try
+            {
+                return _LoadHistorical(connectionString, iconum, guid, table_id);
+            }
+            catch
+            {
+                return new NormNameTreeTable();
+            }
+        }
+
         private NormNameTreeTable _Load(string connectionString, int iconum, Guid guid, int table_id)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
@@ -5579,7 +5591,116 @@ where f.document_id = '{1}' and f.iconum = {0}
 and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
 and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
 order by f.file_id, f.row_id, f.col_id
+", iconum, guid, table_id);
+            int idx = 0;
+            int curr_row_index = 0;
+            var curr_row = new NormNameTreeRow();
+            string last_raw_label = "";
+            int last_database_row_id = -1;
+            int last_file_id = -1;
+            using (var sqlConn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                cmd.CommandTimeout = 600;
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var flat_id = sdr.GetInt64(0);
+                            var curr_raw_label = sdr.GetStringSafe(1);
+                            var cluster_id = sdr.GetInt64(4);
+                            int curr_database_row_id = sdr.GetInt32(5);
+                            var curr_file_id = sdr.GetInt32(7);
+                            if (last_file_id >= 0)
+                            {
+                                if (curr_file_id != last_file_id)
+                                    return this;
+                            }
+                            else
+                            {
+                                last_file_id = curr_file_id;
+                            }
+                            bool isNewRow = false;
+                            if (last_database_row_id < 0)
+                            {
+                                isNewRow = true;
+                            }
+                            else
+                            {
+                                if (last_database_row_id == curr_database_row_id)
+                                {
+                                    if (last_raw_label != curr_raw_label)
+                                    {
+                                        throw new DataException("Row label doesn't match");
+                                    }
+                                }
+                                else
+                                {
+                                    isNewRow = true;
+                                }
+                            }
+                            if (isNewRow)
+                            {
+                                var newRow = new NormNameTreeRow();
+                                curr_row = newRow;
+                                curr_row.RawRowLabel = curr_raw_label;
+                                curr_row.CleanedRawRowLabel = fn.RemoveHierarchyNumberSpace(curr_row.RawRowLabel);
+                                curr_row.CleanedRowLabel = sdr.GetStringSafe(2);
+                                curr_row.CleanedCleanedRowLabel = fn.RemoveHierarchyNumberSpace(curr_row.CleanedRowLabel);
+                                curr_row.FinalLabel = sdr.GetStringSafe(3);
+                                curr_row.CleanedFinalLabel = fn.RemoveHierarchyNumberSpace(curr_row.FinalLabel);
+                                curr_row.ClusterId = cluster_id;
+                                curr_row.DatabaseRowId = curr_database_row_id;
+                                curr_row.NormalizedRowId = curr_row_index;
+                                curr_row.FlatIds.Add(flat_id);
+                                this.Rows.Add(curr_row_index, newRow);
+                                curr_row_index++;
+                                last_database_row_id = curr_database_row_id;
+                                last_raw_label = curr_raw_label;
+                            }
+                            else
+                            {
+                                curr_row.FlatIds.Add(flat_id);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            throw ex;
+                        }
+                    }
 
+                }
+            }
+            return this;
+        }
+
+        private NormNameTreeTable _LoadHistorical(string connectionString, int iconum, Guid guid, int table_id)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+
+            string sqltxt = string.Format(@"
+select f.id, f.raw_row_label, f.cleaned_row_label, f.final_label,
+	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id, f.file_id
+from norm_name_tree_flat f 
+join gold_corpus_document_list gc 
+                    on gc.document_id = f.document_id and gc.iconum = f.iconum
+left join cluster_mapping cm on f.id = cm.norm_name_tree_flat_id
+left join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+left join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+left join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+left join concept_type ct 
+		on cpct.concept_type_id = ct.id
+where f.document_id = '{1}' and f.iconum = {0}
+and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
+order by f.file_id, f.row_id, f.col_id
 ", iconum, guid, table_id);
             int idx = 0;
             int curr_row_index = 0;
