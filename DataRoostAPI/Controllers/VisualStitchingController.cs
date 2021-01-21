@@ -53,8 +53,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 message.From = mailFrom;
                 var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
                 var santhosh = new MailAddress("skuthuru@factset.com", "Santhosh Kuthuru");
+                var prapolu = new MailAddress("prapolu@factset.com", "Prakash Rapolu");
                 message.To.Add(ljiang);
                 message.To.Add(santhosh);
+                message.To.Add(prapolu);
                 message.Subject = subject + " from " + Environment.MachineName;
                 message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
                 message.Body = emailBody;
