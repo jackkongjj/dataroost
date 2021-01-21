@@ -4258,11 +4258,11 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     if (unmapped.Count == 0)
                     {
-                        _failureLogger.AppendLine("Document doesn't have label to match");
+                        _failureLogger.AppendLine("Norm Table for NRT label is not available. Document doesn't have label to match.");
                     }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
-                    bool isDone = changeList.Count == datapointToMatch;
+                    bool isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // FIRST ATTEMPT: match raw_row_label
                     {
                         if (existing == null)
@@ -4274,7 +4274,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }                                                         //changelist[flat_id, clusterid]
                     var changeCount = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after First attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
                     { 
                         if (existingCleanLabel == null)
@@ -4295,7 +4295,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
                     var changeCount2 = changeList.Count;
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
                     {
                         if (existingCleanLabelNoHierarchy == null)
@@ -4324,7 +4324,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     var changeCount3 = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 3rd Attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     unmappedCleanLabel = new SortedDictionary<long, string>();
                     existing = null;
                     existingCleanLabel = null;
@@ -4335,12 +4335,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         {
                             existing = _GetExistingClusterHierarchyForIndustry(1, t); // (raw_row_label, cluster_id)
                         }
+                        if (existing.Count == 0)
+                        {
+                            _failureLogger.AppendLine("MRT is not generated, please run the Named Tree. There is no cluster.");
+                        }
                         var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
                     changeCount = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 4th attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // 5th ATTEMPT: match cleaned_row_label for industry
                     {
                         if (existingCleanLabel == null)
@@ -4361,7 +4365,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     _levelOneLogger.AppendLineBreak("changeList.Count after 5th attempt: " + changeList.Count);
                     changeCount2 = changeList.Count;
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone)    // 6th ATTEMPT: stripped cleaned_row_label
                     {
                         if (existingCleanLabelNoHierarchy == null)
@@ -4390,7 +4394,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     changeCount3 = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
 
 
                     _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
