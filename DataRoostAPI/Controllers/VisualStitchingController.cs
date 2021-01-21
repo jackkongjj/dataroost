@@ -43,14 +43,42 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			} catch { }
 		}
 
-		private void LogError(Exception ex, string extra = "") {
+        public static void SendEmailToAnalysts(string subject, string emailBody)
+        {
+            try
+            {
+                SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+                MailAddress mailFrom = new MailAddress("service@factset.com", "IMA DataRoost");
+                MailMessage message = new MailMessage();
+                message.From = mailFrom;
+                var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
+                var santhosh = new MailAddress("skuthuru@factset.com", "Santhosh Kuthuru");
+                message.To.Add(ljiang);
+                message.To.Add(santhosh);
+                message.Subject = subject + " from " + Environment.MachineName;
+                message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+                message.Body = emailBody;
+                message.IsBodyHtml = true;
+                mySMTP.Send(message);
+            }
+            catch { }
+        }
+
+        private void LogError(Exception ex, string extra = "") {
 			string msg = ex.Message + ex.StackTrace;
 			if (ex.InnerException != null)
 				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
 			SendEmail("DataRoost Exception", msg + extra);
 		}
+        private void LogErrorAutoCluster(Exception ex, string extra = "")
+        {
+            string msg = ex.Message + ex.StackTrace;
+            if (ex.InnerException != null)
+                msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
+            SendEmailToAnalysts("Auto-Clustering Failure", msg + extra);
+        }
 
-		[Route("json/id/{id}")]
+        [Route("json/id/{id}")]
 		[HttpGet]
 		public HttpResponseMessage GetDocument(int id) {
 			try {
@@ -820,7 +848,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
-                LogError(ex);
+                LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
@@ -872,7 +900,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
-                LogError(ex);
+                LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
