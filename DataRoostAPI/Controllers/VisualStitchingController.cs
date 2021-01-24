@@ -850,6 +850,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
+                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, -1, -1, -1, ex.ToString());
                 LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
@@ -902,6 +903,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
+                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, tableid, -1, -1, ex.ToString());
                 LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {

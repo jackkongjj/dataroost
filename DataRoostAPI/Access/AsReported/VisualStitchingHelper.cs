@@ -61,12 +61,13 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
         private StringBuilder _levelOneLogger = new StringBuilder();
         private StringBuilder _levelTwoLogger = new StringBuilder();
         private StringBuilder _failureLogger = new StringBuilder();
+        private bool _autoclusteringfailure = false;
         private readonly string _sfConnectionString;
         private readonly string _pgConnectionString;
         private string _environment = "STAGING";
-        static int DebugLogLevel = 5;
+        static int DebugLogLevel = 0;
 		static VisualStitchingHelper() {
-            DebugLogLevel = 5;
+            DebugLogLevel = 0;
 		}
 
         public VisualStitchingHelper(string sfConnectionString)
@@ -4010,12 +4011,12 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, NullGuid);
-            if (!string.IsNullOrWhiteSpace(_failureLogger.ToString()))
+            if (this._autoclusteringfailure)
             {
                 return false;
             }
             _ExtendColumns(iconums, NullGuid);
-            if (!string.IsNullOrWhiteSpace(_failureLogger.ToString()))
+            if (this._autoclusteringfailure)
             {
                 return false;
             }
@@ -4026,12 +4027,12 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, docid, tableid);
-            if (!string.IsNullOrWhiteSpace(_failureLogger.ToString()))
+            if (this._autoclusteringfailure)
             {
                 return false;
             }
             _ExtendColumns(iconums, docid, tableid);
-            if (!string.IsNullOrWhiteSpace(_failureLogger.ToString()))
+            if (this._autoclusteringfailure)
             {
                 return false;
             }
@@ -4069,6 +4070,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+            _failureLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+
 
             var tableIDs = TableIDs();
             foreach (var t in tableIDs)
@@ -4105,6 +4108,11 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         throw new ArgumentException("guid is null");
                         unmapped = _GetIconumRawLabels(i, t);
                         datapointToMatch = unmapped.Count;
+                    }
+                    if (unmapped.Count == 0)
+                    {
+                        this._autoclusteringfailure = true;
+                        _failureLogger.AppendLine(@"Document doesn''t have column label to match.");
                     }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
@@ -4184,6 +4192,11 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         {
                             existing = _GetExistingClusterColumnHierarchyForIndustry(1, t); // (raw_row_label, cluster_id)
                         }
+                        if (existing.Count == 0)
+                        {
+                            this._autoclusteringfailure = true;
+                            _failureLogger.AppendLine(@"There is no cluster for column types.");
+                        }
                         var temp_changeList = _getChangeList(existing, unmapped);
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
@@ -4260,17 +4273,23 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
             }
-            var failures = _failureLogger.ToString();
-            if (!string.IsNullOrWhiteSpace(failures))
+            if (this._autoclusteringfailure)
             {
+                var failures = _failureLogger.ToString();
+                WriteLogToDatabase(this._pgConnectionString, guid, iconum, tableid, -1, -1, failures);
                 SendEmailToAnalysts("AutoClustering Failure", failures);
             }
-            return true;
+            else
+            {
+                _failureLogger = new StringBuilder();
+            }
+            return !this._autoclusteringfailure;
         }
         private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+            _failureLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
 
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
@@ -4312,7 +4331,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     if (unmapped.Count == 0)
                     {
-                        _failureLogger.AppendLine("Norm Table for NRT label is not available. Document doesn't have label to match.");
+                        this._autoclusteringfailure = true;
+                        _failureLogger.AppendLine(@"Norm Table for NRT label is not available. Document doesn''t have label to match.");
                     }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
@@ -4391,7 +4411,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         }
                         if (existing.Count == 0)
                         {
-                            _failureLogger.AppendLine("MRT is not generated, please run the Named Tree. There is no cluster.");
+                            this._autoclusteringfailure = true;
+                            _failureLogger.AppendLine(@"MRT is not generated, please run the Named Tree. There is no cluster.");
                         }
                         var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
@@ -4467,12 +4488,17 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
             }
-            var failures = _failureLogger.ToString();
-            if (!string.IsNullOrWhiteSpace(failures))
+            if (this._autoclusteringfailure)
             {
+                var failures = _failureLogger.ToString();
+                WriteLogToDatabase(this._pgConnectionString, guid, iconum, tableid, -1, -1, failures);
                 SendEmailToAnalysts("AutoClustering Failure", failures);
             }
-            return true;
+            else
+            {
+                _failureLogger = new StringBuilder();
+            }
+            return !this._autoclusteringfailure;
 		}
 		private List<int> TableIDs() {
 			List<int> dataNodes = new List<int>();
@@ -4570,7 +4596,39 @@ select {1}, ntf.id
 			}
 			return true;
 		}
-		private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
+        public static bool WriteLogToDatabase(string connString, Guid docId, int iconum, int normTableId, int fileId, int tableId, string comments)
+        {
+            try
+            {
+                string sql_update_format = @"
+
+insert into log_autoclustering (document_id, iconum, file_id, table_id, norm_table_id, comments)
+values ('{0}', {1}, {2}, {3}, {4}, '{5}'); 
+";
+                string pIconum = iconum < 0 ? "NULL" : iconum.ToString();
+                string pFileId = fileId < 0 ? "NULL" : fileId.ToString();
+                string pTableId = tableId < 0 ? "NULL" : tableId.ToString();
+                string pNormTableId = normTableId < 0 ? "NULL" : normTableId.ToString();
+                string sql_update = string.Format(sql_update_format, docId, pIconum, pFileId, pTableId, pNormTableId, comments);
+                using (var sqlConn = new NpgsqlConnection(connString))
+                {
+                    using (var cmd = new NpgsqlCommand(sql_update, sqlConn))
+                    {
+                        cmd.CommandTimeout = 600;
+                        sqlConn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return false;
+        }
+
+        private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
 			string slottedpath = string.Format("{0}_table{1}_slotted_h.csv", iconum, tableid);
 			string unslottedpath = string.Format("{0}_table{1}_unslotted_h.csv", iconum, tableid);
 			using (System.IO.StreamWriter sw = System.IO.File.AppendText(slottedpath)) {
