@@ -938,6 +938,24 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
+        [Route("cluster/errorlog")]
+        [HttpGet]
+        public List<VisualStitching.Common.Models.ClusterError> GetClusterErrorLog()
+        {
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.ReadLogFromDatabase();
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+            }
+            return new List<VisualStitching.Common.Models.ClusterError>();
+        }
         public class StitchInput {
 			public int TargetStaticHierarchyID { get; set; }
 			public List<int> StitchingStaticHierarchyIDs { get; set; }

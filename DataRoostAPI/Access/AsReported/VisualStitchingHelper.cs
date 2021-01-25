@@ -6,6 +6,7 @@ using System.Data;
 using System.Data.SqlClient;
 using Npgsql;
 using NpgsqlTypes;
+using DataRoostAPI.Common.Models.AsReported;
 using System.Net;
 using Newtonsoft.Json;
 using System.Linq;
@@ -4061,7 +4062,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
         }
         private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
         {
-            if (guid == NullGuid || tableid < 0)
+            if (guid == NullGuid || tableid <= 0)
             {
                 return false; // only work for document-table clustering
             }
@@ -4074,12 +4075,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
 
             var tableIDs = TableIDs();
+            int successfulTableCount = 0;
             foreach (var t in tableIDs)
             {
                 if (tableid > 0 && t != tableid)
                 {
                     continue;
                 }
+                bool isCurrentTableSuccessful = false;
                 _levelOneLogger.AppendLineBreak("foreach (var t in tableIDs): " + t);
                 SortedDictionary<string, long> existing = null;
                 SortedDictionary<string, long> existingCleanLabel = null;
@@ -4111,8 +4114,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     if (unmapped.Count == 0)
                     {
-                        this._autoclusteringfailure = true;
-                        _failureLogger.AppendLine(@"Document doesn''t have column label to match.");
+                        if (tableid > 0)
+                        {
+                            this._autoclusteringfailure = true;
+                        }
+                        isCurrentTableSuccessful = false;
+                        _failureLogger.AppendLine(@"Document does not have column label to match for Norm Table ID " + t + ".");
+                    }
+                    else
+                    {
+                        isCurrentTableSuccessful = true;
                     }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
@@ -4194,8 +4205,15 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         }
                         if (existing.Count == 0)
                         {
-                            this._autoclusteringfailure = true;
-                            _failureLogger.AppendLine(@"There is no cluster for column types.");
+                            if (tableid > 0)
+                            {
+                                this._autoclusteringfailure = true;
+                            }
+                            else
+                            {
+                                isCurrentTableSuccessful = false;
+                            }
+                            _failureLogger.AppendLine(@"There is no cluster for column types for Norm Table ID " + t + ".");
                         }
                         var temp_changeList = _getChangeList(existing, unmapped);
                         changeList.Eat(temp_changeList);
@@ -4262,6 +4280,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
+                    if (tableid <= 0 && isCurrentTableSuccessful)
+                    {
+                        successfulTableCount++;
+                    }
                 }
             }
             if (DebugLogLevel > 0)
@@ -4272,6 +4294,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     emailbody += "LEVEL 2+: " + _levelTwoLogger.ToString();
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
+            }
+            if (tableid <= 0 && successfulTableCount > 0)
+            {
+                this._autoclusteringfailure = false;
             }
             if (this._autoclusteringfailure)
             {
@@ -4298,11 +4324,13 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
                 }
 			}
+            int successfulTableCount = 0;
 			foreach (var t in tableIDs) {
                 if (tableid > 0 && t != tableid)
                 {
                     continue;
                 }
+                bool isCurrentTableSuccessful = false;
                 _levelOneLogger.AppendLineBreak("foreach (var t in tableIDs): " + t);
                 SortedDictionary<string, long> existing = null;
                 SortedDictionary<string, long> existingCleanLabel = null;
@@ -4331,8 +4359,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     if (unmapped.Count == 0)
                     {
-                        this._autoclusteringfailure = true;
-                        _failureLogger.AppendLine(@"Norm Table for NRT label is not available. Document doesn''t have label to match.");
+                        if (tableid > 0)
+                        {
+                            this._autoclusteringfailure = true;
+                        }
+                        isCurrentTableSuccessful = false;
+                        _failureLogger.AppendLine(@"Norm Table (ID " + t + ") for RNT label is not available.");
+                    }
+                    else
+                    {
+                        isCurrentTableSuccessful = true;
                     }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
@@ -4411,8 +4447,19 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         }
                         if (existing.Count == 0)
                         {
-                            this._autoclusteringfailure = true;
-                            _failureLogger.AppendLine(@"MRT is not generated, please run the Named Tree. There is no cluster.");
+                            if (tableid > 0)
+                            {
+                                this._autoclusteringfailure = true;
+                            }
+                            else
+                            {
+                                isCurrentTableSuccessful = false;
+                            }
+                            _failureLogger.AppendLine(@"RNT for Norm Table ID " + t + " does not exist, please run the Named Tree. There is no cluster.");
+                        }
+                        else
+                        {
+
                         }
                         var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
@@ -4477,6 +4524,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
+                    if (tableid <= 0 && isCurrentTableSuccessful)
+                    {
+                        successfulTableCount++;
+                    }
 				}
 			}
             if (DebugLogLevel > 0)
@@ -4487,6 +4538,10 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     emailbody += "LEVEL 2+: " + _levelTwoLogger.ToString();
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
+            }
+            if (tableid <= 0 && successfulTableCount > 0)
+            {
+                this._autoclusteringfailure = false;
             }
             if (this._autoclusteringfailure)
             {
@@ -4627,6 +4682,55 @@ values ('{0}', {1}, {2}, {3}, {4}, '{5}');
             }
             return false;
         }
+
+        public List<VisualStitching.Common.Models.ClusterError> ReadLogFromDatabase()
+        {
+            try
+            {
+                string sql = @"
+select id, document_id, iconum, norm_table_id, creation_stamp_utc, comments  from log_autoclustering order by id desc limit 100
+";
+                List<VisualStitching.Common.Models.ClusterError> list = new List<VisualStitching.Common.Models.ClusterError>();
+                //string sql_update = string.Format(sql, docId, pIconum, pFileId, pTableId, pNormTableId, comments);
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                {
+                    using (var cmd = new NpgsqlCommand(sql, sqlConn))
+                    {
+                        cmd.CommandTimeout = 600;
+                        sqlConn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                try
+                                {
+
+                                    var row = new VisualStitching.Common.Models.ClusterError();
+                                    row.Id =  sdr.GetInt32(0);
+                                    row.DocumentId = sdr.GetGuid(1).ToString();
+                                    row.Iconum = sdr.GetNullable<int>(2);
+                                    row.NormTableId = sdr.GetNullable<int>(3);
+                                    row.CreationTimeStamp = sdr.GetDateTime(4);
+                                    row.Comments = sdr.GetStringSafe(5);
+                                    list.Insert(0, row);
+                                }
+                                catch
+                                {
+
+                                }
+                            }
+                        }
+                    }
+                }
+                return list;
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return new List<VisualStitching.Common.Models.ClusterError>();
+        }
+
 
         private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
 			string slottedpath = string.Format("{0}_table{1}_slotted_h.csv", iconum, tableid);
