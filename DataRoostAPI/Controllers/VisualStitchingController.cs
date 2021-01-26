@@ -842,17 +842,27 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId);
-                return new HttpResponseMessage()
+                var success = vsHelper.ExtendClusterByDocument(iconum, docId);
+                if (success)
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
-                };
+                    return new HttpResponseMessage()
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.Accepted)
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
             }
             catch (Exception ex)
             {
                 VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, -1, -1, -1, ex.ToString());
                 LogErrorAutoCluster(ex);
-                return new HttpResponseMessage()
+                return new HttpResponseMessage(HttpStatusCode.Accepted)
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
                 };
@@ -869,16 +879,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByDocumentDev(iconum, docId);
-                return new HttpResponseMessage()
+                var success = vsHelper.ExtendClusterByDocumentDev(iconum, docId);
+                if (success)
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
-                };
+                    return new HttpResponseMessage()
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.Accepted)
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
             }
             catch (Exception ex)
             {
                 LogError(ex);
-                return new HttpResponseMessage()
+                return new HttpResponseMessage(HttpStatusCode.Accepted)
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
                 };

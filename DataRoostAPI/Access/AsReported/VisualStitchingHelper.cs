@@ -4295,9 +4295,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
             }
-            if (tableid <= 0 && successfulTableCount > 0)
+            if (tableid <= 0)
             {
-                this._autoclusteringfailure = false;
+                if (successfulTableCount > 0)
+                {
+                    this._autoclusteringfailure = false;
+                }
+                else
+                {
+                    this._autoclusteringfailure = true;
+                }
             }
             if (this._autoclusteringfailure)
             {
@@ -4539,9 +4546,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
             }
-            if (tableid <= 0 && successfulTableCount > 0)
-            {
-                this._autoclusteringfailure = false;
+            if (tableid <= 0)
+            {            
+                if (successfulTableCount > 0)
+                {
+                    this._autoclusteringfailure = false;
+                }
+                else
+                {
+                    this._autoclusteringfailure = true;
+                }
             }
             if (this._autoclusteringfailure)
             {
