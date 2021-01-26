@@ -854,7 +854,6 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 {
                     return new HttpResponseMessage(HttpStatusCode.Accepted)
                     {
-                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
                     };
                 }
             }
