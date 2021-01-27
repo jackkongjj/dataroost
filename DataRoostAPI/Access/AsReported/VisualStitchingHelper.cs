@@ -4071,7 +4071,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
-            _failureLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+            string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
 
             var tableIDs = TableIDs();
@@ -4310,7 +4310,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             {
                 var failures = _failureLogger.ToString();
                 WriteLogToDatabase(this._pgConnectionString, guid, iconum, tableid, -1, -1, failures);
-                SendEmailToAnalysts("AutoClustering Failure", failures);
+                SendEmailToAnalysts("AutoClustering Failure", failureEmailHeader + failures);
             }
             else
             {
@@ -4322,7 +4322,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
-            _failureLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+            string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
@@ -4561,7 +4561,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             {
                 var failures = _failureLogger.ToString();
                 WriteLogToDatabase(this._pgConnectionString, guid, iconum, tableid, -1, -1, failures);
-                SendEmailToAnalysts("AutoClustering Failure", failures);
+                SendEmailToAnalysts("AutoClustering Failure", failureEmailHeader + failures);
             }
             else
             {
@@ -4702,7 +4702,10 @@ values ('{0}', {1}, {2}, {3}, {4}, '{5}');
             try
             {
                 string sql = @"
-select id, document_id, iconum, norm_table_id, creation_stamp_utc, comments  from log_autoclustering order by id desc limit 100
+select log.id, log.document_id, log.iconum, nt.label, log.creation_stamp_utc, log.comments 
+from log_autoclustering log
+left JOIN norm_table nt on log.norm_table_id = nt.id
+ order by id desc limit 100
 ";
                 List<VisualStitching.Common.Models.ClusterError> list = new List<VisualStitching.Common.Models.ClusterError>();
                 //string sql_update = string.Format(sql, docId, pIconum, pFileId, pTableId, pNormTableId, comments);
@@ -4723,7 +4726,7 @@ select id, document_id, iconum, norm_table_id, creation_stamp_utc, comments  fro
                                     row.Id =  sdr.GetInt32(0);
                                     row.DocumentId = sdr.GetGuid(1).ToString();
                                     row.Iconum = sdr.GetNullable<int>(2);
-                                    row.NormTableId = sdr.GetNullable<int>(3);
+                                    row.NormTable = sdr.GetStringSafe(3);
                                     row.CreationTimeStamp = sdr.GetDateTime(4);
                                     row.Comments = sdr.GetStringSafe(5);
                                     list.Insert(0, row);

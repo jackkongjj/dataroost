@@ -17,8 +17,8 @@ namespace VisualStitching.Common.Models {
 		[JsonProperty("document_id")]
 		public string DocumentId { get; set; }
 
-		[JsonProperty("norm_table_id")]
-		public int? NormTableId { get; set; }
+		[JsonProperty("norm_table")]
+		public string NormTable { get; set; }
 
 		[JsonProperty("creation_stamp_utc")]
 		public DateTime CreationTimeStamp { get; set; }
