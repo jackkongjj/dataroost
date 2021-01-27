@@ -4134,7 +4134,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                         {
                             existing = _GetExistingClusterColumnHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
                         }
-                        var temp_changeList = _getChangeList(existing, unmapped); 
+                        var temp_changeList = _getChangeListColumn(existing, unmapped); 
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
                     var changeCount = changeList.Count;
@@ -4155,7 +4155,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             }
                         }
 
-                        var temp_changeList = _getChangeList(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        var temp_changeList = _getChangeListColumn(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }
                     _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
@@ -4188,7 +4188,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             }
                             unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
                         }
-                        var temp_changeList = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        var temp_changeList = _getChangeListColumn(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }
                     var changeCount3 = changeList.Count;
@@ -4215,7 +4215,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             }
                             _failureLogger.AppendLine(@"There is no cluster for column types for Norm Table ID " + t + ".");
                         }
-                        var temp_changeList = _getChangeList(existing, unmapped);
+                        var temp_changeList = _getChangeListColumn(existing, unmapped);
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
                     changeCount = changeList.Count;
@@ -4236,7 +4236,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             }
                         }
 
-                        var temp_changeList = _getChangeList(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        var temp_changeList = _getChangeListColumn(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }
                     _levelOneLogger.AppendLineBreak("changeList.Count after 5th attempt: " + changeList.Count);
@@ -4269,7 +4269,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             }
                             unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
                         }
-                        var temp_changeList = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        var temp_changeList = _getChangeListColumn(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }
                     changeCount3 = changeList.Count;
@@ -4702,7 +4702,7 @@ values ('{0}', {1}, {2}, {3}, {4}, '{5}');
             try
             {
                 string sql = @"
-select log.id, log.document_id, log.iconum, nt.label, log.creation_stamp_utc, log.comments 
+select log.id, log.document_id, log.iconum, coalesce(nt.label, 'ALL'), log.creation_stamp_utc, log.comments 
 from log_autoclustering log
 left JOIN norm_table nt on log.norm_table_id = nt.id
  order by id desc limit 100
@@ -5242,8 +5242,118 @@ order by  d.PublicationDateTime desc
 			if (_unslotted.Count == 0) return changelist;
 			return changelist;
 		}
+        private Dictionary<long, long> _getChangeListColumn(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped)
+        {
+            // existing[raw label, clusterid]
+            // unmapped[flat_id, rawlabel]
+            // changelist[flat_id, clusterid]
+            Dictionary<long, long> changelist = new Dictionary<long, long>();
+            Dictionary<long, string> unslotted = new Dictionary<long, string>();
+            foreach (var u in unmapped)
+            {
+                if (existing.ContainsKey(u.Value))
+                {
+                    // u.key is the itemID, existing is the cluster_id
+                    changelist[u.Key] = existing[u.Value]; // changelist[flat_id] = cluster_id
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (unslotted.Count == 0) return changelist;
+            /// ------ second try
+            SortedDictionary<string, string> cleanedExisting = new SortedDictionary<string, string>();
+            SortedDictionary<long, string> cleanedUnmapped = new SortedDictionary<long, string>();
 
-		private string CleanStringForStep2(string str) {
+            foreach (var u in unslotted)
+            {
+                var sCleaned = CleanStringForColumn(u.Value);
+                cleanedUnmapped[u.Key] = sCleaned;
+            }
+            foreach (var e in existing)
+            {
+                var sCleaned = CleanStringForColumn(e.Key);
+                if (!cleanedExisting.ContainsKey(sCleaned))
+                {
+                    //cleaned version is the key
+                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+                }
+            }
+            _unslotted = new Dictionary<string, int>();
+            unslotted = new Dictionary<long, string>();
+            foreach (var u in cleanedUnmapped)
+            {
+                // cleanedunmap[itemid, cleaned]
+                // cleanedExisting[cleaned, uncleaned]
+                if (cleanedExisting.ContainsKey(u.Value))
+                {
+                    // if cleanedversion = cleanversion
+                    // find the 
+
+                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (_unslotted.Count == 0) return changelist;
+            /// ------ third try use end label only
+            cleanedExisting = new SortedDictionary<string, string>();
+            cleanedUnmapped = new SortedDictionary<long, string>();
+
+            foreach (var u in unslotted)
+            {
+                var sCleaned = CleanStringForColumn(fn.EndLabel(u.Value));
+                cleanedUnmapped[u.Key] = sCleaned;
+            }
+            foreach (var e in existing)
+            {
+                var sCleaned = CleanStringForColumn(fn.EndLabel(e.Key));
+                if (!cleanedExisting.ContainsKey(sCleaned))
+                {
+                    //cleaned version is the key
+                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+                }
+            }
+            _unslotted = new Dictionary<string, int>();
+            unslotted = new Dictionary<long, string>();
+            foreach (var u in cleanedUnmapped)
+            {
+                // cleanedunmap[itemid, cleaned]
+                // cleanedExisting[cleaned, uncleaned]
+                if (cleanedExisting.ContainsKey(u.Value))
+                {
+                    // if cleanedversion = cleanversion
+                    // find the 
+
+                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (_unslotted.Count == 0) return changelist;
+            return changelist;
+        }
+        private string CleanStringForStep2(string str) {
 			//remove non alphanumeric and space
 			// make singular
 			// replace phrase
@@ -5258,6 +5368,22 @@ order by  d.PublicationDateTime desc
 			return s;
 
 		}
+        private string CleanStringForColumn(string str)
+        {
+            //remove non alphanumeric and space
+            // make singular
+            // replace phrase
+            // remove stem words, and replace individual words 
+            var s = str;
+            s = fn.AlphaNumericSpaceAndSquareBrackets(s);
+            s = fn.SingularForm(s);
+            s = fn.ReplacePhraseAllLevel(s);
+            //s = fn.RemoveNondictionaryWordAllLevel(s);
+            //s = fn.NoStemWordAllLevel(s);
+            //s = fn.ReplacePhraseAllLevel(s);
+            return s;
+
+        }
         private string _sqlGetGoldCorpus()
         {
             string sql = "";
