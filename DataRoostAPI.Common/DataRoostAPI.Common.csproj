@@ -120,6 +120,7 @@
     <Compile Include="Access\StandardizedDataAccess.cs" />
     <Compile Include="Exceptions\MissingIconumException.cs" />
     <Compile Include="Exceptions\SymbologyMappingException.cs" />
+    <Compile Include="Models\AsReported\ClusterError.cs" />
     <Compile Include="Interfaces\IAsReportedDataAccess.cs" />
     <Compile Include="Interfaces\ICompanyDataAccess.cs" />
     <Compile Include="Interfaces\IExportedItemsDataAccess.cs" />

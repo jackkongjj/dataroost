@@ -6,6 +6,7 @@ using System.Data;
 using System.Data.SqlClient;
 using Npgsql;
 using NpgsqlTypes;
+using DataRoostAPI.Common.Models.AsReported;
 using System.Net;
 using Newtonsoft.Json;
 using System.Linq;
@@ -36,13 +37,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
             }
             catch { }
         }
+        public static void SendEmailToAnalysts(string subject, string emailBody)
+        {
+            try
+            {
+                SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+                MailAddress mailFrom = new MailAddress("service@factset.com", "IMA DataRoost");
+                MailMessage message = new MailMessage();
+                message.From = mailFrom;
+                 var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
+                var santhosh = new MailAddress("skuthuru@factset.com", "Santhosh Kuthuru");
+                var prapolu = new MailAddress("prapolu@factset.com", "Prakash Rapolu");
+                message.To.Add(ljiang);
+                message.To.Add(santhosh);
+                message.To.Add(prapolu);
+                message.Subject = subject + " from " + Environment.MachineName;
+                message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+                message.Body = emailBody;
+                message.IsBodyHtml = true;
+                mySMTP.Send(message);
+            }
+            catch { }
+        }
         private StringBuilder _levelOneLogger = new StringBuilder();
         private StringBuilder _levelTwoLogger = new StringBuilder();
+        private StringBuilder _failureLogger = new StringBuilder();
+        private bool _autoclusteringfailure = false;
         private readonly string _sfConnectionString;
         private readonly string _pgConnectionString;
-        static int DebugLogLevel = 5;
+        private string _environment = "STAGING";
+        static int DebugLogLevel = 0;
 		static VisualStitchingHelper() {
-            DebugLogLevel = 5;
+            DebugLogLevel = 0;
 		}
 
         public VisualStitchingHelper(string sfConnectionString)
@@ -3986,19 +4012,317 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, NullGuid);
-			return true;
+            if (this._autoclusteringfailure)
+            {
+                return false;
+            }
+            _ExtendColumns(iconums, NullGuid);
+            if (this._autoclusteringfailure)
+            {
+                return false;
+            }
+            return true;
 		}
 		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
 			List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(iconums, docid, tableid);
-			return true;
+            if (this._autoclusteringfailure)
+            {
+                return false;
+            }
+            _ExtendColumns(iconums, docid, tableid);
+            if (this._autoclusteringfailure)
+            {
+                return false;
+            }
+            return true;
 		}
-		private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
+
+        public bool ExtendClusterByIconumDev(int iconum)
+        {
+            this._environment = "DEV";
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _ExtendHierarchy(iconums, NullGuid);
+            _ExtendColumns(iconums, NullGuid);
+            return true;
+        }
+        public bool ExtendClusterByDocumentDev(int iconum, Guid docid, int tableid = -1)
+        {
+            this._environment = "DEV";
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _ExtendHierarchy(iconums, docid, tableid);
+            _ExtendColumns(iconums, docid, tableid);
+            return true;
+        }
+        private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
+        {
+            if (guid == NullGuid || tableid <= 0)
+            {
+                return false; // only work for document-table clustering
+            }
+            _levelOneLogger.AppendLineBreak("");
+            _levelOneLogger.AppendLineBreak("COLUMN TYPE");
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+            string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
+
+
+            var tableIDs = TableIDs();
+            int successfulTableCount = 0;
+            foreach (var t in tableIDs)
+            {
+                if (tableid > 0 && t != tableid)
+                {
+                    continue;
+                }
+                bool isCurrentTableSuccessful = false;
+                _levelOneLogger.AppendLineBreak("foreach (var t in tableIDs): " + t);
+                SortedDictionary<string, long> existing = null;
+                SortedDictionary<string, long> existingCleanLabel = null;
+                SortedDictionary<string, long> existingCleanLabelNoHierarchy = null;
+
+                foreach (var i in iconums)
+                {
+                    _levelOneLogger.AppendLineBreak("iconums.First(): " + iconum);
+                    Dictionary<long, long> changeList = new Dictionary<long, long>();
+                    _levelOneLogger.AppendLineBreak("changeList.Count: " + changeList.Count);
+                    _unslotted = new Dictionary<string, int>();
+                    SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
+                    SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
+                    int datapointToMatch = -1;
+                    if (guid != NullGuid)
+                    {
+                        unmapped = _GetIconumRawColumnLabels(i, guid, t); // (flat_id, raw_row_label)
+                        datapointToMatch = unmapped.Count;
+
+                        //var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
+                        //changeList.Eat(tableAlignmentChanges);
+                        //_levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
+                    }
+                    else
+                    {
+                        throw new ArgumentException("guid is null");
+                        unmapped = _GetIconumRawLabels(i, t);
+                        datapointToMatch = unmapped.Count;
+                    }
+                    if (unmapped.Count == 0)
+                    {
+                        if (tableid > 0)
+                        {
+                            this._autoclusteringfailure = true;
+                        }
+                        isCurrentTableSuccessful = false;
+                        _failureLogger.AppendLine(@"Document does not have column label to match for Norm Table ID " + t + ".");
+                    }
+                    else
+                    {
+                        isCurrentTableSuccessful = true;
+                    }
+                    _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
+                    _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
+                    bool isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone) // FIRST ATTEMPT: match raw_row_label
+                    {
+                        if (existing == null)
+                        {
+                            existing = _GetExistingClusterColumnHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
+                        }
+                        var temp_changeList = _getChangeListColumn(existing, unmapped); 
+                        changeList.Eat(temp_changeList);
+                    }                                                         //changelist[flat_id, clusterid]
+                    var changeCount = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after First attempt: " + changeList.Count);
+                    isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
+                    {
+                        if (existingCleanLabel == null)
+                        {
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(iconum, t);
+                        }
+                        var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
+                        foreach (var um in unmappedCleanLabel1)
+                        {
+                            if (!changeList.ContainsKey(um.Key))
+                            {
+                                unmappedCleanLabel[um.Key] = um.Value;
+                            }
+                        }
+
+                        var temp_changeList = _getChangeListColumn(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
+                    var changeCount2 = changeList.Count;
+                    isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
+                    {
+                        if (existingCleanLabelNoHierarchy == null)
+                        {
+                            existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                            if (existingCleanLabel == null)
+                            {
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(iconum, t);
+                            }
+                            foreach (var cl in existingCleanLabel)
+                            {
+                                var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
+                                if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                                {
+                                    existingCleanLabelNoHierarchy[lower] = cl.Value;
+                                }
+                            }
+                        }
+                        var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                        foreach (var unmap in unmappedCleanLabel)
+                        {
+                            if (changeList.ContainsKey(unmap.Key))
+                            {
+                                continue;
+                            }
+                            unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
+                        }
+                        var temp_changeList = _getChangeListColumn(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    var changeCount3 = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 3rd Attempt: " + changeList.Count);
+                    isDone = changeList.Count >= datapointToMatch;
+                    existing = null;
+                    existingCleanLabel = null;
+                    existingCleanLabelNoHierarchy = null;
+                    if (!isDone) // 4th ATTEMPT: match raw_row_label industry
+                    {
+                        if (existing == null)
+                        {
+                            existing = _GetExistingClusterColumnHierarchyForIndustry(1, t); // (raw_row_label, cluster_id)
+                        }
+                        if (existing.Count == 0)
+                        {
+                            if (tableid > 0)
+                            {
+                                this._autoclusteringfailure = true;
+                            }
+                            else
+                            {
+                                isCurrentTableSuccessful = false;
+                            }
+                            _failureLogger.AppendLine(@"There is no cluster for column types for Norm Table ID " + t + ".");
+                        }
+                        var temp_changeList = _getChangeListColumn(existing, unmapped);
+                        changeList.Eat(temp_changeList);
+                    }                                                         //changelist[flat_id, clusterid]
+                    changeCount = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 4th attempt: " + changeList.Count);
+                    isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone) // 5th ATTEMPT: match cleaned_row_label
+                    {
+                        if (existingCleanLabel == null)
+                        {
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(1, t);
+                        }
+                        var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
+                        foreach (var um in unmappedCleanLabel1)
+                        {
+                            if (!changeList.ContainsKey(um.Key))
+                            {
+                                unmappedCleanLabel[um.Key] = um.Value;
+                            }
+                        }
+
+                        var temp_changeList = _getChangeListColumn(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 5th attempt: " + changeList.Count);
+                    changeCount2 = changeList.Count;
+                    isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone)    // 6th ATTEMPT: stripped cleaned_row_label
+                    {
+                        if (existingCleanLabelNoHierarchy == null)
+                        {
+                            existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                            if (existingCleanLabel == null)
+                            {
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(1, t);
+                            }
+                            foreach (var cl in existingCleanLabel)
+                            {
+                                var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
+                                if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                                {
+                                    existingCleanLabelNoHierarchy[lower] = cl.Value;
+                                }
+                            }
+                        }
+                        var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                        foreach (var unmap in unmappedCleanLabel)
+                        {
+                            if (changeList.ContainsKey(unmap.Key))
+                            {
+                                continue;
+                            }
+                            unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
+                        }
+                        var temp_changeList = _getChangeListColumn(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    changeCount3 = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
+                    isDone = changeList.Count >= datapointToMatch;
+                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+
+                    _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
+                    var debugchangelist = changeList;
+                    var debugunslot = _unslotted;
+                    if (tableid <= 0 && isCurrentTableSuccessful)
+                    {
+                        successfulTableCount++;
+                    }
+                }
+            }
+            if (DebugLogLevel > 0)
+            {
+                string emailbody = _levelOneLogger.ToString();
+                if (DebugLogLevel > 1)
+                {
+                    emailbody += "LEVEL 2+: " + _levelTwoLogger.ToString();
+                }
+                SendEmail("Visual Stitching Debug", emailbody);
+            }
+            if (tableid <= 0)
+            {
+                if (successfulTableCount > 0)
+                {
+                    this._autoclusteringfailure = false;
+                }
+                else
+                {
+                    this._autoclusteringfailure = true;
+                }
+            }
+            if (this._autoclusteringfailure)
+            {
+                var failures = _failureLogger.ToString();
+                WriteLogToDatabase(this._pgConnectionString, guid, iconum, tableid, -1, -1, failures);
+                SendEmailToAnalysts("AutoClustering Failure", failureEmailHeader + failures);
+            }
+            else
+            {
+                _failureLogger = new StringBuilder();
+            }
+            return !this._autoclusteringfailure;
+        }
+        private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
+            var iconum = iconums.First();
+            _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
+            _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
+            string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
@@ -4007,11 +4331,13 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
                 }
 			}
+            int successfulTableCount = 0;
 			foreach (var t in tableIDs) {
                 if (tableid > 0 && t != tableid)
                 {
                     continue;
                 }
+                bool isCurrentTableSuccessful = false;
                 _levelOneLogger.AppendLineBreak("foreach (var t in tableIDs): " + t);
                 SortedDictionary<string, long> existing = null;
                 SortedDictionary<string, long> existingCleanLabel = null;
@@ -4028,34 +4354,49 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     if (guid != NullGuid) {
 						unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
                         datapointToMatch = unmapped.Count;
-
-                        var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
-                        changeList.Eat(tableAlignmentChanges);
-                        _levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
+                        if (datapointToMatch > 0)
+                        {
+                            var tableAlignmentChanges = _getChangeListByTableAlignment(i, guid, t);
+                            changeList.Eat(tableAlignmentChanges);
+                            _levelOneLogger.AppendLineBreak("changeList.Count after TableAlignment: " + changeList.Count);
+                        }
                     } else {
 						unmapped = _GetIconumRawLabels(i, t);
                         datapointToMatch = unmapped.Count;
                     }
+                    if (unmapped.Count == 0)
+                    {
+                        if (tableid > 0)
+                        {
+                            this._autoclusteringfailure = true;
+                        }
+                        isCurrentTableSuccessful = false;
+                        _failureLogger.AppendLine(@"Norm Table (ID " + t + ") for RNT label is not available.");
+                    }
+                    else
+                    {
+                        isCurrentTableSuccessful = true;
+                    }
                     _levelOneLogger.AppendLineBreak("datapoints to match: " + datapointToMatch);
                     _levelOneLogger.AppendLineBreak("changeList.Count after GetIconumRawLabels: " + changeList.Count);
-                    bool isDone = changeList.Count == datapointToMatch;
+                    bool isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // FIRST ATTEMPT: match raw_row_label
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterHierarchy(iconum, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
                         }
                         var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
                     }                                                         //changelist[flat_id, clusterid]
                     var changeCount = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after First attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone) // SECOND ATTEMPT: match cleaned_row_label
                     { 
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanLabel(iconum, t);
+                            existingCleanLabel = _GetExistingClusterCleanLabelForCompany(iconum, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4071,7 +4412,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     _levelOneLogger.AppendLineBreak("changeList.Count after Second attempt: " + changeList.Count);
                     var changeCount2 = changeList.Count;
-                    isDone = changeList.Count == datapointToMatch;
+                    isDone = changeList.Count >= datapointToMatch;
                     if (!isDone)    // THIRD ATTEMPT: stripped cleaned_row_label
                     {
                         if (existingCleanLabelNoHierarchy == null)
@@ -4100,27 +4441,100 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     var changeCount3 = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 3rd Attempt: " + changeList.Count);
-                    isDone = changeList.Count == datapointToMatch;
-                    // the problem is: which document do we use? which document's raw tables? 
-                    // get time? iconum, we do have.  we don't have document_id here..., so the guid must be non empty. 
-                    int countSlotted = 0;
-					foreach (var c in changeList) {
-						countSlotted++;
-					}
-					int countUnslotted = 0;
-					foreach (var u in _unslotted) {
-						countUnslotted += u.Value;
-					}
-                    // limit it to /guid/tableid/
-                    // most have a docId
+                    isDone = changeList.Count >= datapointToMatch;
+                    unmappedCleanLabel = new SortedDictionary<long, string>();
+                    existing = null;
+                    existingCleanLabel = null;
+                    existingCleanLabelNoHierarchy = null;
+                    if (!isDone) // 4th ATTEMPT: match raw_row_label for industry
+                    {
+                        if (existing == null)
+                        {
+                            existing = _GetExistingClusterHierarchyForIndustry(1, t); // (raw_row_label, cluster_id)
+                        }
+                        if (existing.Count == 0)
+                        {
+                            if (tableid > 0)
+                            {
+                                this._autoclusteringfailure = true;
+                            }
+                            else
+                            {
+                                isCurrentTableSuccessful = false;
+                            }
+                            _failureLogger.AppendLine(@"RNT for Norm Table ID " + t + " does not exist, please run the Named Tree. There is no cluster.");
+                        }
+                        else
+                        {
 
-                    //Console.WriteLine("End Unslotted: {0} / {1} = {2} ", countUnslotted, (countSlotted + countUnslotted), (double)countUnslotted / (double)(countUnslotted + countSlotted));
-                    //_WriteChangeListToFileForHierarchy(i, t, changeList, _unslotted);
+                        }
+                        var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }                                                         //changelist[flat_id, clusterid]
+                    changeCount = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 4th attempt: " + changeList.Count);
+                    isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone) // 5th ATTEMPT: match cleaned_row_label for industry
+                    {
+                        if (existingCleanLabel == null)
+                        {
+                            existingCleanLabel = _GetExistingClusterCleanLabelForIndustry(1, t);
+                        }
+                        var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
+                        foreach (var um in unmappedCleanLabel1)
+                        {
+                            if (!changeList.ContainsKey(um.Key))
+                            {
+                                unmappedCleanLabel[um.Key] = um.Value;
+                            }
+                        }
+
+                        var temp_changeList = _getChangeList(existingCleanLabel, unmappedCleanLabel); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 5th attempt: " + changeList.Count);
+                    changeCount2 = changeList.Count;
+                    isDone = changeList.Count >= datapointToMatch;
+                    if (!isDone)    // 6th ATTEMPT: stripped cleaned_row_label
+                    {
+                        if (existingCleanLabelNoHierarchy == null)
+                        {
+                            existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
+                            foreach (var cl in existingCleanLabel)
+                            {
+                                var lower = fn.RemoveHierarchyNumberSpace(cl.Key);
+                                if (!string.IsNullOrWhiteSpace(lower) && !existingCleanLabelNoHierarchy.ContainsKey(lower))
+                                {
+                                    existingCleanLabelNoHierarchy[lower] = cl.Value;
+                                }
+                            }
+                        }
+                        var unmappedCleanLabelNotMatched = new SortedDictionary<long, string>();
+                        foreach (var unmap in unmappedCleanLabel)
+                        {
+                            if (changeList.ContainsKey(unmap.Key))
+                            {
+                                continue;
+                            }
+                            unmappedCleanLabelNotMatched[unmap.Key] = fn.RemoveHierarchyNumberSpace(unmap.Value); // (flat_id, cleaned_row_label)
+                        }
+                        var temp_changeList = _getChangeList(existingCleanLabelNoHierarchy, unmappedCleanLabelNotMatched); // forcing to return nothing now. Will use only table alignment.
+                        changeList.Eat(temp_changeList);
+                    }
+                    changeCount3 = changeList.Count;
+                    _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
+                    isDone = changeList.Count >= datapointToMatch;
+
+
                     _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
 
-                    _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
+                    _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
+                    if (tableid <= 0 && isCurrentTableSuccessful)
+                    {
+                        successfulTableCount++;
+                    }
 				}
 			}
             if (DebugLogLevel > 0)
@@ -4132,8 +4546,28 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 }
                 SendEmail("Visual Stitching Debug", emailbody);
             }
-
-            return true;
+            if (tableid <= 0)
+            {            
+                if (successfulTableCount > 0)
+                {
+                    this._autoclusteringfailure = false;
+                }
+                else
+                {
+                    this._autoclusteringfailure = true;
+                }
+            }
+            if (this._autoclusteringfailure)
+            {
+                var failures = _failureLogger.ToString();
+                WriteLogToDatabase(this._pgConnectionString, guid, iconum, tableid, -1, -1, failures);
+                SendEmailToAnalysts("AutoClustering Failure", failureEmailHeader + failures);
+            }
+            else
+            {
+                _failureLogger = new StringBuilder();
+            }
+            return !this._autoclusteringfailure;
 		}
 		private List<int> TableIDs() {
 			List<int> dataNodes = new List<int>();
@@ -4231,7 +4665,91 @@ select {1}, ntf.id
 			}
 			return true;
 		}
-		private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
+        public static bool WriteLogToDatabase(string connString, Guid docId, int iconum, int normTableId, int fileId, int tableId, string comments)
+        {
+            try
+            {
+                string sql_update_format = @"
+
+insert into log_autoclustering (document_id, iconum, file_id, table_id, norm_table_id, comments)
+values ('{0}', {1}, {2}, {3}, {4}, '{5}'); 
+";
+                string pIconum = iconum < 0 ? "NULL" : iconum.ToString();
+                string pFileId = fileId < 0 ? "NULL" : fileId.ToString();
+                string pTableId = tableId < 0 ? "NULL" : tableId.ToString();
+                string pNormTableId = normTableId < 0 ? "NULL" : normTableId.ToString();
+                string sql_update = string.Format(sql_update_format, docId, pIconum, pFileId, pTableId, pNormTableId, comments);
+                using (var sqlConn = new NpgsqlConnection(connString))
+                {
+                    using (var cmd = new NpgsqlCommand(sql_update, sqlConn))
+                    {
+                        cmd.CommandTimeout = 600;
+                        sqlConn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return false;
+        }
+
+        public List<VisualStitching.Common.Models.ClusterError> ReadLogFromDatabase()
+        {
+            try
+            {
+                string sql = @"
+select log.id, log.document_id, log.iconum, coalesce(nt.label, 'ALL'), log.creation_stamp_utc, log.comments 
+from log_autoclustering log
+left JOIN norm_table nt on log.norm_table_id = nt.id
+ order by id desc limit 100
+";
+                List<VisualStitching.Common.Models.ClusterError> list = new List<VisualStitching.Common.Models.ClusterError>();
+                //string sql_update = string.Format(sql, docId, pIconum, pFileId, pTableId, pNormTableId, comments);
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                {
+                    using (var cmd = new NpgsqlCommand(sql, sqlConn))
+                    {
+                        cmd.CommandTimeout = 600;
+                        sqlConn.Open();
+                        using (var sdr = cmd.ExecuteReader())
+                        {
+                            while (sdr.Read())
+                            {
+                                try
+                                {
+
+                                    var row = new VisualStitching.Common.Models.ClusterError();
+                                    row.Id =  sdr.GetInt32(0);
+                                    row.DocumentId = sdr.GetGuid(1).ToString();
+                                    row.Iconum = sdr.GetNullable<int>(2);
+                                    row.NormTable = sdr.GetStringSafe(3);
+                                    row.CreationTimeStamp = sdr.GetDateTime(4);
+                                    row.Comments = sdr.GetStringSafe(5);
+                                    list.Insert(0, row);
+                                }
+                                catch
+                                {
+
+                                }
+                            }
+                        }
+                    }
+                }
+                return list;
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return new List<VisualStitching.Common.Models.ClusterError>();
+        }
+
+
+        private bool _WriteChangeListToFileForHierarchy(long iconum, int tableid, Dictionary<long, long> changeList, Dictionary<string, int> unslotted) {
 			string slottedpath = string.Format("{0}_table{1}_slotted_h.csv", iconum, tableid);
 			string unslottedpath = string.Format("{0}_table{1}_unslotted_h.csv", iconum, tableid);
 			using (System.IO.StreamWriter sw = System.IO.File.AppendText(slottedpath)) {
@@ -4605,7 +5123,7 @@ order by  d.PublicationDateTime desc
             foreach (var c in histTableIds)
             {
                 NormNameTreeTable t = new NormNameTreeTable();
-                t.Load(this._pgConnectionString, iconum, histDoc, c);
+                t.LoadHistorical(this._pgConnectionString, iconum, histDoc, c);
                 histDocTables.Add(t);
             }
             //NormNameTreeTable curr = new NormNameTreeTable();
@@ -4693,11 +5211,11 @@ order by  d.PublicationDateTime desc
 			cleanedUnmapped = new SortedDictionary<long, string>();
 
 			foreach (var u in unslotted) {
-				var sCleaned = CleanStringForStep2(fn.RevCar(u.Value));
+				var sCleaned = CleanStringForStep2(fn.EndLabel(u.Value));
 				cleanedUnmapped[u.Key] = sCleaned;
 			}
 			foreach (var e in existing) {
-				var sCleaned = CleanStringForStep2(fn.RevCar(e.Key));
+				var sCleaned = CleanStringForStep2(fn.EndLabel(e.Key));
 				if (!cleanedExisting.ContainsKey(sCleaned)) {
 					//cleaned version is the key
 					cleanedExisting[sCleaned] = e.Key; // raw label is the value.
@@ -4724,8 +5242,118 @@ order by  d.PublicationDateTime desc
 			if (_unslotted.Count == 0) return changelist;
 			return changelist;
 		}
+        private Dictionary<long, long> _getChangeListColumn(SortedDictionary<string, long> existing, SortedDictionary<long, string> unmapped)
+        {
+            // existing[raw label, clusterid]
+            // unmapped[flat_id, rawlabel]
+            // changelist[flat_id, clusterid]
+            Dictionary<long, long> changelist = new Dictionary<long, long>();
+            Dictionary<long, string> unslotted = new Dictionary<long, string>();
+            foreach (var u in unmapped)
+            {
+                if (existing.ContainsKey(u.Value))
+                {
+                    // u.key is the itemID, existing is the cluster_id
+                    changelist[u.Key] = existing[u.Value]; // changelist[flat_id] = cluster_id
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (unslotted.Count == 0) return changelist;
+            /// ------ second try
+            SortedDictionary<string, string> cleanedExisting = new SortedDictionary<string, string>();
+            SortedDictionary<long, string> cleanedUnmapped = new SortedDictionary<long, string>();
 
-		private string CleanStringForStep2(string str) {
+            foreach (var u in unslotted)
+            {
+                var sCleaned = CleanStringForColumn(u.Value);
+                cleanedUnmapped[u.Key] = sCleaned;
+            }
+            foreach (var e in existing)
+            {
+                var sCleaned = CleanStringForColumn(e.Key);
+                if (!cleanedExisting.ContainsKey(sCleaned))
+                {
+                    //cleaned version is the key
+                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+                }
+            }
+            _unslotted = new Dictionary<string, int>();
+            unslotted = new Dictionary<long, string>();
+            foreach (var u in cleanedUnmapped)
+            {
+                // cleanedunmap[itemid, cleaned]
+                // cleanedExisting[cleaned, uncleaned]
+                if (cleanedExisting.ContainsKey(u.Value))
+                {
+                    // if cleanedversion = cleanversion
+                    // find the 
+
+                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (_unslotted.Count == 0) return changelist;
+            /// ------ third try use end label only
+            cleanedExisting = new SortedDictionary<string, string>();
+            cleanedUnmapped = new SortedDictionary<long, string>();
+
+            foreach (var u in unslotted)
+            {
+                var sCleaned = CleanStringForColumn(fn.EndLabel(u.Value));
+                cleanedUnmapped[u.Key] = sCleaned;
+            }
+            foreach (var e in existing)
+            {
+                var sCleaned = CleanStringForColumn(fn.EndLabel(e.Key));
+                if (!cleanedExisting.ContainsKey(sCleaned))
+                {
+                    //cleaned version is the key
+                    cleanedExisting[sCleaned] = e.Key; // raw label is the value.
+                }
+            }
+            _unslotted = new Dictionary<string, int>();
+            unslotted = new Dictionary<long, string>();
+            foreach (var u in cleanedUnmapped)
+            {
+                // cleanedunmap[itemid, cleaned]
+                // cleanedExisting[cleaned, uncleaned]
+                if (cleanedExisting.ContainsKey(u.Value))
+                {
+                    // if cleanedversion = cleanversion
+                    // find the 
+
+                    changelist[u.Key] = existing[cleanedExisting[u.Value]];
+                }
+                else
+                {
+                    unslotted[u.Key] = u.Value;
+                    if (!_unslotted.ContainsKey(u.Value))
+                    {
+                        _unslotted[u.Value] = 0;
+                    }
+                    _unslotted[u.Value]++;
+                }
+            }
+            if (_unslotted.Count == 0) return changelist;
+            return changelist;
+        }
+        private string CleanStringForStep2(string str) {
 			//remove non alphanumeric and space
 			// make singular
 			// replace phrase
@@ -4740,56 +5368,44 @@ order by  d.PublicationDateTime desc
 			return s;
 
 		}
-		private SortedDictionary<string, long> _GetExistingClusterTree(int tableId) {
-			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
-			string sqltxt_old = string.Format(@"
-select id, label, iconum_count
-	from cluster_name_tree_new c
-	where c.norm_table_id = {0}", tableId);
+        private string CleanStringForColumn(string str)
+        {
+            //remove non alphanumeric and space
+            // make singular
+            // replace phrase
+            // remove stem words, and replace individual words 
+            var s = str;
+            s = fn.AlphaNumericSpaceAndSquareBrackets(s);
+            s = fn.SingularForm(s);
+            s = fn.ReplacePhraseAllLevel(s);
+            //s = fn.RemoveNondictionaryWordAllLevel(s);
+            //s = fn.NoStemWordAllLevel(s);
+            //s = fn.ReplacePhraseAllLevel(s);
+            return s;
 
-			string sqltxt = string.Format(@"
-select distinct c.id, c.iconum_count, tf.raw_row_label
-	from cluster_name_tree_new c
-	join norm_name_tree t on c.id = t.cluster_id_new 
-	join norm_name_tree_flat tf on t.id = tf.id
-where c.norm_table_id = {0}
-	and t.norm_table_id = {0}
-order by c.iconum_count
-", tableId);
-			int idx = 0;
-			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
-				//cmd.Parameters.AddWithValue("@iconum", iconum);
-				sqlConn.Open();
-				using (var sdr = cmd.ExecuteReader()) {
-					while (sdr.Read()) {
-						try {
-							var id = sdr.GetInt64(0);
-							var rawlabel = sdr.GetStringSafe(2);
-							if (!string.IsNullOrWhiteSpace(rawlabel)) {
-								entries[rawlabel] = id;
+        }
+        private string _sqlGetGoldCorpus()
+        {
+            string sql = "";
 
-							}
-						} catch {
-
-						}
-					}
-
-				}
-			}
-			return entries;
-		}
-		private SortedDictionary<string, long> _GetExistingClusterHierarchy(int iconum, int tableId) {
+            if (true || this._environment == "DEV")
+            {
+                sql = @"	join gold_corpus_document_list gc 
+                    on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum ";
+            }
+            return sql;
+        }
+		private SortedDictionary<string, long> _GetExistingClusterHierarchyForCompany(int iconum, int tableId) {
 			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             // TODO: think there is a bug here. not joining HTML table identification
 
             // TODO: need to increase timeout
 			string sqltxt = string.Format(@"
-select distinct ch.id, nntf.raw_row_label
+select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+	@" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -4800,25 +5416,9 @@ select distinct ch.id, nntf.raw_row_label
 		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>''
+        and ch.is_reviewed = true
 ", iconum, tableId);
 
-            string sqltxt2 = string.Format(@"
-select distinct ch.id, nntf.raw_row_label
-	from cluster_mapping cm
-	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join cluster_hierarchy ch 
-		on cm.cluster_hierarchy_id = ch.id
-	join cluster_presentation_concept_type cpct 
-		on ch.concept_type_id = cpct.concept_type_id
-	join cluster_presentation cp 
-		on cp.id = cpct.cluster_presentation_id
-	join concept_type ct 
-		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
-	where cp.norm_table_id = {1} and cp.industry_id = 1
-		and coalesce( trim(nntf.raw_row_label),'')<>''
-", iconum, tableId);
 			int idx = 0;
 			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
@@ -4842,9 +5442,90 @@ select distinct ch.id, nntf.raw_row_label
 
 				}
 			}
+            return entries;
+		}
+
+        private SortedDictionary<string, long> _GetExistingClusterHierarchyForIndustry(int industryId, int tableId)
+        {
+            industryId = 1;
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.raw_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
+	where cp.norm_table_id = {1} and cp.industry_id = {0}
+		and coalesce( trim(nntf.raw_row_label),'')<>''
+    and ch.is_reviewed = true
+", industryId, tableId);
+            if (entries.Count == 0)
+            {
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+                {
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            try
+                            {
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1).ToLower();
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
+                            }
+                            catch
+                            {
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            return entries;
+        }
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForCompany(int iconum, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            // TODO: think there is a bug here. not joining HTML table identification
+
+            // TODO: need to increase timeout
+            string sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.raw_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join cluster_hierarchy ch 
+        on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and nntf.iconum = {0}
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", iconum, tableId);
 
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
             {
                 //cmd.Parameters.AddWithValue("@iconum", iconum);
                 sqlConn.Open();
@@ -4872,18 +5553,179 @@ select distinct ch.id, nntf.raw_row_label
                 }
             }
             return entries;
-		}
+        }
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForIndustry(int industryId, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.raw_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and cp.industry_id = {0}
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", industryId, tableId);
+            int idx = 0;
+            if (entries.Count == 0)
+            {
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+                {
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            try
+                            {
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1).ToLower();
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
 
-        private SortedDictionary<string, long> _GetExistingClusterCleanLabel(int iconum, int tableId)
+
+                            }
+                            catch
+                            {
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            return entries;
+        }
+
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForCompany(int iconum, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt = string.Format(@"
-select distinct ch.id, nntf.cleaned_row_label
+select distinct ch.id, lower(nntf.cleaned_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and nntf.iconum = {0}
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", iconum, tableId);
+
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var id = sdr.GetInt64(0);
+                            var rawlabel = sdr.GetStringSafe(1);
+                            if (!entries.ContainsKey(rawlabel))
+                            {
+                                entries[rawlabel] = id;
+                            }
+
+
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+            }
+            return entries;
+        }
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForIndustry(int industryId, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where cp.norm_table_id = {1} and cp.industry_id = {0}
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", industryId, tableId);
+
+            if (entries.Count == 0)
+            {
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+                {
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            try
+                            {
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1);
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
+                            }
+                            catch
+                            {
+
+                            }
+                        }
+
+                    }
+                }
+            }
+            return entries;
+        }
+
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForCompany(int iconum, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+
+            string sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+	@" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -4894,25 +5736,9 @@ select distinct ch.id, nntf.cleaned_row_label
 		and ct.concept_association_type_id = 'R'
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+        and ch.is_reviewed = true
 ", iconum, tableId);
 
-            string sqltxt2 = string.Format(@"
-select distinct ch.id, nntf.cleaned_row_label
-	from cluster_mapping cm
-	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id
-	join cluster_hierarchy ch 
-		on cm.cluster_hierarchy_id = ch.id
-	join cluster_presentation_concept_type cpct 
-		on ch.concept_type_id = cpct.concept_type_id
-	join cluster_presentation cp 
-		on cp.id = cpct.cluster_presentation_id
-	join concept_type ct 
-		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
-	where cp.norm_table_id = {1} and cp.industry_id = 1
-		and coalesce( trim(nntf.cleaned_row_label),'')<>''
-", iconum, tableId);
             int idx = 0;
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -4942,38 +5768,64 @@ select distinct ch.id, nntf.cleaned_row_label
 
                 }
             }
+            return entries;
+        }
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForIndustry(int industryId, int tableId)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
-            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-            using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
+            string sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+	join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+	join concept_type ct 
+		on cpct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
+	where cp.norm_table_id = {1} and cp.industry_id = {0}
+		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+        and ch.is_reviewed = true
+", industryId, tableId);
+            int idx = 0;
+            if (entries.Count == 0)
             {
-                //cmd.Parameters.AddWithValue("@iconum", iconum);
-                sqlConn.Open();
-                using (var sdr = cmd.ExecuteReader())
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt2, sqlConn))
                 {
-                    while (sdr.Read())
+                    //cmd.Parameters.AddWithValue("@iconum", iconum);
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
                     {
-                        try
+                        while (sdr.Read())
                         {
-                            var id = sdr.GetInt64(0);
-                            var rawlabel = sdr.GetStringSafe(1);
-                            if (!entries.ContainsKey(rawlabel))
+                            try
                             {
-                                entries[rawlabel] = id;
+                                var id = sdr.GetInt64(0);
+                                var rawlabel = sdr.GetStringSafe(1);
+                                if (!entries.ContainsKey(rawlabel))
+                                {
+                                    entries[rawlabel] = id;
+                                }
+
+
                             }
+                            catch
+                            {
 
-
+                            }
                         }
-                        catch
-                        {
 
-                        }
                     }
-
                 }
             }
             return entries;
         }
-
         private SortedDictionary<long, string> _GetIconumCleanLabels(int iconum, int tableId)
         {
             string sqltxt = string.Format(@"
@@ -4982,7 +5834,7 @@ select distinct ch.id, nntf.cleaned_row_label
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0} 
 	and tf.iconum = {1} 
 	and (tf.cleaned_row_label = '') is not true
 
@@ -4998,9 +5850,25 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and (tf.cleaned_row_label = '') is not true
+
+", tableId, iconum, docid.ToString());
+            return _GetIconumLabelsHelper(sqltxt);
+        }
+
+        private SortedDictionary<long, string> _GetIconumCleanColumnLabels(int iconum, Guid docid, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+  select distinct tf.id, tf.cleaned_column_label
+	from norm_name_tree t 
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
+where hti.norm_table_id = {0}
+	and tf.iconum = {1} and tf.document_id = '{2}'
+	and (tf.cleaned_column_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
             return _GetIconumLabelsHelper(sqltxt);
@@ -5013,7 +5881,7 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} 
 	and (tf.raw_row_label = '') is not true
 
@@ -5028,14 +5896,32 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
 	from norm_name_tree t 
 	right join norm_name_tree_flat tf on t.id = tf.id
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
-where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
+where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
 	and (tf.raw_row_label = '') is not true
 
 ", tableId, iconum, docid.ToString());
 			return _GetIconumLabelsHelper(sqltxt);
 		}
-		private SortedDictionary<long, string> _GetIconumLabelsHelper(string sqltxt) {
+
+        private SortedDictionary<long, string> _GetIconumRawColumnLabels(int iconum, Guid docid, int tableId)
+        {
+            string sqltxt = string.Format(@"
+
+  select distinct tf.id, tf.raw_column_label
+	from norm_name_tree t 
+	right join norm_name_tree_flat tf on t.id = tf.id
+  	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id and hti.file_id = tf.file_id
+where hti.norm_table_id = {0}
+	and tf.iconum = {1} and tf.document_id = '{2}'
+	and (tf.raw_column_label = '') is not true
+
+", tableId, iconum, docid.ToString());
+            return _GetIconumLabelsHelper(sqltxt);
+        }
+
+
+        private SortedDictionary<long, string> _GetIconumLabelsHelper(string sqltxt) {
 			SortedDictionary<long, string> entries = new SortedDictionary<long, string>();
 
 
@@ -5122,6 +6008,18 @@ where (hti.norm_table_id = {0} or t.norm_table_id = {0} )
             }
         }
 
+        public NormNameTreeTable LoadHistorical(string connectionString, int iconum, Guid guid, int table_id)
+        {
+            try
+            {
+                return _LoadHistorical(connectionString, iconum, guid, table_id);
+            }
+            catch
+            {
+                return new NormNameTreeTable();
+            }
+        }
+
         private NormNameTreeTable _Load(string connectionString, int iconum, Guid guid, int table_id)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
@@ -5140,10 +6038,119 @@ left join cluster_presentation cp
 left join concept_type ct 
 		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
-and f.table_id = {2} and f.item_offset like '%|r0'
+and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
 and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
 order by f.file_id, f.row_id, f.col_id
+", iconum, guid, table_id);
+            int idx = 0;
+            int curr_row_index = 0;
+            var curr_row = new NormNameTreeRow();
+            string last_raw_label = "";
+            int last_database_row_id = -1;
+            int last_file_id = -1;
+            using (var sqlConn = new NpgsqlConnection(connectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+            {
+                cmd.CommandTimeout = 600;
+                //cmd.Parameters.AddWithValue("@iconum", iconum);
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        try
+                        {
+                            var flat_id = sdr.GetInt64(0);
+                            var curr_raw_label = sdr.GetStringSafe(1);
+                            var cluster_id = sdr.GetInt64(4);
+                            int curr_database_row_id = sdr.GetInt32(5);
+                            var curr_file_id = sdr.GetInt32(7);
+                            if (last_file_id >= 0)
+                            {
+                                if (curr_file_id != last_file_id)
+                                    return this;
+                            }
+                            else
+                            {
+                                last_file_id = curr_file_id;
+                            }
+                            bool isNewRow = false;
+                            if (last_database_row_id < 0)
+                            {
+                                isNewRow = true;
+                            }
+                            else
+                            {
+                                if (last_database_row_id == curr_database_row_id)
+                                {
+                                    if (last_raw_label != curr_raw_label)
+                                    {
+                                        throw new DataException("Row label doesn't match");
+                                    }
+                                }
+                                else
+                                {
+                                    isNewRow = true;
+                                }
+                            }
+                            if (isNewRow)
+                            {
+                                var newRow = new NormNameTreeRow();
+                                curr_row = newRow;
+                                curr_row.RawRowLabel = curr_raw_label;
+                                curr_row.CleanedRawRowLabel = fn.RemoveHierarchyNumberSpace(curr_row.RawRowLabel);
+                                curr_row.CleanedRowLabel = sdr.GetStringSafe(2);
+                                curr_row.CleanedCleanedRowLabel = fn.RemoveHierarchyNumberSpace(curr_row.CleanedRowLabel);
+                                curr_row.FinalLabel = sdr.GetStringSafe(3);
+                                curr_row.CleanedFinalLabel = fn.RemoveHierarchyNumberSpace(curr_row.FinalLabel);
+                                curr_row.ClusterId = cluster_id;
+                                curr_row.DatabaseRowId = curr_database_row_id;
+                                curr_row.NormalizedRowId = curr_row_index;
+                                curr_row.FlatIds.Add(flat_id);
+                                this.Rows.Add(curr_row_index, newRow);
+                                curr_row_index++;
+                                last_database_row_id = curr_database_row_id;
+                                last_raw_label = curr_raw_label;
+                            }
+                            else
+                            {
+                                curr_row.FlatIds.Add(flat_id);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            throw ex;
+                        }
+                    }
 
+                }
+            }
+            return this;
+        }
+
+        private NormNameTreeTable _LoadHistorical(string connectionString, int iconum, Guid guid, int table_id)
+        {
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+
+            string sqltxt = string.Format(@"
+select f.id, f.raw_row_label, f.cleaned_row_label, f.final_label,
+	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id, f.file_id
+from norm_name_tree_flat f 
+join gold_corpus_document_list gc 
+                    on gc.document_id = f.document_id and gc.iconum = f.iconum
+left join cluster_mapping cm on f.id = cm.norm_name_tree_flat_id
+left join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+left join cluster_presentation_concept_type cpct 
+		on ch.concept_type_id = cpct.concept_type_id
+left join cluster_presentation cp 
+		on cp.id = cpct.cluster_presentation_id
+left join concept_type ct 
+		on cpct.concept_type_id = ct.id
+where f.document_id = '{1}' and f.iconum = {0}
+and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
+order by f.file_id, f.row_id, f.col_id
 ", iconum, guid, table_id);
             int idx = 0;
             int curr_row_index = 0;

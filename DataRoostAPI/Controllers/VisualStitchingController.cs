@@ -43,14 +43,44 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 			} catch { }
 		}
 
-		private void LogError(Exception ex, string extra = "") {
+        public static void SendEmailToAnalysts(string subject, string emailBody)
+        {
+            try
+            {
+                SmtpClient mySMTP = new SmtpClient("mail.factset.com");
+                MailAddress mailFrom = new MailAddress("service@factset.com", "IMA DataRoost");
+                MailMessage message = new MailMessage();
+                message.From = mailFrom;
+                var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
+                var santhosh = new MailAddress("skuthuru@factset.com", "Santhosh Kuthuru");
+                var prapolu = new MailAddress("prapolu@factset.com", "Prakash Rapolu");
+                message.To.Add(ljiang);
+                message.To.Add(santhosh);
+                message.To.Add(prapolu);
+                message.Subject = subject + " from " + Environment.MachineName;
+                message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
+                message.Body = emailBody;
+                message.IsBodyHtml = true;
+                mySMTP.Send(message);
+            }
+            catch { }
+        }
+
+        private void LogError(Exception ex, string extra = "") {
 			string msg = ex.Message + ex.StackTrace;
 			if (ex.InnerException != null)
 				msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
 			SendEmail("DataRoost Exception", msg + extra);
 		}
+        private void LogErrorAutoCluster(Exception ex, string extra = "")
+        {
+            string msg = ex.Message + ex.StackTrace;
+            if (ex.InnerException != null)
+                msg += "INNER EXCEPTION" + ex.InnerException.Message + ex.InnerException.StackTrace;
+            SendEmailToAnalysts("Auto-Clustering Failure", msg + extra);
+        }
 
-		[Route("json/id/{id}")]
+        [Route("json/id/{id}")]
 		[HttpGet]
 		public HttpResponseMessage GetDocument(int id) {
 			try {
@@ -884,7 +914,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByIconum(iconum);
+                var json = vsHelper.ExtendClusterByIconumDev(iconum);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -910,16 +940,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId);
-                return new HttpResponseMessage()
+                var success = vsHelper.ExtendClusterByDocument(iconum, docId);
+                if (success)
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
-                };
+                    return new HttpResponseMessage()
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.Accepted)
+                    {
+                    };
+                }
             }
             catch (Exception ex)
             {
-                LogError(ex);
-                return new HttpResponseMessage()
+                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, -1, -1, -1, ex.ToString());
+                LogErrorAutoCluster(ex);
+                return new HttpResponseMessage(HttpStatusCode.Accepted)
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
                 };
@@ -936,16 +976,26 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId);
-                return new HttpResponseMessage()
+                var success = vsHelper.ExtendClusterByDocumentDev(iconum, docId);
+                if (success)
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
-                };
+                    return new HttpResponseMessage()
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
+                else
+                {
+                    return new HttpResponseMessage(HttpStatusCode.Accepted)
+                    {
+                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
+                    };
+                }
             }
             catch (Exception ex)
             {
                 LogError(ex);
-                return new HttpResponseMessage()
+                return new HttpResponseMessage(HttpStatusCode.Accepted)
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
                 };
@@ -970,7 +1020,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
-                LogError(ex);
+                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, tableid, -1, -1, ex.ToString());
+                LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
@@ -988,7 +1039,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId, tableid);
+                var json = vsHelper.ExtendClusterByDocumentDev(iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -1004,11 +1055,28 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
-        public class StitchInput
+        [Route("cluster/errorlog")]
+        [HttpGet]
+        public List<VisualStitching.Common.Models.ClusterError> GetClusterErrorLog()
         {
-            public int TargetStaticHierarchyID { get; set; }
-            public List<int> StitchingStaticHierarchyIDs { get; set; }
+            try
+            {
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.ReadLogFromDatabase();
+                return json;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+            }
+            return new List<VisualStitching.Common.Models.ClusterError>();
         }
+        public class StitchInput {
+			public int TargetStaticHierarchyID { get; set; }
+			public List<int> StitchingStaticHierarchyIDs { get; set; }
+		}
 
         public class UnStitchInput
         {
