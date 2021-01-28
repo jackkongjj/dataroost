@@ -65,7 +65,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Access.AsReported {
         private bool _autoclusteringfailure = false;
         private readonly string _sfConnectionString;
         private readonly string _pgConnectionString;
-        private string _environment = "STAGING";
+        private string _environment = "PRODUCTION";
         static int DebugLogLevel = 0;
 		static VisualStitchingHelper() {
             DebugLogLevel = 0;
@@ -4071,7 +4071,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
-            string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
+            string failureEmailHeader = _environment + string.Format(" iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
 
             var tableIDs = TableIDs();
@@ -4322,7 +4322,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
-            string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
+            string failureEmailHeader = _environment + string.Format(" iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
             var tableIDs = TableIDs();
 			if (guid == NullGuid) {
