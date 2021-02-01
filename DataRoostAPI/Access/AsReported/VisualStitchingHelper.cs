@@ -5379,8 +5379,8 @@ order by  d.PublicationDateTime desc
             s = fn.SingularForm(s);
             s = fn.ReplacePhraseAllLevel(s);
             //s = fn.RemoveNondictionaryWordAllLevel(s);
-            //s = fn.NoStemWordAllLevel(s);
-            //s = fn.ReplacePhraseAllLevel(s);
+            s = fn.NoStemWordAllLevelColumn(s);
+            s = fn.ReplacePhraseAllLevel(s);
             return s;
 
         }
