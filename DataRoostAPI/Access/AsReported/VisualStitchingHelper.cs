@@ -5418,7 +5418,27 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		and coalesce( trim(nntf.raw_row_label),'')<>''
         and ch.is_reviewed = true
 ", iconum, tableId);
-
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.raw_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
+	where hti.norm_table_id = {1} and hti.iconum = {0}
+		and coalesce( trim(nntf.raw_row_label),'')<>''
+        and ch.is_reviewed = true
+", iconum, tableId);
+            }
 			int idx = 0;
 			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
@@ -5467,6 +5487,27 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		and coalesce( trim(nntf.raw_row_label),'')<>''
     and ch.is_reviewed = true
 ", industryId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.raw_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
+	where hti.norm_table_id = {1}
+		and coalesce( trim(nntf.raw_row_label),'')<>''
+        and ch.is_reviewed = true
+", industryId, tableId);
+            }
             if (entries.Count == 0)
             {
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
@@ -5523,6 +5564,26 @@ select distinct ch.id, lower(nntf.raw_column_label)
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", iconum, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.raw_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" 	join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where hti.norm_table_id = {1} and hti.iconum = {0}
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", iconum, tableId);
+            }
 
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -5574,6 +5635,26 @@ select distinct ch.id, lower(nntf.raw_column_label)
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", industryId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.raw_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where hti.norm_table_id = {1} 
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", industryId, tableId);
+            }
             int idx = 0;
             if (entries.Count == 0)
             {
@@ -5630,7 +5711,26 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", iconum, tableId);
-
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" 	join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where hti.norm_table_id = {1} and hti.iconum = {0}
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", iconum, tableId);
+            }
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
             {
@@ -5681,7 +5781,26 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", industryId, tableId);
-
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+   @" 	join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'C'
+	where hti.norm_table_id = {1} 
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", industryId, tableId);
+            }
             if (entries.Count == 0)
             {
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
@@ -5738,7 +5857,27 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
         and ch.is_reviewed = true
 ", iconum, tableId);
-
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
+	where hti.norm_table_id = {1} and hti.iconum = {0}
+		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+        and ch.is_reviewed = true
+", iconum, tableId);
+            }
             int idx = 0;
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -5792,6 +5931,27 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
         and ch.is_reviewed = true
 ", industryId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_row_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+    @" join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ntct.concept_type_id = ct.id
+		and ct.concept_association_type_id = 'R'
+	where hti.norm_table_id = {1}
+		and coalesce( trim(nntf.cleaned_row_label),'')<>''
+        and ch.is_reviewed = true
+", industryId, tableId);
+            }
             int idx = 0;
             if (entries.Count == 0)
             {
