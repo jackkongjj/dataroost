@@ -4007,38 +4007,61 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 		}
 
 		static Guid NullGuid = new Guid();
-		public bool ExtendClusterByIconum(int iconum) {
+		public bool ExtendClusterByIconum(int contentSetId, int iconum) {
 			List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
-			_ExtendHierarchy(iconums, NullGuid);
+			_ExtendHierarchy(contentSetId, iconums, NullGuid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
-            _ExtendColumns(iconums, NullGuid);
+            _ExtendColumns(contentSetId, iconums, NullGuid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
             return true;
 		}
-		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
-			List<int> iconums = new List<int>();
-			iconums.Add(iconum);
-			//List<int> iconums = new List<int>() { 18119 };
-			_ExtendHierarchy(iconums, docid, tableid);
+		public bool ExtendClusterByDocument(int contentSetId, int iconum, Guid docid, int tableid = -1) {
+            //List<int> iconums = new List<int>();
+            //iconums.Add(iconum);
+            ////List<int> iconums = new List<int>() { 18119 };
+            //_ExtendHierarchy(iconums, docid, tableid);
+            //         if (this._autoclusteringfailure)
+            //         {
+            //             return false;
+            //         }
+            //         _ExtendColumns(iconums, docid, tableid);
+            //         if (this._autoclusteringfailure)
+            //         {
+            //             return false;
+            //         }
+            //         return true;
+            return ExtendClusterByContentSetDocument(contentSetId, iconum, docid, tableid);
+
+        }
+
+
+        public bool ExtendClusterByContentSetDocument(int contentSetId, int iconum, Guid docid, int tableid = -1)
+        {
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _ExtendHierarchy(contentSetId, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
-            _ExtendColumns(iconums, docid, tableid);
+            _ExtendColumns(contentSetId, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
             return true;
-		}
+        }
+
+
 
         public bool ExtendClusterByIconumDev(int iconum)
         {
@@ -4046,8 +4069,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(iconums, NullGuid);
-            _ExtendColumns(iconums, NullGuid);
+            _ExtendHierarchy(1, iconums, NullGuid);
+            _ExtendColumns(1, iconums, NullGuid);
             return true;
         }
         public bool ExtendClusterByDocumentDev(int iconum, Guid docid, int tableid = -1)
@@ -4056,11 +4079,11 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(iconums, docid, tableid);
-            _ExtendColumns(iconums, docid, tableid);
+            _ExtendHierarchy(1, iconums, docid, tableid);
+            _ExtendColumns(1, iconums, docid, tableid);
             return true;
         }
-        private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
+        private bool _ExtendColumns(int contentSetId, List<int> iconums, Guid guid, int tableid = -1)
         {
             if (guid == NullGuid)
             {
@@ -4074,7 +4097,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
 
-            var tableIDs = TableIDs();
+            var tableIDs = TableIDs(contentSetId);
             int successfulTableCount = 0;
             foreach (var t in tableIDs)
             {
@@ -4318,16 +4341,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             }
             return !this._autoclusteringfailure;
         }
-        private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
+        private bool _ExtendHierarchy(int contentSetId, List<int> iconums, Guid guid, int tableid = -1) {
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
             string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
-            var tableIDs = TableIDs();
+            var tableIDs = TableIDs(contentSetId);
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
-					_CleanupHierarchy(iconum, t);
+					//_CleanupHierarchy(iconum, t);
                     _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
                 }
 			}
@@ -4569,27 +4592,66 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             }
             return !this._autoclusteringfailure;
 		}
-		private List<int> TableIDs() {
-			List<int> dataNodes = new List<int>();
-			dataNodes = new List<int>() { 1, 2, 4, 5 };
-			return dataNodes;
-			string sqltxt = string.Format(@"
-  select nt.id 
-  from norm_table nt
---  where nt.label = 'Average Balance Sheet'
-  order by id ");
-			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
-				//cmd.Parameters.AddWithValue("@iconum", iconum);
-				sqlConn.Open();
-				using (var sdr = cmd.ExecuteReader()) {
-					while (sdr.Read()) {
-						int value = sdr.GetInt32(0);
-						dataNodes.Add(value);
-					}
 
-				}
-			}
+        public int IconumToContentSet(int iconum)
+        {
+            int contentSetId = 1;
+            try
+            {
+                string sqltxt = string.Format(@"
+        select distinct industry_id from iconum_industry_association
+where iconum = {0}
+order by industry_id ", iconum);
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+                {
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            contentSetId = sdr.GetInt32(0);
+                            break;  
+                        }
+
+                    }
+                }
+            } catch (Exception ex)
+            {
+                contentSetId = 1;
+            }
+            return contentSetId;
+        }
+
+        private List<int> TableIDs(int contentSetId) {
+			List<int> dataNodes = new List<int>();
+            if (contentSetId == 1)
+            {
+                dataNodes = new List<int>() { 1, 2, 4, 5 };
+                return dataNodes;
+            }
+            else
+            {
+                string sqltxt = string.Format(@"
+select distinct cp.norm_table_id 
+from cluster_presentation cp
+where cp.industry_id = {0}
+order by cp.norm_table_id ", contentSetId);
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+                {
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            int value = sdr.GetInt32(0);
+                            dataNodes.Add(value);
+                        }
+
+                    }
+                }
+            }
 			return dataNodes;
 		}
 		private bool _CleanupHierarchy(int iconum, int tableId) {
@@ -4601,7 +4663,6 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
 			string sqltxt = string.Format(@"
-
 select p.item_code, max(cm.cluster_hierarchy_id)
 	from prod_data p
 	join norm_name_tree ntf

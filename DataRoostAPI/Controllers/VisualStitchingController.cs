@@ -25,16 +25,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 				MailAddress mailFrom = new MailAddress("myself@factset.com", "IMA DataRoost");
 				MailMessage message = new MailMessage();
 				message.From = mailFrom;
-				var ljiang = new MailAddress("ljiang@factset.com", "Leo Jiang");
-				var leo = new MailAddress("lchang@factset.com", "Leo");
-				var adam = new MailAddress("apitzer@factset.com", "Adam Pitzer");
-				var vsaxena = new MailAddress("vsaxena@factset.com", "Vaibhav Saxena");
+				var ljiang = new MailAddress("ljiang@factset.com", "Lun Jiang");
 				var rohan = new MailAddress("rthankachan@factset.com", "Rohan Jacob");
 				message.To.Add(ljiang);
-				//message.To.Add(vsaxena);
-				//message.To.Add(adam);
-				//message.To.Add(leo);
-				//message.To.Add(rohan);
 				message.Subject = subject + " from " + Environment.MachineName;
 				message.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
 				message.Body = emailBody;
@@ -789,7 +782,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.ExtendClusterByIconum(iconum);
+                var json = vsHelper.ExtendClusterByIconum(1, iconum);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -805,32 +798,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
-        [Route("cluster/extend/{iconum}/dev")]
-        [HttpGet]
-        public HttpResponseMessage ClusterTreeExtendPutDev(int iconum)
-        {
-            try
-            {
-                if (iconum <= 0)
-                    throw new NotImplementedException();
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
-                var json = vsHelper.ExtendClusterByIconumDev(iconum);
-                return new HttpResponseMessage()
-                {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
-                };
-            }
-            catch (Exception ex)
-            {
-                LogError(ex);
-                return new HttpResponseMessage()
-                {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
-                };
-            }
-        }
         [Route("cluster/extend/{iconum}/{docId}")]
         [HttpGet]
         public HttpResponseMessage ClusterTreeExtendPut2(int iconum, Guid docId)
@@ -842,7 +810,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var success = vsHelper.ExtendClusterByDocument(iconum, docId);
+                int contentSetId = vsHelper.IconumToContentSet(iconum);
+                var success = vsHelper.ExtendClusterByDocument(contentSetId, iconum, docId);
                 if (success)
                 {
                     return new HttpResponseMessage()
@@ -867,9 +836,95 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 };
             }
         }
+
+        [Route("cluster/extend/{iconum}/{docId}/{tableid}")]
+        [HttpGet]
+        public HttpResponseMessage ClusterTreeExtendDocIdTableId(int iconum, Guid docId, int tableid)
+        {
+            try
+            {
+                if (iconum <= 0)
+                    throw new NotImplementedException();
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                int contentSetId = vsHelper.IconumToContentSet(iconum);
+                var json = vsHelper.ExtendClusterByDocument(contentSetId, iconum, docId, tableid);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, tableid, -1, -1, ex.ToString());
+                LogErrorAutoCluster(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
+
+        [Route("cluster/extend/{contentSetId}/{iconum}/{docId}/{tableid}")]
+        [HttpGet]
+        public HttpResponseMessage ClusterTreeExtendIndustryDocIdTableId(int contentSetId, int iconum, Guid docId, int tableid)
+        {
+            try
+            {
+                if (iconum <= 0)
+                    throw new NotImplementedException();
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var json = vsHelper.ExtendClusterByDocument(contentSetId, iconum, docId, tableid);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, tableid, -1, -1, ex.ToString());
+                LogErrorAutoCluster(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
+
+        #region DEV
+        [Route("cluster/extend/{iconum}/dev")]
+        [HttpGet]
+        public HttpResponseMessage ClusterTreeExtendIconumDev(int iconum)
+        {
+            try
+            {
+                if (iconum <= 0)
+                    throw new NotImplementedException();
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString, VisualStitchingHelper.PGDevConnectionString());
+                var json = vsHelper.ExtendClusterByIconumDev(iconum);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
+
         [Route("cluster/extend/{iconum}/{docId}/dev")]
         [HttpGet]
-        public HttpResponseMessage ClusterTreeExtendPut2Dev(int iconum, Guid docId)
+        public HttpResponseMessage ClusterTreeExtendIconumDocIdDev(int iconum, Guid docId)
         {
             try
             {
@@ -903,36 +958,9 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 };
             }
         }
-        [Route("cluster/extend/{iconum}/{docId}/{tableid}")]
-        [HttpGet]
-        public HttpResponseMessage ClusterTreeExtendPut3(int iconum, Guid docId, int tableid)
-        {
-            try
-            {
-                if (iconum <= 0)
-                    throw new NotImplementedException();
-
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.ExtendClusterByDocument(iconum, docId, tableid);
-                return new HttpResponseMessage()
-                {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
-                };
-            }
-            catch (Exception ex)
-            {
-                VisualStitchingHelper.WriteLogToDatabase(VisualStitchingHelper.PGConnectionString(), docId, iconum, tableid, -1, -1, ex.ToString());
-                LogErrorAutoCluster(ex);
-                return new HttpResponseMessage()
-                {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
-                };
-            }
-        }
         [Route("cluster/extend/{iconum}/{docId}/{tableid}/dev")]
         [HttpGet]
-        public HttpResponseMessage ClusterTreeExtendPut3Dev(int iconum, Guid docId, int tableid)
+        public HttpResponseMessage ClusterTreeExtendIconumDocIdTableIdDev(int iconum, Guid docId, int tableid)
         {
             try
             {
@@ -956,7 +984,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 };
             }
         }
-
+        #endregion  
         [Route("cluster/errorlog")]
         [HttpGet]
         public List<VisualStitching.Common.Models.ClusterError> GetClusterErrorLog()
