@@ -4062,9 +4062,9 @@ exec GDBGetCountForIconum @sdbcode, @iconum
         }
         private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
         {
-            if (guid == NullGuid || tableid <= 0)
+            if (guid == NullGuid)
             {
-                return false; // only work for document-table clustering
+                return false; 
             }
             _levelOneLogger.AppendLineBreak("");
             _levelOneLogger.AppendLineBreak("COLUMN TYPE");
@@ -4119,7 +4119,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             this._autoclusteringfailure = true;
                         }
                         isCurrentTableSuccessful = false;
-                        _failureLogger.AppendLine(@"Document does not have column label to match for Norm Table ID " + t + ".");
+                        _failureLogger.AppendLine(@"Norm Table (ID " + t + ") for RNT column label is not available.");
                     }
                     else
                     {
@@ -4213,7 +4213,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             {
                                 isCurrentTableSuccessful = false;
                             }
-                            _failureLogger.AppendLine(@"There is no cluster for column types for Norm Table ID " + t + ".");
+                            _failureLogger.AppendLine(@"RNT for Norm Table ID " + t + " does not exist, please run the Named Tree. There is no cluster for column type.");
                         }
                         var temp_changeList = _getChangeListColumn(existing, unmapped);
                         changeList.Eat(temp_changeList);
@@ -4277,7 +4277,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     isDone = changeList.Count >= datapointToMatch;
                     _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
 
-                    _levelOneLogger.AppendLineBreak("changeList.Count after WrieChangesToDB: " + changeList.Count);
+                    _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
                     if (tableid <= 0 && isCurrentTableSuccessful)
