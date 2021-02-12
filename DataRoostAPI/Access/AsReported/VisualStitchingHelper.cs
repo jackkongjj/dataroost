@@ -5449,7 +5449,7 @@ order by  d.PublicationDateTime desc
         {
             string sql = "";
 
-            if (contentSetId == 1)
+            if (true || contentSetId == 1)
             {
 
                 if (true || this._environment == "DEV")
@@ -5464,7 +5464,7 @@ order by  d.PublicationDateTime desc
         {
             string sql = "";
 
-            if (contentSetId == 1)
+            if (true || contentSetId == 1)
             {
                 sql = @" and ch.is_reviewed = true ";
             }
@@ -5480,7 +5480,7 @@ select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
-	@" join cluster_hierarchy ch 
+    @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -5488,9 +5488,9 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
-		and coalesce( trim(nntf.raw_row_label),'')<>'' " 
+		and coalesce( trim(nntf.raw_row_label),'')<>'' "
     + _sqlGetIsReview(contentSetId), iconum, tableId);
             if (this._environment == "DEV")
             {
@@ -5507,9 +5507,9 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} and hti.iconum = {0}
-		and coalesce( trim(nntf.raw_row_label),'')<>'' " 
+		and coalesce( trim(nntf.raw_row_label),'')<>'' "
      + _sqlGetIsReview(contentSetId), iconum, tableId);
             }
 			int idx = 0;
@@ -5554,7 +5554,7 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.raw_row_label),'')<>'' "
     + _sqlGetIsReview(contentSetId), contentSetId, tableId);
@@ -5573,7 +5573,7 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1}
 		and coalesce( trim(nntf.raw_row_label),'')<>'' "
     + _sqlGetIsReview(contentSetId), contentSetId, tableId);
@@ -5630,7 +5630,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", iconum, tableId);
@@ -5649,7 +5649,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} and hti.iconum = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", iconum, tableId);
@@ -5701,7 +5701,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", contentSetId, tableId);
@@ -5720,7 +5720,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} 
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", contentSetId, tableId);
@@ -5777,7 +5777,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", iconum, tableId);
@@ -5796,7 +5796,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} and hti.iconum = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", iconum, tableId);
@@ -5847,7 +5847,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", contentSetId, tableId);
@@ -5866,7 +5866,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} 
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", contentSetId, tableId);
@@ -5914,7 +5914,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
 		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
-	@" join cluster_hierarchy ch 
+    @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -5922,7 +5922,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''"
     + _sqlGetIsReview(contentSetId), iconum, tableId);
@@ -5941,7 +5941,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} and hti.iconum = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
 " + _sqlGetIsReview(contentSetId), iconum, tableId);
@@ -5994,7 +5994,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
 " + _sqlGetIsReview(contentSetId), contentSetId, tableId);
@@ -6013,7 +6013,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
 		on ntct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
 " + _sqlGetIsReview(contentSetId), contentSetId, tableId);
@@ -6265,7 +6265,7 @@ left join concept_type ct
 		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
 and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
-and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 order by f.file_id, f.row_id, f.col_id
 ", iconum, guid, table_id);
             int idx = 0;
@@ -6375,7 +6375,7 @@ left join concept_type ct
 		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
 and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
-and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 order by f.file_id, f.row_id, f.col_id
 ", iconum, guid, table_id);
             int idx = 0;
