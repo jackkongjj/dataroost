@@ -1382,13 +1382,13 @@ SELECT  [Id]
 
 
 		public static string PGConnectionString() { 
-            //return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
-            return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+            //return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";  
+            return "Host=dsnametree.cluster-cbpqurvkowt4.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=skAQGPAs;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
 		}
 
         public static string PGDevConnectionString()
         {
-            return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
+            return "Host=dsnametree.cluster-cizhlzyxlrwg.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=PaeQKA74;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";  
             //return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
         }
 
@@ -4008,7 +4008,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
 		static Guid NullGuid = new Guid();
 		public bool ExtendClusterByIconum(int contentSetId, int iconum) {
-			List<int> iconums = new List<int>();
+            this._environment = "DEV";
+            List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
 			_ExtendHierarchy(contentSetId, iconums, NullGuid);
@@ -4024,6 +4025,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             return true;
 		}
 		public bool ExtendClusterByDocument(int contentSetId, int iconum, Guid docid, int tableid = -1) {
+            this._environment = "DEV";
             //List<int> iconums = new List<int>();
             //iconums.Add(iconum);
             ////List<int> iconums = new List<int>() { 18119 };
@@ -4298,8 +4300,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     changeCount3 = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
                     isDone = changeList.Count >= datapointToMatch;
-                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
-
+                    if (changeList.Count > 0)
+                    {
+                        _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    }
+                    else
+                    {
+                        var debug = changeList.Count;
+                    }
                     _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
@@ -4548,9 +4556,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
                     isDone = changeList.Count >= datapointToMatch;
 
-
-                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
-
+                    if (changeList.Count > 0)
+                    {
+                        _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    }
+                    else
+                    {
+                        var debug = changeList.Count;
+                    }
                     _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
@@ -4599,9 +4612,9 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             try
             {
                 string sqltxt = string.Format(@"
-        select distinct industry_id from iconum_industry_association
+        select distinct content_set_id from iconum_content_set_association
 where iconum = {0}
-order by industry_id ", iconum);
+order by content_set_id ", iconum);
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
                 using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
                 {
@@ -4633,10 +4646,7 @@ order by industry_id ", iconum);
             else
             {
                 string sqltxt = string.Format(@"
-select distinct cp.norm_table_id 
-from cluster_presentation cp
-where cp.industry_id = {0}
-order by cp.norm_table_id ", contentSetId);
+select distinct nt.id from norm_table nt where nt.content_set_id ={0} order by nt.id ", contentSetId);
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
                 using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
                 {
@@ -4651,6 +4661,10 @@ order by cp.norm_table_id ", contentSetId);
 
                     }
                 }
+            }
+            if (dataNodes == null || dataNodes.Count == 0)
+            {
+                dataNodes = new List<int>() { 1, 4, 5 };
             }
 			return dataNodes;
 		}
