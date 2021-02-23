@@ -5662,7 +5662,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 	join norm_table_concept_type ntct 
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
-		on ntct.concept_type_id = ct.id
+		on ch.concept_type_id = ct.id
 		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} and hti.iconum = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
@@ -5733,7 +5733,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 	join norm_table_concept_type ntct 
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
-		on ntct.concept_type_id = ct.id
+		on ch.concept_type_id = ct.id
 		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} 
 		and coalesce( trim(nntf.raw_column_label),'')<>''
@@ -5809,7 +5809,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 	join norm_table_concept_type ntct 
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
-		on ntct.concept_type_id = ct.id
+		on ch.concept_type_id = ct.id
 		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} and hti.iconum = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
@@ -5879,7 +5879,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 	join norm_table_concept_type ntct 
 		on ntct.norm_table_id = hti.norm_table_id 
 	join concept_type ct 
-		on ntct.concept_type_id = ct.id
+		on ch.concept_type_id = ct.id
 		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where hti.norm_table_id = {1} 
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
