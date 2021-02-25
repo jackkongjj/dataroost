@@ -1381,17 +1381,22 @@ SELECT  [Id]
 		}
 
 
-		public static string PGConnectionString() { 
-            //return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";  
-            return "Host=dsnametree.cluster-cbpqurvkowt4.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=skAQGPAs;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
-		}
+		public static string PGConnectionString() {
+#if DEBUG
 
+            return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+#else
+            return "Host=dsnametree.cluster-cbpqurvkowt4.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=skAQGPAs;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+#endif
+        }
         public static string PGDevConnectionString()
         {
+#if DEBUG
+            return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
+#else
             return "Host=dsnametree.cluster-cizhlzyxlrwg.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=PaeQKA74;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";  
-            //return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+#endif
         }
-
         private List<Profile> GetProfilePostGres() {
 			const string query = @"
 				SELECT name,json FROM cluster_name_tree_profile
