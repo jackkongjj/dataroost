@@ -5653,22 +5653,20 @@ select distinct ch.id, lower(nntf.raw_column_label)
             if (this._environment == "DEV")
             {
                 sqltxt = string.Format(@"
-select distinct ch.id, lower(nntf.raw_column_label)
-	from cluster_mapping cm
-	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
-    @" 	join html_table_identification hti 
-		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
-	join cluster_hierarchy ch 
-		on cm.cluster_hierarchy_id = ch.id
-	join norm_table_concept_type ntct 
-		on ntct.norm_table_id = hti.norm_table_id 
-	join concept_type ct 
-		on ch.concept_type_id = ct.id
+    select distinct ch.id, lower(nntf.raw_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where hti.norm_table_id = {3} and hti.iconum = {2}
 		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
-	where hti.norm_table_id = {1} and hti.iconum = {0}
-		and coalesce( trim(nntf.raw_column_label),'')<>''
-", iconum, tableId);
+		and coalesce( trim(nntf.raw_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), iconum, tableId);
             }
 
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
@@ -5740,6 +5738,21 @@ select distinct ch.id, lower(nntf.raw_column_label)
 	where hti.norm_table_id = {1} 
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", contentSetId, tableId);
+                sqltxt2 = string.Format(@"
+    select distinct ch.id, lower(nntf.raw_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where  hti.norm_table_id = {3}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.raw_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), contentSetId, tableId);
             }
             int idx = 0;
             if (entries.Count == 0)
@@ -5816,6 +5829,21 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 	where hti.norm_table_id = {1} and hti.iconum = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", iconum, tableId);
+                sqltxt = string.Format(@"
+    select distinct ch.id, lower(nntf.cleaned_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where hti.norm_table_id = {3} and hti.iconum = {2}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.cleaned_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), iconum, tableId);
             }
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -5886,6 +5914,21 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 	where hti.norm_table_id = {1} 
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", contentSetId, tableId);
+                sqltxt2 = string.Format(@"
+    select distinct ch.id, lower(nntf.cleaned_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where  hti.norm_table_id = {3}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.cleaned_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), contentSetId, tableId);
             }
             if (entries.Count == 0)
             {
