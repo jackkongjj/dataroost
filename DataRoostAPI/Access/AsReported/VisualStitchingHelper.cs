@@ -4105,7 +4105,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
 
-            var tableIDs = TableIDs(contentSetId);
+            var tableIDs = TableIDs(contentSetId, iconum);
             int successfulTableCount = 0;
             foreach (var t in tableIDs)
             {
@@ -4361,7 +4361,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
             string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
-            var tableIDs = TableIDs(contentSetId);
+            var tableIDs = TableIDs(contentSetId, iconum);
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
 					//_CleanupHierarchy(iconum, t);
@@ -4642,7 +4642,7 @@ order by content_set_id ", iconum);
             return contentSetId;
         }
 
-        private List<int> TableIDs(int contentSetId) {
+        private List<int> TableIDs(int contentSetId, int iconum) {
 			List<int> dataNodes = new List<int>();
             if (contentSetId == 1)
             {
@@ -4652,7 +4652,10 @@ order by content_set_id ", iconum);
             else
             {
                 string sqltxt = string.Format(@"
-select distinct nt.id from norm_table nt where nt.content_set_id ={0} order by nt.id ", contentSetId);
+select distinct nt.id as norm_table_id from norm_table nt where nt.content_set_id = {0}
+union
+select distinct hti.norm_table_id from html_table_identification hti where hti.iconum = {1} and hti.norm_table_id is not null
+order by norm_table_id ", contentSetId, iconum);
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
                 using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
                 {
