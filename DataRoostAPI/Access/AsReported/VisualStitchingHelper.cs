@@ -1388,8 +1388,12 @@ SELECT  [Id]
 
         public static string PGDevConnectionString()
         {
-            return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
-            //return "Host=dsnametree.cluster-c8vzac0v5wdo.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=UEmtE39C;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+#if DEBUG
+            //return "Host=nametreedata.cluster-c85crloosogt.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=J51YjIfF;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;"; //This is Produciton
+            return "Host=dsnametree.cluster-cizhlzyxlrwg.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=PaeQKA74;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";
+#else
+            return "Host=dsnametree.cluster-cizhlzyxlrwg.us-east-1.rds.amazonaws.com;Port=5432;Username=nametreedata_admin_user;Password=PaeQKA74;Database=nametreedata;sslmode=Require;Trust Server Certificate=true;";  
+#endif
         }
 
         private List<Profile> GetProfilePostGres() {
@@ -4007,38 +4011,63 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 		}
 
 		static Guid NullGuid = new Guid();
-		public bool ExtendClusterByIconum(int iconum) {
-			List<int> iconums = new List<int>();
+		public bool ExtendClusterByIconum(int contentSetId, int iconum) {
+            this._environment = "DEV";
+            List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
-			_ExtendHierarchy(iconums, NullGuid);
+			_ExtendHierarchy(contentSetId, iconums, NullGuid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
-            _ExtendColumns(iconums, NullGuid);
+            _ExtendColumns(contentSetId, iconums, NullGuid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
             return true;
 		}
-		public bool ExtendClusterByDocument(int iconum, Guid docid, int tableid = -1) {
-			List<int> iconums = new List<int>();
-			iconums.Add(iconum);
-			//List<int> iconums = new List<int>() { 18119 };
-			_ExtendHierarchy(iconums, docid, tableid);
+		public bool ExtendClusterByDocument(int contentSetId, int iconum, Guid docid, int tableid = -1) {
+            this._environment = "DEV";
+            //List<int> iconums = new List<int>();
+            //iconums.Add(iconum);
+            ////List<int> iconums = new List<int>() { 18119 };
+            //_ExtendHierarchy(iconums, docid, tableid);
+            //         if (this._autoclusteringfailure)
+            //         {
+            //             return false;
+            //         }
+            //         _ExtendColumns(iconums, docid, tableid);
+            //         if (this._autoclusteringfailure)
+            //         {
+            //             return false;
+            //         }
+            //         return true;
+            return ExtendClusterByContentSetDocument(contentSetId, iconum, docid, tableid);
+
+        }
+
+
+        public bool ExtendClusterByContentSetDocument(int contentSetId, int iconum, Guid docid, int tableid = -1)
+        {
+            List<int> iconums = new List<int>();
+            iconums.Add(iconum);
+            //List<int> iconums = new List<int>() { 18119 };
+            _ExtendHierarchy(contentSetId, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
-            _ExtendColumns(iconums, docid, tableid);
+            _ExtendColumns(contentSetId, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
             return true;
-		}
+        }
+
+
 
         public bool ExtendClusterByIconumDev(int iconum)
         {
@@ -4046,8 +4075,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(iconums, NullGuid);
-            _ExtendColumns(iconums, NullGuid);
+            _ExtendHierarchy(1, iconums, NullGuid);
+            _ExtendColumns(1, iconums, NullGuid);
             return true;
         }
         public bool ExtendClusterByDocumentDev(int iconum, Guid docid, int tableid = -1)
@@ -4056,11 +4085,11 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(iconums, docid, tableid);
-            _ExtendColumns(iconums, docid, tableid);
+            _ExtendHierarchy(1, iconums, docid, tableid);
+            _ExtendColumns(1, iconums, docid, tableid);
             return true;
         }
-        private bool _ExtendColumns(List<int> iconums, Guid guid, int tableid = -1)
+        private bool _ExtendColumns(int contentSetId, List<int> iconums, Guid guid, int tableid = -1)
         {
             if (guid == NullGuid)
             {
@@ -4074,7 +4103,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             string failureEmailHeader = _environment + string.Format(" iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
 
-            var tableIDs = TableIDs();
+            var tableIDs = TableIDs(contentSetId, iconum);
             int successfulTableCount = 0;
             foreach (var t in tableIDs)
             {
@@ -4132,7 +4161,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterColumnHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterColumnHierarchyForCompany(contentSetId, iconum, t); // (raw_row_label, cluster_id)
                         }
                         var temp_changeList = _getChangeListColumn(existing, unmapped); 
                         changeList.Eat(temp_changeList);
@@ -4144,7 +4173,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(iconum, t);
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(contentSetId, iconum, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4168,7 +4197,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
                             if (existingCleanLabel == null)
                             {
-                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(iconum, t);
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(contentSetId, iconum, t);
                             }
                             foreach (var cl in existingCleanLabel)
                             {
@@ -4201,7 +4230,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterColumnHierarchyForIndustry(1, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterColumnHierarchyForIndustry(contentSetId, t); // (raw_row_label, cluster_id)
                         }
                         if (existing.Count == 0)
                         {
@@ -4225,7 +4254,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(1, t);
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(contentSetId, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4249,7 +4278,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
                             if (existingCleanLabel == null)
                             {
-                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(1, t);
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(contentSetId, t);
                             }
                             foreach (var cl in existingCleanLabel)
                             {
@@ -4275,8 +4304,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     changeCount3 = changeList.Count;
                     _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
                     isDone = changeList.Count >= datapointToMatch;
-                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
-
+                    if (changeList.Count > 0)
+                    {
+                        _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    }
+                    else
+                    {
+                        var debug = changeList.Count;
+                    }
                     _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
@@ -4318,16 +4353,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             }
             return !this._autoclusteringfailure;
         }
-        private bool _ExtendHierarchy(List<int> iconums, Guid guid, int tableid = -1) {
+        private bool _ExtendHierarchy(int contentSetId, List<int> iconums, Guid guid, int tableid = -1) {
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
             string failureEmailHeader = _environment + string.Format(" iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
-            var tableIDs = TableIDs();
+            var tableIDs = TableIDs(contentSetId, iconum);
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
-					_CleanupHierarchy(iconum, t);
+					//_CleanupHierarchy(iconum, t);
                     _levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
                 }
 			}
@@ -4384,7 +4419,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterHierarchyForCompany(contentSetId, iconum, t); // (raw_row_label, cluster_id)
                         }
                         var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
@@ -4396,7 +4431,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     { 
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanLabelForCompany(iconum, t);
+                            existingCleanLabel = _GetExistingClusterCleanLabelForCompany(contentSetId, iconum, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4450,7 +4485,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterHierarchyForIndustry(1, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterHierarchyForIndustry(contentSetId, t); // (raw_row_label, cluster_id)
                         }
                         if (existing.Count == 0)
                         {
@@ -4478,7 +4513,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanLabelForIndustry(1, t);
+                            existingCleanLabel = _GetExistingClusterCleanLabelForIndustry(contentSetId, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4525,9 +4560,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     _levelOneLogger.AppendLineBreak("changeList.Count after 6th Attempt: " + changeList.Count);
                     isDone = changeList.Count >= datapointToMatch;
 
-
-                    _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
-
+                    if (changeList.Count > 0)
+                    {
+                        _WriteChangeListToDBForHierarchy(i, changeList, _unslotted);
+                    }
+                    else
+                    {
+                        var debug = changeList.Count;
+                    }
                     _levelOneLogger.AppendLineBreak("changeList.Count after WriteChangesToDB: " + changeList.Count);
                     var debugchangelist = changeList;
                     var debugunslot = _unslotted;
@@ -4569,27 +4609,70 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             }
             return !this._autoclusteringfailure;
 		}
-		private List<int> TableIDs() {
-			List<int> dataNodes = new List<int>();
-			dataNodes = new List<int>() { 1, 2, 4, 5 };
-			return dataNodes;
-			string sqltxt = string.Format(@"
-  select nt.id 
-  from norm_table nt
---  where nt.label = 'Average Balance Sheet'
-  order by id ");
-			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
-				//cmd.Parameters.AddWithValue("@iconum", iconum);
-				sqlConn.Open();
-				using (var sdr = cmd.ExecuteReader()) {
-					while (sdr.Read()) {
-						int value = sdr.GetInt32(0);
-						dataNodes.Add(value);
-					}
 
-				}
-			}
+        public int IconumToContentSet(int iconum)
+        {
+            int contentSetId = 1;
+            try
+            {
+                string sqltxt = string.Format(@"
+        select distinct content_set_id from iconum_content_set_association
+where iconum = {0}
+order by content_set_id ", iconum);
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+                {
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            contentSetId = sdr.GetInt32(0);
+                            break;  
+                        }
+
+                    }
+                }
+            } catch (Exception ex)
+            {
+                contentSetId = 1;
+            }
+            return contentSetId;
+        }
+
+        private List<int> TableIDs(int contentSetId, int iconum) {
+			List<int> dataNodes = new List<int>();
+            if (contentSetId == 1)
+            {
+                dataNodes = new List<int>() { 1, 2, 4, 5 };
+                return dataNodes;
+            }
+            else
+            {
+                string sqltxt = string.Format(@"
+select distinct nt.id as norm_table_id from norm_table nt where nt.content_set_id = {0}
+union
+select distinct hti.norm_table_id from html_table_identification hti where hti.iconum = {1} and hti.norm_table_id is not null
+order by norm_table_id ", contentSetId, iconum);
+                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+                {
+                    sqlConn.Open();
+                    using (var sdr = cmd.ExecuteReader())
+                    {
+                        while (sdr.Read())
+                        {
+                            int value = sdr.GetInt32(0);
+                            dataNodes.Add(value);
+                        }
+
+                    }
+                }
+            }
+            if (dataNodes == null || dataNodes.Count == 0)
+            {
+                dataNodes = new List<int>() { 1, 4, 5 };
+            }
 			return dataNodes;
 		}
 		private bool _CleanupHierarchy(int iconum, int tableId) {
@@ -4601,7 +4684,6 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
 			string sqltxt = string.Format(@"
-
 select p.item_code, max(cm.cluster_hierarchy_id)
 	from prod_data p
 	join norm_name_tree ntf
@@ -5379,23 +5461,37 @@ order by  d.PublicationDateTime desc
             s = fn.SingularForm(s);
             s = fn.ReplacePhraseAllLevel(s);
             //s = fn.RemoveNondictionaryWordAllLevel(s);
-            //s = fn.NoStemWordAllLevel(s);
-            //s = fn.ReplacePhraseAllLevel(s);
+            s = fn.NoStemWordAllLevelColumn(s);
+            s = fn.ReplacePhraseAllLevel(s);
             return s;
 
         }
-        private string _sqlGetGoldCorpus()
+        private string _sqlGetGoldCorpus(int contentSetId)
         {
             string sql = "";
 
-            if (true || this._environment == "DEV")
+            if (true || contentSetId == 1)
             {
-                sql = @"	join gold_corpus_document_list gc 
+
+                if (true || this._environment == "DEV")
+                {
+                    sql = @"	join gold_corpus_document_list gc 
                     on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum ";
+                }
             }
             return sql;
         }
-		private SortedDictionary<string, long> _GetExistingClusterHierarchyForCompany(int iconum, int tableId) {
+        private string _sqlGetIsReview(int contentSetId)
+        {
+            string sql = "";
+
+            if (true || contentSetId == 1)
+            {
+                sql = @" and ch.is_reviewed = true ";
+            }
+            return sql;
+        }
+        private SortedDictionary<string, long> _GetExistingClusterHierarchyForCompany(int contentSetId, int iconum, int tableId) {
 			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             // TODO: think there is a bug here. not joining HTML table identification
 
@@ -5404,8 +5500,8 @@ order by  d.PublicationDateTime desc
 select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
-	@" join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
+    @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -5413,12 +5509,28 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
-		and coalesce( trim(nntf.raw_row_label),'')<>''
-        and ch.is_reviewed = true
-", iconum, tableId);
-
+		and coalesce( trim(nntf.raw_row_label),'')<>'' "
+    + _sqlGetIsReview(contentSetId), iconum, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+    select distinct ch.id, lower(nntf.raw_row_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where hti.norm_table_id = {3} and hti.iconum = {2}
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.raw_row_label),'')<>'' {1} "
+     , _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), iconum, tableId);
+            }
 			int idx = 0;
 			using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
 			using (var cmd = new NpgsqlCommand(sqltxt, sqlConn)) {
@@ -5445,15 +5557,14 @@ select distinct ch.id, lower(nntf.raw_row_label)
             return entries;
 		}
 
-        private SortedDictionary<string, long> _GetExistingClusterHierarchyForIndustry(int industryId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterHierarchyForIndustry(int contentSetId, int tableId)
         {
-            industryId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             string sqltxt2 = string.Format(@"
 select distinct ch.id, lower(nntf.raw_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
     @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5462,11 +5573,28 @@ select distinct ch.id, lower(nntf.raw_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
-		and coalesce( trim(nntf.raw_row_label),'')<>''
-    and ch.is_reviewed = true
-", industryId, tableId);
+		and coalesce( trim(nntf.raw_row_label),'')<>'' "
+    + _sqlGetIsReview(contentSetId), contentSetId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+    select distinct ch.id, lower(nntf.raw_row_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where  hti.norm_table_id = {3}
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.raw_row_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), contentSetId, tableId);
+            }
             if (entries.Count == 0)
             {
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
@@ -5500,7 +5628,7 @@ select distinct ch.id, lower(nntf.raw_row_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForCompany(int iconum, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForCompany(int contentSetId, int iconum, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             // TODO: think there is a bug here. not joining HTML table identification
@@ -5510,7 +5638,7 @@ select distinct ch.id, lower(nntf.raw_row_label)
 select distinct ch.id, lower(nntf.raw_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
     @" join cluster_hierarchy ch 
         on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5519,10 +5647,28 @@ select distinct ch.id, lower(nntf.raw_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
 ", iconum, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+    select distinct ch.id, lower(nntf.raw_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where hti.norm_table_id = {3} and hti.iconum = {2}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.raw_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), iconum, tableId);
+            }
 
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -5554,14 +5700,14 @@ select distinct ch.id, lower(nntf.raw_column_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForIndustry(int industryId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForIndustry(int contentSetId, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             string sqltxt2 = string.Format(@"
 select distinct ch.id, lower(nntf.raw_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
     @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5570,10 +5716,45 @@ select distinct ch.id, lower(nntf.raw_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.raw_column_label),'')<>''
-", industryId, tableId);
+", contentSetId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.raw_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
+    @" join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ch.concept_type_id = ct.id
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+	where hti.norm_table_id = {1} 
+		and coalesce( trim(nntf.raw_column_label),'')<>''
+", contentSetId, tableId);
+                sqltxt2 = string.Format(@"
+    select distinct ch.id, lower(nntf.raw_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where  hti.norm_table_id = {3}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.raw_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), contentSetId, tableId);
+            }
             int idx = 0;
             if (entries.Count == 0)
             {
@@ -5609,7 +5790,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
             return entries;
         }
 
-        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForCompany(int iconum, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForCompany(int contentSetId, int iconum, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
@@ -5617,7 +5798,7 @@ select distinct ch.id, lower(nntf.raw_column_label)
 select distinct ch.id, lower(nntf.cleaned_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
     @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5626,11 +5807,45 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
 ", iconum, tableId);
-
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
+    @" 	join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ch.concept_type_id = ct.id
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+	where hti.norm_table_id = {1} and hti.iconum = {0}
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", iconum, tableId);
+                sqltxt = string.Format(@"
+    select distinct ch.id, lower(nntf.cleaned_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where hti.norm_table_id = {3} and hti.iconum = {2}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.cleaned_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), iconum, tableId);
+            }
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
             {
@@ -5661,14 +5876,14 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForIndustry(int industryId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForIndustry(int contentSetId, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             string sqltxt2 = string.Format(@"
 select distinct ch.id, lower(nntf.cleaned_column_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
     @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5677,11 +5892,45 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'C'
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.cleaned_column_label),'')<>''
-", industryId, tableId);
-
+", contentSetId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+select distinct ch.id, lower(nntf.cleaned_column_label)
+	from cluster_mapping cm
+	join norm_name_tree_flat nntf 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
+   @" 	join html_table_identification hti 
+		on hti.document_id = nntf.document_id and hti.table_id = nntf.table_id
+	join cluster_hierarchy ch 
+		on cm.cluster_hierarchy_id = ch.id
+	join norm_table_concept_type ntct 
+		on ntct.norm_table_id = hti.norm_table_id 
+	join concept_type ct 
+		on ch.concept_type_id = ct.id
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+	where hti.norm_table_id = {1} 
+		and coalesce( trim(nntf.cleaned_column_label),'')<>''
+", contentSetId, tableId);
+                sqltxt2 = string.Format(@"
+    select distinct ch.id, lower(nntf.cleaned_column_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where  hti.norm_table_id = {3}
+		and (ct.concept_association_type_id = 'C' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.cleaned_column_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), contentSetId, tableId);
+            }
             if (entries.Count == 0)
             {
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
@@ -5716,7 +5965,7 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
             return entries;
         }
 
-        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForCompany(int iconum, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForCompany(int contentSetId, int iconum, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
@@ -5724,8 +5973,8 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
 select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
-	@" join cluster_hierarchy ch 
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
+    @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
 		on ch.concept_type_id = cpct.concept_type_id
@@ -5733,12 +5982,28 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and nntf.iconum = {0}
-		and coalesce( trim(nntf.cleaned_row_label),'')<>''
-        and ch.is_reviewed = true
-", iconum, tableId);
-
+		and coalesce( trim(nntf.cleaned_row_label),'')<>''"
+    + _sqlGetIsReview(contentSetId), iconum, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt = string.Format(@"
+    select distinct ch.id, lower(nntf.cleaned_row_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where hti.norm_table_id = {3} and hti.iconum = {2}
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.cleaned_row_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), iconum, tableId);
+            }
             int idx = 0;
             using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
             using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
@@ -5770,7 +6035,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForIndustry(int industryId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForIndustry(int contentSetId, int tableId)
         {
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
@@ -5778,7 +6043,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 select distinct ch.id, lower(nntf.cleaned_row_label)
 	from cluster_mapping cm
 	join norm_name_tree_flat nntf 
-		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus() +
+		on cm.norm_name_tree_flat_id = nntf.id " + _sqlGetGoldCorpus(contentSetId) +
     @" join cluster_hierarchy ch 
 		on cm.cluster_hierarchy_id = ch.id
 	join cluster_presentation_concept_type cpct 
@@ -5787,11 +6052,28 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
 		on cp.id = cpct.cluster_presentation_id
 	join concept_type ct 
 		on cpct.concept_type_id = ct.id
-		and ct.concept_association_type_id = 'R'
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 	where cp.norm_table_id = {1} and cp.industry_id = {0}
 		and coalesce( trim(nntf.cleaned_row_label),'')<>''
-        and ch.is_reviewed = true
-", industryId, tableId);
+" + _sqlGetIsReview(contentSetId), contentSetId, tableId);
+            if (this._environment == "DEV")
+            {
+                sqltxt2 = string.Format(@"
+    select distinct ch.id, lower(nntf.cleaned_row_label)
+    from cluster_hierarchy ch
+    join cluster_mapping cm 
+	    on cm.cluster_hierarchy_id = ch.id
+    join concept_type ct
+	    on ct.id = ch.concept_type_id
+    join norm_name_tree_flat nntf 
+	    on nntf.id = cm.norm_name_tree_flat_id
+    join html_table_identification hti
+	    on hti.document_id = nntf.document_id and hti.table_id =nntf.table_id and hti.file_id = nntf.file_id {0}  
+	where  hti.norm_table_id = {3}
+		and (ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
+		and coalesce( trim(nntf.cleaned_row_label),'')<>'' {1} "
+, _sqlGetGoldCorpus(contentSetId), _sqlGetIsReview(contentSetId), contentSetId, tableId);
+            }
             int idx = 0;
             if (entries.Count == 0)
             {
@@ -6039,7 +6321,7 @@ left join concept_type ct
 		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
 and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
-and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 order by f.file_id, f.row_id, f.col_id
 ", iconum, guid, table_id);
             int idx = 0;
@@ -6149,7 +6431,7 @@ left join concept_type ct
 		on cpct.concept_type_id = ct.id
 where f.document_id = '{1}' and f.iconum = {0}
 and f.table_id = {2} and (length(f.item_offset) = 0 or f.item_offset like '%|r0')
-and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R')
+and (ct.concept_association_type_id is null or ct.concept_association_type_id = 'R' or ct.concept_association_type_id = 'M')
 order by f.file_id, f.row_id, f.col_id
 ", iconum, guid, table_id);
             int idx = 0;

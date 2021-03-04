@@ -516,6 +516,91 @@ namespace CCS.Fundamentals.DataRoostAPI.Helpers {
                 return NoStemWordSingleLevel(str);
             }
         }
+        public static string NoStemWordAllLevelColumn(string str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+            {
+                return str;
+            }
+            if (str.Contains("]"))
+            {
+                var result = str.Replace("[", "");
+                string[] remlabelWords = result.Split(new char[] { ']' }, StringSplitOptions.RemoveEmptyEntries);
+                result = "";
+                foreach (var r in remlabelWords)
+                {
+                    if (string.IsNullOrWhiteSpace(r))
+                    {
+                        continue;
+                    }
+                    var s = NoStemWordSingleLevelColumn(r.TrimStart().TrimEnd()).TrimStart().TrimEnd();
+                    if (!string.IsNullOrWhiteSpace(s))
+                    {
+                        result += string.Format("[{0}]", s);
+                    }
+
+                }
+                return result;
+            }
+            else
+            {
+                return NoStemWordSingleLevelColumn(str);
+            }
+        }
+        public static string NoStemWordSingleLevelColumn(string str, string wordToRemove = "")
+        {
+            var result = str;
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                return result;
+            }
+            if (string.IsNullOrWhiteSpace(wordToRemove))
+            {
+                string[] remlabelWords = result.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < remlabelWords.Count(); i++)
+                {
+                    if (StemDictionary.ContainsKey(remlabelWords[i]))
+                    {
+                        remlabelWords[i] = StemDictionary[remlabelWords[i]];
+                    }
+                }
+
+                result = string.Join<string>(" ", remlabelWords.Where(x => x.Length > 1 && !string.IsNullOrWhiteSpace(x)));// && !_stops.ContainsKey(c.ToLower())));
+                if (!result.Contains("liability and "))
+                {
+                    result = NoStemWordSingleLevelColumn(result, "and");
+                }
+                if (string.IsNullOrWhiteSpace(result))
+                {
+                    return str;
+                }
+            }
+            else
+            {
+                string[] remlabelWords = result.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < remlabelWords.Count(); i++)
+                {
+                    if (string.IsNullOrWhiteSpace(remlabelWords[i]))
+                    {
+                        continue;
+                    }
+                    if (remlabelWords[i] == wordToRemove)
+                    {
+                        remlabelWords[i] = "";
+                    }
+                }
+
+                result = string.Join<string>(" ", remlabelWords.Where(x => x.Length > 1 && !string.IsNullOrWhiteSpace(x)));// && !_stops.ContainsKey(c.ToLower())));
+                if (string.IsNullOrWhiteSpace(result))
+                {
+                    return str;
+                }
+            }
+
+            return result;
+        }
+
+
         public static string NoStemWordSingleLevel(string str, string wordToRemove = "")
         {
             var result = str;
