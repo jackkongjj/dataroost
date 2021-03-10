@@ -782,7 +782,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.ExtendClusterByIconum(1, iconum);
+                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+                var json = vsHelper.ExtendClusterByIconum(contentSetIds, iconum);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -810,8 +811,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                int contentSetId = vsHelper.IconumToContentSet(iconum);
-                var success = vsHelper.ExtendClusterByDocument(contentSetId, iconum, docId);
+                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+                var success = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId);
                 if (success)
                 {
                     return new HttpResponseMessage()
@@ -848,8 +849,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                int contentSetId = vsHelper.IconumToContentSet(iconum);
-                var json = vsHelper.ExtendClusterByDocument(contentSetId, iconum, docId, tableid);
+                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+                var json = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
@@ -877,7 +878,8 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
                 string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
                 var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var json = vsHelper.ExtendClusterByDocument(contentSetId, iconum, docId, tableid);
+                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+                var json = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
                     Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")

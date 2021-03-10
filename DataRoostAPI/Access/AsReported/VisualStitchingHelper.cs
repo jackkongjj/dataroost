@@ -4013,24 +4013,24 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 		}
 
 		static Guid NullGuid = new Guid();
-		public bool ExtendClusterByIconum(int contentSetId, int iconum) {
+		public bool ExtendClusterByIconum(List<int> contentSetIds, int iconum) {
             this._environment = "DEV";
             List<int> iconums = new List<int>();
 			iconums.Add(iconum);
 			//List<int> iconums = new List<int>() { 18119 };
-			_ExtendHierarchy(contentSetId, iconums, NullGuid);
+			_ExtendHierarchy(contentSetIds, iconums, NullGuid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
-            _ExtendColumns(contentSetId, iconums, NullGuid);
+            _ExtendColumns(contentSetIds, iconums, NullGuid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
             return true;
 		}
-		public bool ExtendClusterByDocument(int contentSetId, int iconum, Guid docid, int tableid = -1) {
+		public bool ExtendClusterByDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1) {
             this._environment = "DEV";
             //List<int> iconums = new List<int>();
             //iconums.Add(iconum);
@@ -4046,22 +4046,22 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             //             return false;
             //         }
             //         return true;
-            return ExtendClusterByContentSetDocument(contentSetId, iconum, docid, tableid);
+            return ExtendClusterByContentSetDocument(contentSetIds, iconum, docid, tableid);
 
         }
 
 
-        public bool ExtendClusterByContentSetDocument(int contentSetId, int iconum, Guid docid, int tableid = -1)
+        public bool ExtendClusterByContentSetDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1)
         {
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(contentSetId, iconums, docid, tableid);
+            _ExtendHierarchy(contentSetIds, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
                 return false;
             }
-            _ExtendColumns(contentSetId, iconums, docid, tableid);
+            _ExtendColumns(contentSetIds, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
                 return false;
@@ -4077,8 +4077,8 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(1, iconums, NullGuid);
-            _ExtendColumns(1, iconums, NullGuid);
+            //_ExtendHierarchy(1, iconums, NullGuid);
+            //_ExtendColumns(1, iconums, NullGuid);
             return true;
         }
         public bool ExtendClusterByDocumentDev(int iconum, Guid docid, int tableid = -1)
@@ -4087,11 +4087,11 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
             //List<int> iconums = new List<int>() { 18119 };
-            _ExtendHierarchy(1, iconums, docid, tableid);
-            _ExtendColumns(1, iconums, docid, tableid);
+            //_ExtendHierarchy(1, iconums, docid, tableid);
+            //_ExtendColumns(1, iconums, docid, tableid);
             return true;
         }
-        private bool _ExtendColumns(int contentSetId, List<int> iconums, Guid guid, int tableid = -1)
+        private bool _ExtendColumns(List<int> contentSetIds, List<int> iconums, Guid guid, int tableid = -1)
         {
             if (guid == NullGuid)
             {
@@ -4105,7 +4105,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
 
-            var tableIDs = TableIDs(contentSetId, iconum);
+            var tableIDs = GetTableIdsFromContentSetIds(contentSetIds);
             int successfulTableCount = 0;
             foreach (var t in tableIDs)
             {
@@ -4163,7 +4163,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterColumnHierarchyForCompany(contentSetId, iconum, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterColumnHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
                         }
                         var temp_changeList = _getChangeListColumn(existing, unmapped); 
                         changeList.Eat(temp_changeList);
@@ -4175,7 +4175,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(contentSetId, iconum, t);
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(iconum, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4199,7 +4199,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
                             if (existingCleanLabel == null)
                             {
-                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(contentSetId, iconum, t);
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForCompany(iconum, t);
                             }
                             foreach (var cl in existingCleanLabel)
                             {
@@ -4232,7 +4232,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterColumnHierarchyForIndustry(contentSetId, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterColumnHierarchyForIndustry(t); // (raw_row_label, cluster_id)
                         }
                         if (existing.Count == 0)
                         {
@@ -4256,7 +4256,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(contentSetId, t);
+                            existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanColumnLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4280,7 +4280,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                             existingCleanLabelNoHierarchy = new SortedDictionary<string, long>();
                             if (existingCleanLabel == null)
                             {
-                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(contentSetId, t);
+                                existingCleanLabel = _GetExistingClusterCleanColumnHierarchyForIndustry(t);
                             }
                             foreach (var cl in existingCleanLabel)
                             {
@@ -4355,13 +4355,13 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             }
             return !this._autoclusteringfailure;
         }
-        private bool _ExtendHierarchy(int contentSetId, List<int> iconums, Guid guid, int tableid = -1) {
+        private bool _ExtendHierarchy(List<int> contentSetIds, List<int> iconums, Guid guid, int tableid = -1) {
             var iconum = iconums.First();
             _levelTwoLogger.AppendLineBreak("").AppendLineBreak("iconums.First(): " + iconum);
             _levelOneLogger.AppendLineBreak(string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count));
             string failureEmailHeader = string.Format("iconum: {0}, Guid: {1}, tableid: {2}, iconumsize:{3}", iconum, guid.ToString(), tableid, iconums.Count);
 
-            var tableIDs = TableIDs(contentSetId, iconum);
+            var tableIDs = GetTableIdsFromContentSetIds(contentSetIds);
 			if (guid == NullGuid) {
 				foreach (var t in tableIDs) {
 					//_CleanupHierarchy(iconum, t);
@@ -4421,7 +4421,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterHierarchyForCompany(contentSetId, iconum, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterHierarchyForCompany(iconum, t); // (raw_row_label, cluster_id)
                         }
                         var temp_changeList = _getChangeList(existing, unmapped); // forcing to return nothing now. Will use only table alignment.
                         changeList.Eat(temp_changeList);
@@ -4433,7 +4433,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     { 
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanLabelForCompany(contentSetId, iconum, t);
+                            existingCleanLabel = _GetExistingClusterCleanLabelForCompany(iconum, t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4487,7 +4487,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existing == null)
                         {
-                            existing = _GetExistingClusterHierarchyForIndustry(contentSetId, t); // (raw_row_label, cluster_id)
+                            existing = _GetExistingClusterHierarchyForIndustry(t); // (raw_row_label, cluster_id)
                         }
                         if (existing.Count == 0)
                         {
@@ -4515,7 +4515,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     {
                         if (existingCleanLabel == null)
                         {
-                            existingCleanLabel = _GetExistingClusterCleanLabelForIndustry(contentSetId, t);
+                            existingCleanLabel = _GetExistingClusterCleanLabelForIndustry(t);
                         }
                         var unmappedCleanLabel1 = _GetIconumCleanLabels(i, guid, t);
                         foreach (var um in unmappedCleanLabel1)
@@ -4612,15 +4612,46 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             return !this._autoclusteringfailure;
 		}
 
-        public int IconumToContentSet(int iconum)
+//        public int IconumToContentSet(int iconum)
+//        {
+//            int contentSetId = 1;
+//            try
+//            {
+//                string sqltxt = string.Format(@"
+//        select distinct content_set_id from iconum_content_set_association
+//where iconum = {0}
+//order by content_set_id ", iconum);
+//                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+//                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+//                {
+//                    sqlConn.Open();
+//                    using (var sdr = cmd.ExecuteReader())
+//                    {
+//                        while (sdr.Read())
+//                        {
+//                            contentSetId = sdr.GetInt32(0);
+//                            break;  
+//                        }
+
+//                    }
+//                }
+//            } catch (Exception ex)
+//            {
+//                contentSetId = 1;
+//            }
+//            return contentSetId;
+//        }
+
+        public List<int> GetContentSetIdsFromIconum(int iconum)
         {
-            int contentSetId = 1;
+            List<int> result = new List<int>();
             try
             {
                 string sqltxt = string.Format(@"
-        select distinct content_set_id from iconum_content_set_association
-where iconum = {0}
-order by content_set_id ", iconum);
+                        select c.id
+                        from iconum_content_set_association i
+                        join content_set c on i.content_set_id = c.id
+                    where i.iconum = {0}", iconum);
                 using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
                 using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
                 {
@@ -4629,54 +4660,81 @@ order by content_set_id ", iconum);
                     {
                         while (sdr.Read())
                         {
-                            contentSetId = sdr.GetInt32(0);
-                            break;  
+                            var contentSetId = sdr.GetInt32(0);
+                            result.Add(contentSetId);
                         }
 
                     }
                 }
-            } catch (Exception ex)
-            {
-                contentSetId = 1;
             }
-            return contentSetId;
+            catch (Exception ex)
+            {
+                result = new List<int>();
+            }
+            return result;
         }
 
-        private List<int> TableIDs(int contentSetId, int iconum) {
-			List<int> dataNodes = new List<int>();
-            if (contentSetId == 1)
+//        private List<int> TableIDs(int contentSetId, int iconum) {
+//			List<int> dataNodes = new List<int>();
+//            if (contentSetId == 1)
+//            {
+//                dataNodes = new List<int>() { 1, 2, 4, 5 };
+//                return dataNodes;
+//            }
+//            else
+//            {
+//                string sqltxt = string.Format(@"
+//select distinct nt.id as norm_table_id from norm_table nt where nt.content_set_id = {0}
+//union
+//select distinct hti.norm_table_id from html_table_identification hti where hti.iconum = {1} and hti.norm_table_id is not null
+//order by norm_table_id ", contentSetId, iconum);
+//                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+//                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
+//                {
+//                    sqlConn.Open();
+//                    using (var sdr = cmd.ExecuteReader())
+//                    {
+//                        while (sdr.Read())
+//                        {
+//                            int value = sdr.GetInt32(0);
+//                            dataNodes.Add(value);
+//                        }
+
+//                    }
+//                }
+//            }
+//            if (dataNodes == null || dataNodes.Count == 0)
+//            {
+//                dataNodes = new List<int>() { 1, 4, 5 };
+//            }
+//			return dataNodes;
+//		}
+
+        private List<int> GetTableIdsFromContentSetIds(List<int> contentSetIds)
+        {
+            if (contentSetIds == null || contentSetIds.Count <= 0)
+                throw new ArgumentException("Content Set Ids Invalid");
+
+            List<int> dataNodes = new List<int>();
+            string joined = String.Join(",", contentSetIds);
+            string sqltxt = string.Format(@"
+select distinct nt.id as norm_table_id from norm_table nt where nt.content_set_id in ({0})", joined);
+            using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
+            using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
             {
-                dataNodes = new List<int>() { 1, 2, 4, 5 };
+                sqlConn.Open();
+                using (var sdr = cmd.ExecuteReader())
+                {
+                    while (sdr.Read())
+                    {
+                        int value = sdr.GetInt32(0);
+                        dataNodes.Add(value);
+                    }
+
+                }
                 return dataNodes;
             }
-            else
-            {
-                string sqltxt = string.Format(@"
-select distinct nt.id as norm_table_id from norm_table nt where nt.content_set_id = {0}
-union
-select distinct hti.norm_table_id from html_table_identification hti where hti.iconum = {1} and hti.norm_table_id is not null
-order by norm_table_id ", contentSetId, iconum);
-                using (var sqlConn = new NpgsqlConnection(this._pgConnectionString))
-                using (var cmd = new NpgsqlCommand(sqltxt, sqlConn))
-                {
-                    sqlConn.Open();
-                    using (var sdr = cmd.ExecuteReader())
-                    {
-                        while (sdr.Read())
-                        {
-                            int value = sdr.GetInt32(0);
-                            dataNodes.Add(value);
-                        }
-
-                    }
-                }
-            }
-            if (dataNodes == null || dataNodes.Count == 0)
-            {
-                dataNodes = new List<int>() { 1, 4, 5 };
-            }
-			return dataNodes;
-		}
+        }
 		private bool _CleanupHierarchy(int iconum, int tableId) {
 			var dict = _CleanupGetMissingHierarchy(iconum, tableId);
 			_CleanUpdateClusterIdForHierarchy(iconum, tableId, dict);
@@ -5493,8 +5551,9 @@ order by  d.PublicationDateTime desc
             }
             return sql;
         }
-        private SortedDictionary<string, long> _GetExistingClusterHierarchyForCompany(int contentSetId, int iconum, int tableId) {
-			SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
+        private SortedDictionary<string, long> _GetExistingClusterHierarchyForCompany(int iconum, int tableId) {
+            int contentSetId = 1;
+            SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             // TODO: think there is a bug here. not joining HTML table identification
 
             // TODO: need to increase timeout
@@ -5559,8 +5618,9 @@ select distinct ch.id, lower(nntf.raw_row_label)
             return entries;
 		}
 
-        private SortedDictionary<string, long> _GetExistingClusterHierarchyForIndustry(int contentSetId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterHierarchyForIndustry(int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             string sqltxt2 = string.Format(@"
 select distinct ch.id, lower(nntf.raw_row_label)
@@ -5630,8 +5690,9 @@ select distinct ch.id, lower(nntf.raw_row_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForCompany(int contentSetId, int iconum, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForCompany(int iconum, int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             // TODO: think there is a bug here. not joining HTML table identification
 
@@ -5702,8 +5763,9 @@ select distinct ch.id, lower(nntf.raw_column_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForIndustry(int contentSetId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterColumnHierarchyForIndustry(int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             string sqltxt2 = string.Format(@"
 select distinct ch.id, lower(nntf.raw_column_label)
@@ -5792,8 +5854,9 @@ select distinct ch.id, lower(nntf.raw_column_label)
             return entries;
         }
 
-        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForCompany(int contentSetId, int iconum, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForCompany(int iconum, int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt = string.Format(@"
@@ -5878,8 +5941,9 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForIndustry(int contentSetId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanColumnHierarchyForIndustry(int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
             string sqltxt2 = string.Format(@"
 select distinct ch.id, lower(nntf.cleaned_column_label)
@@ -5967,8 +6031,9 @@ select distinct ch.id, lower(nntf.cleaned_column_label)
             return entries;
         }
 
-        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForCompany(int contentSetId, int iconum, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForCompany(int iconum, int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt = string.Format(@"
@@ -6037,8 +6102,9 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
             }
             return entries;
         }
-        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForIndustry(int contentSetId, int tableId)
+        private SortedDictionary<string, long> _GetExistingClusterCleanLabelForIndustry(int tableId)
         {
+            int contentSetId = 1;
             SortedDictionary<string, long> entries = new SortedDictionary<string, long>();
 
             string sqltxt2 = string.Format(@"
