@@ -4050,6 +4050,24 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
         }
 
+        public string DecideClusterByDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1)
+        {
+            this._environment = "DEV";
+            string result = "OK";
+            try
+            {
+                List<int> iconums = new List<int>();
+                iconums.Add(iconum);
+                result = _DecideHierarchy(contentSetIds, iconums, docid, tableid);
+            }
+            catch
+            {
+                result = "FAIL";
+            }
+
+            return result;
+
+        }
 
         public bool ExtendClusterByContentSetDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1)
         {
@@ -4612,6 +4630,52 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             return !this._autoclusteringfailure;
 		}
 
+        private string _DecideHierarchy(List<int> contentSetIds, List<int> iconums, Guid guid, int tableid = -1) {
+            var iconum = iconums.First();
+
+            var tableIDs = GetTableIdsFromContentSetIds(contentSetIds);
+			if (guid == NullGuid) {
+				foreach (var t in tableIDs) {
+					//_CleanupHierarchy(iconum, t);
+                    //_levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
+                }
+			}
+            int successfulTableCount = 0;
+			foreach (var t in tableIDs) {
+                if (tableid > 0 && t != tableid)
+                {
+                    continue;
+                }
+                bool isCurrentTableSuccessful = false;
+                SortedDictionary<string, long> existing = null;
+                SortedDictionary<string, long> existingCleanLabel = null;
+                SortedDictionary<string, long> existingCleanLabelNoHierarchy = null;
+
+                foreach (var i in iconums) {
+                    Dictionary<long, long> changeList = new Dictionary<long, long>();
+                    _unslotted = new Dictionary<string, int>();
+					SortedDictionary<long, string> unmapped = new SortedDictionary<long, string>();
+                    SortedDictionary<long, string> unmappedCleanLabel = new SortedDictionary<long, string>();
+                    int datapointToMatch = -1;
+                    if (guid != NullGuid) {
+						unmapped = _GetIconumRawLabels(i, guid, t); // (flat_id, raw_row_label)
+                        datapointToMatch = unmapped.Count;
+                    } else {
+						unmapped = _GetIconumRawLabels(i, t);
+                        datapointToMatch = unmapped.Count;
+                    }
+                    if (unmapped.Count == 0)
+                    {
+                        //return "OK";
+                    }
+                    else
+                    {
+                        return "Reject";
+                    }
+				}
+			}
+            return "OK";
+		}
 //        public int IconumToContentSet(int iconum)
 //        {
 //            int contentSetId = 1;
@@ -6181,8 +6245,7 @@ select distinct ch.id, lower(nntf.cleaned_row_label)
             string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.cleaned_row_label
-	from norm_name_tree t 
-	right join norm_name_tree_flat tf on t.id = tf.id
+	from  norm_name_tree_flat tf
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where hti.norm_table_id = {0} 
 	and tf.iconum = {1} 
@@ -6197,8 +6260,7 @@ where hti.norm_table_id = {0}
             string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.cleaned_row_label
-	from norm_name_tree t 
-	right join norm_name_tree_flat tf on t.id = tf.id
+	from norm_name_tree_flat tf 
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
@@ -6213,8 +6275,7 @@ where hti.norm_table_id = {0}
             string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.cleaned_column_label
-	from norm_name_tree t 
-	right join norm_name_tree_flat tf on t.id = tf.id
+	from norm_name_tree_flat tf 
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
@@ -6228,8 +6289,7 @@ where hti.norm_table_id = {0}
 			string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.raw_row_label
-	from norm_name_tree t 
-	right join norm_name_tree_flat tf on t.id = tf.id
+	from norm_name_tree_flat tf 
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where hti.norm_table_id = {0}
 	and tf.iconum = {1} 
@@ -6243,8 +6303,7 @@ where hti.norm_table_id = {0}
 			string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.raw_row_label
-	from norm_name_tree t 
-	right join norm_name_tree_flat tf on t.id = tf.id
+	from norm_name_tree_flat tf 
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id
 where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'
@@ -6259,8 +6318,7 @@ where hti.norm_table_id = {0}
             string sqltxt = string.Format(@"
 
   select distinct tf.id, tf.raw_column_label
-	from norm_name_tree t 
-	right join norm_name_tree_flat tf on t.id = tf.id
+	from norm_name_tree_flat tf 
   	join html_table_identification hti on hti.document_id = tf.document_id and hti.table_id = tf.table_id and hti.file_id = tf.file_id
 where hti.norm_table_id = {0}
 	and tf.iconum = {1} and tf.document_id = '{2}'

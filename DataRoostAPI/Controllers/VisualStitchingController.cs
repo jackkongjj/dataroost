@@ -896,6 +896,38 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
+        [Route("cluster/decide/{contentSetId}/{iconum}/{docId}")]
+        [HttpGet]
+        public HttpResponseMessage ClusterTreeDecideContentIdIconumDocId(int contentSetId, int iconum, Guid docId)
+        {
+            try
+            {
+                if (iconum <= 0)
+                    throw new NotImplementedException();
+
+                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+                var vsHelper = new VisualStitchingHelper(sfConnectionString);
+                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+                if (contentSetIds.Count == 0)
+                    contentSetIds.Add(contentSetId);
+                var json = vsHelper.DecideClusterByDocument(contentSetIds, iconum, docId);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                LogErrorAutoCluster(ex);
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+        }
+
+
+
         #region DEV
         [Route("cluster/extend/{iconum}/dev")]
         [HttpGet]
