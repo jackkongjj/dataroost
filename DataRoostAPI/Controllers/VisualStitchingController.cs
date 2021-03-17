@@ -926,7 +926,72 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
         }
 
+        [Route("cluster/decide")]
+        [HttpPost]
+        public HttpResponseMessage ClusterTreeDecideContentIdIconumDocIdList(StringDictionary input)
+        {
+            List<HttpContent> results = new List<HttpContent>();
+            try
+            {
+                foreach (var kvp in input.StringData)
+                {
+                    var strIconum = kvp.Value;
+                    var result = ClusterTreeDecideContentIdIconumDocId(-1, strIconum.AsInt32(), kvp.Key.AsGuid());
+                    results.Add(result.Content);
+                }
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(results), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+            catch (Exception ex)
+            {
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
 
+        }
+        [Route("cluster/extend")]
+        [HttpPost]
+        public HttpResponseMessage ClusterTreeExtendDocumentList(StringDictionary input)
+        {
+            List<HttpContent> results = new List<HttpContent>();
+            try
+            {
+                foreach (var kvp in input.StringData)
+                {
+                    var strIconum = kvp.Value;
+                    var result = ClusterTreeExtendPut2(strIconum.AsInt32(), kvp.Key.AsGuid());
+                    results.Add(result.Content);
+                }
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(results), System.Text.Encoding.UTF8, "application/json")
+                };
+                // or just do a task.Run()
+
+
+                //var urls = new List<string>();
+                //var results = new ConcurrentBag<OccupationSearch>();
+                //Parallel.ForEach(urls, url =>
+                //{
+                //    WebRequest request = WebRequest.Create(requestUrl);
+                //    string response = new StreamReader(request.GetResponse().GetResponseStream()).ReadToEnd();
+                //    var result = JsonSerializer().Deserialize<OccupationSearch>(new JsonTextReader(new StringReader(response)));
+                //    results.Add(result);
+                //});
+            }
+            catch (Exception ex)
+            {
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+
+        }
 
         #region DEV
         [Route("cluster/extend/{iconum}/dev")]
