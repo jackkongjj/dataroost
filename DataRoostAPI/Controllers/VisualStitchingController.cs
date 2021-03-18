@@ -928,48 +928,53 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 
         [Route("cluster/decide")]
         [HttpPost]
-        public HttpResponseMessage ClusterTreeDecideContentIdIconumDocIdList(StringDictionary input)
+        public ClusteringOutput ClusterTreeDecideContentIdIconumDocIdList(ClusteringInput input)
         {
             List<HttpContent> results = new List<HttpContent>();
             try
             {
-                foreach (var kvp in input.StringData)
+                foreach (var d in input.document_list)
                 {
-                    var strIconum = kvp.Value;
-                    var result = ClusterTreeDecideContentIdIconumDocId(-1, strIconum.AsInt32(), kvp.Key.AsGuid());
-                    results.Add(result.Content);
+                    var strIconum = input.iconum;
+                    var result = ClusterTreeDecideContentIdIconumDocId(-1, strIconum.AsInt32(), d.docId.AsGuid());
+                    if (result.Content.AsString().ToUpper().Contains("REJECT"))
+                    {
+                        results.Add(result.Content);
+                    }
                 }
-                return new HttpResponseMessage()
+                if (results.Count > 0)
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(results), System.Text.Encoding.UTF8, "application/json")
-                };
+                    return new ClusteringOutput { CompletionStatus = "REJECTED", Output = new List<string>() };
+                }
+                return new ClusteringOutput { CompletionStatus = "OK", Output = new List<string>() };
             }
             catch (Exception ex)
             {
-                return new HttpResponseMessage()
-                {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
-                };
+                return new ClusteringOutput { CompletionStatus = "FAILED", Output = new List<string>() };
             }
 
         }
         [Route("cluster/extend")]
         [HttpPost]
-        public HttpResponseMessage ClusterTreeExtendDocumentList(StringDictionary input)
+        public ClusteringOutput ClusterTreeExtendDocumentList(ClusteringInput input)
         {
             List<HttpContent> results = new List<HttpContent>();
             try
             {
-                foreach (var kvp in input.StringData)
+                foreach (var kvp in input.document_list)
                 {
-                    var strIconum = kvp.Value;
-                    var result = ClusterTreeExtendPut2(strIconum.AsInt32(), kvp.Key.AsGuid());
-                    results.Add(result.Content);
+                    var strIconum = input.iconum;
+                    var result = ClusterTreeExtendPut2(strIconum.AsInt32(), kvp.docId.AsGuid());
+                    if (result.Content.AsString().ToUpper().Contains("REJECT"))
+                    {
+                        results.Add(result.Content);
+                    }
                 }
-                return new HttpResponseMessage()
+                if (results.Count > 0)
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(results), System.Text.Encoding.UTF8, "application/json")
-                };
+                    return new ClusteringOutput { CompletionStatus = "REJECTED", Output = new List<string>() };
+                }
+                return new ClusteringOutput { CompletionStatus = "OK", Output = new List<string>() };
                 // or just do a task.Run()
 
 
@@ -985,10 +990,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
-                return new HttpResponseMessage()
-                {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
-                };
+                return new ClusteringOutput { CompletionStatus = "FAILED", Output = new List<string>() };
             }
 
         }
@@ -1129,5 +1131,23 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
 		public class StringDictionary {
 			public Dictionary<string, string> StringData { get; set; }
 		}
-	}
+
+        public class ClusteringDocument
+        {
+            public string docId;
+            public int fileId;
+        }
+        public class ClusteringInput
+        {
+            public int iconum { get; set; }
+            public List<ClusteringDocument> document_list { get; set; }
+            public int content_set { get; set; }
+        }
+
+        public class ClusteringOutput
+        {
+            public string CompletionStatus { get; set; }
+            public List<string> Output { get; set; }
+        }
+    }
 }
