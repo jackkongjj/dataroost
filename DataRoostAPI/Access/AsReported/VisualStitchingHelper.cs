@@ -4030,7 +4030,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             }
             return true;
 		}
-		public bool ExtendClusterByDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1) {
+		public string ExtendClusterByDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1) {
             this._environment = "DEV";
             //List<int> iconums = new List<int>();
             //iconums.Add(iconum);
@@ -4060,16 +4060,16 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                 iconums.Add(iconum);
                 result = _DecideHierarchy(contentSetIds, iconums, docid, tableid);
             }
-            catch
+            catch (Exception ex)
             {
-                result = "FAIL";
+                result = string.Format("FAILED|{0}", ex.Message.ToString());
             }
 
             return result;
 
         }
 
-        public bool ExtendClusterByContentSetDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1)
+        public string ExtendClusterByContentSetDocument(List<int> contentSetIds, int iconum, Guid docid, int tableid = -1)
         {
             List<int> iconums = new List<int>();
             iconums.Add(iconum);
@@ -4077,14 +4077,14 @@ exec GDBGetCountForIconum @sdbcode, @iconum
             _ExtendHierarchy(contentSetIds, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
-                return false;
+                return string.Format("REJECTED|{0}", _failureLogger.ToString());
             }
             _ExtendColumns(contentSetIds, iconums, docid, tableid);
             if (this._autoclusteringfailure)
             {
-                return false;
+                return string.Format("REJECTED|{0}", _failureLogger.ToString());
             }
-            return true;
+            return "OK";
         }
 
 
@@ -4635,10 +4635,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
 
             var tableIDs = GetTableIdsFromContentSetIds(contentSetIds);
 			if (guid == NullGuid) {
-				foreach (var t in tableIDs) {
-					//_CleanupHierarchy(iconum, t);
-                    //_levelTwoLogger.AppendLineBreak("_CleanupHierarchy(iconum, t): " + t);
-                }
+                throw new Exception("Bad Document id");
 			}
             int successfulTableCount = 0;
 			foreach (var t in tableIDs) {
@@ -4670,7 +4667,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
                     }
                     else
                     {
-                        return "Reject";
+                        return "REJECTED|Not fully clustered";
                     }
 				}
 			}
@@ -4777,7 +4774,7 @@ exec GDBGetCountForIconum @sdbcode, @iconum
         private List<int> GetTableIdsFromContentSetIds(List<int> contentSetIds)
         {
             if (contentSetIds == null || contentSetIds.Count <= 0)
-                throw new ArgumentException("Content Set Ids Invalid");
+                throw new ArgumentException("No Content Set Id provided.");
 
             List<int> dataNodes = new List<int>();
             string joined = String.Join(",", contentSetIds);
@@ -4796,8 +4793,10 @@ select distinct nt.id as norm_table_id from norm_table nt where nt.content_set_i
                     }
 
                 }
-                return dataNodes;
             }
+            if (dataNodes.Count <= 0)
+                throw new ArgumentException("Content Set IDs has no mapped norm table.");
+            return dataNodes;
         }
 		private bool _CleanupHierarchy(int iconum, int tableId) {
 			var dict = _CleanupGetMissingHierarchy(iconum, tableId);

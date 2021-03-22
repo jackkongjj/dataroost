@@ -800,32 +800,35 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         }
 
 
+        public string ClusterTreeExtendIconumDocIdUnboxed(int contentSetId, int iconum, Guid docId, int tableId = -1, bool isBulk = false)
+        {
+
+            if (iconum <= 0)
+                throw new ArgumentException("Invalid Iconum");
+
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+            var vsHelper = new VisualStitchingHelper(sfConnectionString);
+            List<int> contentSetIds = new List<int>();
+            contentSetIds.Add(contentSetId);
+            if (contentSetId <= 0)
+            {
+                contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+            }
+            var message = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId, tableId);
+            return message;
+        }
+
         [Route("cluster/extend/{iconum}/{docId}")]
         [HttpGet]
-        public HttpResponseMessage ClusterTreeExtendPut2(int iconum, Guid docId)
+        public HttpResponseMessage ClusterTreeExtendIconumDocId(int iconum, Guid docId)
         {
             try
             {
-                if (iconum <= 0)
-                    throw new NotImplementedException();
-
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
-                var success = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId);
-                if (success)
+                var message = ClusterTreeExtendIconumDocIdUnboxed(-1, iconum, docId);
+                return new HttpResponseMessage()
                 {
-                    return new HttpResponseMessage()
-                    {
-                        Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(success), System.Text.Encoding.UTF8, "application/json")
-                    };
-                }
-                else
-                {
-                    return new HttpResponseMessage(HttpStatusCode.Accepted)
-                    {
-                    };
-                }
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(message), System.Text.Encoding.UTF8, "application/json")
+                };
             }
             catch (Exception ex)
             {
@@ -833,7 +836,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 LogErrorAutoCluster(ex);
                 return new HttpResponseMessage(HttpStatusCode.Accepted)
                 {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(string.Format("FAILED|{0}", ex.Message.ToString()), System.Text.Encoding.UTF8, "application/json")
                 };
             }
         }
@@ -844,16 +847,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         {
             try
             {
-                if (iconum <= 0)
-                    throw new NotImplementedException();
-
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
-                var json = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId, tableid);
+                var message = ClusterTreeExtendIconumDocIdUnboxed(-1, iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(message), System.Text.Encoding.UTF8, "application/json")
                 };
             }
             catch (Exception ex)
@@ -862,7 +859,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(string.Format("FAILED|{0}", ex.Message.ToString()), System.Text.Encoding.UTF8, "application/json")
                 };
             }
         }
@@ -873,16 +870,10 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         {
             try
             {
-                if (iconum <= 0)
-                    throw new NotImplementedException();
-
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
-                var json = vsHelper.ExtendClusterByDocument(contentSetIds, iconum, docId, tableid);
+                var message = ClusterTreeExtendIconumDocIdUnboxed(contentSetId, iconum, docId, tableid);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(message), System.Text.Encoding.UTF8, "application/json")
                 };
             }
             catch (Exception ex)
@@ -891,10 +882,35 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(string.Format("FAILED|{0}", ex.Message.ToString()), System.Text.Encoding.UTF8, "application/json")
                 };
             }
         }
+
+
+        public string ClusterTreeDecideContentIdIconumDocIdUnboxed(int contentSetId, int iconum, Guid docId, bool isBulk = false)
+        {
+            if (iconum <= 0)
+                throw new ArgumentException("Invalid Iconum");
+
+            string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
+            var vsHelper = new VisualStitchingHelper(sfConnectionString);
+            List<int> contentSetIds = new List<int>();
+            contentSetIds.Add(contentSetId);
+            if (contentSetId <= 0)
+            {
+                contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+            }
+            //if (!isBulk)
+            //{
+            //    contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
+            //    if (contentSetIds.Count == 0)
+            //        contentSetIds.Add(contentSetId);
+            //}
+            var message = vsHelper.DecideClusterByDocument(contentSetIds, iconum, docId);
+            return message;
+        }
+
 
         [Route("cluster/decide/{contentSetId}/{iconum}/{docId}")]
         [HttpGet]
@@ -902,18 +918,11 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         {
             try
             {
-                if (iconum <= 0)
-                    throw new NotImplementedException();
+                var message = ClusterTreeDecideContentIdIconumDocIdUnboxed(contentSetId, iconum, docId);
 
-                string sfConnectionString = ConfigurationManager.ConnectionStrings["FFDoc-SCAR"].ToString();
-                var vsHelper = new VisualStitchingHelper(sfConnectionString);
-                var contentSetIds = vsHelper.GetContentSetIdsFromIconum(iconum);
-                if (contentSetIds.Count == 0)
-                    contentSetIds.Add(contentSetId);
-                var json = vsHelper.DecideClusterByDocument(contentSetIds, iconum, docId);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(json), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(message), System.Text.Encoding.UTF8, "application/json")
                 };
             }
             catch (Exception ex)
@@ -921,7 +930,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
                 LogErrorAutoCluster(ex);
                 return new HttpResponseMessage()
                 {
-                    Content = new StringContent(ex.Message.ToString(), System.Text.Encoding.UTF8, "application/json")
+                    Content = new StringContent(string.Format("FAILED|{0}", ex.Message.ToString()), System.Text.Encoding.UTF8, "application/json")
                 };
             }
         }
@@ -930,27 +939,59 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         [HttpPost]
         public ClusteringOutput ClusterTreeDecideContentIdIconumDocIdList(ClusteringInput input)
         {
-            List<HttpContent> results = new List<HttpContent>();
+            List<string> results = new List<string>();
             try
             {
+                var strIconum = input.iconum;
+                var strContentSet = input.content_set;
+                bool isFailed = false;
                 foreach (var d in input.document_list)
                 {
-                    var strIconum = input.iconum;
-                    var result = ClusterTreeDecideContentIdIconumDocId(-1, strIconum.AsInt32(), d.docId.AsGuid());
-                    if (result.Content.AsString().ToUpper().Contains("REJECT"))
+                    var result = ClusterTreeDecideContentIdIconumDocIdUnboxed(strContentSet, strIconum, d.docId.AsGuid(), true);
+                    if (!result.StartsWith("OK"))
                     {
-                        results.Add(result.Content);
+                        var r = result.Split(new string[] { "|" }, StringSplitOptions.None);
+                        if (result.StartsWith("FAILED"))
+                        {
+                            if (r.Length == 2)
+                            {
+                                results.Add(string.Format("Error: {0} {1}", d.docId, r[1]));
+                            }
+                            else
+                            {
+                                results.Add(string.Format("Error: {0} {1}", d.docId, result));
+                            }
+                            isFailed = true;
+                        } else
+                        {
+                            if (r.Length == 2)
+                            {
+                                results.Add(string.Format("RejectReason: {0} {1}", d.docId, r[1]));
+                            }
+                            else
+                            {
+                                results.Add(string.Format("RejectReason: {0} {1}", d.docId, result));
+                            }
+                        }
+                        
                     }
                 }
                 if (results.Count > 0)
                 {
-                    return new ClusteringOutput { CompletionStatus = "REJECTED", Output = new List<string>() };
+                    if (isFailed)
+                    {
+                        return new ClusteringOutput { CompletionStatus = "FAILED", Output = results };
+                    }
+                    else
+                    {
+                        return new ClusteringOutput { CompletionStatus = "REJECTED", Output = results };
+                    }
                 }
                 return new ClusteringOutput { CompletionStatus = "OK", Output = new List<string>() };
             }
             catch (Exception ex)
             {
-                return new ClusteringOutput { CompletionStatus = "FAILED", Output = new List<string>() };
+                return new ClusteringOutput { CompletionStatus = "FAILED", Output = new List<string>() { string.Format("Error: {0}", ex.Message.ToString()) } };
             }
 
         }
@@ -958,21 +999,54 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
         [HttpPost]
         public ClusteringOutput ClusterTreeExtendDocumentList(ClusteringInput input)
         {
-            List<HttpContent> results = new List<HttpContent>();
+            List<string> results = new List<string>();
             try
             {
-                foreach (var kvp in input.document_list)
+                var strIconum = input.iconum;
+                var strContentSet = input.content_set;
+                bool isFailed = false;
+                foreach (var d in input.document_list)
                 {
-                    var strIconum = input.iconum;
-                    var result = ClusterTreeExtendPut2(strIconum.AsInt32(), kvp.docId.AsGuid());
-                    if (result.Content.AsString().ToUpper().Contains("REJECT"))
+                    var result = ClusterTreeExtendIconumDocIdUnboxed(strContentSet, strIconum, d.docId.AsGuid(), -1, true);
+                    if (!result.StartsWith("OK"))
                     {
-                        results.Add(result.Content);
+                        var r = result.Split(new string[] { "|" }, StringSplitOptions.None);
+                        if (result.StartsWith("FAILED"))
+                        {
+                            if (r.Length == 2)
+                            {
+                                results.Add(string.Format("Error: {0} {1}", d.docId, r[1]));
+                            }
+                            else
+                            {
+                                results.Add(string.Format("Error: {0} {1}", d.docId, result));
+                            }
+                            isFailed = true;
+                        }
+                        else
+                        {
+                            if (r.Length == 2)
+                            {
+                                results.Add(string.Format("RejectReason: {0} {1}", d.docId, r[1]));
+                            }
+                            else
+                            {
+                                results.Add(string.Format("RejectReason: {0} {1}", d.docId, result));
+                            }
+                        }
+
                     }
                 }
                 if (results.Count > 0)
                 {
-                    return new ClusteringOutput { CompletionStatus = "REJECTED", Output = new List<string>() };
+                    if (isFailed)
+                    {
+                        return new ClusteringOutput { CompletionStatus = "FAILED", Output = results };
+                    }
+                    else
+                    {
+                        return new ClusteringOutput { CompletionStatus = "REJECTED", Output = results };
+                    }
                 }
                 return new ClusteringOutput { CompletionStatus = "OK", Output = new List<string>() };
                 // or just do a task.Run()
@@ -990,7 +1064,7 @@ namespace CCS.Fundamentals.DataRoostAPI.Controllers {
             }
             catch (Exception ex)
             {
-                return new ClusteringOutput { CompletionStatus = "FAILED", Output = new List<string>() };
+                return new ClusteringOutput { CompletionStatus = "FAILED", Output = new List<string>() { string.Format("Error: {0}", ex.Message.ToString()) } };
             }
 
         }
