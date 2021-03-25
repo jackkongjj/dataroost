@@ -5598,7 +5598,7 @@ order by  d.PublicationDateTime desc
 
                 if (true || this._environment == "DEV")
                 {
-                    sql = @"	join gold_corpus_document_list gc 
+                    sql = @"	join vw_gold_corpus_document_list gc 
                     on gc.document_id = nntf.document_id and gc.iconum = nntf.iconum ";
                 }
             }
@@ -6543,7 +6543,7 @@ order by f.file_id, f.row_id, f.col_id
 select f.id, f.raw_row_label, f.cleaned_row_label, f.final_label,
 	 coalesce(cm.cluster_hierarchy_id, 0), f.row_id, f.col_id, f.file_id
 from norm_name_tree_flat f 
-join gold_corpus_document_list gc 
+join vw_gold_corpus_document_list gc 
                     on gc.document_id = f.document_id and gc.iconum = f.iconum
 left join cluster_mapping cm on f.id = cm.norm_name_tree_flat_id
 left join cluster_hierarchy ch 
